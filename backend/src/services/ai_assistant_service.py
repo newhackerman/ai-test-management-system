@@ -408,6 +408,46 @@ class AIAssistantService:
         """初始化监控"""
         self.metrics["service_start_time"] = self.startup_time.isoformat()
         self.logger.debug("Monitoring initialized")
+
+    async def generate_content(
+        self,
+        prompt: str,
+        max_tokens: int = 4000,
+        temperature: float = 0.7,
+        context: Optional[Dict[str, Any]] = None,
+        user_id: Optional[int] = None,
+    ) -> str:
+        """Compatibility entrypoint for services that need raw AI-generated text."""
+        if not prompt or not prompt.strip():
+            raise ValueError("AI prompt cannot be empty")
+
+        provider = AIProvider.OPENAI
+        config = self.ai_configs.get(provider, {})
+        previous_max_tokens = config.get("max_tokens")
+        previous_temperature = config.get("temperature")
+        config["max_tokens"] = max_tokens
+        config["temperature"] = temperature
+
+        try:
+            response = await self._call_ai_service(prompt, provider, context or {})
+            self.metrics["total_queries"] += 1
+            self.metrics["successful_queries"] += 1
+            self.metrics["total_tokens_used"] += response.tokens_used
+            return response.content
+        except Exception:
+            self.metrics["total_queries"] += 1
+            self.metrics["failed_queries"] += 1
+            raise
+        finally:
+            if previous_max_tokens is None:
+                config.pop("max_tokens", None)
+            else:
+                config["max_tokens"] = previous_max_tokens
+
+            if previous_temperature is None:
+                config.pop("temperature", None)
+            else:
+                config["temperature"] = previous_temperature
     
     @log_ai_model_call(
         operation_name="process_user_query",
@@ -1142,8 +1182,8 @@ class AIAssistantService:
         endpoint = (config.get("api_endpoint") or "https://api.openai.com/v1").rstrip("/")
         model = (config.get("models") or ["gpt-4"])[0]
         timeout_seconds = float(getattr(settings, "OPENAI_TIMEOUT", 90.0) or 90.0)
-        max_tokens = int(os.getenv("AI_MAX_TOKENS") or getattr(settings, "OPENAI_MAX_TOKENS", 4000) or 4000)
-        temperature = float(os.getenv("AI_TEMPERATURE") or getattr(settings, "OPENAI_TEMPERATURE", 0.7) or 0.7)
+        max_tokens = int(os.getenv("AI_MAX_TOKENS") or getattr(settings, "OPENAI_MAX_TOKENS", config.get("max_tokens", 4000)) or 4000)
+        temperature = float(os.getenv("AI_TEMPERATURE") or getattr(settings, "OPENAI_TEMPERATURE", config.get("temperature", 0.7)) or 0.7)
 
         user_content: Any = prompt
         image_attachments = [
