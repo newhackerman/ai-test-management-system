@@ -1,0 +1,386 @@
+"""
+WebRTC信令API路由
+
+本模块提供WebRTC信令处理的REST API接口，包括：
+- WebSocket /meetings/{meeting_id}/ws 信令连接接口
+- POST /meetings/{meeting_id}/webrtc/offer SDP offer接口
+- POST /meetings/{meeting_id}/webrtc/answer SDP answer接口
+- POST /meetings/{meeting_id}/webrtc/ice ICE候选接口
+- GET /meetings/{meeting_id}/webrtc/config 获取WebRTC配置接口
+"""
+import logging
+from typing import Optional
+
+from fastapi import APIRouter, Depends, HTTPException, Path, status, WebSocket, WebSocketDisconnect
+from fastapi.responses import JSONResponse
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from ....core.database import get_async_session
+from ....core.exceptions import ValidationError, NotFoundError, PermissionError
+from ....services.webrtc_service import WebRTCService, get_webrtc_service
+from ....services.meeting_service import MeetingService, get_meeting_service
+from ....api.auth import get_current_user
+from ....models.user import User
+from ....schemas.webrtc_schemas import (
+    WebRTCSignalRequest, WebRTCOfferRequest, WebRTCAnswerRequest,
+    ICECandidateRequest, MediaControlRequest, WebRTCConfigResponse,
+    WebRTCSignalResponse, ScreenShareRequest, ScreenShareResponse,
+    StopScreenShareRequest, StopScreenShareResponse
+)
+
+logger = logging.getLogger(__name__)
+
+router = APIRouter()
+
+
+@router.websocket("/ws")
+async def websocket_endpoint(
+    websocket: WebSocket,
+    meeting_id: int = Path(..., description="会议ID"),
+    webrtc_service: WebRTCService = Depends(get_webrtc_service)
+):
+    """
+    WebSocket信令连接
+    
+    建立WebSocket连接用于实时信令交换
+    
+    - **meeting_id**: 会议ID（必填）
+    
+    WebSocket消息格式：
+    ```json
+    {
+        "type": "offer|answer|ice-candidate|media-control|room-event",
+        "data": {...}
+    }
+    ```
+    """
+    await websocket.accept()
+    
+    try:
+        # 从查询参数或头部获取用户信息
+        # 这里需要实现WebSocket认证逻辑
+        user_id = None  # TODO: 实现WebSocket用户认证
+        
+        logger.info(f"WebSocket连接建立: 会议 {meeting_id}, 用户 {user_id}")
+        
+        # 加入WebRTC房间
+        session = await webrtc_service.join_room(f"room_{meeting_id}", user_id, {})
+        
+        # 注册WebSocket连接
+        await webrtc_service.register_websocket(session.session_id, websocket)
+        
+        while True:
+            # 接收WebSocket消息
+            data = await websocket.receive_json()
+            
+            # 处理信令消息
+            await webrtc_service.handle_websocket_message(session.session_id, data)
+            
+    except WebSocketDisconnect:
+        logger.info(f"WebSocket连接断开: 会议 {meeting_id}, 用户 {user_id}")
+        
+        # 清理连接
+        if 'session' in locals():
+            await webrtc_service.leave_room(session.session_id)
+            
+    except Exception as e:
+        logger.error(f"WebSocket连接异常: {e}")
+        await websocket.close(code=1011, reason="Internal server error")
+
+
+@router.post(
+    "/offer",
+    response_model=WebRTCSignalResponse,
+    summary="发送SDP Offer",
+    description="发送WebRTC SDP Offer信令"
+)
+async def send_offer(
+    meeting_id: int = Path(..., description="会议ID"),
+    request: WebRTCOfferRequest = ...,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_session),
+    webrtc_service: WebRTCService = Depends(get_webrtc_service)
+):
+    """
+    发送SDP Offer
+    
+    - **meeting_id**: 会议ID（必填）
+    - **session_id**: 会话ID（必填）
+    - **sdp**: SDP描述（必填）
+    - **media_constraints**: 媒体约束（可选）
+    """
+    try:
+        logger.info(f"用户 {current_user.id} 发送SDP Offer: 会议 {meeting_id}, 会话 {request.session_id}")
+        
+        # 处理SDP Offer
+        result = await webrtc_service.handle_offer(request.session_id, {
+            'sdp': request.sdp,
+            'media_constraints': request.media_constraints
+        })
+        
+        return WebRTCSignalResponse(
+            success=True,
+            message="SDP Offer处理成功",
+            signal_id=result.get('signal_id'),
+            response_data=result.get('response_data')
+        )
+        
+    except NotFoundError as e:
+        logger.warning(f"会话不存在: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
+        )
+    except ValidationError as e:
+        logger.warning(f"SDP Offer验证失败: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except Exception as e:
+        logger.error(f"SDP Offer处理失败: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="SDP Offer处理失败"
+        )
+
+
+@router.post(
+    "/answer",
+    response_model=WebRTCSignalResponse,
+    summary="发送SDP Answer",
+    description="发送WebRTC SDP Answer信令"
+)
+async def send_answer(
+    meeting_id: int = Path(..., description="会议ID"),
+    request: WebRTCAnswerRequest = ...,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_session),
+    webrtc_service: WebRTCService = Depends(get_webrtc_service)
+):
+    """
+    发送SDP Answer
+    
+    - **meeting_id**: 会议ID（必填）
+    - **session_id**: 会话ID（必填）
+    - **sdp**: SDP描述（必填）
+    """
+    try:
+        logger.info(f"用户 {current_user.id} 发送SDP Answer: 会议 {meeting_id}, 会话 {request.session_id}")
+        
+        # 处理SDP Answer
+        result = await webrtc_service.handle_answer(request.session_id, {
+            'sdp': request.sdp
+        })
+        
+        return WebRTCSignalResponse(
+            success=True,
+            message="SDP Answer处理成功",
+            signal_id=result.get('signal_id'),
+            response_data=result.get('response_data')
+        )
+        
+    except NotFoundError as e:
+        logger.warning(f"会话不存在: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
+        )
+    except ValidationError as e:
+        logger.warning(f"SDP Answer验证失败: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except Exception as e:
+        logger.error(f"SDP Answer处理失败: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="SDP Answer处理失败"
+        )
+
+
+@router.post(
+    "/ice",
+    response_model=WebRTCSignalResponse,
+    summary="发送ICE候选",
+    description="发送WebRTC ICE候选信令"
+)
+async def send_ice_candidate(
+    meeting_id: int = Path(..., description="会议ID"),
+    request: ICECandidateRequest = ...,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_session),
+    webrtc_service: WebRTCService = Depends(get_webrtc_service)
+):
+    """
+    发送ICE候选
+    
+    - **meeting_id**: 会议ID（必填）
+    - **session_id**: 会话ID（必填）
+    - **candidate**: ICE候选（必填）
+    - **sdp_mid**: SDP MID（可选）
+    - **sdp_m_line_index**: SDP M-Line索引（可选）
+    """
+    try:
+        logger.info(f"用户 {current_user.id} 发送ICE候选: 会议 {meeting_id}, 会话 {request.session_id}")
+        
+        # 处理ICE候选
+        result = await webrtc_service.handle_ice_candidate(request.session_id, {
+            'candidate': request.candidate,
+            'sdp_mid': request.sdp_mid,
+            'sdp_m_line_index': request.sdp_m_line_index
+        })
+        
+        return WebRTCSignalResponse(
+            success=True,
+            message="ICE候选处理成功",
+            signal_id=result.get('signal_id'),
+            response_data=result.get('response_data')
+        )
+        
+    except NotFoundError as e:
+        logger.warning(f"会话不存在: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
+        )
+    except ValidationError as e:
+        logger.warning(f"ICE候选验证失败: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except Exception as e:
+        logger.error(f"ICE候选处理失败: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="ICE候选处理失败"
+        )
+
+
+@router.get(
+    "/config",
+    response_model=WebRTCConfigResponse,
+    summary="获取WebRTC配置",
+    description="获取WebRTC连接配置信息"
+)
+async def get_webrtc_config(
+    meeting_id: int = Path(..., description="会议ID"),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_session),
+    webrtc_service: WebRTCService = Depends(get_webrtc_service),
+    meeting_service: MeetingService = Depends(get_meeting_service)
+):
+    """
+    获取WebRTC配置
+    
+    - **meeting_id**: 会议ID（必填）
+    
+    返回WebRTC连接所需的配置信息，包括ICE服务器、媒体约束等
+    """
+    try:
+        logger.info(f"用户 {current_user.id} 获取WebRTC配置: 会议 {meeting_id}")
+        
+        # 验证会议权限
+        meeting = await meeting_service.get_meeting_by_id(meeting_id, current_user.id)
+        if not meeting:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="会议不存在"
+            )
+        
+        # 获取WebRTC配置
+        config = await webrtc_service.get_webrtc_config(meeting_id, current_user.id)
+        
+        return WebRTCConfigResponse(
+            ice_servers=config['ice_servers'],
+            media_constraints=config['media_constraints'],
+            room_config=config['room_config'],
+            session_config=config['session_config']
+        )
+        
+    except NotFoundError as e:
+        logger.warning(f"会议不存在: {meeting_id}")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
+        )
+    except PermissionError as e:
+        logger.warning(f"获取WebRTC配置权限不足: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=str(e)
+        )
+    except Exception as e:
+        logger.error(f"获取WebRTC配置失败: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="获取WebRTC配置失败"
+        )
+
+
+@router.post(
+    "/media-control",
+    response_model=WebRTCSignalResponse,
+    summary="媒体控制",
+    description="控制音视频媒体流"
+)
+async def media_control(
+    meeting_id: int = Path(..., description="会议ID"),
+    request: MediaControlRequest = ...,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_session),
+    webrtc_service: WebRTCService = Depends(get_webrtc_service)
+):
+    """
+    媒体控制
+    
+    - **meeting_id**: 会议ID（必填）
+    - **session_id**: 会话ID（必填）
+    - **media_type**: 媒体类型（audio/video/screen）
+    - **action**: 控制动作（mute/unmute/enable/disable）
+    - **target_user_id**: 目标用户ID（可选，用于控制其他用户）
+    """
+    try:
+        logger.info(f"用户 {current_user.id} 媒体控制: 会议 {meeting_id}, 类型 {request.media_type}, 动作 {request.action}")
+        
+        # 处理媒体控制
+        result = await webrtc_service.handle_media_control(request.session_id, {
+            'media_type': request.media_type,
+            'action': request.action,
+            'target_user_id': request.target_user_id,
+            'user_id': current_user.id
+        })
+        
+        return WebRTCSignalResponse(
+            success=True,
+            message="媒体控制成功",
+            signal_id=result.get('signal_id'),
+            response_data=result.get('response_data')
+        )
+        
+    except NotFoundError as e:
+        logger.warning(f"会话不存在: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
+        )
+    except ValidationError as e:
+        logger.warning(f"媒体控制验证失败: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except PermissionError as e:
+        logger.warning(f"媒体控制权限不足: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=str(e)
+        )
+    except Exception as e:
+        logger.error(f"媒体控制失败: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="媒体控制失败"
+        )

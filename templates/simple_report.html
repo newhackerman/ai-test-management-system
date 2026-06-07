@@ -1,0 +1,61 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{{ title }}</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .header { background: #f0f0f0; padding: 10px; margin-bottom: 20px; }
+        .summary { margin-bottom: 20px; }
+        .section { margin-bottom: 15px; }
+        table { border-collapse: collapse; width: 100%; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>{{ title }}</h1>
+        <p>生成时间: {{ generation_time.strftime('%Y-%m-%d %H:%M:%S') }}</p>
+    </div>
+    
+    <div class="summary">
+        <h2>摘要信息</h2>
+        {% for key, value in summary.items() %}
+        <p><strong>{{ key }}:</strong> {{ value }}</p>
+        {% endfor %}
+    </div>
+    
+    {% for section in sections %}
+    <div class="section">
+        <h2>{{ section.title }}</h2>
+        {% if section.data %}
+        <table>
+            {% if section.data[0] is mapping %}
+            <thead>
+                <tr>
+                    {% for key in section.data[0].keys() %}
+                    <th>{{ key }}</th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in section.data %}
+                <tr>
+                    {% for value in item.values() %}
+                    <td>{{ value }}</td>
+                    {% endfor %}
+                </tr>
+                {% endfor %}
+            </tbody>
+            {% else %}
+            {% for item in section.data %}
+            <p>{{ item }}</p>
+            {% endfor %}
+            {% endif %}
+        </table>
+        {% endif %}
+    </div>
+    {% endfor %}
+</body>
+</html>

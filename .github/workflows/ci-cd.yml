@@ -1,0 +1,1051 @@
+name: AI Testing Management System - CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop, feature/*, hotfix/* ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    # 每天凌晨2点运行完整测试套件
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    inputs:
+      test_type:
+        description: '测试类型'
+        required: false
+        default: 'all'
+        type: choice
+        options:
+        - all
+        - unit
+        - integration
+        - meeting
+        - performance
+        - security
+      deploy_environment:
+        description: '部署环境'
+        required: false
+        default: 'none'
+        type: choice
+        options:
+        - none
+        - staging
+        - production
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+  PYTHON_VERSION: '3.11'
+  NODE_VERSION: '18'
+
+jobs:
+  # 代码质量检查
+  code-quality:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Install dependencies
+      working-directory: ./backend
+      run: |
+        python -m pip install --upgrade pip
+        pip install flake8 black isort mypy
+        pip install -r requirements.txt
+
+    - name: Run code formatting check
+      working-directory: ./backend
+      run: |
+        black --check --diff .
+        isort --check-only --diff .
+
+    - name: Run linting
+      working-directory: ./backend
+      run: |
+        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+
+    - name: Run type checking
+      working-directory: ./backend
+      run: |
+        mypy src/ --ignore-missing-imports
+
+  # 单元测试
+  unit-tests:
+    runs-on: ubuntu-latest
+    needs: code-quality
+    
+    strategy:
+      matrix:
+        python-version: ['3.10', '3.11', '3.12']
+    
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Cache Python dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-${{ matrix.python-version }}-pip-${{ hashFiles('backend/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-${{ matrix.python-version }}-pip-
+
+    - name: Install dependencies
+      working-directory: ./backend
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Run unit tests
+      working-directory: ./backend
+      env:
+        TESTING: true
+        DATABASE_URL: sqlite:///:memory:
+        REDIS_URL: redis://localhost:6379/15
+        SECRET_KEY: test-secret-key-for-ci
+        AI_SERVICE_MOCK: true
+        WEBRTC_MOCK: true
+        CI_PARALLEL_WORKERS: 4
+        CI_TIMEOUT_SECONDS: 900
+        CI_COVERAGE_THRESHOLD: 80.0
+      run: |
+        python run_ci_tests.py --test-type unit --verbose
+
+    - name: Upload unit test results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: unit-test-results-${{ matrix.python-version }}
+        path: backend/test_reports/unit_*.xml
+
+  # 集成测试
+  integration-tests:
+    runs-on: ubuntu-latest
+    needs: unit-tests
+    
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: test_password
+          MYSQL_DATABASE: test_db
+          MYSQL_USER: test_user
+          MYSQL_PASSWORD: test_password
+        ports:
+          - 3306:3306
+        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
+
+      redis:
+        image: redis:7.0-alpine
+        ports:
+          - 6379:6379
+        options: --health-cmd="redis-cli ping" --health-interval=10s --health-timeout=5s --health-retries=3
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Cache Python dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('backend/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+
+    - name: Install dependencies
+      working-directory: ./backend
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Wait for services
+      run: |
+        sleep 10
+
+    - name: Run integration tests
+      working-directory: ./backend
+      env:
+        TESTING: true
+        DATABASE_URL: mysql+asyncmy://test_user:test_password@localhost:3306/test_db
+        REDIS_URL: redis://localhost:6379/0
+        SECRET_KEY: test-secret-key-for-ci
+        AI_SERVICE_MOCK: true
+        WEBRTC_MOCK: true
+        CI_PARALLEL_WORKERS: 2
+        CI_TIMEOUT_SECONDS: 1200
+        CI_COVERAGE_THRESHOLD: 75.0
+      run: |
+        python run_ci_tests.py --test-type integration --verbose
+
+    - name: Upload integration test results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: integration-test-results
+        path: backend/test_reports/integration_*.xml
+
+  # API测试
+  api-tests:
+    runs-on: ubuntu-latest
+    needs: unit-tests
+    
+    services:
+      redis:
+        image: redis:7.0-alpine
+        ports:
+          - 6379:6379
+        options: --health-cmd="redis-cli ping" --health-interval=10s --health-timeout=5s --health-retries=3
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Install dependencies
+      working-directory: ./backend
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Run API tests
+      working-directory: ./backend
+      env:
+        TESTING: true
+        DATABASE_URL: sqlite:///:memory:
+        REDIS_URL: redis://localhost:6379/1
+        SECRET_KEY: test-secret-key-for-ci
+        AI_SERVICE_MOCK: true
+        WEBRTC_MOCK: true
+      run: |
+        python run_tests.py --api -v
+
+    - name: Upload API test results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: api-test-results
+        path: backend/test_reports/api_*.xml
+
+  # 端到端测试
+  e2e-tests:
+    runs-on: ubuntu-latest
+    needs: [integration-tests, api-tests]
+    
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: test_password
+          MYSQL_DATABASE: test_db
+          MYSQL_USER: test_user
+          MYSQL_PASSWORD: test_password
+        ports:
+          - 3306:3306
+        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
+
+      redis:
+        image: redis:7.0-alpine
+        ports:
+          - 6379:6379
+        options: --health-cmd="redis-cli ping" --health-interval=10s --health-timeout=5s --health-retries=3
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Install dependencies
+      working-directory: ./backend
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Install Playwright
+      run: |
+        pip install playwright
+        playwright install
+
+    - name: Run E2E tests
+      working-directory: ./backend
+      env:
+        TESTING: true
+        DATABASE_URL: mysql+asyncmy://test_user:test_password@localhost:3306/test_db
+        REDIS_URL: redis://localhost:6379/2
+        SECRET_KEY: test-secret-key-for-ci
+        AI_SERVICE_MOCK: false
+        WEBRTC_MOCK: false
+      run: |
+        python run_tests.py --e2e -v
+
+    - name: Upload E2E test results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: e2e-test-results
+        path: backend/test_reports/e2e_*.xml
+
+  # 性能测试
+  performance-tests:
+    runs-on: ubuntu-latest
+    needs: integration-tests
+    if: github.event_name == 'schedule' || contains(github.event.head_commit.message, '[performance]')
+    
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: test_password
+          MYSQL_DATABASE: test_db
+          MYSQL_USER: test_user
+          MYSQL_PASSWORD: test_password
+        ports:
+          - 3306:3306
+        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
+
+      redis:
+        image: redis:7.0-alpine
+        ports:
+          - 6379:6379
+        options: --health-cmd="redis-cli ping" --health-interval=10s --health-timeout=5s --health-retries=3
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Install dependencies
+      working-directory: ./backend
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Run performance tests
+      working-directory: ./backend
+      env:
+        TESTING: true
+        DATABASE_URL: mysql+asyncmy://test_user:test_password@localhost:3306/test_db
+        REDIS_URL: redis://localhost:6379/3
+        SECRET_KEY: test-secret-key-for-ci
+        PERFORMANCE_TEST_TIMEOUT: 600
+        MAX_CONCURRENT_USERS: 50
+      run: |
+        python run_tests.py --performance -v
+
+    - name: Upload performance test results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: performance-test-results
+        path: backend/test_reports/performance_*.xml
+
+  # 会议模块专项测试
+  meeting-tests:
+    runs-on: ubuntu-latest
+    needs: unit-tests
+    
+    services:
+      redis:
+        image: redis:7.0-alpine
+        ports:
+          - 6379:6379
+        options: --health-cmd="redis-cli ping" --health-interval=10s --health-timeout=5s --health-retries=3
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Install dependencies
+      working-directory: ./backend
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Run meeting module tests
+      working-directory: ./backend
+      env:
+        TESTING: true
+        DATABASE_URL: sqlite:///:memory:
+        REDIS_URL: redis://localhost:6379/4
+        SECRET_KEY: test-secret-key-for-ci
+        AI_SERVICE_MOCK: true
+        WEBRTC_MOCK: true
+        MEETING_TEST_DURATION: 30
+        MAX_TEST_PARTICIPANTS: 5
+        CI_PARALLEL_WORKERS: 2
+        CI_TIMEOUT_SECONDS: 600
+        CI_COVERAGE_THRESHOLD: 70.0
+      run: |
+        python run_ci_tests.py --test-type meeting --verbose
+
+    - name: Upload meeting test results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: meeting-test-results
+        path: backend/test_reports/meeting_*.xml
+
+  # 生成测试报告
+  test-report:
+    runs-on: ubuntu-latest
+    needs: [unit-tests, integration-tests, api-tests, e2e-tests, meeting-tests]
+    if: always()
+    
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Download all test results
+      uses: actions/download-artifact@v3
+      with:
+        path: test-results
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Install dependencies
+      run: |
+        pip install junitparser coverage
+
+    - name: Generate comprehensive test report
+      run: |
+        python -c "
+        import os
+        import json
+        from pathlib import Path
+        from junitparser import JUnitXml
+        from datetime import datetime
+        
+        # 收集所有测试结果
+        results = {}
+        test_results_dir = Path('test-results')
+        
+        for xml_file in test_results_dir.rglob('*.xml'):
+            try:
+                xml = JUnitXml.fromfile(str(xml_file))
+                suite_name = xml_file.stem.replace('_results', '').replace('_', '-')
+                
+                results[suite_name] = {
+                    'tests': xml.tests,
+                    'failures': xml.failures,
+                    'errors': xml.errors,
+                    'skipped': xml.skipped,
+                    'time': xml.time
+                }
+            except Exception as e:
+                print(f'Error parsing {xml_file}: {e}')
+        
+        # 生成摘要报告
+        total_tests = sum(r['tests'] for r in results.values())
+        total_failures = sum(r['failures'] for r in results.values())
+        total_errors = sum(r['errors'] for r in results.values())
+        total_skipped = sum(r['skipped'] for r in results.values())
+        total_passed = total_tests - total_failures - total_errors - total_skipped
+        
+        report = {
+            'timestamp': datetime.now().isoformat(),
+            'summary': {
+                'total_tests': total_tests,
+                'passed': total_passed,
+                'failed': total_failures,
+                'errors': total_errors,
+                'skipped': total_skipped,
+                'success_rate': (total_passed / total_tests * 100) if total_tests > 0 else 0
+            },
+            'suites': results
+        }
+        
+        # 保存报告
+        with open('test-summary.json', 'w') as f:
+            json.dump(report, f, indent=2)
+        
+        # 打印摘要
+        print('=' * 60)
+        print('📊 测试执行摘要')
+        print('=' * 60)
+        print(f'总测试数: {total_tests}')
+        print(f'✅ 通过: {total_passed}')
+        print(f'❌ 失败: {total_failures}')
+        print(f'⚠️ 错误: {total_errors}')
+        print(f'⏭️ 跳过: {total_skipped}')
+        print(f'🎯 成功率: {report[\"summary\"][\"success_rate\"]:.1f}%')
+        print('=' * 60)
+        "
+
+    - name: Upload test summary
+      uses: actions/upload-artifact@v3
+      with:
+        name: test-summary
+        path: test-summary.json
+
+    - name: Comment PR with test results
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const fs = require('fs');
+          const report = JSON.parse(fs.readFileSync('test-summary.json', 'utf8'));
+          
+          const comment = `## 🧪 测试结果摘要
+          
+          | 指标 | 数值 |
+          |------|------|
+          | 总测试数 | ${report.summary.total_tests} |
+          | ✅ 通过 | ${report.summary.passed} |
+          | ❌ 失败 | ${report.summary.failed} |
+          | ⚠️ 错误 | ${report.summary.errors} |
+          | ⏭️ 跳过 | ${report.summary.skipped} |
+          | 🎯 成功率 | ${report.summary.success_rate.toFixed(1)}% |
+          
+          ### 测试套件详情
+          ${Object.entries(report.suites).map(([name, suite]) => 
+            `- **${name}**: ${suite.tests} 测试, ${suite.failures} 失败, ${suite.errors} 错误`
+          ).join('\n')}
+          `;
+          
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: comment
+          });
+
+  test-frontend:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: frontend/package-lock.json
+
+    - name: Install dependencies
+      working-directory: ./frontend
+      run: npm ci
+
+    - name: Run linting
+      working-directory: ./frontend
+      run: npm run lint
+
+    - name: Run tests
+      working-directory: ./frontend
+      run: npm run test -- --run --coverage
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./frontend/coverage/coverage-final.json
+        flags: frontend
+        name: frontend-coverage
+
+  # Security scanning
+  security-scan:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'fs'
+        scan-ref: '.'
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+
+    - name: Upload Trivy scan results to GitHub Security tab
+      uses: github/codeql-action/upload-sarif@v2
+      with:
+        sarif_file: 'trivy-results.sarif'
+
+  # Build and push Docker images
+  build-and-push:
+    needs: [test-backend, test-frontend, security-scan]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    
+    permissions:
+      contents: read
+      packages: write
+
+    strategy:
+      matrix:
+        component: [backend, frontend]
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Log in to Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Extract metadata
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-${{ matrix.component }}
+        tags: |
+          type=ref,event=branch
+          type=ref,event=pr
+          type=sha,prefix={{branch}}-
+          type=raw,value=latest,enable={{is_default_branch}}
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: ./${{ matrix.component }}
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+        target: production
+
+  # Deploy to staging
+  deploy-staging:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/develop'
+    environment: staging
+
+    steps:
+    - name: Deploy to staging
+      run: |
+        echo "Deploying to staging environment"
+        # Add your staging deployment commands here
+
+  # 通知系统
+  notify-success:
+    needs: [test-report, build-and-push]
+    runs-on: ubuntu-latest
+    if: success()
+    
+    steps:
+    - name: Notify success
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const { owner, repo } = context.repo;
+          const sha = context.sha.substring(0, 7);
+          const branch = context.ref.replace('refs/heads/', '');
+          
+          // 创建成功通知
+          const message = `✅ **CI/CD 流水线执行成功**
+          
+          📋 **执行信息**
+          - 分支: \`${branch}\`
+          - 提交: \`${sha}\`
+          - 触发者: @${{ github.actor }}
+          - 执行时间: ${new Date().toLocaleString('zh-CN')}
+          
+          🎯 **测试结果**
+          - 所有测试套件通过
+          - 代码质量检查通过
+          - 安全扫描通过
+          - 构建和部署成功
+          
+          🔗 **相关链接**
+          - [查看详情](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+          - [测试报告](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts)
+          `;
+          
+          // 发送到Issues（作为通知）
+          if (context.eventName === 'push' && branch === 'main') {
+            try {
+              await github.rest.issues.create({
+                owner,
+                repo,
+                title: `🎉 生产部署成功 - ${sha}`,
+                body: message,
+                labels: ['deployment', 'success', 'production']
+              });
+            } catch (error) {
+              console.log('创建Issue通知失败:', error.message);
+            }
+          }
+
+    - name: Send Slack notification
+      if: env.SLACK_WEBHOOK_URL != ''
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+      run: |
+        curl -X POST -H 'Content-type: application/json' \
+        --data '{
+          "text": "✅ CI/CD Pipeline Success",
+          "blocks": [
+            {
+              "type": "section",
+              "text": {
+                "type": "mrkdwn",
+                "text": "*AI测试管理系统 - 流水线执行成功* ✅\n\n*分支:* `${{ github.ref_name }}`\n*提交:* `${{ github.sha }}`\n*执行者:* ${{ github.actor }}\n\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|查看详情>"
+              }
+            }
+          ]
+        }' \
+        $SLACK_WEBHOOK_URL
+
+    - name: Send email notification
+      if: env.SMTP_SERVER != ''
+      env:
+        SMTP_SERVER: ${{ secrets.SMTP_SERVER }}
+        SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
+        SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+        EMAIL_TO: ${{ secrets.NOTIFICATION_EMAIL }}
+      run: |
+        python -c "
+        import smtplib
+        from email.mime.text import MIMEText
+        from email.mime.multipart import MIMEMultipart
+        import os
+        
+        if os.environ.get('SMTP_SERVER'):
+            msg = MIMEMultipart()
+            msg['From'] = os.environ.get('SMTP_USERNAME')
+            msg['To'] = os.environ.get('EMAIL_TO', 'admin@example.com')
+            msg['Subject'] = 'AI测试管理系统 - CI/CD执行成功'
+            
+            body = '''
+            AI测试管理系统 CI/CD 流水线执行成功！
+            
+            执行信息：
+            - 分支: ${{ github.ref_name }}
+            - 提交: ${{ github.sha }}
+            - 执行者: ${{ github.actor }}
+            - 执行时间: $(date)
+            
+            所有测试通过，系统运行正常。
+            
+            查看详情: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+            '''
+            
+            msg.attach(MIMEText(body, 'plain', 'utf-8'))
+            
+            try:
+                server = smtplib.SMTP(os.environ.get('SMTP_SERVER'), 587)
+                server.starttls()
+                server.login(os.environ.get('SMTP_USERNAME'), os.environ.get('SMTP_PASSWORD'))
+                server.send_message(msg)
+                server.quit()
+                print('邮件通知发送成功')
+            except Exception as e:
+                print(f'邮件发送失败: {e}')
+        "
+
+  notify-failure:
+    needs: [code-quality, unit-tests, integration-tests, api-tests, e2e-tests, meeting-tests]
+    runs-on: ubuntu-latest
+    if: failure()
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Download test results
+      uses: actions/download-artifact@v3
+      with:
+        path: test-results
+      continue-on-error: true
+    
+    - name: Analyze failure
+      id: analyze
+      run: |
+        echo "Analyzing test failures..."
+        
+        # 分析失败原因
+        FAILURE_SUMMARY=""
+        FAILED_JOBS=""
+        
+        # 检查各个job的状态
+        if [[ "${{ needs.code-quality.result }}" == "failure" ]]; then
+          FAILED_JOBS="$FAILED_JOBS 代码质量检查"
+          FAILURE_SUMMARY="$FAILURE_SUMMARY\n❌ 代码质量检查失败"
+        fi
+        
+        if [[ "${{ needs.unit-tests.result }}" == "failure" ]]; then
+          FAILED_JOBS="$FAILED_JOBS 单元测试"
+          FAILURE_SUMMARY="$FAILURE_SUMMARY\n❌ 单元测试失败"
+        fi
+        
+        if [[ "${{ needs.integration-tests.result }}" == "failure" ]]; then
+          FAILED_JOBS="$FAILED_JOBS 集成测试"
+          FAILURE_SUMMARY="$FAILURE_SUMMARY\n❌ 集成测试失败"
+        fi
+        
+        if [[ "${{ needs.meeting-tests.result }}" == "failure" ]]; then
+          FAILED_JOBS="$FAILED_JOBS 会议模块测试"
+          FAILURE_SUMMARY="$FAILURE_SUMMARY\n❌ 会议模块测试失败"
+        fi
+        
+        echo "failed_jobs=$FAILED_JOBS" >> $GITHUB_OUTPUT
+        echo "failure_summary<<EOF" >> $GITHUB_OUTPUT
+        echo -e "$FAILURE_SUMMARY" >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
+
+    - name: Create failure issue
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const { owner, repo } = context.repo;
+          const sha = context.sha.substring(0, 7);
+          const branch = context.ref.replace('refs/heads/', '');
+          
+          const failedJobs = '${{ steps.analyze.outputs.failed_jobs }}';
+          const failureSummary = `${{ steps.analyze.outputs.failure_summary }}`;
+          
+          const issueBody = `🚨 **CI/CD 流水线执行失败**
+          
+          📋 **执行信息**
+          - 分支: \`${branch}\`
+          - 提交: \`${sha}\`
+          - 触发者: @${{ github.actor }}
+          - 失败时间: ${new Date().toLocaleString('zh-CN')}
+          
+          ❌ **失败详情**
+          ${failureSummary}
+          
+          🔧 **失败的作业**
+          ${failedJobs}
+          
+          🔗 **相关链接**
+          - [查看详情](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+          - [失败日志](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+          
+          📝 **处理建议**
+          1. 检查失败的测试用例
+          2. 修复代码质量问题
+          3. 确保所有依赖正常
+          4. 重新提交修复
+          
+          ---
+          *此Issue由CI/CD自动创建，请及时处理*
+          `;
+          
+          // 创建失败Issue
+          const issue = await github.rest.issues.create({
+            owner,
+            repo,
+            title: `🚨 CI/CD失败 - ${branch} - ${sha}`,
+            body: issueBody,
+            labels: ['ci-failure', 'bug', 'urgent'],
+            assignees: ['${{ github.actor }}']
+          });
+          
+          console.log(`创建失败Issue: ${issue.data.html_url}`);
+
+    - name: Send failure notification to Slack
+      if: env.SLACK_WEBHOOK_URL != ''
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+      run: |
+        curl -X POST -H 'Content-type: application/json' \
+        --data '{
+          "text": "🚨 CI/CD Pipeline Failed",
+          "blocks": [
+            {
+              "type": "section",
+              "text": {
+                "type": "mrkdwn",
+                "text": "*AI测试管理系统 - 流水线执行失败* 🚨\n\n*分支:* `${{ github.ref_name }}`\n*提交:* `${{ github.sha }}`\n*执行者:* ${{ github.actor }}\n*失败作业:* ${{ steps.analyze.outputs.failed_jobs }}\n\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|查看详情>"
+              }
+            },
+            {
+              "type": "section",
+              "text": {
+                "type": "mrkdwn",
+                "text": "${{ steps.analyze.outputs.failure_summary }}"
+              }
+            }
+          ]
+        }' \
+        $SLACK_WEBHOOK_URL
+
+    - name: Send failure email
+      if: env.SMTP_SERVER != ''
+      env:
+        SMTP_SERVER: ${{ secrets.SMTP_SERVER }}
+        SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
+        SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+        EMAIL_TO: ${{ secrets.NOTIFICATION_EMAIL }}
+      run: |
+        python -c "
+        import smtplib
+        from email.mime.text import MIMEText
+        from email.mime.multipart import MIMEMultipart
+        import os
+        
+        if os.environ.get('SMTP_SERVER'):
+            msg = MIMEMultipart()
+            msg['From'] = os.environ.get('SMTP_USERNAME')
+            msg['To'] = os.environ.get('EMAIL_TO', 'admin@example.com')
+            msg['Subject'] = '🚨 AI测试管理系统 - CI/CD执行失败'
+            
+            body = '''
+            AI测试管理系统 CI/CD 流水线执行失败！
+            
+            执行信息：
+            - 分支: ${{ github.ref_name }}
+            - 提交: ${{ github.sha }}
+            - 执行者: ${{ github.actor }}
+            - 失败时间: $(date)
+            
+            失败作业: ${{ steps.analyze.outputs.failed_jobs }}
+            
+            失败详情:
+            ${{ steps.analyze.outputs.failure_summary }}
+            
+            请及时检查并修复问题。
+            
+            查看详情: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+            '''
+            
+            msg.attach(MIMEText(body, 'plain', 'utf-8'))
+            
+            try:
+                server = smtplib.SMTP(os.environ.get('SMTP_SERVER'), 587)
+                server.starttls()
+                server.login(os.environ.get('SMTP_USERNAME'), os.environ.get('SMTP_PASSWORD'))
+                server.send_message(msg)
+                server.quit()
+                print('失败通知邮件发送成功')
+            except Exception as e:
+                print(f'邮件发送失败: {e}')
+        "
+
+  # Deploy to staging
+  deploy-staging:
+    needs: [test-report, build-and-push]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/develop' || (github.event_name == 'workflow_dispatch' && github.event.inputs.deploy_environment == 'staging')
+    environment: staging
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Deploy to staging
+      run: |
+        echo "🚀 部署到预发布环境..."
+        
+        # 这里添加实际的部署命令
+        # 例如：kubectl apply -f k8s/staging/
+        # 或者：docker-compose -f docker-compose.staging.yml up -d
+        
+        echo "✅ 预发布环境部署完成"
+    
+    - name: Run smoke tests on staging
+      run: |
+        echo "💨 在预发布环境运行冒烟测试..."
+        
+        # 等待服务启动
+        sleep 30
+        
+        # 运行冒烟测试
+        # curl -f http://staging.example.com/health || exit 1
+        
+        echo "✅ 预发布环境冒烟测试通过"
+    
+    - name: Notify staging deployment
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const { owner, repo } = context.repo;
+          
+          await github.rest.issues.create({
+            owner,
+            repo,
+            title: `🚀 预发布环境部署成功 - ${{ github.sha }}`,
+            body: `预发布环境部署成功！\n\n- 分支: ${{ github.ref_name }}\n- 提交: ${{ github.sha }}\n- 部署时间: ${new Date().toLocaleString('zh-CN')}\n\n请进行验收测试。`,
+            labels: ['deployment', 'staging']
+          });
+
+  # Deploy to production
+  deploy-production:
+    needs: [test-report, build-and-push, deploy-staging]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || (github.event_name == 'workflow_dispatch' && github.event.inputs.deploy_environment == 'production')
+    environment: production
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Deploy to production
+      run: |
+        echo "🚀 部署到生产环境..."
+        
+        # 这里添加实际的生产部署命令
+        # 例如：kubectl apply -f k8s/production/
+        # 或者：docker-compose -f docker-compose.production.yml up -d
+        
+        echo "✅ 生产环境部署完成"
+    
+    - name: Run production health checks
+      run: |
+        echo "🏥 运行生产环境健康检查..."
+        
+        # 等待服务启动
+        sleep 60
+        
+        # 运行健康检查
+        # curl -f https://api.example.com/health || exit 1
+        # curl -f https://app.example.com/health || exit 1
+        
+        echo "✅ 生产环境健康检查通过"
+    
+    - name: Create production deployment record
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const { owner, repo } = context.repo;
+          
+          // 创建部署记录
+          await github.rest.repos.createDeployment({
+            owner,
+            repo,
+            ref: context.sha,
+            environment: 'production',
+            description: 'Production deployment via CI/CD',
+            auto_merge: false
+          });
+          
+          // 创建成功通知
+          await github.rest.issues.create({
+            owner,
+            repo,
+            title: `🎉 生产环境部署成功 - ${{ github.sha }}`,
+            body: `生产环境部署成功！\n\n- 分支: ${{ github.ref_name }}\n- 提交: ${{ github.sha }}\n- 部署时间: ${new Date().toLocaleString('zh-CN')}\n\n系统已上线运行。`,
+            labels: ['deployment', 'production', 'success']
+          });

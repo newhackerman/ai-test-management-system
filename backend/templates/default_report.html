@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }}</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Microsoft YaHei', 'Arial', sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f5f5f5;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 2rem;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .header .subtitle {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+        
+        .branding {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-top: 1rem;
+        }
+        
+        .branding img {
+            height: 40px;
+            margin-right: 1rem;
+        }
+        
+        .meta-info {
+            background: #f8f9fa;
+            padding: 1rem 2rem;
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        .meta-info .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+        
+        .meta-info .info-item {
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        .meta-info .info-label {
+            font-weight: bold;
+            color: #6c757d;
+        }
+        
+        .content {
+            padding: 2rem;
+        }
+        
+        .summary {
+            margin-bottom: 3rem;
+        }
+        
+        .summary h2 {
+            color: #495057;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid #007bff;
+        }
+        
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        
+        .summary-card {
+            background: #f8f9fa;
+            padding: 1.5rem;
+            border-radius: 8px;
+            border-left: 4px solid #007bff;
+            text-align: center;
+        }
+        
+        .summary-card.success {
+            border-left-color: #28a745;
+        }
+        
+        .summary-card.warning {
+            border-left-color: #ffc107;
+        }
+        
+        .summary-card.danger {
+            border-left-color: #dc3545;
+        }
+        
+        .summary-card .value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #495057;
+        }
+        
+        .summary-card .label {
+            color: #6c757d;
+            margin-top: 0.5rem;
+        }
+        
+        .section {
+            margin-bottom: 3rem;
+        }
+        
+        .section h3 {
+            color: #495057;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        .table-responsive {
+            overflow-x: auto;
+            margin-top: 1rem;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+        }
+        
+        table th,
+        table td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        table th {
+            background: #f8f9fa;
+            font-weight: bold;
+            color: #495057;
+        }
+        
+        table tr:hover {
+            background: #f8f9fa;
+        }
+        
+        .status-badge {
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.875rem;
+            font-weight: bold;
+        }
+        
+        .status-passed {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .status-failed {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .status-skipped {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .chart-container {
+            margin: 2rem 0;
+            text-align: center;
+        }
+        
+        .chart-container img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .footer {
+            background: #f8f9fa;
+            padding: 2rem;
+            text-align: center;
+            border-top: 1px solid #dee2e6;
+            color: #6c757d;
+        }
+        
+        .progress-bar {
+            background: #e9ecef;
+            border-radius: 4px;
+            overflow: hidden;
+            height: 20px;
+            margin: 0.5rem 0;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #28a745, #20c997);
+            transition: width 0.3s ease;
+        }
+        
+        .progress-text {
+            font-size: 0.875rem;
+            color: #6c757d;
+            margin-top: 0.25rem;
+        }
+        
+        @media print {
+            body {
+                background: white;
+            }
+            
+            .container {
+                box-shadow: none;
+            }
+            
+            .page-break {
+                page-break-before: always;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .content {
+                padding: 1rem;
+            }
+            
+            .summary-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .meta-info .info-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 报告头部 -->
+        <div class="header">
+            <h1>{{ title }}</h1>
+            <div class="subtitle">{{ config.report_type.value|title }} Report</div>
+            
+            {% if branding %}
+            <div class="branding">
+                {% if branding.logo_url %}
+                <img src="{{ branding.logo_url }}" alt="Logo">
+                {% endif %}
+                <span>{{ branding.company_name }}</span>
+            </div>
+            {% endif %}
+        </div>
+        
+        <!-- 元信息 -->
+        <div class="meta-info">
+            <div class="info-grid">
+                <div class="info-item">
+                    <span class="info-label">报告ID:</span>
+                    <span>{{ report_id }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">生成时间:</span>
+                    <span>{{ generation_time|datetime_format }}</span>
+                </div>
+                {% if metadata %}
+                    {% for key, value in metadata.items() %}
+                    <div class="info-item">
+                        <span class="info-label">{{ key }}:</span>
+                        <span>{{ value }}</span>
+                    </div>
+                    {% endfor %}
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- 报告内容 -->
+        <div class="content">
+            <!-- 摘要部分 -->
+            {% if summary %}
+            <div class="summary">
+                <h2>📊 执行摘要</h2>
+                <div class="summary-grid">
+                    {% for key, value in summary.items() %}
+                    <div class="summary-card {% if 'pass' in key.lower() or 'success' in key.lower() %}success{% elif 'fail' in key.lower() or 'error' in key.lower() %}danger{% elif 'skip' in key.lower() or 'warn' in key.lower() %}warning{% endif %}">
+                        <div class="value">
+                            {% if 'rate' in key.lower() or 'percent' in key.lower() %}
+                                {{ value|percentage }}
+                            {% else %}
+                                {{ value }}
+                            {% endif %}
+                        </div>
+                        <div class="label">{{ key }}</div>
+                    </div>
+                    {% endfor %}
+                </div>
+                
+                <!-- 通过率进度条 -->
+                {% if summary.get('通过率') or summary.get('pass_rate') %}
+                {% set pass_rate = summary.get('通过率', summary.get('pass_rate', 0)) %}
+                <div style="margin-top: 2rem;">
+                    <h4>整体通过率</h4>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: {{ pass_rate }}%"></div>
+                    </div>
+                    <div class="progress-text">{{ pass_rate }}% 通过</div>
+                </div>
+                {% endif %}
+            </div>
+            {% endif %}
+            
+            <!-- 图表部分 -->
+            {% if chart_paths %}
+            <div class="section">
+                <h3>📈 数据可视化</h3>
+                {% for chart_name, chart_path in chart_paths.items() %}
+                <div class="chart-container">
+                    <img src="{{ chart_path }}" alt="{{ chart_name }}">
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+            
+            <!-- 详细章节 -->
+            {% if sections %}
+            {% for section in sections %}
+            <div class="section {% if loop.index > 1 %}page-break{% endif %}">
+                <h3>{{ section.title }}</h3>
+                
+                {% if section.description %}
+                <p>{{ section.description }}</p>
+                {% endif %}
+                
+                {% if section.data %}
+                    {% if section.data is iterable and section.data is not string %}
+                        {% if section.data[0] is mapping %}
+                        <!-- 表格数据 -->
+                        <div class="table-responsive">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        {% for key in section.data[0].keys() %}
+                                        <th>{{ key }}</th>
+                                        {% endfor %}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for item in section.data %}
+                                    <tr>
+                                        {% for key, value in item.items() %}
+                                        <td>
+                                            {% if key.lower() in ['status', 'result', '状态', '结果'] %}
+                                                {% if 'pass' in value|string|lower or 'success' in value|string|lower or '通过' in value|string %}
+                                                <span class="status-badge status-passed">{{ value }}</span>
+                                                {% elif 'fail' in value|string|lower or 'error' in value|string|lower or '失败' in value|string %}
+                                                <span class="status-badge status-failed">{{ value }}</span>
+                                                {% else %}
+                                                <span class="status-badge status-skipped">{{ value }}</span>
+                                                {% endif %}
+                                            {% elif 'rate' in key.lower() or 'percent' in key.lower() %}
+                                                {{ value|percentage }}
+                                            {% else %}
+                                                {{ value }}
+                                            {% endif %}
+                                        </td>
+                                        {% endfor %}
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% else %}
+                        <!-- 列表数据 -->
+                        <ul>
+                            {% for item in section.data %}
+                            <li>{{ item }}</li>
+                            {% endfor %}
+                        </ul>
+                        {% endif %}
+                    {% else %}
+                    <!-- 文本数据 -->
+                    <p>{{ section.data }}</p>
+                    {% endif %}
+                {% endif %}
+                
+                {% if section.charts %}
+                {% for chart in section.charts %}
+                <div class="chart-container">
+                    <h4>{{ chart.title }}</h4>
+                    <!-- 这里可以添加图表渲染逻辑 -->
+                </div>
+                {% endfor %}
+                {% endif %}
+            </div>
+            {% endfor %}
+            {% endif %}
+        </div>
+        
+        <!-- 报告尾部 -->
+        <div class="footer">
+            <p>本报告由 AI 自动化测试管理系统生成</p>
+            <p>生成时间: {{ generation_time|datetime_format }}</p>
+            {% if branding and branding.company_name %}
+            <p>© {{ generation_time.year }} {{ branding.company_name }}. All rights reserved.</p>
+            {% endif %}
+        </div>
+    </div>
+</body>
+</html>

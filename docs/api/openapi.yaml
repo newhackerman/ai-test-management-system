@@ -1,0 +1,968 @@
+openapi: 3.0.3
+info:
+  title: AI Test Management System API
+  description: |
+    Comprehensive API for AI-powered test management system with project management capabilities.
+    
+    ## Features
+    - Project lifecycle management
+    - Task and milestone tracking
+    - Team collaboration
+    - Progress monitoring
+    - Risk management
+    - Statistical analysis
+    
+    ## Authentication
+    This API uses JWT Bearer token authentication. Include the token in the Authorization header:
+    ```
+    Authorization: Bearer <your-jwt-token>
+    ```
+    
+    ## Rate Limiting
+    API requests are rate limited to 1000 requests per hour per user.
+    
+    ## Error Handling
+    The API uses standard HTTP status codes and returns error details in JSON format.
+  version: 1.0.0
+  contact:
+    name: AI Test Management Team
+    email: support@aitestmanagement.com
+    url: https://aitestmanagement.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: https://api.aitestmanagement.com/api/v1
+    description: Production server
+  - url: https://staging-api.aitestmanagement.com/api/v1
+    description: Staging server
+  - url: http://localhost:8000/api/v1
+    description: Development server
+
+security:
+  - BearerAuth: []
+
+paths:
+  # Authentication endpoints
+  /auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: User login
+      description: Authenticate user and return JWT tokens
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - username
+                - password
+              properties:
+                username:
+                  type: string
+                  example: admin@example.com
+                password:
+                  type: string
+                  format: password
+                  example: password123
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token:
+                    type: string
+                  refresh_token:
+                    type: string
+                  token_type:
+                    type: string
+                    example: bearer
+                  expires_in:
+                    type: integer
+                    example: 1800
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /auth/refresh:
+    post:
+      tags:
+        - Authentication
+      summary: Refresh access token
+      description: Get new access token using refresh token
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - refresh_token
+              properties:
+                refresh_token:
+                  type: string
+      responses:
+        '200':
+          description: Token refreshed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token:
+                    type: string
+                  token_type:
+                    type: string
+                    example: bearer
+                  expires_in:
+                    type: integer
+                    example: 1800
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # Project endpoints
+  /projects:
+    get:
+      tags:
+        - Projects
+      summary: List projects
+      description: Get paginated list of projects with filtering and sorting
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: size
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [PLANNING, IN_PROGRESS, ON_HOLD, COMPLETED, CANCELLED, ARCHIVED]
+        - name: project_type
+          in: query
+          schema:
+            type: string
+            enum: [FUNCTIONAL, PERFORMANCE, SECURITY, AUTOMATION, INTEGRATION]
+        - name: priority
+          in: query
+          schema:
+            type: string
+            enum: [LOW, MEDIUM, HIGH, URGENT]
+        - name: search
+          in: query
+          schema:
+            type: string
+          description: Search in project name and description
+        - name: sort_by
+          in: query
+          schema:
+            type: string
+            enum: [created_at, updated_at, project_name, priority, status]
+            default: created_at
+        - name: sort_order
+          in: query
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+      responses:
+        '200':
+          description: Projects retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Project'
+                  total:
+                    type: integer
+                  page:
+                    type: integer
+                  size:
+                    type: integer
+                  pages:
+                    type: integer
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      tags:
+        - Projects
+      summary: Create project
+      description: Create a new project
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateProjectRequest'
+      responses:
+        '201':
+          description: Project created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /projects/{project_id}:
+    get:
+      tags:
+        - Projects
+      summary: Get project
+      description: Get project details by ID
+      parameters:
+        - name: project_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Project retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    put:
+      tags:
+        - Projects
+      summary: Update project
+      description: Update project details
+      parameters:
+        - name: project_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProjectRequest'
+      responses:
+        '200':
+          description: Project updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+    delete:
+      tags:
+        - Projects
+      summary: Delete project
+      description: Soft delete a project
+      parameters:
+        - name: project_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Project deleted successfully
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /projects/{project_id}/progress:
+    get:
+      tags:
+        - Projects
+      summary: Get project progress
+      description: Get detailed project progress information
+      parameters:
+        - name: project_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Project progress retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectProgress'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # Task endpoints
+  /projects/{project_id}/tasks:
+    get:
+      tags:
+        - Tasks
+      summary: List project tasks
+      description: Get paginated list of tasks for a project
+      parameters:
+        - name: project_id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: size
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [TODO, ASSIGNED, IN_PROGRESS, ON_HOLD, BLOCKED, PENDING_REVIEW, COMPLETED, CANCELLED]
+        - name: assignee_id
+          in: query
+          schema:
+            type: integer
+        - name: task_type
+          in: query
+          schema:
+            type: string
+            enum: [REQUIREMENT_ANALYSIS, TEST_DESIGN, TEST_EXECUTION, AUTOMATION_DEVELOPMENT, PERFORMANCE_TEST, SECURITY_TEST, ENVIRONMENT_SETUP, DOCUMENTATION]
+      responses:
+        '200':
+          description: Tasks retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Task'
+                  total:
+                    type: integer
+                  page:
+                    type: integer
+                  size:
+                    type: integer
+                  pages:
+                    type: integer
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      tags:
+        - Tasks
+      summary: Create task
+      description: Create a new task in the project
+      parameters:
+        - name: project_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTaskRequest'
+      responses:
+        '201':
+          description: Task created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Project:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        project_code:
+          type: string
+          example: "PROJ-20241221-001"
+        project_name:
+          type: string
+          example: "E-commerce Platform Testing"
+        description:
+          type: string
+          example: "Comprehensive testing of the new e-commerce platform"
+        project_type:
+          type: string
+          enum: [FUNCTIONAL, PERFORMANCE, SECURITY, AUTOMATION, INTEGRATION]
+          example: FUNCTIONAL
+        priority:
+          type: string
+          enum: [LOW, MEDIUM, HIGH, URGENT]
+          example: HIGH
+        status:
+          type: string
+          enum: [PLANNING, IN_PROGRESS, ON_HOLD, COMPLETED, CANCELLED, ARCHIVED]
+          example: IN_PROGRESS
+        health_score:
+          type: integer
+          minimum: 0
+          maximum: 100
+          example: 85
+        risk_level:
+          type: string
+          enum: [LOW, MEDIUM, HIGH, CRITICAL]
+          example: MEDIUM
+        planned_start_date:
+          type: string
+          format: date
+          example: "2024-01-15"
+        planned_end_date:
+          type: string
+          format: date
+          example: "2024-03-15"
+        actual_start_date:
+          type: string
+          format: date
+          nullable: true
+          example: "2024-01-16"
+        actual_end_date:
+          type: string
+          format: date
+          nullable: true
+        project_manager_id:
+          type: integer
+          example: 1
+        test_manager_id:
+          type: integer
+          nullable: true
+          example: 2
+        budget:
+          type: number
+          format: decimal
+          nullable: true
+          example: 50000.00
+        actual_cost:
+          type: number
+          format: decimal
+          example: 25000.00
+        progress_percentage:
+          type: number
+          format: decimal
+          minimum: 0
+          maximum: 100
+          example: 65.50
+        task_count:
+          type: integer
+          example: 25
+        completed_task_count:
+          type: integer
+          example: 16
+        test_case_count:
+          type: integer
+          example: 150
+        passed_test_count:
+          type: integer
+          example: 120
+        defect_count:
+          type: integer
+          example: 8
+        tags:
+          type: array
+          items:
+            type: string
+          example: ["web", "mobile", "api"]
+        created_at:
+          type: string
+          format: date-time
+          example: "2024-01-15T10:30:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          example: "2024-01-20T14:45:00Z"
+
+    CreateProjectRequest:
+      type: object
+      required:
+        - project_name
+        - project_type
+        - project_manager_id
+        - planned_start_date
+        - planned_end_date
+      properties:
+        project_name:
+          type: string
+          minLength: 1
+          maxLength: 200
+          example: "E-commerce Platform Testing"
+        description:
+          type: string
+          maxLength: 1000
+          example: "Comprehensive testing of the new e-commerce platform"
+        project_type:
+          type: string
+          enum: [FUNCTIONAL, PERFORMANCE, SECURITY, AUTOMATION, INTEGRATION]
+          example: FUNCTIONAL
+        priority:
+          type: string
+          enum: [LOW, MEDIUM, HIGH, URGENT]
+          default: MEDIUM
+          example: HIGH
+        project_manager_id:
+          type: integer
+          example: 1
+        test_manager_id:
+          type: integer
+          nullable: true
+          example: 2
+        planned_start_date:
+          type: string
+          format: date
+          example: "2024-01-15"
+        planned_end_date:
+          type: string
+          format: date
+          example: "2024-03-15"
+        budget:
+          type: number
+          format: decimal
+          nullable: true
+          minimum: 0
+          example: 50000.00
+        tags:
+          type: array
+          items:
+            type: string
+          example: ["web", "mobile", "api"]
+        template_id:
+          type: integer
+          nullable: true
+          example: 1
+
+    UpdateProjectRequest:
+      type: object
+      properties:
+        project_name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        description:
+          type: string
+          maxLength: 1000
+        priority:
+          type: string
+          enum: [LOW, MEDIUM, HIGH, URGENT]
+        test_manager_id:
+          type: integer
+          nullable: true
+        planned_start_date:
+          type: string
+          format: date
+        planned_end_date:
+          type: string
+          format: date
+        budget:
+          type: number
+          format: decimal
+          nullable: true
+          minimum: 0
+        tags:
+          type: array
+          items:
+            type: string
+
+    Task:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        project_id:
+          type: integer
+          example: 1
+        task_code:
+          type: string
+          example: "TASK-001"
+        task_name:
+          type: string
+          example: "Design login test cases"
+        description:
+          type: string
+          example: "Create comprehensive test cases for user login functionality"
+        task_type:
+          type: string
+          enum: [REQUIREMENT_ANALYSIS, TEST_DESIGN, TEST_EXECUTION, AUTOMATION_DEVELOPMENT, PERFORMANCE_TEST, SECURITY_TEST, ENVIRONMENT_SETUP, DOCUMENTATION]
+          example: TEST_DESIGN
+        priority:
+          type: string
+          enum: [LOW, MEDIUM, HIGH, URGENT]
+          example: HIGH
+        status:
+          type: string
+          enum: [TODO, ASSIGNED, IN_PROGRESS, ON_HOLD, BLOCKED, PENDING_REVIEW, COMPLETED, CANCELLED]
+          example: IN_PROGRESS
+        assignee_id:
+          type: integer
+          nullable: true
+          example: 2
+        reporter_id:
+          type: integer
+          nullable: true
+          example: 1
+        reviewer_id:
+          type: integer
+          nullable: true
+          example: 3
+        planned_start_date:
+          type: string
+          format: date
+          nullable: true
+          example: "2024-01-16"
+        planned_end_date:
+          type: string
+          format: date
+          nullable: true
+          example: "2024-01-18"
+        actual_start_date:
+          type: string
+          format: date
+          nullable: true
+          example: "2024-01-16"
+        actual_end_date:
+          type: string
+          format: date
+          nullable: true
+        estimated_hours:
+          type: number
+          format: decimal
+          nullable: true
+          example: 8.0
+        actual_hours:
+          type: number
+          format: decimal
+          example: 6.5
+        remaining_hours:
+          type: number
+          format: decimal
+          nullable: true
+          example: 1.5
+        acceptance_criteria:
+          type: string
+          nullable: true
+          example: "All login scenarios covered with positive and negative test cases"
+        created_at:
+          type: string
+          format: date-time
+          example: "2024-01-15T10:30:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          example: "2024-01-16T14:45:00Z"
+
+    CreateTaskRequest:
+      type: object
+      required:
+        - task_name
+        - task_type
+      properties:
+        task_name:
+          type: string
+          minLength: 1
+          maxLength: 200
+          example: "Design login test cases"
+        description:
+          type: string
+          maxLength: 1000
+          example: "Create comprehensive test cases for user login functionality"
+        task_type:
+          type: string
+          enum: [REQUIREMENT_ANALYSIS, TEST_DESIGN, TEST_EXECUTION, AUTOMATION_DEVELOPMENT, PERFORMANCE_TEST, SECURITY_TEST, ENVIRONMENT_SETUP, DOCUMENTATION]
+          example: TEST_DESIGN
+        priority:
+          type: string
+          enum: [LOW, MEDIUM, HIGH, URGENT]
+          default: MEDIUM
+          example: HIGH
+        assignee_id:
+          type: integer
+          nullable: true
+          example: 2
+        planned_start_date:
+          type: string
+          format: date
+          nullable: true
+          example: "2024-01-16"
+        planned_end_date:
+          type: string
+          format: date
+          nullable: true
+          example: "2024-01-18"
+        estimated_hours:
+          type: number
+          format: decimal
+          nullable: true
+          minimum: 0
+          example: 8.0
+        acceptance_criteria:
+          type: string
+          nullable: true
+          example: "All login scenarios covered with positive and negative test cases"
+        dependencies:
+          type: array
+          items:
+            type: integer
+          example: [1, 2]
+
+    ProjectProgress:
+      type: object
+      properties:
+        project_id:
+          type: integer
+          example: 1
+        overall_progress:
+          type: number
+          format: decimal
+          minimum: 0
+          maximum: 100
+          example: 65.5
+        time_progress:
+          type: object
+          properties:
+            progress_rate:
+              type: number
+              format: decimal
+              example: 70.0
+            days_elapsed:
+              type: integer
+              example: 35
+            total_days:
+              type: integer
+              example: 50
+            remaining_days:
+              type: integer
+              example: 15
+            deviation:
+              type: number
+              format: decimal
+              example: -0.05
+        task_progress:
+          type: object
+          properties:
+            progress_rate:
+              type: number
+              format: decimal
+              example: 64.0
+            total_tasks:
+              type: integer
+              example: 25
+            completed_tasks:
+              type: integer
+              example: 16
+            in_progress_tasks:
+              type: integer
+              example: 5
+            blocked_tasks:
+              type: integer
+              example: 1
+        quality_progress:
+          type: object
+          properties:
+            progress_rate:
+              type: number
+              format: decimal
+              example: 80.0
+            test_coverage:
+              type: number
+              format: decimal
+              example: 85.5
+            pass_rate:
+              type: number
+              format: decimal
+              example: 93.3
+            defect_density:
+              type: number
+              format: decimal
+              example: 0.05
+        milestone_progress:
+          type: object
+          properties:
+            progress_rate:
+              type: number
+              format: decimal
+              example: 50.0
+            total_milestones:
+              type: integer
+              example: 4
+            completed_milestones:
+              type: integer
+              example: 2
+            overdue_milestones:
+              type: integer
+              example: 0
+        calculated_at:
+          type: string
+          format: date-time
+          example: "2024-01-20T14:45:00Z"
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          example: "Validation failed"
+        message:
+          type: string
+          example: "The request data is invalid"
+        details:
+          type: object
+          nullable: true
+        timestamp:
+          type: string
+          format: date-time
+          example: "2024-01-20T14:45:00Z"
+
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "Bad Request"
+            message: "The request is malformed"
+            timestamp: "2024-01-20T14:45:00Z"
+
+    Unauthorized:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "Unauthorized"
+            message: "Authentication required"
+            timestamp: "2024-01-20T14:45:00Z"
+
+    Forbidden:
+      description: Forbidden
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "Forbidden"
+            message: "Insufficient permissions"
+            timestamp: "2024-01-20T14:45:00Z"
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "Not Found"
+            message: "The requested resource was not found"
+            timestamp: "2024-01-20T14:45:00Z"
+
+    Conflict:
+      description: Conflict
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "Conflict"
+            message: "The request conflicts with the current state"
+            timestamp: "2024-01-20T14:45:00Z"
+
+    ValidationError:
+      description: Validation error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "Validation Error"
+            message: "Input validation failed"
+            details:
+              field_errors:
+                project_name: ["This field is required"]
+                planned_end_date: ["End date must be after start date"]
+            timestamp: "2024-01-20T14:45:00Z"
+
+tags:
+  - name: Authentication
+    description: User authentication and authorization
+  - name: Projects
+    description: Project management operations
+  - name: Tasks
+    description: Task management operations
+  - name: Teams
+    description: Team and member management
+  - name: Statistics
+    description: Analytics and reporting

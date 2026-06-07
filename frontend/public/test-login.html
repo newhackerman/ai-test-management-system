@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>前端登录测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 4px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        .test-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>前端登录测试工具</h2>
+        
+        <div class="test-buttons">
+            <button onclick="testDirectAPI()">测试直接API调用</button>
+            <button onclick="testCORS()">测试CORS</button>
+        </div>
+        
+        <form id="loginForm">
+            <div class="form-group">
+                <label for="username">用户名:</label>
+                <input type="text" id="username" value="admin" required>
+            </div>
+            <div class="form-group">
+                <label for="password">密码:</label>
+                <input type="password" id="password" value="admin123" required>
+            </div>
+            <button type="submit" id="loginBtn">登录测试</button>
+        </form>
+        
+        <div id="result"></div>
+    </div>
+
+    <script>
+        const resultDiv = document.getElementById('result');
+        const loginBtn = document.getElementById('loginBtn');
+        
+        function showResult(message, type = 'info') {
+            resultDiv.className = `result ${type}`;
+            resultDiv.textContent = message;
+        }
+        
+        function showError(error) {
+            console.error('Error:', error);
+            showResult(`错误: ${error.message || error}`, 'error');
+        }
+        
+        function showSuccess(data) {
+            console.log('Success:', data);
+            showResult(`成功: ${JSON.stringify(data, null, 2)}`, 'success');
+        }
+        
+        // 测试直接API调用
+        async function testDirectAPI() {
+            showResult('正在测试直接API调用...', 'info');
+            
+            try {
+                const response = await fetch('http://localhost:8000/api/v1/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        username: 'admin',
+                        password: 'admin123',
+                        remember_me: false
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showSuccess({
+                        message: '直接API调用成功',
+                        status: response.status,
+                        data: data
+                    });
+                } else {
+                    showError({
+                        message: '直接API调用失败',
+                        status: response.status,
+                        error: data
+                    });
+                }
+            } catch (error) {
+                showError({
+                    message: '直接API调用网络错误',
+                    error: error.message
+                });
+            }
+        }
+        
+        // 测试CORS
+        async function testCORS() {
+            showResult('正在测试CORS...', 'info');
+            
+            try {
+                // 先发送OPTIONS请求测试CORS
+                const optionsResponse = await fetch('http://localhost:8000/api/v1/auth/login', {
+                    method: 'OPTIONS',
+                    headers: {
+                        'Origin': 'http://localhost:3000',
+                        'Access-Control-Request-Method': 'POST',
+                        'Access-Control-Request-Headers': 'Content-Type'
+                    }
+                });
+                
+                showSuccess({
+                    message: 'CORS预检请求成功',
+                    status: optionsResponse.status,
+                    headers: Object.fromEntries(optionsResponse.headers.entries())
+                });
+            } catch (error) {
+                showError({
+                    message: 'CORS预检请求失败',
+                    error: error.message
+                });
+            }
+        }
+        
+        // 表单提交测试
+        document.getElementById('loginForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            loginBtn.disabled = true;
+            loginBtn.textContent = '登录中...';
+            
+            showResult('正在进行登录测试...', 'info');
+            
+            try {
+                // 模拟前端的登录流程
+                const response = await fetch('http://localhost:8000/api/v1/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Origin': 'http://localhost:3000'
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        username: username,
+                        password: password,
+                        remember_me: false
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    // 测试获取用户资料
+                    try {
+                        const profileResponse = await fetch('http://localhost:8000/api/v1/auth/profile', {
+                            method: 'GET',
+                            headers: {
+                                'Authorization': `Bearer ${data.access_token}`,
+                                'Content-Type': 'application/json',
+                                'Origin': 'http://localhost:3000'
+                            },
+                            credentials: 'include'
+                        });
+                        
+                        const profileData = await profileResponse.json();
+                        
+                        showSuccess({
+                            message: '完整登录流程测试成功',
+                            login: {
+                                status: response.status,
+                                user: {
+                                    id: data.user_id,
+                                    username: data.username,
+                                    email: data.email,
+                                    role: data.role
+                                },
+                                token: data.access_token.substring(0, 50) + '...'
+                            },
+                            profile: {
+                                status: profileResponse.status,
+                                data: profileData
+                            }
+                        });
+                    } catch (profileError) {
+                        showResult(`登录成功，但获取用户资料失败: ${profileError.message}`, 'error');
+                    }
+                } else {
+                    showError({
+                        message: '登录失败',
+                        status: response.status,
+                        error: data
+                    });
+                }
+            } catch (error) {
+                showError({
+                    message: '登录网络错误',
+                    error: error.message
+                });
+            } finally {
+                loginBtn.disabled = false;
+                loginBtn.textContent = '登录测试';
+            }
+        });
+        
+        // 页面加载时显示环境信息
+        window.addEventListener('load', function() {
+            showResult(`测试环境信息:
+当前页面: ${window.location.href}
+用户代理: ${navigator.userAgent}
+时间: ${new Date().toLocaleString()}
+
+请点击上方按钮进行各种测试，或填写表单进行完整登录流程测试。`, 'info');
+        });
+    </script>
+</body>
+</html>

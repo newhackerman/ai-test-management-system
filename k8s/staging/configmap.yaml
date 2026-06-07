@@ -1,0 +1,74 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ai-testing-system-config
+  namespace: staging
+  labels:
+    app: ai-testing-system
+    environment: staging
+data:
+  # 应用配置
+  LOG_LEVEL: "INFO"
+  DEBUG: "false"
+  TESTING: "false"
+  
+  # 数据库配置
+  DB_POOL_SIZE: "10"
+  DB_MAX_OVERFLOW: "20"
+  DB_POOL_TIMEOUT: "30"
+  DB_POOL_RECYCLE: "3600"
+  
+  # Redis配置
+  REDIS_MAX_CONNECTIONS: "100"
+  REDIS_RETRY_ON_TIMEOUT: "true"
+  REDIS_SOCKET_KEEPALIVE: "true"
+  
+  # 会议模块配置
+  MEETING_MAX_PARTICIPANTS: "100"
+  MEETING_DEFAULT_DURATION: "60"
+  MEETING_RECORDING_ENABLED: "true"
+  MEETING_AI_ANALYSIS_ENABLED: "true"
+  
+  # WebRTC配置
+  WEBRTC_STUN_SERVERS: "stun:stun.l.google.com:19302"
+  WEBRTC_TURN_SERVERS: "turn:staging-turn.example.com:3478"
+  WEBRTC_MAX_BITRATE: "2000"
+  WEBRTC_MIN_BITRATE: "150"
+  
+  # AI服务配置
+  AI_SERVICE_TIMEOUT: "30"
+  AI_SERVICE_MAX_RETRIES: "3"
+  AI_SERVICE_MOCK: "false"
+  
+  # 文件存储配置
+  FILE_STORAGE_TYPE: "s3"
+  FILE_STORAGE_BUCKET: "ai-testing-system-staging"
+  FILE_STORAGE_REGION: "us-west-2"
+  FILE_MAX_SIZE: "100MB"
+  
+  # 通知配置
+  NOTIFICATION_ENABLED: "true"
+  NOTIFICATION_CHANNELS: "email,slack"
+  
+  # 安全配置
+  CORS_ORIGINS: "https://staging.ai-testing-system.com"
+  ALLOWED_HOSTS: "staging.ai-testing-system.com,*.staging.ai-testing-system.com"
+  SECURE_COOKIES: "true"
+  
+  # 监控配置
+  METRICS_ENABLED: "true"
+  TRACING_ENABLED: "true"
+  HEALTH_CHECK_INTERVAL: "30"
+  
+  # 缓存配置
+  CACHE_TTL: "3600"
+  CACHE_MAX_SIZE: "1000"
+  
+  # 任务队列配置
+  CELERY_BROKER_URL: "redis://redis:6379/0"
+  CELERY_RESULT_BACKEND: "redis://redis:6379/0"
+  CELERY_WORKER_CONCURRENCY: "4"
+  
+  # 测试配置
+  TEST_DATABASE_URL: "sqlite:///:memory:"
+  TEST_REDIS_URL: "redis://redis:6379/15"

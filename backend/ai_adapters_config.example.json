@@ -1,0 +1,246 @@
+{
+  "ai_adapters": {
+    "manager_config": {
+      "load_balance_strategy": "round_robin",
+      "failover_strategy": "retry_then_failover",
+      "health_check_interval": 60,
+      "max_retries": 3,
+      "retry_delay": 1.0,
+      "performance_window": 300,
+      "unhealthy_threshold": 3,
+      "recovery_threshold": 2
+    },
+    "adapters": {
+      "openai_primary": {
+        "provider": "openai",
+        "api_key": "${OPENAI_API_KEY}",
+        "api_endpoint": "https://api.openai.com/v1",
+        "default_model": "gpt-3.5-turbo",
+        "max_tokens": 4000,
+        "temperature": 0.7,
+        "max_retries": 3,
+        "timeout": 30.0,
+        "max_concurrent_requests": 10,
+        "rate_limit_per_minute": 60,
+        "cost_per_token": 0.002,
+        "daily_token_limit": 100000,
+        "enabled": true,
+        "weight": 2.0,
+        "custom_headers": {
+          "User-Agent": "AI-Assistant/1.0"
+        }
+      },
+      "openai_gpt4": {
+        "provider": "openai",
+        "api_key": "${OPENAI_API_KEY}",
+        "default_model": "gpt-4",
+        "max_tokens": 8000,
+        "temperature": 0.7,
+        "timeout": 60.0,
+        "max_concurrent_requests": 5,
+        "rate_limit_per_minute": 20,
+        "cost_per_token": 0.03,
+        "daily_token_limit": 50000,
+        "enabled": true,
+        "weight": 1.0
+      },
+      "anthropic_claude": {
+        "provider": "anthropic",
+        "api_key": "${ANTHROPIC_API_KEY}",
+        "api_endpoint": "https://api.anthropic.com",
+        "api_version": "2023-06-01",
+        "default_model": "claude-3-sonnet-20240229",
+        "max_tokens": 4000,
+        "temperature": 0.7,
+        "timeout": 45.0,
+        "max_concurrent_requests": 8,
+        "rate_limit_per_minute": 50,
+        "cost_per_token": 0.015,
+        "daily_token_limit": 80000,
+        "enabled": true,
+        "weight": 1.5
+      },
+      "baidu_wenxin": {
+        "provider": "baidu_wenxin",
+        "api_key": "${BAIDU_API_KEY}",
+        "api_endpoint": "https://aip.baidubce.com",
+        "default_model": "ERNIE-Bot-4",
+        "max_tokens": 2000,
+        "temperature": 0.7,
+        "timeout": 30.0,
+        "max_concurrent_requests": 15,
+        "rate_limit_per_minute": 100,
+        "cost_per_token": 0.008,
+        "daily_token_limit": 200000,
+        "enabled": true,
+        "weight": 1.0,
+        "custom_params": {
+          "secret_key": "${BAIDU_SECRET_KEY}"
+        }
+      },
+      "aliyun_tongyi": {
+        "provider": "aliyun_tongyi",
+        "api_key": "${ALIYUN_API_KEY}",
+        "api_endpoint": "https://dashscope.aliyuncs.com",
+        "default_model": "qwen-max",
+        "max_tokens": 2000,
+        "temperature": 0.7,
+        "timeout": 30.0,
+        "max_concurrent_requests": 12,
+        "rate_limit_per_minute": 80,
+        "cost_per_token": 0.01,
+        "daily_token_limit": 150000,
+        "enabled": true,
+        "weight": 1.0
+      },
+      "google_gemini": {
+        "provider": "google_gemini",
+        "api_key": "${GOOGLE_API_KEY}",
+        "api_endpoint": "https://generativelanguage.googleapis.com",
+        "api_version": "v1",
+        "default_model": "gemini-pro",
+        "max_tokens": 4000,
+        "temperature": 0.7,
+        "timeout": 40.0,
+        "max_concurrent_requests": 10,
+        "rate_limit_per_minute": 60,
+        "cost_per_token": 0.02,
+        "daily_token_limit": 100000,
+        "enabled": true,
+        "weight": 1.2
+      },
+      "zhipu_chatglm": {
+        "provider": "zhipu_chatglm",
+        "api_key": "${ZHIPU_API_KEY}",
+        "api_endpoint": "https://open.bigmodel.cn",
+        "default_model": "chatglm_turbo",
+        "max_tokens": 2000,
+        "temperature": 0.7,
+        "timeout": 25.0,
+        "max_concurrent_requests": 20,
+        "rate_limit_per_minute": 120,
+        "cost_per_token": 0.005,
+        "daily_token_limit": 300000,
+        "enabled": true,
+        "weight": 0.8
+      },
+      "xunfei_xinghuo": {
+        "provider": "xunfei_xinghuo",
+        "api_key": "${XUNFEI_API_KEY}",
+        "api_endpoint": "https://spark-api.xf-yun.com",
+        "default_model": "spark-3.5",
+        "max_tokens": 2000,
+        "temperature": 0.5,
+        "timeout": 30.0,
+        "max_concurrent_requests": 15,
+        "rate_limit_per_minute": 100,
+        "cost_per_token": 0.006,
+        "daily_token_limit": 250000,
+        "enabled": false,
+        "weight": 0.8,
+        "custom_params": {
+          "app_id": "${XUNFEI_APP_ID}",
+          "api_secret": "${XUNFEI_API_SECRET}"
+        }
+      },
+      "custom_local": {
+        "provider": "custom",
+        "api_key": "local-key",
+        "api_endpoint": "http://localhost:8080/api",
+        "default_model": "local-llm",
+        "max_tokens": 2000,
+        "temperature": 0.7,
+        "timeout": 60.0,
+        "max_concurrent_requests": 5,
+        "rate_limit_per_minute": 30,
+        "cost_per_token": 0.0,
+        "enabled": false,
+        "weight": 0.5,
+        "custom_params": {
+          "request_format": "openai",
+          "response_format": "openai",
+          "stream_format": "openai",
+          "auth_header": "Authorization",
+          "auth_format": "Bearer {}",
+          "chat_endpoint": "/chat/completions",
+          "stream_endpoint": "/chat/completions",
+          "models_endpoint": "/models",
+          "supported_models": ["local-llm", "local-llm-large"]
+        }
+      }
+    },
+    "routing_rules": {
+      "task_routing": {
+        "simple_query": ["openai_primary", "baidu_wenxin", "aliyun_tongyi"],
+        "complex_analysis": ["openai_gpt4", "anthropic_claude", "google_gemini"],
+        "chinese_content": ["baidu_wenxin", "aliyun_tongyi", "zhipu_chatglm"],
+        "code_generation": ["openai_gpt4", "anthropic_claude", "openai_primary"],
+        "creative_writing": ["anthropic_claude", "openai_gpt4", "baidu_wenxin"],
+        "translation": ["google_gemini", "baidu_wenxin", "aliyun_tongyi"]
+      },
+      "cost_optimization": {
+        "low_cost": ["zhipu_chatglm", "baidu_wenxin", "aliyun_tongyi"],
+        "balanced": ["openai_primary", "anthropic_claude", "google_gemini"],
+        "high_quality": ["openai_gpt4", "anthropic_claude"]
+      },
+      "fallback_chains": {
+        "primary": ["openai_primary", "anthropic_claude", "baidu_wenxin"],
+        "chinese": ["baidu_wenxin", "aliyun_tongyi", "zhipu_chatglm"],
+        "cost_effective": ["zhipu_chatglm", "baidu_wenxin", "openai_primary"]
+      }
+    },
+    "monitoring": {
+      "metrics_collection": true,
+      "performance_tracking": true,
+      "cost_tracking": true,
+      "health_monitoring": true,
+      "alert_thresholds": {
+        "error_rate": 0.1,
+        "response_time": 10.0,
+        "daily_cost": 1000.0,
+        "token_usage": 500000
+      },
+      "retention_days": 30
+    },
+    "security": {
+      "api_key_encryption": true,
+      "request_logging": false,
+      "response_logging": false,
+      "content_filtering": true,
+      "rate_limiting": true,
+      "ip_whitelist": [],
+      "user_agent_filtering": false
+    }
+  },
+  "environment_variables": {
+    "description": "以下环境变量需要在系统中设置",
+    "required": [
+      "OPENAI_API_KEY",
+      "ANTHROPIC_API_KEY", 
+      "BAIDU_API_KEY",
+      "BAIDU_SECRET_KEY",
+      "ALIYUN_API_KEY",
+      "GOOGLE_API_KEY"
+    ],
+    "optional": [
+      "ZHIPU_API_KEY",
+      "XUNFEI_API_KEY",
+      "XUNFEI_APP_ID",
+      "XUNFEI_API_SECRET"
+    ]
+  },
+  "usage_examples": {
+    "basic_usage": {
+      "description": "基本使用示例",
+      "code": "from adapters import AIAdapterManager, AIRequest, MessageRole\n\nmanager = AIAdapterManager(config['ai_adapters']['manager_config'])\nawait manager.start()\n\nrequest = AIRequest(\n    messages=[{'role': MessageRole.USER, 'content': 'Hello'}]\n)\n\nresponse = await manager.send_request(request)\nprint(response.content)"
+    },
+    "task_specific_routing": {
+      "description": "任务特定路由",
+      "code": "# 中文内容处理\nresponse = await manager.send_request(\n    request, \n    preferred_adapters=['baidu_wenxin', 'aliyun_tongyi']\n)\n\n# 代码生成\ncode_request = AIRequest(\n    messages=[{'role': MessageRole.USER, 'content': '写一个Python排序函数'}]\n)\nresponse = await manager.send_request(\n    code_request,\n    preferred_adapters=['openai_gpt4', 'anthropic_claude']\n)"
+    },
+    "cost_optimization": {
+      "description": "成本优化使用",
+      "code": "# 使用低成本适配器\nlow_cost_adapters = config['ai_adapters']['routing_rules']['cost_optimization']['low_cost']\nresponse = await manager.send_request(\n    request,\n    preferred_adapters=low_cost_adapters\n)"
+    }
+  }
+}

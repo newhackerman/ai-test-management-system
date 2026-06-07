@@ -1,0 +1,125 @@
+.app-container {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  
+  // 主题切换动画
+  .theme-transition {
+    transition: background-color 0.3s, color 0.3s;
+  }
+  
+  // 页面内容区域
+  .page-content {
+    flex: 1;
+    padding: 24px;
+    overflow-y: auto;
+    
+    // 暗色主题样式
+    .ant-layout-dark & {
+      background-color: #141414;
+      color: rgba(255, 255, 255, 0.85);
+    }
+    
+    // 亮色主题样式
+    .ant-layout-light & {
+      background-color: #f0f2f5;
+      color: rgba(0, 0, 0, 0.85);
+    }
+  }
+  
+  // 页面加载状态
+  .page-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    
+    .loading-text {
+      margin-top: 16px;
+      color: rgba(0, 0, 0, 0.45);
+      
+      .ant-layout-dark & {
+        color: rgba(255, 255, 255, 0.45);
+      }
+    }
+  }
+  
+  // 页面错误状态
+  .page-error {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    padding: 24px;
+    text-align: center;
+    
+    .error-code {
+      font-size: 72px;
+      font-weight: 600;
+      color: #1890ff;
+      margin-bottom: 16px;
+      
+      .ant-layout-dark & {
+        color: #40a9ff;
+      }
+    }
+    
+    .error-title {
+      font-size: 24px;
+      font-weight: 500;
+      margin-bottom: 8px;
+      
+      .ant-layout-dark & {
+        color: rgba(255, 255, 255, 0.85);
+      }
+    }
+    
+    .error-description {
+      color: rgba(0, 0, 0, 0.45);
+      margin-bottom: 24px;
+      
+      .ant-layout-dark & {
+        color: rgba(255, 255, 255, 0.45);
+      }
+    }
+  }
+  
+  // 页面未找到状态
+  .page-not-found {
+    .error-code {
+      color: #f5222d;
+      
+      .ant-layout-dark & {
+        color: #ff4d4f;
+      }
+    }
+  }
+  
+  // 页面无权限状态
+  .page-no-permission {
+    .error-code {
+      color: #fa8c16;
+      
+      .ant-layout-dark & {
+        color: #ffc53d;
+      }
+    }
+  }
+  
+  // 页面过渡动画
+  .page-transition {
+    animation: fadeIn 0.3s ease-in-out;
+  }
+  
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}

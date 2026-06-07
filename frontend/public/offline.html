@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>离线模式 - 需求管理系统</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+
+        .offline-container {
+            background: white;
+            border-radius: 16px;
+            padding: 3rem 2rem;
+            text-align: center;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            max-width: 500px;
+            width: 100%;
+            animation: fadeInUp 0.6s ease-out;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .offline-icon {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 2rem;
+            background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5rem;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.05);
+            }
+        }
+
+        .offline-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #2c3e50;
+            margin-bottom: 1rem;
+        }
+
+        .offline-subtitle {
+            font-size: 1.1rem;
+            color: #7f8c8d;
+            margin-bottom: 2rem;
+            line-height: 1.6;
+        }
+
+        .offline-features {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin: 2rem 0;
+            text-align: left;
+        }
+
+        .offline-features h3 {
+            color: #2c3e50;
+            margin-bottom: 1rem;
+            font-size: 1.2rem;
+        }
+
+        .offline-features ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .offline-features li {
+            padding: 0.5rem 0;
+            color: #555;
+            display: flex;
+            align-items: center;
+        }
+
+        .offline-features li::before {
+            content: "✓";
+            color: #27ae60;
+            font-weight: bold;
+            margin-right: 0.5rem;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 2rem;
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-secondary {
+            background: #f8f9fa;
+            color: #495057;
+            border: 2px solid #dee2e6;
+        }
+
+        .btn-secondary:hover {
+            background: #e9ecef;
+            transform: translateY(-1px);
+        }
+
+        .network-status {
+            margin-top: 2rem;
+            padding: 1rem;
+            border-radius: 8px;
+            font-size: 0.9rem;
+        }
+
+        .network-status.offline {
+            background: #fff5f5;
+            color: #c53030;
+            border: 1px solid #fed7d7;
+        }
+
+        .network-status.online {
+            background: #f0fff4;
+            color: #38a169;
+            border: 1px solid #c6f6d5;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 0.5rem;
+        }
+
+        .status-indicator.offline {
+            background: #c53030;
+        }
+
+        .status-indicator.online {
+            background: #38a169;
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0.3; }
+        }
+
+        .footer {
+            margin-top: 2rem;
+            padding-top: 1rem;
+            border-top: 1px solid #e9ecef;
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 768px) {
+            .offline-container {
+                padding: 2rem 1.5rem;
+                margin: 1rem;
+            }
+
+            .offline-title {
+                font-size: 1.5rem;
+            }
+
+            .offline-subtitle {
+                font-size: 1rem;
+            }
+
+            .action-buttons {
+                flex-direction: column;
+            }
+
+            .btn {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="offline-container">
+        <div class="offline-icon">
+            📱
+        </div>
+        
+        <h1 class="offline-title">离线模式</h1>
+        <p class="offline-subtitle">
+            您当前处于离线状态，但仍可以使用部分功能
+        </p>
+
+        <div class="offline-features">
+            <h3>离线可用功能：</h3>
+            <ul>
+                <li>查看已缓存的需求列表</li>
+                <li>查看需求详情</li>
+                <li>创建和编辑需求（将在联网后同步）</li>
+                <li>查看项目信息</li>
+                <li>使用搜索和筛选功能</li>
+            </ul>
+        </div>
+
+        <div class="action-buttons">
+            <button class="btn btn-primary" onclick="tryReconnect()">
+                🔄 重新连接
+            </button>
+            <a href="/" class="btn btn-secondary">
+                🏠 返回首页
+            </a>
+        </div>
+
+        <div class="network-status" id="networkStatus">
+            <span class="status-indicator offline"></span>
+            网络连接已断开
+        </div>
+
+        <div class="footer">
+            <p>需求管理系统 - 支持离线使用</p>
+        </div>
+    </div>
+
+    <script>
+        // 检查网络状态
+        function updateNetworkStatus() {
+            const statusElement = document.getElementById('networkStatus');
+            const indicator = statusElement.querySelector('.status-indicator');
+            
+            if (navigator.onLine) {
+                statusElement.className = 'network-status online';
+                statusElement.innerHTML = '<span class="status-indicator online"></span>网络连接正常';
+                
+                // 自动重定向到主页
+                setTimeout(() => {
+                    window.location.href = '/';
+                }, 2000);
+            } else {
+                statusElement.className = 'network-status offline';
+                statusElement.innerHTML = '<span class="status-indicator offline"></span>网络连接已断开';
+            }
+        }
+
+        // 尝试重新连接
+        function tryReconnect() {
+            const button = event.target;
+            const originalText = button.innerHTML;
+            
+            button.innerHTML = '🔄 检查中...';
+            button.disabled = true;
+            
+            // 尝试发送一个简单的请求来检查连接
+            fetch('/', { 
+                method: 'HEAD',
+                cache: 'no-cache'
+            })
+            .then(() => {
+                button.innerHTML = '✅ 连接成功';
+                setTimeout(() => {
+                    window.location.href = '/';
+                }, 1000);
+            })
+            .catch(() => {
+                button.innerHTML = '❌ 仍然离线';
+                setTimeout(() => {
+                    button.innerHTML = originalText;
+                    button.disabled = false;
+                }, 2000);
+            });
+        }
+
+        // 监听网络状态变化
+        window.addEventListener('online', updateNetworkStatus);
+        window.addEventListener('offline', updateNetworkStatus);
+
+        // 初始化网络状态
+        updateNetworkStatus();
+
+        // 定期检查网络状态
+        setInterval(updateNetworkStatus, 5000);
+
+        // 监听 Service Worker 消息
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.addEventListener('message', (event) => {
+                if (event.data.type === 'SYNC_COMPLETE') {
+                    console.log('Background sync completed');
+                    updateNetworkStatus();
+                }
+            });
+        }
+
+        // 页面可见性变化时检查网络状态
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden) {
+                updateNetworkStatus();
+            }
+        });
+    </script>
+</body>
+</html>

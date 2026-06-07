@@ -1,0 +1,17 @@
+{
+  "mcpServers": {
+    "echo-test": {
+      "command": "python",
+      "args": [
+        "-c",
+        "import sys, json; [print(json.dumps({'result': line.strip()})) for line in sys.stdin]"
+      ],
+      "env": {},
+      "timeout": 10,
+      "disabled": false,
+      "autoApprove": [
+        "echo"
+      ]
+    }
+  }
+}

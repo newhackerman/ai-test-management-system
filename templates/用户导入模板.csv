@@ -1,0 +1,3 @@
+﻿username,email,password,nickname,phone,bio,gender,birthday,location,website,is_email_verified,is_phone_verified,mfa_enabled,is_active,is_superuser,status,language,timezone,theme,email_notifications,sms_notifications,push_notifications
+user001,user001@example.com,Password123!,示例用户1,13800138000,这是一个示例用户,MALE,1990-01-01,北京市,https://example.com,FALSE,FALSE,FALSE,TRUE,FALSE,ACTIVE,zh-CN,Asia/Shanghai,light,TRUE,FALSE,TRUE
+admin001,admin@example.com,AdminPass123!,管理员,13800138001,系统管理员账户,FEMALE,1985-05-15,上海市,,TRUE,TRUE,TRUE,TRUE,TRUE,ACTIVE,zh-CN,Asia/Shanghai,dark,TRUE,TRUE,TRUE

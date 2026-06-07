@@ -1,0 +1,36 @@
+[run]
+source = src
+omit = 
+    */tests/*
+    */test_*
+    */conftest.py
+    */migrations/*
+    */venv/*
+    */env/*
+    */__pycache__/*
+    */site-packages/*
+    */alembic/*
+    */scripts/*
+
+[report]
+exclude_lines =
+    pragma: no cover
+    def __repr__
+    if self.debug:
+    if settings.DEBUG
+    raise AssertionError
+    raise NotImplementedError
+    if 0:
+    if __name__ == .__main__.:
+    class .*\bProtocol\):
+    @(abc\.)?abstractmethod
+
+[html]
+directory = test_reports/coverage_html
+title = AI自动化测试管理系统 - 测试覆盖率报告
+
+[xml]
+output = test_reports/coverage.xml
+
+[json]
+output = test_reports/coverage.json

@@ -1,0 +1,177 @@
+{
+  "timestamp": "2025-09-06T13:30:09.097335",
+  "summary": {
+    "total_tests": 12,
+    "successful_tests": 12,
+    "success_rate": 100.0
+  },
+  "results": [
+    {
+      "test": "基础优化 - 简单提示词优化",
+      "success": true,
+      "details": {
+        "original": "帮我写个测试用例",
+        "optimized": "您好！帮我写个测试用例，请提供详细的回答。请按步骤说明。",
+        "length_increase": 20,
+        "config": {
+          "formality_level": "semi_formal",
+          "context_type": "technical",
+          "use_honorifics": true,
+          "prefer_classical_expressions": false,
+          "include_cultural_context": true,
+          "optimize_for_ai_understanding": true,
+          "target_audience": "专业用户",
+          "domain_specific": null
+        }
+      }
+    },
+    {
+      "test": "基础优化 - 技术内容优化",
+      "success": true,
+      "details": {
+        "original": "分析这个bug的原因",
+        "optimized": "请您好！分析这个bug的原因，请提供详细的回答。请按步骤说明。",
+        "length_increase": 21,
+        "config": {
+          "formality_level": "semi_formal",
+          "context_type": "technical",
+          "use_honorifics": true,
+          "prefer_classical_expressions": false,
+          "include_cultural_context": true,
+          "optimize_for_ai_understanding": true,
+          "target_audience": "专业用户",
+          "domain_specific": null
+        }
+      }
+    },
+    {
+      "test": "基础优化 - 商务场景优化",
+      "success": true,
+      "details": {
+        "original": "写个项目报告",
+        "optimized": "请您好！写个项目报告。谢谢！，请提供详细的回答。",
+        "length_increase": 18,
+        "config": {
+          "formality_level": "formal",
+          "context_type": "business",
+          "use_honorifics": true,
+          "prefer_classical_expressions": false,
+          "include_cultural_context": true,
+          "optimize_for_ai_understanding": true,
+          "target_audience": "专业用户",
+          "domain_specific": null
+        }
+      }
+    },
+    {
+      "test": "正式程度调整 - very_formal",
+      "success": true,
+      "details": {
+        "original": "你能帮我分析一下这个问题吗？",
+        "optimized": "您好！您能帮我分析一下这个问题吗？谢谢！，请提供详细的回答。请按步骤说明。",
+        "expected_features": [
+          "您",
+          "请问",
+          "协助"
+        ],
+        "features_found": 1
+      }
+    },
+    {
+      "test": "正式程度调整 - formal",
+      "success": true,
+      "details": {
+        "original": "你能帮我分析一下这个问题吗？",
+        "optimized": "您好！您能帮我分析一下这个问题吗？谢谢！，请提供详细的回答。请按步骤说明。",
+        "expected_features": [
+          "您",
+          "帮助"
+        ],
+        "features_found": 1
+      }
+    },
+    {
+      "test": "正式程度调整 - semi_formal",
+      "success": true,
+      "details": {
+        "original": "你能帮我分析一下这个问题吗？",
+        "optimized": "您好！你能帮我分析一下这个问题吗？，请提供详细的回答。请按步骤说明。",
+        "expected_features": [
+          "你",
+          "帮我"
+        ],
+        "features_found": 2
+      }
+    },
+    {
+      "test": "文化背景适配 - 添加礼貌用语",
+      "success": true,
+      "details": {
+        "original": "分析这个数据",
+        "optimized": "请您好！分析这个数据，请提供详细的回答。请按步骤说明。",
+        "features_found": 2,
+        "expected_features": [
+          "您好",
+          "请",
+          "谢谢"
+        ]
+      }
+    },
+    {
+      "test": "文化背景适配 - 正式场合适配",
+      "success": true,
+      "details": {
+        "original": "写个报告",
+        "optimized": "请您好！写个报告。谢谢！，请提供详细的回答。请按步骤说明。",
+        "features_found": 3,
+        "expected_features": [
+          "您好",
+          "谢谢",
+          "。"
+        ]
+      }
+    },
+    {
+      "test": "专业术语优化 - 测试领域术语",
+      "success": true,
+      "details": {
+        "original": "找出这个bug并写test case",
+        "optimized": "请您好！找出这个缺陷并写测试用例，请提供详细的回答。请按步骤说明。",
+        "domain": "testing",
+        "replacements_found": 2
+      }
+    },
+    {
+      "test": "AI理解优化 - 添加明确指令",
+      "success": true,
+      "details": {
+        "original": "分析代码质量",
+        "optimized": "请您好！分析代码质量，请提供详细的回答。请按步骤说明。",
+        "features_found": 3
+      }
+    },
+    {
+      "test": "AI理解优化 - 技术内容结构化",
+      "success": true,
+      "details": {
+        "original": "优化这个算法",
+        "optimized": "请您好！优化这个算法，请提供详细的回答。请按步骤说明。",
+        "features_found": 3
+      }
+    },
+    {
+      "test": "模板创建功能",
+      "success": true,
+      "details": {
+        "note": "需要数据库连接才能完整测试",
+        "template_types": [
+          "test_case",
+          "requirement_analysis",
+          "code_review",
+          "document_generation",
+          "problem_analysis"
+        ]
+      }
+    }
+  ]
+}

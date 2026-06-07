@@ -1,0 +1,32 @@
+{
+  "extends": "lighthouse:default",
+  "settings": {
+    "onlyAudits": [
+      "first-contentful-paint",
+      "largest-contentful-paint",
+      "cumulative-layout-shift",
+      "max-potential-fid",
+      "speed-index",
+      "total-blocking-time",
+      "interactive"
+    ],
+    "skipAudits": [
+      "uses-http2",
+      "uses-long-cache-ttl"
+    ],
+    "emulatedFormFactor": "desktop",
+    "throttling": {
+      "rttMs": 40,
+      "throughputKbps": 10240,
+      "cpuSlowdownMultiplier": 1,
+      "requestLatencyMs": 0,
+      "downloadThroughputKbps": 0,
+      "uploadThroughputKbps": 0
+    },
+    "auditMode": false,
+    "gatherMode": false,
+    "disableDeviceEmulation": false,
+    "disableStorageReset": false,
+    "locale": "zh-CN"
+  }
+}

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="test_suite" tests="10" failures="1" errors="0" skipped="1" time="5.234">
+    <testcase classname="test_example" name="test_success" time="0.123"/>
+    <testcase classname="test_example" name="test_failure" time="0.456">
+        <failure message="AssertionError">Test failed</failure>
+    </testcase>
+    <testcase classname="test_example" name="test_skipped" time="0.000">
+        <skipped message="Skipped test"/>
+    </testcase>
+</testsuite>

@@ -1,0 +1,38 @@
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# Dependencies
+node_modules/
+frontend/node_modules/
+venv/
+.venv/
+__pycache__/
+*.py[cod]
+
+# Build outputs and generated assets
+dist/
+build/
+frontend/dist/
+static/dist/
+reports/
+lighthouse_reports/
+recordings/
+
+# Local tooling and IDE state
+.idea/
+.vscode/
+.claude/
+.pytest_cache/
+.benchmarks/
+
+# Logs and temp files
+*.log
+*.tmp
+*.bak
+tmp-*.log
+
+# OS files
+.DS_Store
+Thumbs.db

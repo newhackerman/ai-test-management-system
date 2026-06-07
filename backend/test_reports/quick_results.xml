@@ -1,0 +1,256 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites><testsuite name="pytest" errors="26" failures="0" skipped="0" tests="26" time="4.466" timestamp="2025-11-02T11:23:59.855419" hostname="WINBOSS"><testcase classname="" name="tests.test_cleanup" time="0.000"><error message="collection failure">ImportError while importing test module 'D:\pythonTtest\ai-test-management-system\backend\tests\test_cleanup.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+D:\Programs\Python\Python313\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests\test_cleanup.py:17: in &lt;module&gt;
+    from backend.src.core.database import get_database
+E   ModuleNotFoundError: No module named 'backend'</error></testcase><testcase classname="" name="tests.test_config_management" time="0.000"><error message="collection failure">ImportError while importing test module 'D:\pythonTtest\ai-test-management-system\backend\tests\test_config_management.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+D:\Programs\Python\Python313\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests\test_config_management.py:11: in &lt;module&gt;
+    from src.main import app
+src\main.py:15: in &lt;module&gt;
+    from .api import api_router
+src\api\__init__.py:180: in &lt;module&gt;
+    from .v1.dashboards import router as dashboards_router
+src\api\v1\dashboards\__init__.py:6: in &lt;module&gt;
+    from .dashboard_data import router as data_router
+src\api\v1\dashboards\dashboard_data.py:10: in &lt;module&gt;
+    from ....services.data_aggregation_service import DataAggregationService, get_data_aggregation_service
+src\services\data_aggregation_service.py:24: in &lt;module&gt;
+    from ..models.project import Project, ProjectMember, ProjectStatus
+E   ImportError: cannot import name 'ProjectStatus' from 'src.models.project' (D:\pythonTtest\ai-test-management-system\backend\src\models\project.py)</error></testcase><testcase classname="" name="tests.test_dashboard_api_interfaces" time="0.000"><error message="collection failure">tests\test_dashboard_api_interfaces.py:26: in &lt;module&gt;
+    from src.api.v1.dashboard_config import router as config_router
+&lt;frozen importlib._bootstrap&gt;:1360: in _find_and_load
+    ???
+&lt;frozen importlib._bootstrap&gt;:1322: in _find_and_load_unlocked
+    ???
+&lt;frozen importlib._bootstrap&gt;:1262: in _find_spec
+    ???
+&lt;frozen importlib._bootstrap_external&gt;:1555: in find_spec
+    ???
+&lt;frozen importlib._bootstrap_external&gt;:1524: in _get_spec
+    ???
+&lt;frozen importlib._bootstrap_external&gt;:1395: in __iter__
+    ???
+&lt;frozen importlib._bootstrap_external&gt;:1382: in _recalculate
+    ???
+&lt;frozen importlib._bootstrap_external&gt;:1378: in _get_parent_path
+    ???
+E   KeyError: 'src.api'</error></testcase><testcase classname="" name="tests.test_dashboard_integration" time="0.000"><error message="collection failure">ImportError while importing test module 'D:\pythonTtest\ai-test-management-system\backend\tests\test_dashboard_integration.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+D:\Programs\Python\Python313\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests\test_dashboard_integration.py:22: in &lt;module&gt;
+    from src.utils.cache_utils import CacheManager
+E   ImportError: cannot import name 'CacheManager' from 'src.utils.cache_utils' (D:\pythonTtest\ai-test-management-system\backend\src\utils\cache_utils.py)</error></testcase><testcase classname="" name="tests.test_dashboard_service" time="0.000"><error message="collection failure">ImportError while importing test module 'D:\pythonTtest\ai-test-management-system\backend\tests\test_dashboard_service.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+D:\Programs\Python\Python313\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests\test_dashboard_service.py:21: in &lt;module&gt;
+    from src.utils.cache_utils import CacheManager
+E   ImportError: cannot import name 'CacheManager' from 'src.utils.cache_utils' (D:\pythonTtest\ai-test-management-system\backend\src\utils\cache_utils.py)</error></testcase><testcase classname="" name="tests.test_data_aggregation_service" time="0.000"><error message="collection failure">ImportError while importing test module 'D:\pythonTtest\ai-test-management-system\backend\tests\test_data_aggregation_service.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+D:\Programs\Python\Python313\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests\test_data_aggregation_service.py:18: in &lt;module&gt;
+    from src.services.data_aggregation_service import DataAggregationService, HealthStatus
+src\services\data_aggregation_service.py:24: in &lt;module&gt;
+    from ..models.project import Project, ProjectMember, ProjectStatus
+E   ImportError: cannot import name 'ProjectStatus' from 'src.models.project' (D:\pythonTtest\ai-test-management-system\backend\src\models\project.py)</error></testcase><testcase classname="" name="tests.test_defect_services" time="0.000"><error message="collection failure">ImportError while importing test module 'D:\pythonTtest\ai-test-management-system\backend\tests\test_defect_services.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+D:\Programs\Python\Python313\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests\test_defect_services.py:25: in &lt;module&gt;
+    from src.services.defect_service import DefectService
+src\services\defect_service.py:27: in &lt;module&gt;
+    from ..utils.redis_client import RedisClient
+E   ImportError: cannot import name 'RedisClient' from 'src.utils.redis_client' (D:\pythonTtest\ai-test-management-system\backend\src\utils\redis_client.py)</error></testcase><testcase classname="" name="tests.test_execution_services" time="0.000"><error message="collection failure">ImportError while importing test module 'D:\pythonTtest\ai-test-management-system\backend\tests\test_execution_services.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+D:\Programs\Python\Python313\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests\test_execution_services.py:9: in &lt;module&gt;
+    from src.services.test_execution_service import TestExecutionService
+src\services\test_execution_service.py:23: in &lt;module&gt;
+    from ..utils.redis_client import RedisClient
+E   ImportError: cannot import name 'RedisClient' from 'src.utils.redis_client' (D:\pythonTtest\ai-test-management-system\backend\src\utils\redis_client.py)</error></testcase><testcase classname="" name="tests.test_milestone_service" time="0.000"><error message="collection failure">ImportError while importing test module 'D:\pythonTtest\ai-test-management-system\backend\tests\test_milestone_service.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+D:\Programs\Python\Python313\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests\test_milestone_service.py:18: in &lt;module&gt;
+    from src.schemas.milestone import (
+E   ImportError: cannot import name 'MilestoneProgressResponse' from 'src.schemas.milestone' (D:\pythonTtest\ai-test-management-system\backend\src\schemas\milestone.py)</error></testcase><testcase classname="" name="tests.test_quality_metrics_service" time="0.000"><error message="collection failure">ImportError while importing test module 'D:\pythonTtest\ai-test-management-system\backend\tests\test_quality_metrics_service.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+D:\Programs\Python\Python313\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests\test_quality_metrics_service.py:12: in &lt;module&gt;
+    from ..src.services.quality_metrics_service import QualityMetricsService
+E   ImportError: attempted relative import beyond top-level package</error></testcase><testcase classname="" name="tests.test_report_distribution_service" time="0.000"><error message="collection failure">ImportError while importing test module 'D:\pythonTtest\ai-test-management-system\backend\tests\test_report_distribution_service.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+D:\Programs\Python\Python313\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests\test_report_distribution_service.py:12: in &lt;module&gt;
+    from src.services.test_report_distribution_service import TestReportDistributionService
+src\services\test_report_distribution_service.py:20: in &lt;module&gt;
+    from ..models.test_report_subscription import (
+E   ImportError: cannot import name 'DistributionStatus' from 'src.models.test_report_subscription' (D:\pythonTtest\ai-test-management-system\backend\src\models\test_report_subscription.py)</error></testcase><testcase classname="" name="tests.test_test_plan_service" time="0.000"><error message="collection failure">ImportError while importing test module 'D:\pythonTtest\ai-test-management-system\backend\tests\test_test_plan_service.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+D:\Programs\Python\Python313\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests\test_test_plan_service.py:23: in &lt;module&gt;
+    from src.services.test_phase_service import TestPhaseService, TestPhaseTemplateService
+src\services\test_phase_service.py:20: in &lt;module&gt;
+    from ..models.test_execution import TestExecution, ExecutionStatus
+E   ModuleNotFoundError: No module named 'src.models.test_execution'</error></testcase><testcase classname="" name="tests.test_testmanager_models" time="0.000"><error message="collection failure">D:\Programs\Python\Python313\Lib\site-packages\_pytest\python.py:618: in _importtestmodule
+    mod = import_path(self.path, mode=importmode, root=self.config.rootpath)
+D:\Programs\Python\Python313\Lib\site-packages\_pytest\pathlib.py:533: in import_path
+    importlib.import_module(module_name)
+D:\Programs\Python\Python313\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+&lt;frozen importlib._bootstrap&gt;:1387: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1360: in _find_and_load
+    ???
+&lt;frozen importlib._bootstrap&gt;:1331: in _find_and_load_unlocked
+    ???
+&lt;frozen importlib._bootstrap&gt;:935: in _load_unlocked
+    ???
+D:\Programs\Python\Python313\Lib\site-packages\_pytest\assertion\rewrite.py:159: in exec_module
+    source_stat, co = _rewrite_test(fn, self.config)
+D:\Programs\Python\Python313\Lib\site-packages\_pytest\assertion\rewrite.py:342: in _rewrite_test
+    tree = ast.parse(source, filename=strfn)
+D:\Programs\Python\Python313\Lib\ast.py:54: in parse
+    return compile(source, filename, mode, flags,
+E     File "D:\pythonTtest\ai-test-management-system\backend\tests\test_testmanager_models.py", line 98
+E       def test_test_plan_enum_validation(self):
+E                                                ^
+E   IndentationError: unindent does not match any outer indentation level</error></testcase><testcase classname="" name="tests.test_testmanager_models_simple" time="0.000"><error message="collection failure">ImportError while importing test module 'D:\pythonTtest\ai-test-management-system\backend\tests\test_testmanager_models_simple.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+D:\Programs\Python\Python313\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests\test_testmanager_models_simple.py:15: in &lt;module&gt;
+    from src.models.test_report import TestReport, ReportType, ReportFormat, ReportStatus
+E   ImportError: cannot import name 'TestReport' from 'src.models.test_report' (D:\pythonTtest\ai-test-management-system\backend\src\models\test_report.py)</error></testcase><testcase classname="" name="tests.test_user_management" time="0.000"><error message="collection failure">tests\test_user_management.py:12: in &lt;module&gt;
+    from src.main import app
+src\main.py:15: in &lt;module&gt;
+    from .api import api_router
+src\api\__init__.py:42: in &lt;module&gt;
+    register_router_with_config(auth_router, "auth")
+src\api\__init__.py:36: in register_router_with_config
+    if config["prefix"]:
+E   TypeError: 'Mock' object is not subscriptable</error></testcase><testcase classname="" name="tests.e2e.test_ai_analysis_functionality" time="0.000"><error message="collection failure">D:\Programs\Python\Python313\Lib\site-packages\_pytest\python.py:618: in _importtestmodule
+    mod = import_path(self.path, mode=importmode, root=self.config.rootpath)
+D:\Programs\Python\Python313\Lib\site-packages\_pytest\pathlib.py:533: in import_path
+    importlib.import_module(module_name)
+D:\Programs\Python\Python313\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+&lt;frozen importlib._bootstrap&gt;:1387: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1360: in _find_and_load
+    ???
+&lt;frozen importlib._bootstrap&gt;:1331: in _find_and_load_unlocked
+    ???
+&lt;frozen importlib._bootstrap&gt;:935: in _load_unlocked
+    ???
+D:\Programs\Python\Python313\Lib\site-packages\_pytest\assertion\rewrite.py:159: in exec_module
+    source_stat, co = _rewrite_test(fn, self.config)
+D:\Programs\Python\Python313\Lib\site-packages\_pytest\assertion\rewrite.py:342: in _rewrite_test
+    tree = ast.parse(source, filename=strfn)
+D:\Programs\Python\Python313\Lib\ast.py:54: in parse
+    return compile(source, filename, mode, flags,
+E     File "D:\pythonTtest\ai-test-management-system\backend\tests\e2e\test_ai_analysis_functionality.py", line 75
+E       @pytest.fixture
+E                      ^
+E   IndentationError: unindent does not match any outer indentation level</error></testcase><testcase classname="" name="tests.e2e.test_meeting_complete_workflow" time="0.000"><error message="collection failure">ImportError while importing test module 'D:\pythonTtest\ai-test-management-system\backend\tests\e2e\test_meeting_complete_workflow.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+D:\Programs\Python\Python313\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests\e2e\test_meeting_complete_workflow.py:25: in &lt;module&gt;
+    from src.services.meeting_permission_service import MeetingPermissionService
+src\services\meeting_permission_service.py:23: in &lt;module&gt;
+    from ..models.meeting_participant import MeetingParticipant
+E   ModuleNotFoundError: No module named 'src.models.meeting_participant'</error></testcase><testcase classname="" name="tests.e2e.test_multi_user_collaboration" time="0.000"><error message="collection failure">ImportError while importing test module 'D:\pythonTtest\ai-test-management-system\backend\tests\e2e\test_multi_user_collaboration.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+D:\Programs\Python\Python313\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests\e2e\test_multi_user_collaboration.py:26: in &lt;module&gt;
+    from src.services.meeting_chat_service import MeetingChatService
+E   ModuleNotFoundError: No module named 'src.services.meeting_chat_service'</error></testcase><testcase classname="" name="tests.e2e.test_recording_and_playback" time="0.000"><error message="collection failure">ImportError while importing test module 'D:\pythonTtest\ai-test-management-system\backend\tests\e2e\test_recording_and_playback.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+D:\Programs\Python\Python313\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests\e2e\test_recording_and_playback.py:25: in &lt;module&gt;
+    from src.services.recording_service import RecordingService
+src\services\recording_service.py:40: in &lt;module&gt;
+    from ..utils.file_storage_utils import FileStorageUtils
+src\utils\file_storage_utils.py:7: in &lt;module&gt;
+    import magic
+E   ModuleNotFoundError: No module named 'magic'</error></testcase><testcase classname="" name="tests.integration.test_meeting_database_integrity" time="0.000"><error message="collection failure">ImportError while importing test module 'D:\pythonTtest\ai-test-management-system\backend\tests\integration\test_meeting_database_integrity.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+D:\Programs\Python\Python313\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests\integration\test_meeting_database_integrity.py:13: in &lt;module&gt;
+    from app.models.meeting import (
+E   ModuleNotFoundError: No module named 'app.models'</error></testcase><testcase classname="" name="tests.integration.test_meeting_realtime_sync" time="0.000"><error message="collection failure">ImportError while importing test module 'D:\pythonTtest\ai-test-management-system\backend\tests\integration\test_meeting_realtime_sync.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+D:\Programs\Python\Python313\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests\integration\test_meeting_realtime_sync.py:15: in &lt;module&gt;
+    from app.main import app
+E   ModuleNotFoundError: No module named 'app.main'</error></testcase><testcase classname="" name="tests.integration.test_meeting_system_integration" time="0.000"><error message="collection failure">ImportError while importing test module 'D:\pythonTtest\ai-test-management-system\backend\tests\integration\test_meeting_system_integration.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+D:\Programs\Python\Python313\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests\integration\test_meeting_system_integration.py:22: in &lt;module&gt;
+    from src.models.config import Config
+E   ImportError: cannot import name 'Config' from 'src.models.config' (D:\pythonTtest\ai-test-management-system\backend\src\models\config.py). Did you mean: 'config'?</error></testcase><testcase classname="" name="tests.models.test_meeting" time="0.000"><error message="collection failure">ImportError while importing test module 'D:\pythonTtest\ai-test-management-system\backend\tests\models\test_meeting.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+D:\Programs\Python\Python313\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests\models\test_meeting.py:17: in &lt;module&gt;
+    from backend.src.models.meeting import (
+E   ModuleNotFoundError: No module named 'backend'</error></testcase><testcase classname="" name="tests.performance.test_meeting_load_performance" time="0.000"><error message="collection failure">ImportError while importing test module 'D:\pythonTtest\ai-test-management-system\backend\tests\performance\test_meeting_load_performance.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+D:\Programs\Python\Python313\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests\performance\test_meeting_load_performance.py:19: in &lt;module&gt;
+    from app.services.meeting_service import MeetingService
+E   ModuleNotFoundError: No module named 'app.services'</error></testcase><testcase classname="" name="tests.services.test_meeting_security_services" time="0.000"><error message="collection failure">ImportError while importing test module 'D:\pythonTtest\ai-test-management-system\backend\tests\services\test_meeting_security_services.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+D:\Programs\Python\Python313\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests\services\test_meeting_security_services.py:15: in &lt;module&gt;
+    from backend.src.services.meeting_security_service import MeetingSecurityService
+E   ModuleNotFoundError: No module named 'backend'</error></testcase><testcase classname="" name="tests.validation.test_api_data_consistency" time="0.000"><error message="collection failure">tests\validation\test_api_data_consistency.py:22: in &lt;module&gt;
+    from src.schemas.meeting_schemas import (
+src\schemas\meeting_schemas.py:110: in &lt;module&gt;
+    class MeetingQueryParams(BaseModel):
+src\schemas\meeting_schemas.py:122: in MeetingQueryParams
+    sort_order: str = Field("desc", description="排序方向", regex="^(asc|desc)$")
+D:\Programs\Python\Python313\Lib\site-packages\pydantic\fields.py:1090: in Field
+    raise PydanticUserError('`regex` is removed. use `pattern` instead', code='removed-kwargs')
+E   pydantic.errors.PydanticUserError: `regex` is removed. use `pattern` instead
+E   
+E   For further information visit https://errors.pydantic.dev/2.11/u/removed-kwargs</error></testcase></testsuite></testsuites>

@@ -1,0 +1,67 @@
+fastapi
+uvicorn[standard]
+sqlalchemy
+alembic
+asyncmy
+redis
+python-jose[cryptography]
+passlib[bcrypt]
+python-multipart
+pydantic[email]
+pydantic-settings
+pytest
+pytest-asyncio
+pytest-cov
+pytest-html
+pytest-xdist
+pytest-timeout
+pytest-mock
+pytest-benchmark
+pytest-json-report
+pytest-metadata
+httpx
+pyotp
+qrcode[pil]
+python-dotenv
+prometheus-client
+authlib
+pandas
+openpyxl
+xlrd
+openai
+aiohttp
+sse-starlette
+pytz
+coverage[toml]
+factory-boy
+faker
+aiofiles
+websockets
+selenium
+playwright
+# Test framework dependencies
+aiosqlite
+redis[hiredis]
+dataclasses-json
+# Enhanced test reporting and coverage analysis
+matplotlib
+seaborn
+plotly
+jinja2
+# Allure test reporting
+allure-pytest>=2.12.0
+allure-python-commons>=2.12.0
+junitparser
+radon
+# Report generation dependencies
+# weasyprint  # Commented out due to Windows compatibility issues
+reportlab  # Alternative PDF generation library
+PyPDF2
+python-docx
+beautifulsoup4
+kaleido
+# Development and testing tools
+black
+flake8
+isort
+mypy

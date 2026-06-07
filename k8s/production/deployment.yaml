@@ -1,0 +1,190 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ai-testing-system
+  namespace: production
+  labels:
+    app: ai-testing-system
+    environment: production
+    version: "{{IMAGE_TAG}}"
+spec:
+  replicas: {{REPLICAS}}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: ai-testing-system
+      environment: production
+  template:
+    metadata:
+      labels:
+        app: ai-testing-system
+        environment: production
+        version: "{{IMAGE_TAG}}"
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8000"
+        prometheus.io/path: "/metrics"
+    spec:
+      containers:
+      - name: backend
+        image: ghcr.io/ai-testing-system/backend:{{IMAGE_TAG}}
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8000
+          name: http
+          protocol: TCP
+        env:
+        - name: ENVIRONMENT
+          value: "production"
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: ai-testing-system-secrets
+              key: database-url
+        - name: REDIS_URL
+          valueFrom:
+            secretKeyRef:
+              name: ai-testing-system-secrets
+              key: redis-url
+        - name: SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: ai-testing-system-secrets
+              key: secret-key
+        - name: AI_SERVICE_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: ai-testing-system-secrets
+              key: ai-service-api-key
+        - name: SMTP_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: ai-testing-system-secrets
+              key: smtp-password
+        - name: S3_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: ai-testing-system-secrets
+              key: s3-access-key
+        - name: S3_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: ai-testing-system-secrets
+              key: s3-secret-key
+        envFrom:
+        - configMapRef:
+            name: ai-testing-system-config
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 60
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 8000
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        volumeMounts:
+        - name: app-logs
+          mountPath: /app/logs
+        - name: temp-storage
+          mountPath: /app/temp
+        - name: persistent-storage
+          mountPath: /app/data
+      
+      - name: frontend
+        image: ghcr.io/ai-testing-system/frontend:{{IMAGE_TAG}}
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 3000
+          name: http
+          protocol: TCP
+        env:
+        - name: NODE_ENV
+          value: "production"
+        - name: REACT_APP_API_URL
+          value: "https://api.ai-testing-system.com"
+        - name: REACT_APP_WS_URL
+          value: "wss://api.ai-testing-system.com/ws"
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "200m"
+          limits:
+            memory: "1Gi"
+            cpu: "400m"
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 3000
+          initialDelaySeconds: 60
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 3000
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+      
+      volumes:
+      - name: app-logs
+        persistentVolumeClaim:
+          claimName: ai-testing-system-logs
+      - name: temp-storage
+        emptyDir:
+          sizeLimit: 2Gi
+      - name: persistent-storage
+        persistentVolumeClaim:
+          claimName: ai-testing-system-data
+      
+      imagePullSecrets:
+      - name: ghcr-secret
+      
+      restartPolicy: Always
+      
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: app
+                operator: In
+                values:
+                - ai-testing-system
+            topologyKey: kubernetes.io/hostname
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            preference:
+              matchExpressions:
+              - key: node-type
+                operator: In
+                values:
+                - production
+      
+      tolerations:
+      - key: "production"
+        operator: "Equal"
+        value: "true"
+        effect: "NoSchedule"

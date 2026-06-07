@@ -1,0 +1,108 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ai-testing-system-config
+  namespace: production
+  labels:
+    app: ai-testing-system
+    environment: production
+data:
+  # 应用配置
+  LOG_LEVEL: "WARNING"
+  DEBUG: "false"
+  TESTING: "false"
+  
+  # 数据库配置
+  DB_POOL_SIZE: "20"
+  DB_MAX_OVERFLOW: "40"
+  DB_POOL_TIMEOUT: "30"
+  DB_POOL_RECYCLE: "3600"
+  DB_ECHO: "false"
+  
+  # Redis配置
+  REDIS_MAX_CONNECTIONS: "200"
+  REDIS_RETRY_ON_TIMEOUT: "true"
+  REDIS_SOCKET_KEEPALIVE: "true"
+  REDIS_CONNECTION_POOL_MAX_CONNECTIONS: "50"
+  
+  # 会议模块配置
+  MEETING_MAX_PARTICIPANTS: "500"
+  MEETING_DEFAULT_DURATION: "60"
+  MEETING_RECORDING_ENABLED: "true"
+  MEETING_AI_ANALYSIS_ENABLED: "true"
+  MEETING_MAX_DURATION: "480"
+  MEETING_CLEANUP_INTERVAL: "3600"
+  
+  # WebRTC配置
+  WEBRTC_STUN_SERVERS: "stun:stun.l.google.com:19302,stun:stun1.l.google.com:19302"
+  WEBRTC_TURN_SERVERS: "turn:turn.ai-testing-system.com:3478"
+  WEBRTC_MAX_BITRATE: "4000"
+  WEBRTC_MIN_BITRATE: "150"
+  WEBRTC_ADAPTIVE_BITRATE: "true"
+  
+  # AI服务配置
+  AI_SERVICE_TIMEOUT: "60"
+  AI_SERVICE_MAX_RETRIES: "3"
+  AI_SERVICE_MOCK: "false"
+  AI_SERVICE_RATE_LIMIT: "100"
+  
+  # 文件存储配置
+  FILE_STORAGE_TYPE: "s3"
+  FILE_STORAGE_BUCKET: "ai-testing-system-production"
+  FILE_STORAGE_REGION: "us-west-2"
+  FILE_MAX_SIZE: "500MB"
+  FILE_STORAGE_CDN: "https://cdn.ai-testing-system.com"
+  
+  # 通知配置
+  NOTIFICATION_ENABLED: "true"
+  NOTIFICATION_CHANNELS: "email,slack,wechat"
+  SMTP_SERVER: "smtp.gmail.com"
+  SMTP_PORT: "587"
+  SMTP_USERNAME: "noreply@ai-testing-system.com"
+  EMAIL_FROM: "AI Testing System <noreply@ai-testing-system.com>"
+  
+  # 安全配置
+  CORS_ORIGINS: "https://ai-testing-system.com,https://www.ai-testing-system.com"
+  ALLOWED_HOSTS: "ai-testing-system.com,www.ai-testing-system.com,api.ai-testing-system.com"
+  SECURE_COOKIES: "true"
+  SESSION_COOKIE_SECURE: "true"
+  CSRF_COOKIE_SECURE: "true"
+  
+  # 监控配置
+  METRICS_ENABLED: "true"
+  TRACING_ENABLED: "true"
+  HEALTH_CHECK_INTERVAL: "30"
+  PROMETHEUS_METRICS: "true"
+  
+  # 缓存配置
+  CACHE_TTL: "7200"
+  CACHE_MAX_SIZE: "10000"
+  CACHE_COMPRESSION: "true"
+  
+  # 任务队列配置
+  CELERY_BROKER_URL: "redis://redis-cluster:6379/0"
+  CELERY_RESULT_BACKEND: "redis://redis-cluster:6379/0"
+  CELERY_WORKER_CONCURRENCY: "8"
+  CELERY_TASK_ROUTES: "{'ai_tasks.*': {'queue': 'ai_queue'}}"
+  
+  # 性能配置
+  GUNICORN_WORKERS: "4"
+  GUNICORN_WORKER_CLASS: "uvicorn.workers.UvicornWorker"
+  GUNICORN_MAX_REQUESTS: "1000"
+  GUNICORN_MAX_REQUESTS_JITTER: "100"
+  GUNICORN_TIMEOUT: "120"
+  
+  # 备份配置
+  BACKUP_ENABLED: "true"
+  BACKUP_SCHEDULE: "0 2 * * *"
+  BACKUP_RETENTION_DAYS: "30"
+  
+  # 日志配置
+  LOG_FORMAT: "json"
+  LOG_ROTATION: "daily"
+  LOG_RETENTION_DAYS: "90"
+  
+  # 限流配置
+  RATE_LIMIT_ENABLED: "true"
+  RATE_LIMIT_REQUESTS_PER_MINUTE: "1000"
+  RATE_LIMIT_BURST: "100"

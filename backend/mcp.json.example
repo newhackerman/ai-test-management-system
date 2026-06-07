@@ -1,0 +1,71 @@
+{
+  "mcpServers": {
+    "openai": {
+      "command": "uvx",
+      "args": ["openai-mcp-server@latest"],
+      "env": {
+        "OPENAI_API_KEY": "your-openai-api-key-here"
+      },
+      "timeout": 30,
+      "max_retries": 3,
+      "retry_delay": 1.0,
+      "health_check_interval": 60,
+      "disabled": false,
+      "autoApprove": ["chat/completions", "models/list"]
+    },
+    "anthropic": {
+      "command": "uvx", 
+      "args": ["anthropic-mcp-server@latest"],
+      "env": {
+        "ANTHROPIC_API_KEY": "your-anthropic-api-key-here"
+      },
+      "timeout": 30,
+      "max_retries": 3,
+      "retry_delay": 1.0,
+      "health_check_interval": 60,
+      "disabled": false,
+      "autoApprove": ["messages/create", "models/list"]
+    },
+    "baidu-wenxin": {
+      "command": "python",
+      "args": ["-m", "baidu_wenxin_mcp"],
+      "env": {
+        "BAIDU_API_KEY": "your-baidu-api-key-here",
+        "BAIDU_SECRET_KEY": "your-baidu-secret-key-here"
+      },
+      "timeout": 45,
+      "max_retries": 2,
+      "retry_delay": 2.0,
+      "health_check_interval": 120,
+      "disabled": false,
+      "autoApprove": ["chat", "completions"]
+    },
+    "aliyun-tongyi": {
+      "command": "python",
+      "args": ["-m", "aliyun_tongyi_mcp"],
+      "env": {
+        "ALIYUN_API_KEY": "your-aliyun-api-key-here"
+      },
+      "timeout": 45,
+      "max_retries": 2,
+      "retry_delay": 2.0,
+      "health_check_interval": 120,
+      "disabled": true,
+      "autoApprove": []
+    },
+    "custom-local": {
+      "command": "./scripts/local_ai_server.sh",
+      "args": ["--port", "8080"],
+      "env": {
+        "MODEL_PATH": "/path/to/local/model",
+        "LOG_LEVEL": "INFO"
+      },
+      "timeout": 60,
+      "max_retries": 1,
+      "retry_delay": 5.0,
+      "health_check_interval": 30,
+      "disabled": true,
+      "autoApprove": ["generate", "health"]
+    }
+  }
+}

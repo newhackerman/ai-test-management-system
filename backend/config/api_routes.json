@@ -1,0 +1,56 @@
+{
+  "api_routes": {
+    "auth": {
+      "prefix": "/auth",
+      "tags": ["认证管理"],
+      "description": "用户认证相关接口"
+    },
+    "users": {
+      "prefix": "/users",
+      "tags": ["用户管理"],
+      "description": "用户管理相关接口"
+    },
+    "roles": {
+      "prefix": "/roles",
+      "tags": ["角色管理"],
+      "description": "角色管理相关接口"
+    },
+    "permissions": {
+      "prefix": "/permissions",
+      "tags": ["权限管理"],
+      "description": "权限管理相关接口"
+    },
+    "configs": {
+      "prefix": "/configs",
+      "tags": ["配置管理"],
+      "description": "系统配置管理接口"
+    },
+    "ai_assistant": {
+      "prefix": "/ai-assistant",
+      "tags": ["AI助手"],
+      "description": "AI助手相关接口"
+    },
+    "ai_queue": {
+      "prefix": "/ai-queue",
+      "tags": ["AI请求队列"],
+      "description": "AI请求队列管理接口"
+    },
+    "streaming": {
+      "prefix": "/streaming",
+      "tags": ["流式响应"],
+      "description": "流式响应接口"
+    },
+    "websocket": {
+      "prefix": "",
+      "tags": ["WebSocket实时通信"],
+      "description": "WebSocket实时通信接口"
+    }
+  },
+  "route_settings": {
+    "enable_docs": true,
+    "enable_redoc": true,
+    "docs_url": "/docs",
+    "redoc_url": "/redoc",
+    "openapi_url": "/openapi.json"
+  }
+}

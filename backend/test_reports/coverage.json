@@ -1,0 +1,23 @@
+{
+  "totals": {
+    "covered_lines": 85,
+    "num_statements": 100,
+    "percent_covered": 85.0,
+    "missing_lines": 15,
+    "excluded_lines": 0
+  },
+  "files": {
+    "src/example.py": {
+      "summary": {
+        "covered_lines": 85,
+        "num_statements": 100,
+        "percent_covered": 85.0
+      },
+      "missing_lines": [
+        10,
+        15,
+        20
+      ]
+    }
+  }
+}
