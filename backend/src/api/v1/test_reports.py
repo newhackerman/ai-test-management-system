@@ -258,13 +258,17 @@ async def generate_report(
     try:
         service = TestReportService(db)
         
+        report_config = dict(request.report_config or {})
+        if request.test_plan_id:
+            report_config["test_plan_id"] = request.test_plan_id
+
         # 创建报告记录
         report_data = {
             'name': request.report_name,
             'report_type': request.report_type,
             'project_id': request.project_id,
             'template_id': request.template_id,
-            'report_config': request.report_config,
+            'report_config': report_config,
             'include_sections': request.include_sections,
             'date_range': request.date_range,
             'export_formats': request.export_formats,
@@ -290,17 +294,17 @@ async def generate_report(
             report_type=report.report_type,
             project_id=report.project_id,
             template_id=report.template_id,
-            report_config=report.report_config,
-            include_sections=report.include_sections,
+            report_config=report.report_config or {},
+            include_sections=report.include_sections or [],
             date_range=report.date_range,
-            export_formats=report.export_formats,
+            export_formats=report.export_formats or [],
             file_paths=report.file_paths,
             file_size=report.file_size,
             status=report.status,
             generation_time=report.generation_time,
             error_message=report.error_message,
-            view_count=report.view_count,
-            download_count=report.download_count,
+            view_count=report.view_count or 0,
+            download_count=report.download_count or 0,
             created_by=report.created_by,
             created_at=report.created_at,
             updated_at=report.updated_at
@@ -393,17 +397,17 @@ async def get_report(
             report_type=report.report_type,
             project_id=report.project_id,
             template_id=report.template_id,
-            report_config=report.report_config,
-            include_sections=report.include_sections,
+            report_config=report.report_config or {},
+            include_sections=report.include_sections or [],
             date_range=report.date_range,
-            export_formats=report.export_formats,
+            export_formats=report.export_formats or [],
             file_paths=report.file_paths,
             file_size=report.file_size,
             status=report.status,
             generation_time=report.generation_time,
             error_message=report.error_message,
-            view_count=report.view_count + 1,  # 包含本次查看
-            download_count=report.download_count,
+            view_count=(report.view_count or 0) + 1,  # 包含本次查看
+            download_count=report.download_count or 0,
             created_by=report.created_by,
             created_at=report.created_at,
             updated_at=report.updated_at
@@ -467,6 +471,7 @@ async def download_report(
 @router.get("/", response_model=PaginatedResponse[TestReportResponse])
 async def list_reports(
     project_id: Optional[int] = Query(None, description="项目ID"),
+    test_plan_id: Optional[int] = Query(None, description="测试计划ID"),
     report_type: Optional[str] = Query(None, description="报告类型"),
     status: Optional[str] = Query(None, description="生成状态"),
     created_by: Optional[int] = Query(None, description="创建人ID"),
@@ -490,6 +495,8 @@ async def list_reports(
         filters = {}
         if project_id:
             filters['project_id'] = project_id
+        if test_plan_id:
+            filters['test_plan_id'] = test_plan_id
         if report_type:
             filters['report_type'] = report_type
         if status:
@@ -516,17 +523,17 @@ async def list_reports(
                 report_type=report.report_type,
                 project_id=report.project_id,
                 template_id=report.template_id,
-                report_config=report.report_config,
-                include_sections=report.include_sections,
+                report_config=report.report_config or {},
+                include_sections=report.include_sections or [],
                 date_range=report.date_range,
-                export_formats=report.export_formats,
+                export_formats=report.export_formats or [],
                 file_paths=report.file_paths,
                 file_size=report.file_size,
                 status=report.status,
                 generation_time=report.generation_time,
                 error_message=report.error_message,
-                view_count=report.view_count,
-                download_count=report.download_count,
+                view_count=report.view_count or 0,
+                download_count=report.download_count or 0,
                 created_by=report.created_by,
                 created_at=report.created_at,
                 updated_at=report.updated_at

@@ -105,6 +105,9 @@ class TestReportService:
     """测试报告服务"""
     
     def __init__(self, project_root: str = None):
+        self.db = project_root if hasattr(project_root, "query") else None
+        if self.db is not None:
+            project_root = None
         self.project_root = Path(project_root) if project_root else Path(__file__).parent.parent.parent
         self.reports_dir = self.project_root / "test_reports"
         self.reports_dir.mkdir(exist_ok=True)
@@ -116,6 +119,180 @@ class TestReportService:
         # 配置可视化样式
         plt.style.use('seaborn-v0_8')
         sns.set_palette("husl")
+
+    def _require_db(self):
+        if self.db is None:
+            raise RuntimeError("Database session is required for report record operations")
+        return self.db
+
+    def _ensure_record_tables(self):
+        from sqlalchemy import text
+
+        db = self._require_db()
+        db.execute(text("""
+            CREATE TABLE IF NOT EXISTS test_report_templates (
+                id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                name VARCHAR(100) NOT NULL,
+                description TEXT NULL,
+                template_type VARCHAR(50) NOT NULL,
+                template_content JSON NULL,
+                default_config JSON NULL,
+                is_active BOOLEAN DEFAULT TRUE,
+                created_by INT NOT NULL,
+                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                INDEX ix_test_report_templates_id (id)
+            )
+        """))
+        db.execute(text("""
+            CREATE TABLE IF NOT EXISTS test_report_records (
+                id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                name VARCHAR(200) NOT NULL,
+                description TEXT NULL,
+                report_type VARCHAR(50) NOT NULL,
+                project_id INT NULL,
+                template_id INT NULL,
+                report_config JSON NULL,
+                include_sections JSON NULL,
+                date_range JSON NULL,
+                export_formats JSON NULL,
+                file_paths JSON NULL,
+                file_size INT NULL,
+                status VARCHAR(20) DEFAULT 'pending',
+                generation_time FLOAT NULL,
+                error_message TEXT NULL,
+                view_count INT DEFAULT 0,
+                download_count INT DEFAULT 0,
+                created_by INT NOT NULL,
+                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                INDEX ix_test_report_records_id (id),
+                INDEX ix_test_report_records_project_id (project_id),
+                INDEX ix_test_report_records_created_by (created_by),
+                INDEX ix_test_report_records_status (status)
+            )
+        """))
+        db.commit()
+
+    async def create_report_record(self, report_data: Dict[str, Any]):
+        from ..models.test_report import TestReportRecord
+
+        db = self._require_db()
+        self._ensure_record_tables()
+        report = TestReportRecord(
+            name=report_data.get("name"),
+            description=report_data.get("description"),
+            report_type=report_data.get("report_type"),
+            project_id=report_data.get("project_id"),
+            template_id=report_data.get("template_id"),
+            report_config=report_data.get("report_config") or {},
+            include_sections=report_data.get("include_sections") or [],
+            date_range=report_data.get("date_range"),
+            export_formats=report_data.get("export_formats") or ["HTML"],
+            file_paths=report_data.get("file_paths") or {},
+            file_size=report_data.get("file_size"),
+            status=report_data.get("status") or "pending",
+            created_by=report_data.get("created_by"),
+        )
+        db.add(report)
+        db.commit()
+        db.refresh(report)
+        return report
+
+    async def get_report_by_id(self, report_id: int):
+        from ..models.test_report import TestReportRecord
+
+        db = self._require_db()
+        self._ensure_record_tables()
+        return db.query(TestReportRecord).filter(TestReportRecord.id == report_id).first()
+
+    async def get_reports_by_filters(self, filters: Dict[str, Any], page: int = 1, page_size: int = 20):
+        from ..models.test_report import TestReportRecord
+
+        db = self._require_db()
+        self._ensure_record_tables()
+        query = db.query(TestReportRecord)
+
+        if filters.get("project_id"):
+            query = query.filter(TestReportRecord.project_id == filters["project_id"])
+        if filters.get("report_type"):
+            query = query.filter(TestReportRecord.report_type == filters["report_type"])
+        if filters.get("status"):
+            query = query.filter(TestReportRecord.status == filters["status"])
+        if filters.get("created_by"):
+            query = query.filter(TestReportRecord.created_by == filters["created_by"])
+        if filters.get("start_date"):
+            query = query.filter(TestReportRecord.created_at >= filters["start_date"])
+        if filters.get("end_date"):
+            query = query.filter(TestReportRecord.created_at <= filters["end_date"])
+        if filters.get("search"):
+            keyword = f"%{filters['search']}%"
+            query = query.filter(TestReportRecord.name.ilike(keyword))
+
+        query = query.order_by(TestReportRecord.created_at.desc(), TestReportRecord.id.desc())
+
+        if filters.get("test_plan_id"):
+            target_plan_id = str(filters["test_plan_id"])
+            matched_reports = []
+            for report in query.all():
+                config = report.report_config or {}
+                if str(config.get("test_plan_id", "")) == target_plan_id:
+                    matched_reports.append(report)
+            total = len(matched_reports)
+            start = (page - 1) * page_size
+            return matched_reports[start:start + page_size], total
+
+        total = query.count()
+        reports = query.offset((page - 1) * page_size).limit(page_size).all()
+        return reports, total
+
+    async def increment_view_count(self, report_id: int):
+        report = await self.get_report_by_id(report_id)
+        if report:
+            report.view_count = (report.view_count or 0) + 1
+            self._require_db().commit()
+        return report
+
+    async def increment_download_count(self, report_id: int):
+        report = await self.get_report_by_id(report_id)
+        if report:
+            report.download_count = (report.download_count or 0) + 1
+            self._require_db().commit()
+        return report
+
+    async def delete_report(self, report_id: int, user_id: int):
+        from ..core.exceptions import NotFoundError, PermissionError
+
+        report = await self.get_report_by_id(report_id)
+        if not report:
+            raise NotFoundError("测试报告不存在")
+        if report.created_by != user_id:
+            raise PermissionError("无权删除该测试报告")
+
+        db = self._require_db()
+        db.delete(report)
+        db.commit()
+        return True
+
+    async def generate_report_async(self, report_id: int, auto_send: bool = False, recipients: List[str] = None):
+        report = await self.get_report_by_id(report_id)
+        if not report:
+            return None
+
+        try:
+            report.status = "completed"
+            report.generation_time = 0.0
+            report.file_paths = report.file_paths or {}
+            report.updated_at = datetime.utcnow()
+            self._require_db().commit()
+            return report
+        except Exception as e:
+            logger.error(f"Generate report record failed: {e}")
+            report.status = "failed"
+            report.error_message = str(e)
+            report.updated_at = datetime.utcnow()
+            self._require_db().commit()
+            return report
     
     def _init_database(self):
         """初始化报告数据库"""

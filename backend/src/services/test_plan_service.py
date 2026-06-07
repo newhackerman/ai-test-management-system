@@ -308,25 +308,48 @@ class TestPlanService:
             # 2. 统计用例执行情况
             from ..models.test_case import TestCase, TestExecution, ExecutionStatus
             
-            # 获取计划下的所有用例
-            cases_query = self.db.query(TestCase).filter(TestCase.test_plan_id == plan_id)
-            total_cases = cases_query.count()
-            
-            # 统计执行情况
-            executed_query = self.db.query(TestExecution)\
-                .join(TestCase, TestExecution.test_case_id == TestCase.id)\
-                .filter(TestCase.test_plan_id == plan_id)\
-                .filter(TestExecution.execution_status != ExecutionStatus.NOT_EXECUTED)
-            
-            executed_cases = executed_query.count()
-            
-            passed_cases = executed_query.filter(
-                TestExecution.execution_status == ExecutionStatus.PASSED
-            ).count()
-            
-            failed_cases = executed_query.filter(
-                TestExecution.execution_status == ExecutionStatus.FAILED
-            ).count()
+            # 获取计划下的所有用例，并按每个用例的最新执行结果统计，避免多次执行被重复计数
+            cases = self.db.query(TestCase).filter(TestCase.test_plan_id == plan_id).all()
+            total_cases = len(cases)
+            case_ids = [test_case.id for test_case in cases]
+
+            latest_status_by_case = {}
+            if case_ids:
+                latest_executions = (
+                    self.db.query(TestExecution)
+                    .filter(TestExecution.test_case_id.in_(case_ids))
+                    .order_by(
+                        TestExecution.test_case_id.asc(),
+                        desc(func.coalesce(
+                            TestExecution.completed_at,
+                            TestExecution.updated_at,
+                            TestExecution.started_at,
+                            TestExecution.created_at,
+                        )),
+                        desc(TestExecution.id),
+                    )
+                    .all()
+                )
+                for execution in latest_executions:
+                    latest_status_by_case.setdefault(execution.test_case_id, execution.execution_status)
+
+            status_counts = {status.value: 0 for status in ExecutionStatus}
+            for test_case in cases:
+                status = latest_status_by_case.get(test_case.id) or test_case.last_execution_status or ExecutionStatus.NOT_EXECUTED
+                status_value = status.value if hasattr(status, "value") else str(status)
+                status_counts[status_value] = status_counts.get(status_value, 0) + 1
+
+            completed_statuses = {
+                ExecutionStatus.PASSED.value,
+                ExecutionStatus.FAILED.value,
+                ExecutionStatus.BLOCKED.value,
+                ExecutionStatus.SKIPPED.value,
+            }
+            executed_cases = sum(status_counts.get(status, 0) for status in completed_statuses)
+            passed_cases = status_counts.get(ExecutionStatus.PASSED.value, 0)
+            failed_cases = status_counts.get(ExecutionStatus.FAILED.value, 0)
+            blocked_cases = status_counts.get(ExecutionStatus.BLOCKED.value, 0)
+            skipped_cases = status_counts.get(ExecutionStatus.SKIPPED.value, 0)
             
             # 3. 计算进度指标
             execution_rate = (executed_cases / total_cases * 100) if total_cases > 0 else 0
@@ -351,12 +374,8 @@ class TestPlanService:
                 'executed_cases': executed_cases,
                 'passed_cases': passed_cases,
                 'failed_cases': failed_cases,
-                'blocked_cases': executed_query.filter(
-                    TestExecution.execution_status == ExecutionStatus.BLOCKED
-                ).count(),
-                'skipped_cases': executed_query.filter(
-                    TestExecution.execution_status == ExecutionStatus.SKIPPED
-                ).count(),
+                'blocked_cases': blocked_cases,
+                'skipped_cases': skipped_cases,
                 'execution_rate': round(execution_rate, 2),
                 'pass_rate': round(pass_rate, 2),
                 'updated_at': datetime.utcnow().isoformat()

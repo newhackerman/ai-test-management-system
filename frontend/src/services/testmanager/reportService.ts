@@ -41,7 +41,7 @@ export class ReportService {
     if (filters) {
       Object.entries(filters).forEach(([key, value]) => {
         if (value !== undefined && value !== null && value !== '') {
-          params.append(key, String(value))
+          params.append(key === 'size' ? 'page_size' : key, String(value))
         }
       })
     }

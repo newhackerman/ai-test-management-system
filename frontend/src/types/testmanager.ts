@@ -392,6 +392,7 @@ export interface TestCaseFilters {
 
 export interface DefectFilters {
   search?: string
+  test_plan_id?: number
   test_case_id?: number
   requirement_id?: number
   defect_type?: DefectType

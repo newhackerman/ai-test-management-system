@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react'
-import { useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useParams, Link } from 'react-router-dom'
-import { ArrowLeft, Edit, Play, Pause, CheckCircle, Download, Users, Calendar, Target, Link2, Unlink, Search } from 'lucide-react'
+import { ArrowLeft, Edit, Play, Pause, CheckCircle, Download, Users, Calendar, Target, Link2, Unlink, Search, Clock, Bug, FileText } from 'lucide-react'
 import { Button } from '../../../components/ui/Button'
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/Card'
 import { Badge } from '../../../components/ui/Badge'
@@ -12,7 +12,10 @@ import { Input } from '../../../components/ui/Input'
 import { Checkbox } from '../../../components/ui/Checkbox'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../components/ui/Table'
 import { useBatchUpdateTestCases, useTestCases, useUpdateTestCase } from '../../../hooks/testmanager/useTestCase'
+import { useDefects } from '../../../hooks/testmanager/useDefect'
+import { useExecutions } from '../../../hooks/testmanager/useExecution'
 import { useExportTestPlan, useTestPlan, useTestPlanProgress, useUpdateTestPlanStatus } from '../../../hooks/testmanager/useTestPlan'
+import { reportService } from '../../../services/testmanager/reportService'
 import { Priority, TestCaseStatus, TestPlanStatus, TestType } from '../../../types/testmanager'
 import { formatDate } from '../../../utils/date'
 
@@ -24,11 +27,22 @@ const TestPlanDetail: React.FC = () => {
   const [selectedCaseIds, setSelectedCaseIds] = useState<number[]>([])
   const linkedCasesFilters = useMemo(() => ({ test_plan_id: planId, page: 1, size: 100 }), [planId])
   const candidateCasesFilters = useMemo(() => ({ search: caseSearch, page: 1, size: 100 }), [caseSearch])
+  const executionFilters = useMemo(() => ({ test_plan_id: planId, page: 1, size: 20 }), [planId])
+  const defectFilters = useMemo(() => ({ test_plan_id: planId, page: 1, size: 20 }), [planId])
+  const reportFilters = useMemo(() => ({ test_plan_id: planId, page: 1, size: 20 }), [planId])
 
   const { data: testPlan, isLoading, error } = useTestPlan(planId)
   const { data: progress } = useTestPlanProgress(planId)
   const { data: linkedCasesData, isLoading: linkedCasesLoading } = useTestCases(linkedCasesFilters)
   const { data: candidateCasesData, isLoading: candidateCasesLoading } = useTestCases(candidateCasesFilters)
+  const { data: executionsData, isLoading: executionsLoading } = useExecutions(executionFilters)
+  const { data: defectsData, isLoading: defectsLoading } = useDefects(defectFilters)
+  const { data: reportsData, isLoading: reportsLoading } = useQuery({
+    queryKey: ['testReports', reportFilters],
+    queryFn: () => reportService.getReports(reportFilters),
+    enabled: Number.isFinite(planId) && planId > 0,
+    staleTime: 30 * 1000,
+  })
   const exportTestPlan = useExportTestPlan()
   const updateTestPlanStatus = useUpdateTestPlanStatus()
   const updateTestCase = useUpdateTestCase()
@@ -91,11 +105,76 @@ const TestPlanDetail: React.FC = () => {
     return <Badge variant={config.variant}>{config.label}</Badge>
   }
 
+  const getExecutionStatusBadge = (status: string) => {
+    const statusConfig: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
+      NOT_EXECUTED: { label: '未执行', variant: 'secondary' },
+      IN_PROGRESS: { label: '执行中', variant: 'default' },
+      PASSED: { label: '通过', variant: 'default' },
+      FAILED: { label: '失败', variant: 'destructive' },
+      BLOCKED: { label: '阻塞', variant: 'destructive' },
+      SKIPPED: { label: '跳过', variant: 'outline' },
+    }
+    const config = statusConfig[status] || { label: status || '-', variant: 'secondary' as const }
+    return <Badge variant={config.variant}>{config.label}</Badge>
+  }
+
+  const getDefectStatusBadge = (status: string) => {
+    const statusConfig: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
+      NEW: { label: '新建', variant: 'destructive' },
+      ASSIGNED: { label: '已分配', variant: 'default' },
+      IN_PROGRESS: { label: '处理中', variant: 'default' },
+      RESOLVED: { label: '已解决', variant: 'secondary' },
+      VERIFIED: { label: '已验证', variant: 'secondary' },
+      CLOSED: { label: '已关闭', variant: 'outline' },
+      REOPENED: { label: '重新打开', variant: 'destructive' },
+      REJECTED: { label: '已拒绝', variant: 'outline' },
+      DEFERRED: { label: '延期', variant: 'secondary' },
+    }
+    const config = statusConfig[status] || { label: status || '-', variant: 'secondary' as const }
+    return <Badge variant={config.variant}>{config.label}</Badge>
+  }
+
+  const getReportStatusBadge = (status: string) => {
+    const normalized = (status || '').toUpperCase()
+    const statusConfig: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
+      PENDING: { label: '生成中', variant: 'secondary' },
+      PROCESSING: { label: '生成中', variant: 'default' },
+      COMPLETED: { label: '已完成', variant: 'default' },
+      SUCCESS: { label: '已完成', variant: 'default' },
+      FAILED: { label: '失败', variant: 'destructive' },
+    }
+    const config = statusConfig[normalized] || { label: status || '-', variant: 'secondary' as const }
+    return <Badge variant={config.variant}>{config.label}</Badge>
+  }
+
+  const executionTypeLabel = (type: string) => ({
+    MANUAL: '手工执行',
+    AUTOMATED: '自动执行',
+  }[type] || type || '-')
+
+  const reportTypeLabel = (type: string) => ({
+    EXECUTION: '执行报告',
+    DEFECT: '缺陷报告',
+    COVERAGE: '覆盖率报告',
+    QUALITY: '质量报告',
+    PERFORMANCE: '性能报告',
+    SECURITY: '安全报告',
+  }[type] || type || '-')
+
+  const formatDuration = (duration?: number) => {
+    if (!duration && duration !== 0) return '-'
+    if (duration < 60) return `${duration}s`
+    return `${Math.floor(duration / 60)}m ${duration % 60}s`
+  }
+
   const stats = progress || testPlan
   const executionRate = stats.total_cases > 0 ? (stats.executed_cases / stats.total_cases) * 100 : 0
   const passRate = stats.executed_cases > 0 ? (stats.passed_cases / stats.executed_cases) * 100 : 0
   const updatingStatus = updateTestPlanStatus.isPending
   const linkedCases = linkedCasesData?.data || []
+  const executions = executionsData?.data || []
+  const defects = defectsData?.data || []
+  const reports = reportsData?.data || []
   const linkedCaseIdSet = new Set(linkedCases.map((testCase: any) => Number(testCase.id)))
   const candidateCases = (candidateCasesData?.data || []).filter((testCase: any) => Number(testCase.test_plan_id) !== planId)
   const selectableCandidateIds = candidateCases.map((testCase: any) => Number(testCase.id))
@@ -547,12 +626,55 @@ const TestPlanDetail: React.FC = () => {
         <TabsContent value="execution">
           <Card>
             <CardHeader>
-              <CardTitle>执行记录</CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <Clock className="w-5 h-5" />
+                  执行记录 ({executionsData?.total ?? executions.length})
+                </CardTitle>
+                <Link to="/test-manager/executions">
+                  <Button variant="outline" size="sm">查看全部</Button>
+                </Link>
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="text-center py-8 text-gray-500">
-                执行记录将在这里显示
-              </div>
+              {executionsLoading ? (
+                <div className="text-center py-8 text-gray-500">正在加载执行记录...</div>
+              ) : executions.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">当前测试计划暂无执行记录</div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>执行编号</TableHead>
+                      <TableHead>用例ID</TableHead>
+                      <TableHead>执行方式</TableHead>
+                      <TableHead>状态</TableHead>
+                      <TableHead>环境</TableHead>
+                      <TableHead>开始时间</TableHead>
+                      <TableHead>耗时</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {executions.map((execution: any) => (
+                      <TableRow key={execution.id}>
+                        <TableCell className="font-medium">{execution.execution_code || `#${execution.id}`}</TableCell>
+                        <TableCell>
+                          {execution.test_case_id ? (
+                            <Link to={`/test-manager/test-cases/${execution.test_case_id}`} className="text-blue-600 hover:text-blue-800">
+                              #{execution.test_case_id}
+                            </Link>
+                          ) : '-'}
+                        </TableCell>
+                        <TableCell>{executionTypeLabel(execution.execution_type)}</TableCell>
+                        <TableCell>{getExecutionStatusBadge(execution.execution_status)}</TableCell>
+                        <TableCell>{execution.test_environment || '-'}</TableCell>
+                        <TableCell>{execution.started_at ? formatDate(execution.started_at) : '-'}</TableCell>
+                        <TableCell>{formatDuration(execution.duration)}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -560,12 +682,58 @@ const TestPlanDetail: React.FC = () => {
         <TabsContent value="defects">
           <Card>
             <CardHeader>
-              <CardTitle>相关缺陷</CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <Bug className="w-5 h-5" />
+                  相关缺陷 ({defectsData?.total ?? defects.length})
+                </CardTitle>
+                <Link to="/test-manager/defects">
+                  <Button variant="outline" size="sm">查看全部</Button>
+                </Link>
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="text-center py-8 text-gray-500">
-                缺陷列表将在这里显示
-              </div>
+              {defectsLoading ? (
+                <div className="text-center py-8 text-gray-500">正在加载缺陷...</div>
+              ) : defects.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">当前测试计划暂无关联缺陷</div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>缺陷</TableHead>
+                      <TableHead>用例ID</TableHead>
+                      <TableHead>严重程度</TableHead>
+                      <TableHead>优先级</TableHead>
+                      <TableHead>状态</TableHead>
+                      <TableHead>负责人</TableHead>
+                      <TableHead>报告时间</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {defects.map((defect: any) => (
+                      <TableRow key={defect.id}>
+                        <TableCell>
+                          <div className="font-medium">{defect.title}</div>
+                          <div className="text-xs text-gray-500">{defect.defect_code}</div>
+                        </TableCell>
+                        <TableCell>
+                          {defect.test_case_id ? (
+                            <Link to={`/test-manager/test-cases/${defect.test_case_id}`} className="text-blue-600 hover:text-blue-800">
+                              #{defect.test_case_id}
+                            </Link>
+                          ) : '-'}
+                        </TableCell>
+                        <TableCell>{getPriorityBadge(defect.severity)}</TableCell>
+                        <TableCell>{getPriorityBadge(defect.priority)}</TableCell>
+                        <TableCell>{getDefectStatusBadge(defect.status)}</TableCell>
+                        <TableCell>{defect.assignee_id ? `用户 #${defect.assignee_id}` : '未分配'}</TableCell>
+                        <TableCell>{defect.reported_at ? formatDate(defect.reported_at) : '-'}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -573,12 +741,49 @@ const TestPlanDetail: React.FC = () => {
         <TabsContent value="reports">
           <Card>
             <CardHeader>
-              <CardTitle>测试报告</CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="w-5 h-5" />
+                  测试报告 ({reportsData?.total ?? reports.length})
+                </CardTitle>
+                <Link to={`/test-manager/reports/generate?test_plan_id=${planId}`}>
+                  <Button variant="outline" size="sm">生成报告</Button>
+                </Link>
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="text-center py-8 text-gray-500">
-                测试报告将在这里显示
-              </div>
+              {reportsLoading ? (
+                <div className="text-center py-8 text-gray-500">正在加载测试报告...</div>
+              ) : reports.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">当前测试计划暂无测试报告</div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>报告名称</TableHead>
+                      <TableHead>类型</TableHead>
+                      <TableHead>状态</TableHead>
+                      <TableHead>格式</TableHead>
+                      <TableHead>创建人</TableHead>
+                      <TableHead>创建时间</TableHead>
+                      <TableHead>下载次数</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {reports.map((report: any) => (
+                      <TableRow key={report.id}>
+                        <TableCell className="font-medium">{report.name || report.report_name || `报告 #${report.id}`}</TableCell>
+                        <TableCell>{reportTypeLabel(report.report_type)}</TableCell>
+                        <TableCell>{getReportStatusBadge(report.status)}</TableCell>
+                        <TableCell>{(report.export_formats || [report.report_format]).filter(Boolean).join(', ') || '-'}</TableCell>
+                        <TableCell>{report.created_by || report.generated_by ? `用户 #${report.created_by || report.generated_by}` : '-'}</TableCell>
+                        <TableCell>{report.created_at ? formatDate(report.created_at) : '-'}</TableCell>
+                        <TableCell>{report.download_count ?? 0}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

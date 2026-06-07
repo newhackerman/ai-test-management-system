@@ -12,6 +12,7 @@ from datetime import datetime, timedelta
 from typing import Optional, List, Dict, Any
 from fastapi import APIRouter, Depends, HTTPException, Query, Path, Body, UploadFile, File, Response
 from fastapi.security import HTTPBearer
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, Field
 import logging
@@ -24,7 +25,7 @@ from ...services.defect_trend_service import DefectTrendService
 from ...services.defect_notification_service import DefectNotificationService
 from ...services.auth_dependencies import get_current_user
 from ...models.user import User
-from ...models.test_case import Defect, DefectType, DefectSeverity, DefectStatus, DefectResolution, TestCasePriority
+from ...models.test_case import Defect, DefectType, DefectSeverity, DefectStatus, DefectResolution, TestCasePriority, TestCase, TestExecution
 from ...schemas.base import BaseResponse, PaginatedResponse
 
 logger = logging.getLogger(__name__)
@@ -580,6 +581,7 @@ async def delete_defect(
 async def list_defects(
     test_execution_id: Optional[int] = Query(None, description="测试执行ID"),
     test_case_id: Optional[int] = Query(None, description="测试用例ID"),
+    test_plan_id: Optional[int] = Query(None, description="测试计划ID"),
     requirement_id: Optional[int] = Query(None, description="需求ID"),
     defect_type: Optional[DefectType] = Query(None, description="缺陷类型"),
     severity: Optional[DefectSeverity] = Query(None, description="严重程度"),
@@ -607,6 +609,12 @@ async def list_defects(
             query = query.filter(Defect.test_execution_id == test_execution_id)
         if test_case_id:
             query = query.filter(Defect.test_case_id == test_case_id)
+        if test_plan_id:
+            query = (
+                query.outerjoin(TestCase, Defect.test_case_id == TestCase.id)
+                .outerjoin(TestExecution, Defect.test_execution_id == TestExecution.id)
+                .filter(or_(TestCase.test_plan_id == test_plan_id, TestExecution.test_plan_id == test_plan_id))
+            )
         if requirement_id:
             query = query.filter(Defect.requirement_id == requirement_id)
         if defect_type:
