@@ -265,7 +265,7 @@ const TestPlanList: React.FC = () => {
                             </Link>
                           </DropdownMenuItem>
                           <DropdownMenuItem asChild>
-                            <Link to={`/test-manager/test-plans/${plan.id}`}>
+                            <Link to={`/test-manager/test-plans/${plan.id}/edit`}>
                               编辑
                             </Link>
                           </DropdownMenuItem>

@@ -100,6 +100,7 @@ const TestManager = React.lazy(() => import('@/pages/TestManager'))
 const TestPlanList = React.lazy(() => import('@/pages/TestManager/TestPlan/TestPlanList'))
 const TestPlanCreate = React.lazy(() => import('@/pages/TestManager/TestPlan/TestPlanCreate'))
 const TestPlanDetail = React.lazy(() => import('@/pages/TestManager/TestPlan/TestPlanDetail'))
+const TestPlanEdit = React.lazy(() => import('@/pages/TestManager/TestPlan/TestPlanEdit'))
 const TestCaseList = React.lazy(() => import('@/pages/TestManager/TestCase/TestCaseList'))
 const TestCaseCreate = React.lazy(() => import('@/pages/TestManager/TestCase/TestCaseCreate'))
 const TestCaseEdit = React.lazy(() => import('@/pages/TestManager/TestCase/TestCaseEdit'))
@@ -174,6 +175,7 @@ export const routes: RouteObject[] = [
       { path: 'test-manager', element: withModule('testing', TestManager) },
       { path: 'test-manager/test-plans', element: withModule('testing', TestPlanList) },
       { path: 'test-manager/test-plans/create', element: withModule('testing', TestPlanCreate) },
+      { path: 'test-manager/test-plans/:id/edit', element: withModule('testing', TestPlanEdit) },
       { path: 'test-manager/test-plans/:id', element: withModule('testing', TestPlanDetail) },
       { path: 'test-manager/test-cases', element: withModule('testing', TestCaseList) },
       { path: 'test-manager/test-cases/create', element: withModule('testing', TestCaseCreate) },

@@ -1141,12 +1141,6 @@ const AIAssistant: React.FC = () => {
                   rows={6}
                 />
               </div>
-              <div className="rounded-md border border-gray-200 bg-gray-50 p-3 text-xs text-gray-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
-                <div className="font-medium text-gray-800 dark:text-slate-100">当前模型</div>
-                <div className="mt-1 break-words">{statusInfo?.provider || '-'} / {statusInfo?.model || '-'}</div>
-                <div className="mt-2 font-medium text-gray-800 dark:text-slate-100">服务地址</div>
-                <div className="mt-1 break-words">{statusInfo?.endpoint || '-'}</div>
-              </div>
             </CardContent>
           </Card>
 

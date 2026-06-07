@@ -66,6 +66,7 @@ export const useUpdateTestPlan = () => {
     mutationFn: ({ id, data }: { id: number; data: UpdateTestPlanRequest }) =>
       testPlanService.updateTestPlan(id, data),
     onSuccess: (data) => {
+      queryClient.setQueryData(['testPlan', data.id], data)
       queryClient.invalidateQueries({ queryKey: ['testPlans'] })
       queryClient.invalidateQueries({ queryKey: ['testPlan', data.id] })
       toast({ title: '成功', description: '测试计划更新成功', variant: 'success' })
