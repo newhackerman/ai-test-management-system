@@ -331,12 +331,44 @@ async def export_test_plan(
         raise HTTPException(status_code=404, detail="测试计划不存在")
 
     data = _build_test_plan_response(test_plan).dict()
-    lines = ["字段,值"] + [f"{key},{str(value or '').replace(',', '，')}" for key, value in data.items()]
-    content = "\ufeff" + "\n".join(lines)
-    suffix = "csv" if format not in {"txt", "csv"} else format
+    fields = [
+        ("计划编号", data.get("plan_code")),
+        ("计划名称", data.get("plan_name")),
+        ("所属项目ID", data.get("project_id")),
+        ("测试类型", data.get("test_type")),
+        ("当前状态", data.get("status")),
+        ("测试经理ID", data.get("test_manager_id")),
+        ("计划开始日期", data.get("planned_start_date")),
+        ("计划结束日期", data.get("planned_end_date")),
+        ("实际开始日期", data.get("actual_start_date")),
+        ("实际结束日期", data.get("actual_end_date")),
+        ("总用例数", data.get("total_cases")),
+        ("已执行用例数", data.get("executed_cases")),
+        ("通过用例数", data.get("passed_cases")),
+        ("失败用例数", data.get("failed_cases")),
+        ("执行率", data.get("execution_rate")),
+        ("通过率", data.get("pass_rate")),
+        ("描述", data.get("description")),
+        ("测试范围", data.get("test_scope")),
+        ("测试策略", data.get("test_strategy")),
+        ("创建时间", data.get("created_at")),
+        ("更新时间", data.get("updated_at")),
+    ]
+    suffix = "txt" if format == "txt" else "csv"
+    if suffix == "txt":
+        content = "\ufeff" + "\n".join([f"{label}: {value or ''}" for label, value in fields])
+        media_type = "text/plain; charset=utf-8"
+    else:
+        rows = ["字段,值"]
+        for label, value in fields:
+            text = str(value or "").replace('"', '""').replace("\r", " ").replace("\n", " ")
+            rows.append(f'"{label}","{text}"')
+        content = "\ufeff" + "\n".join(rows)
+        media_type = "text/csv; charset=utf-8"
+
     return Response(
         content=content,
-        media_type="text/csv; charset=utf-8",
+        media_type=media_type,
         headers={"Content-Disposition": f"attachment; filename=test-plan-{plan_id}.{suffix}"}
     )
 

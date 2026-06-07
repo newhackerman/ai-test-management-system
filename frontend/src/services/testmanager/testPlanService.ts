@@ -26,6 +26,16 @@ const normalizeParams = (filters?: Record<string, any>) => {
   return params
 }
 
+const parseDownloadFileName = (contentDisposition?: string) => {
+  if (!contentDisposition) return ''
+
+  const utf8Match = contentDisposition.match(/filename\*=UTF-8''([^;]+)/i)
+  if (utf8Match?.[1]) return decodeURIComponent(utf8Match[1].replace(/"/g, ''))
+
+  const plainMatch = contentDisposition.match(/filename="?([^";]+)"?/i)
+  return plainMatch?.[1] || ''
+}
+
 export class TestPlanService {
   private baseUrl = '/api/v1/test-plans/'
 
@@ -80,12 +90,15 @@ export class TestPlanService {
     return unwrapData<any[]>(response.data) || []
   }
 
-  async exportTestPlan(id: number, format: string): Promise<Blob> {
+  async exportTestPlan(id: number, format: string): Promise<{ blob: Blob; filename: string }> {
     const response = await apiClient.get(this.path(`${id}/export`), {
       params: { format },
       responseType: 'blob'
     })
-    return response.data
+    return {
+      blob: response.data,
+      filename: parseDownloadFileName(response.headers?.['content-disposition']) || `test-plan-${id}.${format}`
+    }
   }
 }
 

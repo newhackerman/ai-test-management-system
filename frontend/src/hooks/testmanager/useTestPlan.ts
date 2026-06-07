@@ -109,6 +109,7 @@ export const useUpdateTestPlanStatus = () => {
     mutationFn: ({ id, status }: { id: number; status: string }) =>
       testPlanService.updateTestPlanStatus(id, status),
     onSuccess: (data) => {
+      queryClient.setQueryData(['testPlan', data.id], data)
       queryClient.invalidateQueries({ queryKey: ['testPlans'] })
       queryClient.invalidateQueries({ queryKey: ['testPlan', data.id] })
       toast({ title: '成功', description: '测试计划状态更新成功', variant: 'success' })
@@ -158,15 +159,15 @@ export const useExportTestPlan = () => {
   return useMutation({
     mutationFn: ({ id, format }: { id: number; format: string }) =>
       testPlanService.exportTestPlan(id, format),
-    onSuccess: (blob, variables) => {
+    onSuccess: ({ blob, filename }, variables) => {
       const url = window.URL.createObjectURL(blob)
       const link = document.createElement('a')
       link.href = url
-      link.download = `test-plan-${variables.id}.${variables.format}`
+      link.download = filename || `test-plan-${variables.id}.${variables.format}`
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)
-      window.URL.revokeObjectURL(url)
+      window.setTimeout(() => window.URL.revokeObjectURL(url), 1000)
       toast({ title: '成功', description: '测试计划导出成功', variant: 'success' })
     },
     onError: (error: any) => {

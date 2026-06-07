@@ -57,6 +57,10 @@ const TestPlanList: React.FC = () => {
     if (newName) duplicateTestPlan.mutate({ id, newName })
   }
 
+  const handleExport = (id: number, format: 'csv' | 'txt') => {
+    exportTestPlan.mutate({ id, format })
+  }
+
   const getStatusBadge = (status: TestPlanStatus) => {
     const statusConfig = {
       [TestPlanStatus.DRAFT]: { label: '草稿', variant: 'secondary' as const },
@@ -291,9 +295,13 @@ const TestPlanList: React.FC = () => {
                             <Copy className="w-4 h-4 mr-2" />
                             复制
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => exportTestPlan.mutate({ id: plan.id, format: 'csv' })}>
+                          <DropdownMenuItem disabled={exportTestPlan.isPending} onClick={() => handleExport(plan.id, 'csv')}>
                             <Download className="w-4 h-4 mr-2" />
-                            导出
+                            导出 CSV
+                          </DropdownMenuItem>
+                          <DropdownMenuItem disabled={exportTestPlan.isPending} onClick={() => handleExport(plan.id, 'txt')}>
+                            <Download className="w-4 h-4 mr-2" />
+                            导出 TXT
                           </DropdownMenuItem>
                           <DropdownMenuItem 
                             className="text-red-600"

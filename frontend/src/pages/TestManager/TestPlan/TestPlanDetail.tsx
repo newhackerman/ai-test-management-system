@@ -6,7 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui
 import { Badge } from '../../../components/ui/Badge'
 import { Progress } from '../../../components/ui/Progress'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../components/ui/Tabs'
-import { useTestPlan, useTestPlanProgress } from '../../../hooks/testmanager/useTestPlan'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../../../components/ui/DropdownMenu'
+import { useExportTestPlan, useTestPlan, useTestPlanProgress, useUpdateTestPlanStatus } from '../../../hooks/testmanager/useTestPlan'
 import { TestPlanStatus, TestType } from '../../../types/testmanager'
 import { formatDate } from '../../../utils/date'
 
@@ -16,6 +17,8 @@ const TestPlanDetail: React.FC = () => {
 
   const { data: testPlan, isLoading, error } = useTestPlan(planId)
   const { data: progress } = useTestPlanProgress(planId)
+  const exportTestPlan = useExportTestPlan()
+  const updateTestPlanStatus = useUpdateTestPlanStatus()
 
   if (isLoading) {
     return <div className="flex justify-center items-center h-64">加载中...</div>
@@ -53,6 +56,15 @@ const TestPlanDetail: React.FC = () => {
 
   const executionRate = testPlan.total_cases > 0 ? (testPlan.executed_cases / testPlan.total_cases) * 100 : 0
   const passRate = testPlan.executed_cases > 0 ? (testPlan.passed_cases / testPlan.executed_cases) * 100 : 0
+  const updatingStatus = updateTestPlanStatus.isPending
+
+  const handleExport = (format: 'csv' | 'txt') => {
+    exportTestPlan.mutate({ id: planId, format })
+  }
+
+  const handleStatusChange = (status: TestPlanStatus) => {
+    updateTestPlanStatus.mutate({ id: planId, status })
+  }
 
   return (
     <div className="space-y-6">
@@ -71,11 +83,49 @@ const TestPlanDetail: React.FC = () => {
           </div>
           {getStatusBadge(testPlan.status)}
         </div>
-        <div className="flex space-x-2">
-          <Button variant="outline">
-            <Download className="w-4 h-4 mr-2" />
-            导出
-          </Button>
+        <div className="flex flex-wrap justify-end gap-2">
+          {testPlan.status === TestPlanStatus.DRAFT && (
+            <Button variant="outline" disabled={updatingStatus} onClick={() => handleStatusChange(TestPlanStatus.APPROVED)}>
+              <CheckCircle className="w-4 h-4 mr-2" />
+              批准
+            </Button>
+          )}
+          {testPlan.status === TestPlanStatus.APPROVED && (
+            <Button variant="outline" disabled={updatingStatus} onClick={() => handleStatusChange(TestPlanStatus.IN_PROGRESS)}>
+              <Play className="w-4 h-4 mr-2" />
+              开始执行
+            </Button>
+          )}
+          {testPlan.status === TestPlanStatus.IN_PROGRESS && (
+            <>
+              <Button variant="outline" disabled={updatingStatus} onClick={() => handleStatusChange(TestPlanStatus.PAUSED)}>
+                <Pause className="w-4 h-4 mr-2" />
+                暂停
+              </Button>
+              <Button variant="outline" disabled={updatingStatus} onClick={() => handleStatusChange(TestPlanStatus.COMPLETED)}>
+                <CheckCircle className="w-4 h-4 mr-2" />
+                完成
+              </Button>
+            </>
+          )}
+          {testPlan.status === TestPlanStatus.PAUSED && (
+            <Button variant="outline" disabled={updatingStatus} onClick={() => handleStatusChange(TestPlanStatus.IN_PROGRESS)}>
+              <Play className="w-4 h-4 mr-2" />
+              继续执行
+            </Button>
+          )}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" disabled={exportTestPlan.isPending}>
+                <Download className="w-4 h-4 mr-2" />
+                {exportTestPlan.isPending ? '导出中...' : '导出'}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => handleExport('csv')}>导出 CSV</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleExport('txt')}>导出 TXT</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Link to={`/test-manager/test-plans/${planId}/edit`}>
             <Button>
               <Edit className="w-4 h-4 mr-2" />
