@@ -240,11 +240,19 @@ if __name__ == '__main__':
             prompt = self._build_script_generation_prompt(test_case, config)
             
             # 4. 调用AI生成服务
-            ai_response = await self.ai_service.generate_content(
-                prompt=prompt,
-                max_tokens=3000,
-                temperature=0.3
-            )
+            try:
+                ai_response = await self.ai_service.generate_content(
+                    prompt=prompt,
+                    max_tokens=3000,
+                    temperature=0.3
+                )
+            except Exception as ai_error:
+                logger.warning(
+                    "AI script generation failed for test case %s, using local template fallback: %s",
+                    test_case_id,
+                    str(ai_error)
+                )
+                ai_response = self._generate_basic_script(test_case, config)
             
             # 5. 解析生成结果
             script_data = self._parse_script_response(ai_response, test_case, config)

@@ -20,7 +20,13 @@ from ...core.database import get_db
 from ...core.exceptions import ValidationError, PermissionError, NotFoundError, BusinessLogicError
 from ...services.test_case_service import TestCaseService
 from ...services.ai_test_case_generator import AITestCaseGenerator, GenerationConfig, GenerationTemplate
-from ...services.automation_script_generator import AutomationScriptGenerator
+from ...services.automation_script_generator import (
+    AutomationConfig,
+    AutomationFramework,
+    AutomationScriptGenerator,
+    BrowserType,
+    ProgrammingLanguage,
+)
 from ...services.auth_dependencies import get_current_user
 from ...models.user import User
 from ...models.test_case import TestCase, TestCaseType, TestCasePriority, TestCaseStatus
@@ -38,6 +44,57 @@ def _is_missing_table_error(error: Exception) -> bool:
 
 def _enum_value(value):
     return getattr(value, "value", value)
+
+
+def _normalize_automation_value(value: Optional[str]) -> str:
+    return str(value or "").strip().replace("-", "_").upper()
+
+
+def _build_automation_config(request: "GenerateAutomationScriptRequest") -> AutomationConfig:
+    config = AutomationConfig()
+    automation_config = request.automation_config or {}
+
+    framework_value = _normalize_automation_value(request.framework) or AutomationFramework.PLAYWRIGHT.value
+    language_value = _normalize_automation_value(request.language) or ProgrammingLanguage.PYTHON.value
+    browser_value = _normalize_automation_value(request.browser) or BrowserType.CHROME.value
+
+    aliases = {
+        "CHROMIUM": "CHROME",
+        "JS": "JAVASCRIPT",
+        "TS": "JAVASCRIPT",
+        "TYPESCRIPT": "JAVASCRIPT",
+        "WEBDRIVERIO": "SELENIUM",
+        "WEBDRIVER_IO": "SELENIUM",
+    }
+    framework_value = aliases.get(framework_value, framework_value)
+    language_value = aliases.get(language_value, language_value)
+    browser_value = aliases.get(browser_value, browser_value)
+
+    try:
+        config.framework = AutomationFramework(framework_value)
+    except ValueError:
+        config.framework = AutomationFramework.PLAYWRIGHT
+
+    try:
+        config.language = ProgrammingLanguage(language_value)
+    except ValueError:
+        config.language = ProgrammingLanguage.PYTHON
+
+    try:
+        config.browser = BrowserType(browser_value)
+    except ValueError:
+        config.browser = BrowserType.CHROME
+
+    for attr in ("use_page_object_model", "include_error_handling", "include_screenshots", "include_logging"):
+        if attr in automation_config:
+            setattr(config, attr, bool(automation_config[attr]))
+
+    for attr in ("wait_strategy", "assertion_style", "test_data_source"):
+        value = automation_config.get(attr)
+        if isinstance(value, str) and value.strip():
+            setattr(config, attr, value.strip())
+
+    return config
 
 
 def _build_test_case_response(test_case):
@@ -962,12 +1019,28 @@ async def generate_automation_script(
         generator = AutomationScriptGenerator(db)
         
         # 生成自动化脚本
-        script = await generator.generate_automation_script(
-            test_case_id=request.test_case_id,
-            framework=request.framework,
-            language=request.language,
-            browser=request.browser,
-            automation_config=request.automation_config or {}
+        config = _build_automation_config(request)
+        generation_result = await generator.generate_automation_script(
+            request.test_case_id,
+            config,
+            current_user.id
+        )
+        script = await generator.save_automation_script(
+            request.test_case_id,
+            {
+                "script_name": f"{generation_result.get('test_case_title') or 'test_case'}_automation",
+                "framework": config.framework.value,
+                "language": config.language.value,
+                "browser": config.browser.value,
+                "script_content": generation_result.get("generated_script", ""),
+                "dependencies": generation_result.get("dependencies", []),
+                "environment_config": {
+                    "generation_time": generation_result.get("generation_time"),
+                    "validation_result": generation_result.get("validation_result"),
+                    "script_metadata": generation_result.get("script_metadata"),
+                },
+            },
+            current_user.id
         )
         
         # 构建响应

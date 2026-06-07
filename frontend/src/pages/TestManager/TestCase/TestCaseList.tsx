@@ -107,7 +107,7 @@ const TestCaseList: React.FC = () => {
     Promise.allSettled([
       requirementService.getRequirements({ page: 1, size: 100, sort_by: 'updated_at', sort_order: 'desc' }),
       testPlanService.getTestPlans({ page: 1, size: 100 }),
-      userService.getUsers({ page: 1, size: 200, status: 'active' }),
+      userService.getUsers({ page: 1, size: 100, status: 'active' }),
     ]).then(([requirementsResult, plansResult, usersResult]) => {
       if (cancelled) return
       if (requirementsResult.status === 'fulfilled') setRequirements(requirementsResult.value.data || [])
@@ -238,7 +238,7 @@ const TestCaseList: React.FC = () => {
   const handleGenerateScript = (id: number) => {
     generateAutomationScript.mutate({
       testCaseId: id,
-      config: { framework: 'playwright', language: 'typescript', browser: 'chromium' },
+      config: { framework: 'PLAYWRIGHT', language: 'PYTHON', browser: 'CHROME' },
     })
   }
 

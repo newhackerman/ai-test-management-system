@@ -67,7 +67,7 @@ const TestCaseDetail: React.FC = () => {
 
   useEffect(() => {
     let cancelled = false
-    userService.getUsers({ page: 1, size: 200, status: 'active' })
+    userService.getUsers({ page: 1, size: 100, status: 'active' })
       .then((response) => {
         if (!cancelled) setUsers(response.users || [])
       })
@@ -135,7 +135,7 @@ const TestCaseDetail: React.FC = () => {
   const handleGenerateScript = () => {
     generateAutomationScript.mutate({
       testCaseId: caseId,
-      config: { framework: 'playwright', language: 'typescript', browser: 'chromium' },
+      config: { framework: 'PLAYWRIGHT', language: 'PYTHON', browser: 'CHROME' },
     })
   }
 

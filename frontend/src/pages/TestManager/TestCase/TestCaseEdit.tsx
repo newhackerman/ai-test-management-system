@@ -42,7 +42,7 @@ const TestCaseEdit: React.FC = () => {
     Promise.allSettled([
       requirementService.getRequirements({ page: 1, size: 100, sort_by: 'updated_at', sort_order: 'desc' }),
       testPlanService.getTestPlans({ page: 1, size: 100 }),
-      userService.getUsers({ page: 1, size: 200, status: 'active' }),
+      userService.getUsers({ page: 1, size: 100, status: 'active' }),
     ]).then(([requirementsResult, plansResult, usersResult]) => {
       if (cancelled) return
       if (requirementsResult.status === 'fulfilled') setRequirements(requirementsResult.value.data || [])
