@@ -19,7 +19,7 @@ import logging
 from ...core.database import get_db
 from ...core.exceptions import ValidationError, PermissionError, NotFoundError, BusinessLogicError
 from ...services.test_case_service import TestCaseService
-from ...services.ai_test_case_generator import AITestCaseGenerator
+from ...services.ai_test_case_generator import AITestCaseGenerator, GenerationConfig, GenerationTemplate
 from ...services.automation_script_generator import AutomationScriptGenerator
 from ...services.auth_dependencies import get_current_user
 from ...models.user import User
@@ -384,7 +384,57 @@ async def export_test_cases(
     )
 
 
-@router.post("/generate", response_model=BaseResponse[List[GeneratedTestCaseResponse]])
+@router.post("/generate", response_model=BaseResponse[List[TestCaseResponse]])
+async def generate_test_cases_persisted(
+    request: GenerateTestCasesRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Generate test cases from a requirement and save them as real test cases."""
+    try:
+        config = GenerationConfig()
+        config.case_type = request.case_type
+        config.priority = request.priority
+        config.template = {
+            TestCaseType.INTEGRATION: GenerationTemplate.INTEGRATION_TESTING,
+            TestCaseType.PERFORMANCE: GenerationTemplate.PERFORMANCE_TESTING,
+            TestCaseType.SECURITY: GenerationTemplate.SECURITY_TESTING,
+        }.get(request.case_type, GenerationTemplate.FUNCTIONAL_BASIC)
+
+        raw_config = request.generation_config or {}
+        if isinstance(raw_config.get("max_cases"), int):
+            config.max_cases = max(1, min(raw_config["max_cases"], 30))
+        if isinstance(raw_config.get("include_negative_cases"), bool):
+            config.include_negative_cases = raw_config["include_negative_cases"]
+        if isinstance(raw_config.get("include_boundary_cases"), bool):
+            config.include_boundary_cases = raw_config["include_boundary_cases"]
+        if isinstance(raw_config.get("include_edge_cases"), bool):
+            config.include_edge_cases = raw_config["include_edge_cases"]
+        if raw_config.get("detail_level") in {"low", "medium", "high"}:
+            config.detail_level = raw_config["detail_level"]
+        if raw_config.get("template") in {item.value for item in GenerationTemplate}:
+            config.template = GenerationTemplate(raw_config["template"])
+
+        generator = AITestCaseGenerator(db)
+        generation_result = await generator.generate_test_cases_from_requirement(
+            requirement_id=request.requirement_id,
+            config=config,
+            user_id=current_user.id
+        )
+        saved_cases = await generator.batch_save_generated_cases(
+            generated_cases=generation_result.get("generated_cases", []),
+            test_plan_id=request.test_plan_id,
+            requirement_id=request.requirement_id,
+            user_id=current_user.id
+        )
+        response_data = [_build_test_case_response(case) for case in saved_cases]
+        return BaseResponse(success=True, message=f"AI生成测试用例成功，共保存{len(response_data)}个用例", data=response_data)
+    except Exception as e:
+        logger.error(f"AI generate persisted test cases failed: {str(e)}")
+        raise HTTPException(status_code=500, detail="AI生成测试用例失败")
+
+
+@router.post("/generate-preview-legacy", response_model=BaseResponse[List[GeneratedTestCaseResponse]])
 async def generate_test_cases_compat(
     request: GenerateTestCasesRequest,
     current_user: User = Depends(get_current_user),

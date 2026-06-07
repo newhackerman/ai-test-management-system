@@ -456,16 +456,18 @@ export interface TestCaseGenerationConfig {
   requirement_id: number
   case_type: TestCaseType
   priority: Priority
+  test_plan_id?: number
   complexity?: Complexity
   framework?: string
   template_type?: string
+  generation_config?: Record<string, any>
 }
 
 export interface AutomationConfig {
   framework: string
   language: string
   browser: string
-  creator_id: number
+  creator_id?: number
 }
 
 export interface AutomationScript {

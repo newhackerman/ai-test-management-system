@@ -12,14 +12,17 @@ import type {
 import { useToast } from '../useToast'
 
 const getErrorMessage = (error: any, fallback: string) => (
-  error?.response?.data?.message || error?.message || fallback
+  error?.response?.data?.detail ||
+  error?.response?.data?.message ||
+  error?.message ||
+  fallback
 )
 
 export const useTestCases = (filters?: TestCaseFilters) => {
   return useQuery({
     queryKey: ['testCases', filters],
     queryFn: () => testCaseService.getTestCases(filters),
-    staleTime: 5 * 60 * 1000,
+    staleTime: 30 * 1000,
   })
 }
 
@@ -39,6 +42,7 @@ export const useCreateTestCase = () => {
     mutationFn: (data: CreateTestCaseRequest) => testCaseService.createTestCase(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['testCases'] })
+      queryClient.invalidateQueries({ queryKey: ['testPlans'] })
       toast({ title: '成功', description: '测试用例创建成功', variant: 'success' })
     },
     onError: (error: any) => {
@@ -76,6 +80,7 @@ export const useDeleteTestCase = () => {
     mutationFn: (id: number) => testCaseService.deleteTestCase(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['testCases'] })
+      queryClient.invalidateQueries({ queryKey: ['testPlans'] })
       toast({ title: '成功', description: '测试用例删除成功', variant: 'success' })
     },
     onError: (error: any) => {
@@ -93,6 +98,7 @@ export const useDuplicateTestCase = () => {
       testCaseService.duplicateTestCase(id, newTitle),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['testCases'] })
+      queryClient.invalidateQueries({ queryKey: ['testPlans'] })
       toast({ title: '成功', description: '测试用例复制成功', variant: 'success' })
     },
     onError: (error: any) => {
@@ -109,7 +115,8 @@ export const useGenerateTestCases = () => {
     mutationFn: (config: TestCaseGenerationConfig) => testCaseService.generateTestCases(config),
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['testCases'] })
-      toast({ title: '成功', description: `成功生成 ${data.length} 个测试用例`, variant: 'success' })
+      queryClient.invalidateQueries({ queryKey: ['testPlans'] })
+      toast({ title: '成功', description: `成功生成并保存 ${data.length} 个测试用例`, variant: 'success' })
     },
     onError: (error: any) => {
       toast({ title: '错误', description: getErrorMessage(error, 'AI 生成测试用例失败'), variant: 'destructive' })
@@ -160,6 +167,7 @@ export const useBatchDeleteTestCases = () => {
     mutationFn: (ids: number[]) => testCaseService.batchDeleteTestCases(ids),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['testCases'] })
+      queryClient.invalidateQueries({ queryKey: ['testPlans'] })
       toast({ title: '成功', description: '批量删除成功', variant: 'success' })
     },
     onError: (error: any) => {
@@ -200,6 +208,7 @@ export const useImportTestCases = () => {
       testCaseService.importTestCases(file, testPlanId),
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['testCases'] })
+      queryClient.invalidateQueries({ queryKey: ['testPlans'] })
       toast({
         title: '导入完成',
         description: `成功导入 ${result?.success_count || 0} 个用例，失败 ${result?.failed_count || 0} 个`,
@@ -214,7 +223,7 @@ export const useImportTestCases = () => {
 
 export const useTestCaseManagement = () => {
   const [selectedCases, setSelectedCases] = useState<number[]>([])
-  const [filters, setFilters] = useState<TestCaseFilters>({})
+  const [filters, setFilters] = useState<TestCaseFilters>({ page: 1, size: 20 })
   const [searchTerm, setSearchTerm] = useState('')
 
   const handleSelectCase = useCallback((id: number) => {
@@ -224,7 +233,9 @@ export const useTestCaseManagement = () => {
   }, [])
 
   const handleSelectAllCases = useCallback((caseIds: number[]) => {
-    setSelectedCases((prev) => (prev.length === caseIds.length ? [] : caseIds))
+    setSelectedCases((prev) => (
+      caseIds.length > 0 && caseIds.every((id) => prev.includes(id)) ? [] : caseIds
+    ))
   }, [])
 
   const handleClearSelection = useCallback(() => {
@@ -232,12 +243,24 @@ export const useTestCaseManagement = () => {
   }, [])
 
   const handleUpdateFilters = useCallback((newFilters: Partial<TestCaseFilters>) => {
-    setFilters((prev) => ({ ...prev, ...newFilters }))
+    setSelectedCases([])
+    setFilters((prev) => ({ ...prev, ...newFilters, page: 1 }))
   }, [])
 
   const handleSearch = useCallback((term: string) => {
     setSearchTerm(term)
-    setFilters((prev) => ({ ...prev, search: term }))
+    setSelectedCases([])
+    setFilters((prev) => ({ ...prev, search: term, page: 1 }))
+  }, [])
+
+  const handleChangePage = useCallback((page: number) => {
+    setSelectedCases([])
+    setFilters((prev) => ({ ...prev, page }))
+  }, [])
+
+  const handleChangePageSize = useCallback((size: number) => {
+    setSelectedCases([])
+    setFilters((prev) => ({ ...prev, size, page: 1 }))
   }, [])
 
   return {
@@ -249,5 +272,7 @@ export const useTestCaseManagement = () => {
     handleClearSelection,
     handleUpdateFilters,
     handleSearch,
+    handleChangePage,
+    handleChangePageSize,
   }
 }

@@ -1,71 +1,28 @@
 // @ts-nocheck
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, Plus, Save, Trash2 } from 'lucide-react'
 import { Button } from '../../../components/ui/Button'
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/Card'
 import { Input } from '../../../components/ui/Input'
 import { Textarea } from '../../../components/ui/Textarea'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/Select'
 import { useTestCase, useUpdateTestCase } from '../../../hooks/testmanager/useTestCase'
-import {
-  AutomationLevel,
-  Complexity,
-  Priority,
-  TestCaseStatus,
-  TestCaseType,
-} from '../../../types/testmanager'
+import { AutomationLevel, Complexity, Priority, TestCaseStatus, TestCaseType } from '../../../types/testmanager'
 import requirementService from '../../../services/requirementService'
+import { testPlanService } from '../../../services/testmanager/testPlanService'
+import userService from '../../../services/user-service'
 import type { Requirement } from '../../../types/requirement'
-
-const requirementLabel = (requirement: Requirement) => {
-  const code = requirement.requirement_code || `REQ-${requirement.id}`
-  return `${code} - ${requirement.title}`
-}
-
-const emptyStep = (stepNumber: number) => ({
-  step_number: stepNumber,
-  action: '',
-  expected_result: '',
-  test_data: '',
-})
-
-const labels = {
-  type: {
-    [TestCaseType.FUNCTIONAL]: '功能测试',
-    [TestCaseType.NON_FUNCTIONAL]: '非功能测试',
-    [TestCaseType.INTEGRATION]: '集成测试',
-    [TestCaseType.SYSTEM]: '系统测试',
-    [TestCaseType.ACCEPTANCE]: '验收测试',
-    [TestCaseType.REGRESSION]: '回归测试',
-    [TestCaseType.SMOKE]: '冒烟测试',
-    [TestCaseType.PERFORMANCE]: '性能测试',
-    [TestCaseType.SECURITY]: '安全测试',
-    [TestCaseType.USABILITY]: '易用性测试',
-  },
-  priority: {
-    [Priority.CRITICAL]: '紧急',
-    [Priority.HIGH]: '高',
-    [Priority.MEDIUM]: '中',
-    [Priority.LOW]: '低',
-  },
-  complexity: {
-    [Complexity.SIMPLE]: '简单',
-    [Complexity.MEDIUM]: '中等',
-    [Complexity.COMPLEX]: '复杂',
-  },
-  automation: {
-    [AutomationLevel.MANUAL]: '手动',
-    [AutomationLevel.SEMI_AUTO]: '半自动',
-    [AutomationLevel.FULL_AUTO]: '全自动',
-  },
-  status: {
-    [TestCaseStatus.DRAFT]: '草稿',
-    [TestCaseStatus.APPROVED]: '已批准',
-    [TestCaseStatus.ACTIVE]: '活跃',
-    [TestCaseStatus.DEPRECATED]: '已废弃',
-    [TestCaseStatus.ARCHIVED]: '已归档',
-  },
-}
+import type { TestPlan, TestStep } from '../../../types/testmanager'
+import type { User } from '../../../types'
+import {
+  AUTOMATION_LABELS,
+  COMPLEXITY_LABELS,
+  PRIORITY_LABELS,
+  STATUS_LABELS,
+  TEST_CASE_TYPE_LABELS,
+} from './testCaseLabels'
+import { cleanText, cleanTitle, emptyStep, normalizeSteps } from './testCaseFormUtils'
 
 const TestCaseEdit: React.FC = () => {
   const navigate = useNavigate()
@@ -74,28 +31,24 @@ const TestCaseEdit: React.FC = () => {
   const { data: testCase, isLoading, error } = useTestCase(caseId)
   const updateTestCase = useUpdateTestCase()
   const [requirements, setRequirements] = useState<Requirement[]>([])
-  const [requirementsLoading, setRequirementsLoading] = useState(false)
-  const [requirementsError, setRequirementsError] = useState('')
+  const [testPlans, setTestPlans] = useState<TestPlan[]>([])
+  const [users, setUsers] = useState<User[]>([])
   const [form, setForm] = useState<any | null>(null)
-  const [steps, setSteps] = useState<any[]>([])
+  const [steps, setSteps] = useState<TestStep[]>([])
+  const [submitError, setSubmitError] = useState('')
 
   useEffect(() => {
     let cancelled = false
-    setRequirementsLoading(true)
-    requirementService.getRequirements({ page: 1, size: 100, sort_by: 'updated_at', sort_order: 'desc' })
-      .then((response) => {
-        if (!cancelled) {
-          setRequirements(response.data || [])
-          setRequirementsError('')
-        }
-      })
-      .catch((loadError) => {
-        if (!cancelled) setRequirementsError(loadError?.message || '需求加载失败')
-      })
-      .finally(() => {
-        if (!cancelled) setRequirementsLoading(false)
-      })
-
+    Promise.allSettled([
+      requirementService.getRequirements({ page: 1, size: 100, sort_by: 'updated_at', sort_order: 'desc' }),
+      testPlanService.getTestPlans({ page: 1, size: 100 }),
+      userService.getUsers({ page: 1, size: 200, status: 'active' }),
+    ]).then(([requirementsResult, plansResult, usersResult]) => {
+      if (cancelled) return
+      if (requirementsResult.status === 'fulfilled') setRequirements(requirementsResult.value.data || [])
+      if (plansResult.status === 'fulfilled') setTestPlans(plansResult.value.data || [])
+      if (usersResult.status === 'fulfilled') setUsers(usersResult.value.users || [])
+    })
     return () => {
       cancelled = true
     }
@@ -104,7 +57,9 @@ const TestCaseEdit: React.FC = () => {
   useEffect(() => {
     if (!testCase) return
     setForm({
+      test_plan_id: Number(testCase.test_plan_id || 0),
       requirement_id: Number(testCase.requirement_id || 0),
+      assignee_id: Number(testCase.assignee_id || 0),
       case_title: testCase.case_title || '',
       case_description: testCase.case_description || '',
       case_type: testCase.case_type || TestCaseType.FUNCTIONAL,
@@ -115,52 +70,79 @@ const TestCaseEdit: React.FC = () => {
       preconditions: testCase.preconditions || '',
       expected_result: testCase.expected_result || '',
       status: testCase.status || TestCaseStatus.DRAFT,
+      tags_text: Array.isArray(testCase.tags) ? testCase.tags.join(', ') : '',
     })
-    const nextSteps = Array.isArray(testCase.test_steps) && testCase.test_steps.length
+    setSteps(Array.isArray(testCase.test_steps) && testCase.test_steps.length
       ? testCase.test_steps.map((step, index) => ({
         step_number: index + 1,
         action: step.action || '',
         expected_result: step.expected_result || '',
-        test_data: step.test_data || '',
+        test_data: typeof step.test_data === 'string' ? step.test_data : JSON.stringify(step.test_data || ''),
       }))
-      : [emptyStep(1)]
-    setSteps(nextSteps)
+      : [emptyStep(1)])
   }, [testCase])
 
+  const planOptions = useMemo(() => testPlans.map((plan) => ({
+    value: String(plan.id),
+    label: `${plan.plan_code || `TP-${plan.id}`} - ${plan.plan_name}`,
+  })), [testPlans])
+  const requirementOptions = useMemo(() => requirements.map((requirement) => ({
+    value: String(requirement.id),
+    label: `${requirement.requirement_code || `REQ-${requirement.id}`} - ${requirement.title}`,
+  })), [requirements])
+  const userOptions = useMemo(() => users.map((user) => ({
+    value: String(user.id),
+    label: user.real_name || user.nickname || user.username,
+  })), [users])
+
   const updateForm = (key: string, value: any) => {
+    setSubmitError('')
     setForm((current: any) => ({ ...current, [key]: value }))
   }
 
-  const updateStep = (index: number, key: string, value: string) => {
+  const updateStep = (index: number, key: keyof TestStep, value: string) => {
+    setSubmitError('')
     setSteps((current) => current.map((step, stepIndex) => (
       stepIndex === index ? { ...step, [key]: value } : step
     )))
   }
 
-  const addStep = () => {
-    setSteps((current) => [...current, emptyStep(current.length + 1)])
-  }
-
+  const addStep = () => setSteps((current) => [...current, emptyStep(current.length + 1)])
   const removeStep = (index: number) => {
-    setSteps((current) => current
-      .filter((_, stepIndex) => stepIndex !== index)
-      .map((step, stepIndex) => ({ ...step, step_number: stepIndex + 1 })))
+    setSteps((current) => normalizeSteps(current.filter((_, stepIndex) => stepIndex !== index)))
   }
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault()
     if (!form) return
+    const normalizedSteps = normalizeSteps(steps)
+    if (!cleanTitle(form.case_title)) {
+      setSubmitError('请填写测试用例标题')
+      return
+    }
+    if (!normalizedSteps.some((step) => step.action && step.expected_result)) {
+      setSubmitError('至少需要填写一个包含操作和预期结果的测试步骤')
+      return
+    }
+
     const result = await updateTestCase.mutateAsync({
       id: caseId,
       data: {
-        ...form,
+        test_plan_id: Number(form.test_plan_id || 0) || null,
         requirement_id: Number(form.requirement_id || 0) || null,
-        test_steps: steps.map((step, index) => ({
-          step_number: index + 1,
-          action: String(step.action || '').trim(),
-          expected_result: String(step.expected_result || '').trim(),
-          test_data: String(step.test_data || '').trim(),
-        })),
+        assignee_id: Number(form.assignee_id || 0) || null,
+        case_title: cleanTitle(form.case_title),
+        case_description: cleanText(form.case_description),
+        case_type: form.case_type,
+        module: cleanTitle(form.module).slice(0, 80),
+        priority: form.priority,
+        complexity: form.complexity,
+        automation_level: form.automation_level,
+        preconditions: cleanText(form.preconditions),
+        expected_result: cleanText(form.expected_result),
+        status: form.status,
+        test_steps: normalizedSteps,
+        tags: cleanText(form.tags_text).split(/[，,\n]/).map((tag) => tag.trim()).filter(Boolean),
       },
     })
     navigate(`/test-manager/test-cases/${result.id}`)
@@ -190,47 +172,47 @@ const TestCaseEdit: React.FC = () => {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
+        {submitError && (
+          <Card className="border-red-200 bg-red-50">
+            <CardContent className="p-4 text-sm text-red-700">{submitError}</CardContent>
+          </Card>
+        )}
+
         <Card>
-          <CardHeader>
-            <CardTitle>基本信息</CardTitle>
-          </CardHeader>
+          <CardHeader><CardTitle>基础信息</CardTitle></CardHeader>
           <CardContent className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <Field label="用例标题">
               <Input value={form.case_title} onChange={(event) => updateForm('case_title', event.target.value)} required />
             </Field>
-            <Field label="模块">
+            <Field label="功能模块">
               <Input value={form.module} onChange={(event) => updateForm('module', event.target.value)} />
             </Field>
+            <Field label="关联测试计划">
+              <OptionSelect value={String(form.test_plan_id || '')} placeholder="暂不关联测试计划" options={planOptions} onChange={(value) => updateForm('test_plan_id', Number(value || 0))} />
+            </Field>
             <Field label="关联需求">
-              <select
-                value={String(form.requirement_id || '')}
-                onChange={(event) => updateForm('requirement_id', Number(event.target.value || 0))}
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-              >
-                <option value="">不关联需求</option>
-                {requirements.map((requirement) => (
-                  <option key={requirement.id} value={String(requirement.id)}>
-                    {requirementLabel(requirement)}
-                  </option>
-                ))}
-              </select>
-              {requirementsLoading && <span className="text-xs text-gray-500">需求加载中...</span>}
-              {requirementsError && <span className="text-xs text-red-600">{requirementsError}</span>}
+              <OptionSelect value={String(form.requirement_id || '')} placeholder="暂不关联需求" options={requirementOptions} onChange={(value) => updateForm('requirement_id', Number(value || 0))} />
             </Field>
-            <Field label="用例类型">
-              <EnumSelect value={form.case_type} options={labels.type} onChange={(value) => updateForm('case_type', value)} />
-            </Field>
-            <Field label="优先级">
-              <EnumSelect value={form.priority} options={labels.priority} onChange={(value) => updateForm('priority', value)} />
-            </Field>
-            <Field label="复杂度">
-              <EnumSelect value={form.complexity} options={labels.complexity} onChange={(value) => updateForm('complexity', value)} />
-            </Field>
-            <Field label="自动化级别">
-              <EnumSelect value={form.automation_level} options={labels.automation} onChange={(value) => updateForm('automation_level', value)} />
+            <Field label="负责人">
+              <OptionSelect value={String(form.assignee_id || '')} placeholder="暂不分配" options={userOptions} onChange={(value) => updateForm('assignee_id', Number(value || 0))} />
             </Field>
             <Field label="状态">
-              <EnumSelect value={form.status} options={labels.status} onChange={(value) => updateForm('status', value)} />
+              <EnumSelect value={form.status} options={STATUS_LABELS} onChange={(value) => updateForm('status', value)} />
+            </Field>
+            <Field label="用例类型">
+              <EnumSelect value={form.case_type} options={TEST_CASE_TYPE_LABELS} onChange={(value) => updateForm('case_type', value)} />
+            </Field>
+            <Field label="优先级">
+              <EnumSelect value={form.priority} options={PRIORITY_LABELS} onChange={(value) => updateForm('priority', value)} />
+            </Field>
+            <Field label="复杂度">
+              <EnumSelect value={form.complexity} options={COMPLEXITY_LABELS} onChange={(value) => updateForm('complexity', value)} />
+            </Field>
+            <Field label="自动化级别">
+              <EnumSelect value={form.automation_level} options={AUTOMATION_LABELS} onChange={(value) => updateForm('automation_level', value)} />
+            </Field>
+            <Field label="标签">
+              <Input value={form.tags_text} onChange={(event) => updateForm('tags_text', event.target.value)} placeholder="多个标签用逗号分隔" />
             </Field>
             <div className="md:col-span-2">
               <Field label="描述">
@@ -241,14 +223,12 @@ const TestCaseEdit: React.FC = () => {
         </Card>
 
         <Card>
-          <CardHeader>
-            <CardTitle>执行条件与结果</CardTitle>
-          </CardHeader>
+          <CardHeader><CardTitle>执行条件与结果</CardTitle></CardHeader>
           <CardContent className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <Field label="前置条件">
               <Textarea rows={4} value={form.preconditions} onChange={(event) => updateForm('preconditions', event.target.value)} />
             </Field>
-            <Field label="预期结果">
+            <Field label="总体预期结果">
               <Textarea rows={4} value={form.expected_result} onChange={(event) => updateForm('expected_result', event.target.value)} />
             </Field>
           </CardContent>
@@ -268,17 +248,10 @@ const TestCaseEdit: React.FC = () => {
             {steps.map((step, index) => (
               <div key={index} className="grid gap-3 rounded-md border p-4 md:grid-cols-[80px_1fr_1fr_1fr_auto]">
                 <div className="text-sm font-medium text-gray-600">步骤 {index + 1}</div>
-                <Textarea rows={2} value={step.action} onChange={(event) => updateStep(index, 'action', event.target.value)} placeholder="操作步骤" />
-                <Textarea rows={2} value={step.expected_result} onChange={(event) => updateStep(index, 'expected_result', event.target.value)} placeholder="步骤预期结果" />
-                <Textarea rows={2} value={step.test_data} onChange={(event) => updateStep(index, 'test_data', event.target.value)} placeholder="测试数据" />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => removeStep(index)}
-                  disabled={steps.length <= 1}
-                  aria-label="删除步骤"
-                >
+                <Textarea rows={2} value={step.action} onChange={(event) => updateStep(index, 'action', event.target.value)} placeholder="操作步骤" required />
+                <Textarea rows={2} value={step.expected_result} onChange={(event) => updateStep(index, 'expected_result', event.target.value)} placeholder="该步骤预期结果" required />
+                <Textarea rows={2} value={String(step.test_data || '')} onChange={(event) => updateStep(index, 'test_data', event.target.value)} placeholder="测试数据" />
+                <Button type="button" variant="ghost" size="icon" onClick={() => removeStep(index)} disabled={steps.length <= 1} aria-label="删除步骤">
                   <Trash2 className="h-4 w-4 text-red-500" />
                 </Button>
               </div>
@@ -287,12 +260,10 @@ const TestCaseEdit: React.FC = () => {
         </Card>
 
         <div className="flex justify-end gap-3">
-          <Link to={`/test-manager/test-cases/${caseId}`}>
-            <Button type="button" variant="outline">取消</Button>
-          </Link>
+          <Link to={`/test-manager/test-cases/${caseId}`}><Button type="button" variant="outline">取消</Button></Link>
           <Button type="submit" disabled={updateTestCase.isPending}>
             <Save className="mr-2 h-4 w-4" />
-            保存
+            {updateTestCase.isPending ? '保存中...' : '保存'}
           </Button>
         </div>
       </form>
@@ -301,22 +272,26 @@ const TestCaseEdit: React.FC = () => {
 }
 
 const Field = ({ label, children }: { label: string; children: React.ReactNode }) => (
-  <label className="space-y-2">
-    <span className="text-sm font-medium text-gray-700">{label}</span>
+  <label className="block space-y-2 text-sm font-medium">
+    <span>{label}</span>
     {children}
   </label>
 )
 
 const EnumSelect = ({ value, options, onChange }: { value: string; options: Record<string, string>; onChange: (value: string) => void }) => (
-  <select
-    value={value}
-    onChange={(event) => onChange(event.target.value)}
-    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-  >
-    {Object.entries(options).map(([optionValue, label]) => (
-      <option key={optionValue} value={optionValue}>{label}</option>
-    ))}
+  <select value={value} onChange={(event) => onChange(event.target.value)} className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
+    {Object.entries(options).map(([optionValue, label]) => <option key={optionValue} value={optionValue}>{label}</option>)}
   </select>
+)
+
+const OptionSelect = ({ value, placeholder, options, onChange }: { value: string; placeholder: string; options: Array<{ value: string; label: string }>; onChange: (value: string) => void }) => (
+  <Select value={value || 'none'} onValueChange={(next) => onChange(next === 'none' ? '' : next)}>
+    <SelectTrigger><SelectValue placeholder={placeholder} /></SelectTrigger>
+    <SelectContent>
+      <SelectItem value="none">{placeholder}</SelectItem>
+      {options.map((option) => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}
+    </SelectContent>
+  </Select>
 )
 
 export default TestCaseEdit
