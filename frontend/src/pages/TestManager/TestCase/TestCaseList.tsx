@@ -481,58 +481,64 @@ const TestCaseList: React.FC = () => {
           <CardTitle>测试用例列表</CardTitle>
         </CardHeader>
         <CardContent>
-          <Table>
+          <Table className="min-w-[1385px] table-fixed">
             <TableHeader>
               <TableRow>
-                <TableHead className="w-12">
+                <TableHead className="w-11 px-3">
                   <Checkbox
                     checked={testCases.length > 0 && testCases.every((item) => selectedCases.includes(item.id))}
                     onCheckedChange={() => handleSelectAllCases(testCases.map((item) => item.id))}
                   />
                 </TableHead>
-                <TableHead>用例</TableHead>
-                <TableHead>类型</TableHead>
-                <TableHead>优先级</TableHead>
-                <TableHead>状态</TableHead>
-                <TableHead>测试计划</TableHead>
-                <TableHead>关联需求</TableHead>
-                <TableHead>负责人</TableHead>
-                <TableHead>更新时间</TableHead>
-                <TableHead className="text-right">操作</TableHead>
+                <TableHead className="w-[300px] px-3">用例</TableHead>
+                <TableHead className="w-[92px] px-3">类型</TableHead>
+                <TableHead className="w-20 px-3">优先级</TableHead>
+                <TableHead className="w-[88px] px-3">状态</TableHead>
+                <TableHead className="w-[210px] px-3">测试计划</TableHead>
+                <TableHead className="w-[230px] px-3">关联需求</TableHead>
+                <TableHead className="w-[110px] px-3">负责人</TableHead>
+                <TableHead className="w-[155px] px-3">更新时间</TableHead>
+                <TableHead className="w-[76px] px-3 text-right">操作</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {testCases.map((testCase) => (
                 <TableRow key={testCase.id}>
-                  <TableCell>
+                  <TableCell className="px-3">
                     <Checkbox
                       checked={selectedCases.includes(testCase.id)}
                       onCheckedChange={() => handleSelectCase(testCase.id)}
                     />
                   </TableCell>
-                  <TableCell>
-                    <Link to={`/test-manager/test-cases/${testCase.id}`} className="font-medium text-blue-600 hover:text-blue-800">
+                  <TableCell className="max-w-0 px-3">
+                    <Link
+                      to={`/test-manager/test-cases/${testCase.id}`}
+                      className="block truncate font-medium text-blue-600 hover:text-blue-800"
+                      title={testCase.case_title}
+                    >
                       {testCase.case_title}
                     </Link>
-                    <div className="text-sm text-gray-500">{testCase.case_code}</div>
-                    {testCase.module && <div className="text-xs text-gray-400">{testCase.module}</div>}
+                    <div className="truncate text-sm text-gray-500" title={testCase.case_code}>{testCase.case_code}</div>
+                    {testCase.module && <div className="truncate text-xs text-gray-400" title={testCase.module}>{testCase.module}</div>}
                   </TableCell>
-                  <TableCell><Badge variant="outline">{TEST_CASE_TYPE_LABELS[testCase.case_type] || testCase.case_type}</Badge></TableCell>
-                  <TableCell><Badge variant={priorityVariant[testCase.priority] || 'secondary'}>{PRIORITY_LABELS[testCase.priority] || testCase.priority}</Badge></TableCell>
-                  <TableCell><Badge variant={statusVariant[testCase.status] || 'secondary'}>{STATUS_LABELS[testCase.status] || testCase.status}</Badge></TableCell>
-                  <TableCell>
-                    <div className="max-w-[180px] truncate text-sm" title={getPlanLabel(testCase.test_plan_id)}>
+                  <TableCell className="px-3"><Badge variant="outline">{TEST_CASE_TYPE_LABELS[testCase.case_type] || testCase.case_type}</Badge></TableCell>
+                  <TableCell className="px-3"><Badge variant={priorityVariant[testCase.priority] || 'secondary'}>{PRIORITY_LABELS[testCase.priority] || testCase.priority}</Badge></TableCell>
+                  <TableCell className="px-3"><Badge variant={statusVariant[testCase.status] || 'secondary'}>{STATUS_LABELS[testCase.status] || testCase.status}</Badge></TableCell>
+                  <TableCell className="max-w-0 px-3">
+                    <div className="truncate text-sm" title={getPlanLabel(testCase.test_plan_id)}>
                       {getPlanLabel(testCase.test_plan_id)}
                     </div>
                   </TableCell>
-                  <TableCell>
-                    <div className="max-w-[220px] truncate text-sm" title={getRequirementLabel(testCase.requirement_id)}>
+                  <TableCell className="max-w-0 px-3">
+                    <div className="truncate text-sm" title={getRequirementLabel(testCase.requirement_id)}>
                       {getRequirementLabel(testCase.requirement_id)}
                     </div>
                   </TableCell>
-                  <TableCell>{getUserName(testCase.assignee_id)}</TableCell>
-                  <TableCell>{formatDate(testCase.updated_at)}</TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="max-w-0 px-3">
+                    <div className="truncate" title={getUserName(testCase.assignee_id)}>{getUserName(testCase.assignee_id)}</div>
+                  </TableCell>
+                  <TableCell className="whitespace-nowrap px-3">{formatDate(testCase.updated_at)}</TableCell>
+                  <TableCell className="px-3 text-right">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="sm">操作</Button>
