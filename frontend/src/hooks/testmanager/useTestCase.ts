@@ -57,6 +57,9 @@ export const useUpdateTestCase = () => {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['testCases'] })
       queryClient.invalidateQueries({ queryKey: ['testCase', data.id] })
+      queryClient.invalidateQueries({ queryKey: ['testPlans'] })
+      queryClient.invalidateQueries({ queryKey: ['testPlan'] })
+      queryClient.invalidateQueries({ queryKey: ['testPlanProgress'] })
       toast({ title: '成功', description: '测试用例更新成功', variant: 'success' })
     },
     onError: (error: any) => {
@@ -138,6 +141,9 @@ export const useBatchUpdateTestCases = () => {
       testCaseService.batchUpdateTestCases(ids, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['testCases'] })
+      queryClient.invalidateQueries({ queryKey: ['testPlans'] })
+      queryClient.invalidateQueries({ queryKey: ['testPlan'] })
+      queryClient.invalidateQueries({ queryKey: ['testPlanProgress'] })
       toast({ title: '成功', description: '批量更新成功', variant: 'success' })
     },
     onError: (error: any) => {

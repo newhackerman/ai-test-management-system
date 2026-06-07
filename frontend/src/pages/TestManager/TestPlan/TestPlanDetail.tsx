@@ -1,24 +1,34 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { ArrowLeft, Edit, Play, Pause, CheckCircle, Download, Users, Calendar, Target } from 'lucide-react'
+import { ArrowLeft, Edit, Play, Pause, CheckCircle, Download, Users, Calendar, Target, Link2, Unlink, Search } from 'lucide-react'
 import { Button } from '../../../components/ui/Button'
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/Card'
 import { Badge } from '../../../components/ui/Badge'
 import { Progress } from '../../../components/ui/Progress'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../components/ui/Tabs'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../../../components/ui/DropdownMenu'
+import { Input } from '../../../components/ui/Input'
+import { Checkbox } from '../../../components/ui/Checkbox'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../components/ui/Table'
+import { useBatchUpdateTestCases, useTestCases, useUpdateTestCase } from '../../../hooks/testmanager/useTestCase'
 import { useExportTestPlan, useTestPlan, useTestPlanProgress, useUpdateTestPlanStatus } from '../../../hooks/testmanager/useTestPlan'
-import { TestPlanStatus, TestType } from '../../../types/testmanager'
+import { Priority, TestCaseStatus, TestPlanStatus, TestType } from '../../../types/testmanager'
 import { formatDate } from '../../../utils/date'
 
 const TestPlanDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>()
   const planId = parseInt(id!, 10)
+  const [caseSearch, setCaseSearch] = useState('')
+  const [selectedCaseIds, setSelectedCaseIds] = useState<number[]>([])
 
   const { data: testPlan, isLoading, error } = useTestPlan(planId)
   const { data: progress } = useTestPlanProgress(planId)
+  const { data: linkedCasesData, isLoading: linkedCasesLoading } = useTestCases({ test_plan_id: planId, page: 1, size: 100 })
+  const { data: candidateCasesData, isLoading: candidateCasesLoading } = useTestCases({ search: caseSearch, page: 1, size: 100 })
   const exportTestPlan = useExportTestPlan()
   const updateTestPlanStatus = useUpdateTestPlanStatus()
+  const updateTestCase = useUpdateTestCase()
+  const batchUpdateTestCases = useBatchUpdateTestCases()
 
   if (isLoading) {
     return <div className="flex justify-center items-center h-64">加载中...</div>
@@ -54,9 +64,39 @@ const TestPlanDetail: React.FC = () => {
     return typeLabels[type] || type
   }
 
-  const executionRate = testPlan.total_cases > 0 ? (testPlan.executed_cases / testPlan.total_cases) * 100 : 0
-  const passRate = testPlan.executed_cases > 0 ? (testPlan.passed_cases / testPlan.executed_cases) * 100 : 0
+  const getCaseStatusBadge = (status: TestCaseStatus) => {
+    const statusConfig = {
+      [TestCaseStatus.DRAFT]: { label: '草稿', variant: 'secondary' as const },
+      [TestCaseStatus.APPROVED]: { label: '已批准', variant: 'default' as const },
+      [TestCaseStatus.ACTIVE]: { label: '活跃', variant: 'default' as const },
+      [TestCaseStatus.DEPRECATED]: { label: '已废弃', variant: 'secondary' as const },
+      [TestCaseStatus.ARCHIVED]: { label: '已归档', variant: 'outline' as const },
+    }
+    const config = statusConfig[status] || { label: status, variant: 'secondary' as const }
+    return <Badge variant={config.variant}>{config.label}</Badge>
+  }
+
+  const getPriorityBadge = (priority: Priority) => {
+    const priorityConfig = {
+      [Priority.CRITICAL]: { label: '紧急', variant: 'destructive' as const },
+      [Priority.HIGH]: { label: '高', variant: 'destructive' as const },
+      [Priority.MEDIUM]: { label: '中', variant: 'default' as const },
+      [Priority.LOW]: { label: '低', variant: 'secondary' as const },
+    }
+    const config = priorityConfig[priority] || { label: priority, variant: 'secondary' as const }
+    return <Badge variant={config.variant}>{config.label}</Badge>
+  }
+
+  const stats = progress || testPlan
+  const executionRate = stats.total_cases > 0 ? (stats.executed_cases / stats.total_cases) * 100 : 0
+  const passRate = stats.executed_cases > 0 ? (stats.passed_cases / stats.executed_cases) * 100 : 0
   const updatingStatus = updateTestPlanStatus.isPending
+  const linkedCases = linkedCasesData?.data || []
+  const linkedCaseIdSet = new Set(linkedCases.map((testCase: any) => Number(testCase.id)))
+  const candidateCases = (candidateCasesData?.data || []).filter((testCase: any) => Number(testCase.test_plan_id) !== planId)
+  const selectableCandidateIds = candidateCases.map((testCase: any) => Number(testCase.id))
+  const selectedCandidateIds = selectedCaseIds.filter((caseId) => selectableCandidateIds.includes(caseId))
+  const linking = updateTestCase.isPending || batchUpdateTestCases.isPending
 
   const handleExport = (format: 'csv' | 'txt') => {
     exportTestPlan.mutate({ id: planId, format })
@@ -64,6 +104,40 @@ const TestPlanDetail: React.FC = () => {
 
   const handleStatusChange = (status: TestPlanStatus) => {
     updateTestPlanStatus.mutate({ id: planId, status })
+  }
+
+  const handleToggleCandidate = (caseId: number) => {
+    setSelectedCaseIds((prev) => (
+      prev.includes(caseId) ? prev.filter((id) => id !== caseId) : [...prev, caseId]
+    ))
+  }
+
+  const handleToggleAllCandidates = () => {
+    setSelectedCaseIds((prev) => {
+      const allSelected = selectableCandidateIds.length > 0 && selectableCandidateIds.every((caseId) => prev.includes(caseId))
+      if (allSelected) return prev.filter((caseId) => !selectableCandidateIds.includes(caseId))
+      return Array.from(new Set([...prev, ...selectableCandidateIds]))
+    })
+  }
+
+  const handleAttachCase = (caseId: number) => {
+    updateTestCase.mutate(
+      { id: caseId, data: { test_plan_id: planId } },
+      { onSuccess: () => setSelectedCaseIds((prev) => prev.filter((id) => id !== caseId)) },
+    )
+  }
+
+  const handleAttachSelected = () => {
+    if (!selectedCandidateIds.length) return
+    batchUpdateTestCases.mutate(
+      { ids: selectedCandidateIds, data: { test_plan_id: planId } },
+      { onSuccess: () => setSelectedCaseIds([]) },
+    )
+  }
+
+  const handleDetachCase = (caseId: number) => {
+    if (!window.confirm('确定要将该测试用例从当前测试计划中移除吗？')) return
+    updateTestCase.mutate({ id: caseId, data: { test_plan_id: null } })
   }
 
   return (
@@ -142,7 +216,7 @@ const TestPlanDetail: React.FC = () => {
               <Target className="w-5 h-5 text-blue-500" />
               <div>
                 <p className="text-sm font-medium text-gray-600">总用例数</p>
-                <p className="text-2xl font-bold">{testPlan.total_cases}</p>
+                <p className="text-2xl font-bold">{stats.total_cases}</p>
               </div>
             </div>
           </CardContent>
@@ -154,7 +228,7 @@ const TestPlanDetail: React.FC = () => {
               <CheckCircle className="w-5 h-5 text-green-500" />
               <div>
                 <p className="text-sm font-medium text-gray-600">已执行</p>
-                <p className="text-2xl font-bold">{testPlan.executed_cases}</p>
+                <p className="text-2xl font-bold">{stats.executed_cases}</p>
               </div>
             </div>
           </CardContent>
@@ -166,7 +240,7 @@ const TestPlanDetail: React.FC = () => {
               <div className="w-5 h-5 bg-green-500 rounded-full" />
               <div>
                 <p className="text-sm font-medium text-gray-600">通过</p>
-                <p className="text-2xl font-bold text-green-600">{testPlan.passed_cases}</p>
+                <p className="text-2xl font-bold text-green-600">{stats.passed_cases}</p>
               </div>
             </div>
           </CardContent>
@@ -178,7 +252,7 @@ const TestPlanDetail: React.FC = () => {
               <div className="w-5 h-5 bg-red-500 rounded-full" />
               <div>
                 <p className="text-sm font-medium text-gray-600">失败</p>
-                <p className="text-2xl font-bold text-red-600">{testPlan.failed_cases}</p>
+                <p className="text-2xl font-bold text-red-600">{stats.failed_cases}</p>
               </div>
             </div>
           </CardContent>
@@ -287,12 +361,131 @@ const TestPlanDetail: React.FC = () => {
         <TabsContent value="test-cases">
           <Card>
             <CardHeader>
-              <CardTitle>测试用例</CardTitle>
+              <CardTitle>已关联测试用例 ({linkedCases.length})</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-center py-8 text-gray-500">
-                测试用例列表将在这里显示
+              {linkedCasesLoading ? (
+                <div className="py-8 text-center text-gray-500">正在加载已关联测试用例...</div>
+              ) : linkedCases.length === 0 ? (
+                <div className="py-8 text-center text-gray-500">当前测试计划还没有关联测试用例</div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>用例标题</TableHead>
+                      <TableHead>优先级</TableHead>
+                      <TableHead>状态</TableHead>
+                      <TableHead>模块</TableHead>
+                      <TableHead className="text-right">操作</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {linkedCases.map((testCase: any) => (
+                      <TableRow key={testCase.id}>
+                        <TableCell>
+                          <Link to={`/test-manager/test-cases/${testCase.id}`} className="font-medium text-blue-600 hover:text-blue-800">
+                            {testCase.case_title}
+                          </Link>
+                          <div className="text-xs text-gray-500">{testCase.case_code}</div>
+                        </TableCell>
+                        <TableCell>{getPriorityBadge(testCase.priority)}</TableCell>
+                        <TableCell>{getCaseStatusBadge(testCase.status)}</TableCell>
+                        <TableCell>{testCase.module || '-'}</TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={linking}
+                            onClick={() => handleDetachCase(Number(testCase.id))}
+                          >
+                            <Unlink className="w-4 h-4 mr-2" />
+                            移除关联
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card className="mt-6">
+            <CardHeader>
+              <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <CardTitle>关联已有测试用例</CardTitle>
+                <Button size="sm" disabled={!selectedCandidateIds.length || linking} onClick={handleAttachSelected}>
+                  <Link2 className="w-4 h-4 mr-2" />
+                  关联选中 ({selectedCandidateIds.length})
+                </Button>
               </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                <Input
+                  value={caseSearch}
+                  onChange={(event) => setCaseSearch(event.target.value)}
+                  placeholder="搜索用例标题或编号"
+                  className="pl-10"
+                />
+              </div>
+
+              {candidateCasesLoading ? (
+                <div className="py-8 text-center text-gray-500">正在加载可关联测试用例...</div>
+              ) : candidateCases.length === 0 ? (
+                <div className="py-8 text-center text-gray-500">没有可关联的测试用例</div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-12">
+                        <Checkbox
+                          checked={selectableCandidateIds.length > 0 && selectableCandidateIds.every((caseId) => selectedCaseIds.includes(caseId))}
+                          onCheckedChange={handleToggleAllCandidates}
+                        />
+                      </TableHead>
+                      <TableHead>用例标题</TableHead>
+                      <TableHead>当前计划</TableHead>
+                      <TableHead>优先级</TableHead>
+                      <TableHead>状态</TableHead>
+                      <TableHead className="text-right">操作</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {candidateCases.map((testCase: any) => (
+                      <TableRow key={testCase.id}>
+                        <TableCell>
+                          <Checkbox
+                            checked={selectedCaseIds.includes(Number(testCase.id))}
+                            onCheckedChange={() => handleToggleCandidate(Number(testCase.id))}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Link to={`/test-manager/test-cases/${testCase.id}`} className="font-medium text-blue-600 hover:text-blue-800">
+                            {testCase.case_title}
+                          </Link>
+                          <div className="text-xs text-gray-500">{testCase.case_code}</div>
+                        </TableCell>
+                        <TableCell>{testCase.test_plan_id ? `测试计划 #${testCase.test_plan_id}` : '未关联'}</TableCell>
+                        <TableCell>{getPriorityBadge(testCase.priority)}</TableCell>
+                        <TableCell>{getCaseStatusBadge(testCase.status)}</TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={linking || linkedCaseIdSet.has(Number(testCase.id))}
+                            onClick={() => handleAttachCase(Number(testCase.id))}
+                          >
+                            <Link2 className="w-4 h-4 mr-2" />
+                            关联
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

@@ -312,6 +312,7 @@ export interface CreateTestCaseRequest {
 }
 
 export interface UpdateTestCaseRequest {
+  test_plan_id?: number | null
   requirement_id?: number | null
   case_title?: string
   case_description?: string

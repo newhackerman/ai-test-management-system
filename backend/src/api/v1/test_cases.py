@@ -97,6 +97,7 @@ class CreateTestCaseRequest(BaseModel):
 
 class UpdateTestCaseRequest(BaseModel):
     """更新测试用例请求"""
+    test_plan_id: Optional[int] = Field(None, description="关联测试计划ID")
     requirement_id: Optional[int] = Field(None, description="关联需求ID")
     case_title: Optional[str] = Field(None, min_length=1, max_length=200, description="测试用例标题")
     case_description: Optional[str] = Field(None, description="测试用例描述")

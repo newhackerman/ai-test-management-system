@@ -188,8 +188,15 @@ class TestCaseService:
             if not test_case:
                 raise NotFoundError("测试用例不存在")
 
+            previous_test_plan_id = test_case.test_plan_id
+            if 'test_plan_id' in update_data and not update_data['test_plan_id']:
+                update_data['test_plan_id'] = None
             if 'requirement_id' in update_data and not update_data['requirement_id']:
                 update_data['requirement_id'] = None
+            if update_data.get('test_plan_id') is not None:
+                target_plan = self.db.query(TestPlan).filter(TestPlan.id == update_data['test_plan_id']).first()
+                if not target_plan:
+                    raise NotFoundError("测试计划不存在")
             
             # 2. 验证更新权限
             await self._validate_update_permission(user_id, test_case)
@@ -219,6 +226,8 @@ class TestCaseService:
             
             # 7. 清除缓存
             await self._clear_case_cache(test_case.test_plan_id, case_id)
+            if previous_test_plan_id and previous_test_plan_id != test_case.test_plan_id:
+                await self._clear_case_cache(previous_test_plan_id)
             
             logger.info(f"测试用例更新成功: {test_case.case_code}, 操作人: {user_id}")
             
