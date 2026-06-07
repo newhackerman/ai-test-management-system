@@ -1,4 +1,5 @@
-import React, { useState } from 'react'
+import React, { useMemo, useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { useParams, Link } from 'react-router-dom'
 import { ArrowLeft, Edit, Play, Pause, CheckCircle, Download, Users, Calendar, Target, Link2, Unlink, Search } from 'lucide-react'
 import { Button } from '../../../components/ui/Button'
@@ -18,13 +19,16 @@ import { formatDate } from '../../../utils/date'
 const TestPlanDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>()
   const planId = parseInt(id!, 10)
+  const queryClient = useQueryClient()
   const [caseSearch, setCaseSearch] = useState('')
   const [selectedCaseIds, setSelectedCaseIds] = useState<number[]>([])
+  const linkedCasesFilters = useMemo(() => ({ test_plan_id: planId, page: 1, size: 100 }), [planId])
+  const candidateCasesFilters = useMemo(() => ({ search: caseSearch, page: 1, size: 100 }), [caseSearch])
 
   const { data: testPlan, isLoading, error } = useTestPlan(planId)
   const { data: progress } = useTestPlanProgress(planId)
-  const { data: linkedCasesData, isLoading: linkedCasesLoading } = useTestCases({ test_plan_id: planId, page: 1, size: 100 })
-  const { data: candidateCasesData, isLoading: candidateCasesLoading } = useTestCases({ search: caseSearch, page: 1, size: 100 })
+  const { data: linkedCasesData, isLoading: linkedCasesLoading } = useTestCases(linkedCasesFilters)
+  const { data: candidateCasesData, isLoading: candidateCasesLoading } = useTestCases(candidateCasesFilters)
   const exportTestPlan = useExportTestPlan()
   const updateTestPlanStatus = useUpdateTestPlanStatus()
   const updateTestCase = useUpdateTestCase()
@@ -120,10 +124,57 @@ const TestPlanDetail: React.FC = () => {
     })
   }
 
+  const adjustPagedTotal = (oldData: any, delta: number) => {
+    if (!oldData || typeof oldData !== 'object' || typeof oldData.total !== 'number') return oldData
+    return { ...oldData, total: Math.max(0, oldData.total + delta) }
+  }
+
+  const caseMatchesCurrentSearch = (testCase: any) => {
+    const keyword = caseSearch.trim().toLowerCase()
+    if (!keyword) return true
+    return [
+      testCase.case_title,
+      testCase.case_code,
+      testCase.module,
+    ].filter(Boolean).join(' ').toLowerCase().includes(keyword)
+  }
+
+  const syncCaseAssociationCache = (updatedCase: any, isLinkedToPlan: boolean) => {
+    queryClient.setQueryData(['testCases', linkedCasesFilters], (oldData: any) => {
+      if (!oldData?.data) return oldData
+      const exists = oldData.data.some((testCase: any) => Number(testCase.id) === Number(updatedCase.id))
+      if (isLinkedToPlan) {
+        return exists
+          ? { ...oldData, data: oldData.data.map((testCase: any) => Number(testCase.id) === Number(updatedCase.id) ? updatedCase : testCase) }
+          : adjustPagedTotal({ ...oldData, data: [updatedCase, ...oldData.data] }, 1)
+      }
+      return exists
+        ? adjustPagedTotal({ ...oldData, data: oldData.data.filter((testCase: any) => Number(testCase.id) !== Number(updatedCase.id)) }, -1)
+        : oldData
+    })
+
+    queryClient.setQueryData(['testCases', candidateCasesFilters], (oldData: any) => {
+      if (!oldData?.data) return oldData
+      const exists = oldData.data.some((testCase: any) => Number(testCase.id) === Number(updatedCase.id))
+      if (isLinkedToPlan) {
+        return exists
+          ? adjustPagedTotal({ ...oldData, data: oldData.data.filter((testCase: any) => Number(testCase.id) !== Number(updatedCase.id)) }, -1)
+          : oldData
+      }
+      if (!caseMatchesCurrentSearch(updatedCase)) return oldData
+      return exists
+        ? { ...oldData, data: oldData.data.map((testCase: any) => Number(testCase.id) === Number(updatedCase.id) ? updatedCase : testCase) }
+        : adjustPagedTotal({ ...oldData, data: [updatedCase, ...oldData.data] }, 1)
+    })
+  }
+
   const handleAttachCase = (caseId: number) => {
     updateTestCase.mutate(
       { id: caseId, data: { test_plan_id: planId } },
-      { onSuccess: () => setSelectedCaseIds((prev) => prev.filter((id) => id !== caseId)) },
+      { onSuccess: (updatedCase) => {
+        syncCaseAssociationCache(updatedCase, true)
+        setSelectedCaseIds((prev) => prev.filter((id) => id !== caseId))
+      } },
     )
   }
 
@@ -137,7 +188,10 @@ const TestPlanDetail: React.FC = () => {
 
   const handleDetachCase = (caseId: number) => {
     if (!window.confirm('确定要将该测试用例从当前测试计划中移除吗？')) return
-    updateTestCase.mutate({ id: caseId, data: { test_plan_id: null } })
+    updateTestCase.mutate(
+      { id: caseId, data: { test_plan_id: null } },
+      { onSuccess: (updatedCase) => syncCaseAssociationCache(updatedCase, false) },
+    )
   }
 
   return (

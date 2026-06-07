@@ -2,6 +2,7 @@
 权限管理服务
 """
 import datetime
+import inspect
 from typing import Optional, List, Dict, Any, Set
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, or_, func, text, bindparam
@@ -21,13 +22,23 @@ class PermissionService:
     
     def __init__(self, db: AsyncSession):
         self.db = db
+
+    async def _resolve(self, value):
+        if inspect.isawaitable(value):
+            return await value
+        return value
+
+    async def _execute(self, statement, params: Optional[Dict[str, Any]] = None):
+        if params is None:
+            return await self._resolve(self.db.execute(statement))
+        return await self._resolve(self.db.execute(statement, params))
     
     async def get_user_permissions(self, user_id: int) -> Dict[str, Any]:
         """获取用户的所有权限"""
         # 获取用户信息
         user_query = select(User).where(User.id == user_id)
         
-        user_result = await self.db.execute(user_query)
+        user_result = await self._execute(user_query)
         user = user_result.scalar_one_or_none()
         
         if not user:
@@ -36,7 +47,7 @@ class PermissionService:
         all_permissions = set()
         role_permissions = {}
 
-        role_result = await self.db.execute(
+        role_result = await self._execute(
             text(
                 """
                 SELECT r.id, r.code, r.name
@@ -63,7 +74,7 @@ class PermissionService:
                 WHERE rp.role_id IN :role_ids
                 """
             ).bindparams(bindparam("role_ids", expanding=True))
-            role_perm_result = await self.db.execute(role_perm_stmt, {"role_ids": role_ids})
+            role_perm_result = await self._execute(role_perm_stmt, {"role_ids": role_ids})
 
             for row in role_perm_result.mappings():
                 effect = row.get("effect")
@@ -80,7 +91,7 @@ class PermissionService:
         
         # 获取用户直接权限
         direct_perms = []
-        direct_result = await self.db.execute(
+        direct_result = await self._execute(
             text(
                 """
                 SELECT p.code, p.name, p.module, p.action, p.resource, up.effect
@@ -120,7 +131,7 @@ class PermissionService:
     
     async def check_permission(self, user_id: int, permission_code: str) -> bool:
         """检查用户是否有指定权限"""
-        user_result = await self.db.execute(select(User.is_superuser).where(User.id == user_id))
+        user_result = await self._execute(select(User.is_superuser).where(User.id == user_id))
         if bool(user_result.scalar()):
             return True
 
@@ -129,11 +140,11 @@ class PermissionService:
 
     async def check_project_permission(self, user_id: int, project_id: int, permission: str) -> bool:
         """检查用户是否有项目级权限。"""
-        user_result = await self.db.execute(select(User.is_superuser).where(User.id == user_id))
+        user_result = await self._execute(select(User.is_superuser).where(User.id == user_id))
         if bool(user_result.scalar()):
             return True
 
-        project_result = await self.db.execute(
+        project_result = await self._execute(
             text(
                 """
                 SELECT project_manager_id
@@ -148,10 +159,11 @@ class PermissionService:
         if not project:
             return False
 
-        if int(project["project_manager_id"]) == int(user_id):
+        project_manager_id = project["project_manager_id"]
+        if project_manager_id is not None and int(project_manager_id) == int(user_id):
             return True
 
-        member_result = await self.db.execute(
+        member_result = await self._execute(
             text(
                 """
                 SELECT role_in_project
