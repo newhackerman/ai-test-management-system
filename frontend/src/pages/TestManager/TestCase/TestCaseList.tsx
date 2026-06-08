@@ -258,6 +258,64 @@ const TestCaseList: React.FC = () => {
           <p className="text-gray-600">维护测试用例、需求关联、执行入口和批量状态。</p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <Dialog open={showImportDialog} onOpenChange={setShowImportDialog}>
+            <DialogTrigger asChild>
+              <Button variant="outline">
+                <Upload className="mr-2 h-4 w-4" />
+                导入用例
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>导入测试用例</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <Field label="关联测试计划">
+                  <Select value={importPlanId || 'none'} onValueChange={(value) => setImportPlanId(value === 'none' ? '' : value)}>
+                    <SelectTrigger><SelectValue placeholder="可选" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">暂不关联测试计划</SelectItem>
+                      {testPlans.map((plan) => (
+                        <SelectItem key={plan.id} value={String(plan.id)}>
+                          {plan.plan_code || `TP-${plan.id}`} - {plan.plan_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </Field>
+                <Field label="文件">
+                  <input
+                    type="file"
+                    accept=".xlsx,.xls,.csv"
+                    onChange={(event) => setImportFile(event.target.files?.[0] || null)}
+                    className="block w-full text-sm text-gray-600 file:mr-4 file:rounded-md file:border-0 file:bg-blue-50 file:px-4 file:py-2 file:text-sm file:font-medium file:text-blue-700 hover:file:bg-blue-100"
+                  />
+                </Field>
+                <div className="flex justify-end gap-2">
+                  <Button variant="outline" onClick={() => setShowImportDialog(false)}>取消</Button>
+                  <Button onClick={handleImport} disabled={!importFile || importTestCases.isPending}>
+                    {importTestCases.isPending ? '导入中...' : '导入'}
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline">
+                <Download className="mr-2 h-4 w-4" />
+                导出当前筛选
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              <DropdownMenuItem onClick={() => exportTestCases.mutate({ filters, format: 'csv' })}>
+                导出 CSV
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => exportTestCases.mutate({ filters, format: 'txt' })}>
+                导出 TXT
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Dialog open={showGenerateDialog} onOpenChange={setShowGenerateDialog}>
             <DialogTrigger asChild>
               <Button variant="outline">
@@ -410,75 +468,11 @@ const TestCaseList: React.FC = () => {
         </Card>
       )}
 
-      <Card>
-        <CardContent className="flex flex-col gap-3 pt-6 md:flex-row md:items-center md:justify-between">
-          <div className="flex flex-wrap gap-2">
-            <Dialog open={showImportDialog} onOpenChange={setShowImportDialog}>
-              <DialogTrigger asChild>
-                <Button variant="outline" size="sm">
-                  <Upload className="mr-2 h-4 w-4" />
-                  导入用例
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>导入测试用例</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4">
-                  <Field label="关联测试计划">
-                    <Select value={importPlanId || 'none'} onValueChange={(value) => setImportPlanId(value === 'none' ? '' : value)}>
-                      <SelectTrigger><SelectValue placeholder="可选" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">暂不关联测试计划</SelectItem>
-                        {testPlans.map((plan) => (
-                          <SelectItem key={plan.id} value={String(plan.id)}>
-                            {plan.plan_code || `TP-${plan.id}`} - {plan.plan_name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </Field>
-                  <Field label="文件">
-                    <input
-                      type="file"
-                      accept=".xlsx,.xls,.csv"
-                      onChange={(event) => setImportFile(event.target.files?.[0] || null)}
-                      className="block w-full text-sm text-gray-600 file:mr-4 file:rounded-md file:border-0 file:bg-blue-50 file:px-4 file:py-2 file:text-sm file:font-medium file:text-blue-700 hover:file:bg-blue-100"
-                    />
-                  </Field>
-                  <div className="flex justify-end gap-2">
-                    <Button variant="outline" onClick={() => setShowImportDialog(false)}>取消</Button>
-                    <Button onClick={handleImport} disabled={!importFile || importTestCases.isPending}>
-                      {importTestCases.isPending ? '导入中...' : '导入'}
-                    </Button>
-                  </div>
-                </div>
-              </DialogContent>
-            </Dialog>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm">
-                  <Download className="mr-2 h-4 w-4" />
-                  导出当前筛选
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent>
-                <DropdownMenuItem onClick={() => exportTestCases.mutate({ filters, format: 'csv' })}>
-                  导出 CSV
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => exportTestCases.mutate({ filters, format: 'txt' })}>
-                  导出 TXT
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-          <div className="text-sm text-gray-600">共 {totalCount} 个测试用例</div>
-        </CardContent>
-      </Card>
 
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between gap-3">
           <CardTitle>测试用例列表</CardTitle>
+          <div className="text-sm text-gray-600">共 {totalCount} 个测试用例</div>
         </CardHeader>
         <CardContent>
           <Table className="min-w-[1385px] table-fixed">
