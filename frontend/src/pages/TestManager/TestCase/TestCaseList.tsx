@@ -320,22 +320,22 @@ const TestCaseList: React.FC = () => {
             <DialogTrigger asChild>
               <Button variant="outline">
                 <Bot className="mr-2 h-4 w-4" />
-                AI 生成
+                AI 从需求生成用例
               </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>AI 生成测试用例</DialogTitle>
+                <DialogTitle>AI 从需求生成测试用例</DialogTitle>
               </DialogHeader>
               <div className="space-y-4">
-                <Field label="关联需求">
+                <Field label="选择需求来源">
                   <Select
                     value={generateForm.requirement_id || 'none'}
                     onValueChange={(value) => setGenerateForm((current) => ({ ...current, requirement_id: value === 'none' ? '' : value }))}
                   >
-                    <SelectTrigger><SelectValue placeholder="选择需求" /></SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder="选择要生成用例的需求" /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="none">请选择需求</SelectItem>
+                      <SelectItem value="none">请选择要分析的需求</SelectItem>
                       {requirements.map((requirement) => (
                         <SelectItem key={requirement.id} value={String(requirement.id)}>
                           {requirement.requirement_code || `REQ-${requirement.id}`} - {requirement.title}
@@ -367,14 +367,14 @@ const TestCaseList: React.FC = () => {
                   <Field label="优先级">
                     <EnumSelect value={generateForm.priority} options={PRIORITY_LABELS} onChange={(value) => setGenerateForm((current) => ({ ...current, priority: value }))} />
                   </Field>
-                  <Field label="数量">
+                  <Field label="生成数量">
                     <Input value={generateForm.max_cases} onChange={(event) => setGenerateForm((current) => ({ ...current, max_cases: event.target.value }))} />
                   </Field>
                 </div>
                 <div className="flex justify-end gap-2">
                   <Button variant="outline" onClick={() => setShowGenerateDialog(false)}>取消</Button>
                   <Button onClick={handleGenerate} disabled={generateTestCases.isPending}>
-                    {generateTestCases.isPending ? '生成中...' : '生成并保存'}
+                    {generateTestCases.isPending ? '正在生成...' : '生成测试用例并保存'}
                   </Button>
                 </div>
               </div>
