@@ -159,7 +159,7 @@ def _infer_max_cases(requirement: Requirement) -> int:
         max_cases += 2
     elif content_length > 1200:
         max_cases += 1
-    return max(3, min(max_cases, 10))
+    return max(3, max_cases)
 
 
 def _template_for_case_type(case_type: TestCaseType) -> GenerationTemplate:

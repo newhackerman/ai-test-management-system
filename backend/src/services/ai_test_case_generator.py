@@ -73,7 +73,7 @@ class AITestCaseGenerator:
         self.db = db
         self.ai_service = AIAssistantService()
         self.test_case_service = TestCaseService(db)
-        self.generation_timeout_seconds = 170
+        self.generation_timeout_seconds = 1800
         self._init_templates()
     
     def _init_templates(self):
@@ -91,7 +91,7 @@ class AITestCaseGenerator:
 - 验收标准：{acceptance_criteria}
 
 生成要求：
-1. 生成{max_cases}个测试用例
+1. 根据需求复杂度生成覆盖充分的测试用例，不要限制用例数量
 2. 包含正向测试用例和负向测试用例
 3. 每个用例包含：用例标题、前置条件、测试步骤、预期结果、测试数据
 4. 测试步骤要详细、可执行
@@ -129,7 +129,7 @@ class AITestCaseGenerator:
 - 接口规范：{acceptance_criteria}
 
 生成要求：
-1. 生成{max_cases}个API测试用例
+1. 根据接口复杂度生成覆盖充分的API测试用例，不要限制用例数量
 2. 包含正常请求、异常请求、边界值测试
 3. 每个用例包含：请求方法、请求URL、请求头、请求体、预期响应
 4. 考虑各种HTTP状态码场景
@@ -166,7 +166,7 @@ UI功能信息：
 - 界面要求：{acceptance_criteria}
 
 生成要求：
-1. 生成{max_cases}个UI测试用例
+1. 根据UI功能复杂度生成覆盖充分的UI测试用例，不要限制用例数量
 2. 包含正常操作流程和异常操作流程
 3. 考虑不同浏览器和设备兼容性
 4. 包含界面元素验证、交互验证、数据验证
@@ -204,7 +204,7 @@ UI功能信息：
 - 性能指标：{acceptance_criteria}
 
 生成要求：
-1. 生成{max_cases}个性能测试用例
+1. 根据性能需求复杂度生成覆盖充分的性能测试用例，不要限制用例数量
 2. 包含负载测试、压力测试、容量测试
 3. 明确性能指标和阈值
 4. 包含测试环境和数据准备要求
@@ -245,7 +245,7 @@ UI功能信息：
 - 安全标准：{acceptance_criteria}
 
 生成要求：
-1. 生成{max_cases}个安全测试用例
+1. 根据安全需求复杂度生成覆盖充分的安全测试用例，不要限制用例数量
 2. 包含输入验证、权限控制、数据保护等测试
 3. 考虑常见的安全漏洞（OWASP Top 10）
 4. 包含恶意输入和攻击场景测试
@@ -542,10 +542,10 @@ UI功能信息：
                 timeout=self.generation_timeout_seconds,
             )
         except asyncio.TimeoutError as exc:
-            raise BusinessLogicError("AI生成测试用例超时，请稍后重试或选择内容更少的需求") from exc
+            raise BusinessLogicError("AI生成测试用例超时，请稍后重试或拆分需求后再试") from exc
 
     def _max_tokens_for_config(self, config: GenerationConfig) -> int:
-        return max(1800, min(5000, 700 + config.max_cases * 650))
+        return 30000
 
     def _limit_prompt_text(self, value: Any, limit: int) -> str:
         text = str(value or "").strip()
@@ -579,7 +579,7 @@ UI功能信息：
             for value in self._iter_json_values(response_text):
                 cases = self._normalize_cases_payload(value, config)
                 if cases:
-                    return cases[:config.max_cases]
+                    return cases
 
             if response_text.startswith("```"):
                 response_text = re.sub(r"^```(?:json)?\s*", "", response_text, flags=re.IGNORECASE)
@@ -591,7 +591,7 @@ UI功能信息：
                 response_data = json.loads(response_text[json_start:json_end + 1])
                 cases = self._normalize_cases_payload(response_data, config)
                 if cases:
-                    return cases[:config.max_cases]
+                    return cases
 
             array_start = response_text.find("[")
             array_end = response_text.rfind("]")
@@ -599,7 +599,7 @@ UI功能信息：
                 response_data = json.loads(response_text[array_start:array_end + 1])
                 cases = self._normalize_cases_payload(response_data, config)
                 if cases:
-                    return cases[:config.max_cases]
+                    return cases
             
             # 如果不是JSON格式，尝试提取结构化信息
             return self._extract_cases_from_text(response_text, config)
@@ -808,9 +808,6 @@ UI功能信息：
                 titles.append(first_line[:120])
         
         for i, title in enumerate(titles):
-            if i >= config.max_cases:
-                break
-            
             case = {
                 'case_title': title.strip(),
                 'case_description': f'基于需求生成的测试用例 {i+1}',
