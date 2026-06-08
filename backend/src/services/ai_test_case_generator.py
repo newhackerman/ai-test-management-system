@@ -73,7 +73,7 @@ class AITestCaseGenerator:
         self.db = db
         self.ai_service = AIAssistantService()
         self.test_case_service = TestCaseService(db)
-        self.generation_timeout_seconds = 120
+        self.generation_timeout_seconds = 170
         self._init_templates()
     
     def _init_templates(self):
@@ -545,7 +545,7 @@ UI功能信息：
             raise BusinessLogicError("AI生成测试用例超时，请稍后重试或选择内容更少的需求") from exc
 
     def _max_tokens_for_config(self, config: GenerationConfig) -> int:
-        return max(1000, min(3000, 500 + config.max_cases * 300))
+        return max(1800, min(5000, 700 + config.max_cases * 650))
 
     def _limit_prompt_text(self, value: Any, limit: int) -> str:
         text = str(value or "").strip()
@@ -576,6 +576,11 @@ UI功能信息：
         """解析AI响应"""
         try:
             response_text = str(ai_response or "").strip()
+            for value in self._iter_json_values(response_text):
+                cases = self._normalize_cases_payload(value, config)
+                if cases:
+                    return cases[:config.max_cases]
+
             if response_text.startswith("```"):
                 response_text = re.sub(r"^```(?:json)?\s*", "", response_text, flags=re.IGNORECASE)
                 response_text = re.sub(r"\s*```$", "", response_text).strip()
@@ -584,14 +589,17 @@ UI功能信息：
             json_end = response_text.rfind("}")
             if json_start >= 0 and json_end > json_start:
                 response_data = json.loads(response_text[json_start:json_end + 1])
-                return response_data.get('test_cases', [])
+                cases = self._normalize_cases_payload(response_data, config)
+                if cases:
+                    return cases[:config.max_cases]
 
             array_start = response_text.find("[")
             array_end = response_text.rfind("]")
             if array_start >= 0 and array_end > array_start:
                 response_data = json.loads(response_text[array_start:array_end + 1])
-                if isinstance(response_data, list):
-                    return response_data
+                cases = self._normalize_cases_payload(response_data, config)
+                if cases:
+                    return cases[:config.max_cases]
             
             # 如果不是JSON格式，尝试提取结构化信息
             return self._extract_cases_from_text(response_text, config)
@@ -599,6 +607,183 @@ UI功能信息：
         except json.JSONDecodeError:
             logger.warning("AI响应不是有效的JSON格式，尝试文本解析")
             return self._extract_cases_from_text(ai_response, config)
+
+    def _iter_json_values(self, text: str) -> List[Any]:
+        decoder = json.JSONDecoder()
+        fragments = [
+            match.group(1).strip()
+            for match in re.finditer(r"```(?:json)?\s*(.*?)```", str(text or ""), flags=re.IGNORECASE | re.DOTALL)
+        ]
+        fragments.append(str(text or ""))
+
+        values = []
+        seen = set()
+        for fragment in fragments:
+            for match in re.finditer(r"[\[{]", fragment):
+                candidate = fragment[match.start():].lstrip()
+                if not candidate or candidate in seen:
+                    continue
+                seen.add(candidate)
+                try:
+                    value, _ = decoder.raw_decode(candidate)
+                except json.JSONDecodeError:
+                    continue
+                if isinstance(value, (dict, list)):
+                    values.append(value)
+        return values
+
+    def _normalize_cases_payload(self, payload: Any, config: GenerationConfig) -> List[Dict[str, Any]]:
+        if isinstance(payload, list):
+            raw_cases = payload
+        elif isinstance(payload, dict):
+            raw_cases = (
+                payload.get("test_cases")
+                or payload.get("testCases")
+                or payload.get("cases")
+                or payload.get("data")
+                or payload.get("items")
+            )
+            if raw_cases is None and self._looks_like_case(payload):
+                raw_cases = [payload]
+            elif isinstance(raw_cases, dict):
+                raw_cases = raw_cases.get("test_cases") or raw_cases.get("cases") or raw_cases.get("items") or [raw_cases]
+        else:
+            raw_cases = []
+
+        normalized_cases = []
+        for raw_case in raw_cases or []:
+            if not isinstance(raw_case, dict):
+                continue
+            case = self._normalize_generated_case(raw_case, config)
+            if case:
+                normalized_cases.append(case)
+        return normalized_cases
+
+    def _looks_like_case(self, value: Dict[str, Any]) -> bool:
+        keys = {
+            "case_title", "title", "name", "case_description", "description",
+            "test_steps", "steps", "expected_result", "expected"
+        }
+        return any(key in value for key in keys)
+
+    def _normalize_generated_case(self, raw_case: Dict[str, Any], config: GenerationConfig) -> Optional[Dict[str, Any]]:
+        title = self._first_text(
+            raw_case,
+            "case_title", "title", "name", "test_case_title", "用例标题", "测试用例标题"
+        )
+        if not self._is_usable_title(title):
+            return None
+
+        test_steps = self._normalize_test_steps(
+            raw_case.get("test_steps")
+            or raw_case.get("steps")
+            or raw_case.get("actions")
+            or raw_case.get("测试步骤")
+        )
+        if not test_steps:
+            api_method = self._first_text(raw_case, "api_method", "method", "request_method")
+            api_url = self._first_text(raw_case, "api_url", "url", "endpoint", "request_url")
+            if api_method or api_url:
+                test_steps = [
+                    {
+                        "step": 1,
+                        "action": "准备测试数据、请求头和鉴权信息",
+                        "expected": "测试数据满足当前用例场景，必要的请求头和鉴权信息已准备完成",
+                    },
+                    {
+                        "step": 2,
+                        "action": f"发送 {api_method or 'HTTP'} 请求到 {api_url or '目标接口'}",
+                        "expected": "接口请求成功发出并收到响应",
+                    },
+                    {
+                        "step": 3,
+                        "action": "校验响应状态、响应内容和相关业务数据",
+                        "expected": self._format_expected_response(raw_case),
+                    },
+                ]
+
+        return {
+            "case_title": title[:200],
+            "case_description": self._first_text(raw_case, "case_description", "description", "summary", "用例描述") or title,
+            "case_type": raw_case.get("case_type") or config.case_type.value,
+            "priority": raw_case.get("priority") or config.priority.value,
+            "complexity": raw_case.get("complexity") or "MEDIUM",
+            "automation_level": raw_case.get("automation_level") or "MANUAL",
+            "preconditions": self._first_text(raw_case, "preconditions", "precondition", "前置条件") or "系统正常运行",
+            "test_steps": test_steps,
+            "expected_result": self._first_text(raw_case, "expected_result", "expected", "expected_response", "预期结果") or self._steps_expected_summary(test_steps),
+            "test_data": raw_case.get("test_data") or raw_case.get("data") or raw_case.get("request_body") or {},
+            "test_type": raw_case.get("test_type") or raw_case.get("scenario_type") or "positive",
+            "tags": raw_case.get("tags") or [],
+            "module": raw_case.get("module"),
+        }
+
+    def _first_text(self, data: Dict[str, Any], *keys: str) -> str:
+        for key in keys:
+            value = data.get(key)
+            if value is None:
+                continue
+            if isinstance(value, (dict, list)):
+                return json.dumps(value, ensure_ascii=False)
+            text = str(value).strip()
+            if text:
+                return text
+        return ""
+
+    def _is_usable_title(self, title: str) -> bool:
+        title = str(title or "").strip()
+        if len(title) < 2:
+            return False
+        if title.lower() in {"{", "}", "[", "]", "```", "```json", "json", "test_cases"}:
+            return False
+        return bool(re.search(r"[\w\u4e00-\u9fff]", title))
+
+    def _normalize_test_steps(self, steps: Any) -> List[Dict[str, Any]]:
+        if isinstance(steps, str):
+            parts = [part.strip(" -\t") for part in re.split(r"\n+|\d+[\.、)]", steps) if part.strip(" -\t")]
+            return [
+                {"step": index + 1, "action": part, "expected": "完成该步骤并符合预期"}
+                for index, part in enumerate(parts)
+            ]
+        if not isinstance(steps, list):
+            return []
+
+        normalized = []
+        for index, step in enumerate(steps, start=1):
+            if isinstance(step, str):
+                action = step.strip()
+                expected = "完成该步骤并符合预期"
+            elif isinstance(step, dict):
+                action = self._first_text(step, "action", "operation", "description", "step_description", "步骤", "操作")
+                expected = self._first_text(step, "expected", "expected_result", "assertion", "预期", "预期结果")
+                if not action and step.get("step") and not isinstance(step.get("step"), int):
+                    action = str(step.get("step")).strip()
+            else:
+                continue
+
+            if not action:
+                continue
+            normalized.append({
+                "step": index,
+                "action": action,
+                "expected": expected or "完成该步骤并符合预期",
+            })
+        return normalized
+
+    def _format_expected_response(self, raw_case: Dict[str, Any]) -> str:
+        status = raw_case.get("expected_status")
+        response = raw_case.get("expected_response")
+        if status is not None and response is not None:
+            return f"响应状态为 {status}，响应内容符合预期：{json.dumps(response, ensure_ascii=False)}"
+        if status is not None:
+            return f"响应状态为 {status}"
+        if response is not None:
+            return f"响应内容符合预期：{json.dumps(response, ensure_ascii=False)}"
+        return "接口响应符合预期"
+
+    def _steps_expected_summary(self, steps: List[Dict[str, Any]]) -> str:
+        expected_values = [str(step.get("expected", "")).strip() for step in steps if step.get("expected")]
+        return expected_values[-1] if expected_values else "测试通过"
     
     def _extract_cases_from_text(self, text: str, config: GenerationConfig) -> List[Dict[str, Any]]:
         """从文本中提取测试用例"""
@@ -614,12 +799,12 @@ UI功能信息：
         for pattern in title_patterns:
             for match in re.findall(pattern, text, re.MULTILINE | re.IGNORECASE):
                 title = str(match).strip().strip('"').strip("'")
-                if title and title not in titles and len(title) <= 120:
+                if self._is_usable_title(title) and title not in titles and len(title) <= 120:
                     titles.append(title)
 
         if not titles and text.strip():
             first_line = next((line.strip() for line in text.splitlines() if line.strip()), "")
-            if first_line:
+            if self._is_usable_title(first_line):
                 titles.append(first_line[:120])
         
         for i, title in enumerate(titles):
@@ -655,7 +840,7 @@ UI功能信息：
         for case in cases:
             try:
                 # 基本验证
-                if not case.get('case_title'):
+                if not self._is_usable_title(case.get('case_title', '')):
                     case['case_title'] = f"基于{getattr(requirement, 'title', '需求')}的测试用例"
                 
                 if not case.get('test_steps'):

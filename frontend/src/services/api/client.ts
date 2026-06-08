@@ -83,7 +83,7 @@ apiClient.interceptors.response.use(
       } else if (status === 404) {
         message.error('请求的资源不存在。')
       } else if (status >= 500) {
-        message.error('服务器内部错误。')
+        message.error(getErrorMessage(data, '服务器内部错误。'))
       } else {
         message.error(getErrorMessage(data))
       }

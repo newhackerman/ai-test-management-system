@@ -148,18 +148,18 @@ def _infer_priority(requirement: Requirement, requested_priority: Optional[TestC
 
 def _infer_max_cases(requirement: Requirement) -> int:
     complexity_cases = {
-        RequirementComplexity.SIMPLE: 4,
-        RequirementComplexity.MEDIUM: 6,
-        RequirementComplexity.COMPLEX: 10,
-        RequirementComplexity.VERY_COMPLEX: 14,
+        RequirementComplexity.SIMPLE: 3,
+        RequirementComplexity.MEDIUM: 5,
+        RequirementComplexity.COMPLEX: 8,
+        RequirementComplexity.VERY_COMPLEX: 10,
     }
     max_cases = complexity_cases.get(requirement.complexity, 6)
     content_length = len(requirement.description or "") + len(requirement.acceptance_criteria or "")
     if content_length > 2500:
-        max_cases += 4
-    elif content_length > 1200:
         max_cases += 2
-    return max(3, min(max_cases, 18))
+    elif content_length > 1200:
+        max_cases += 1
+    return max(3, min(max_cases, 10))
 
 
 def _template_for_case_type(case_type: TestCaseType) -> GenerationTemplate:

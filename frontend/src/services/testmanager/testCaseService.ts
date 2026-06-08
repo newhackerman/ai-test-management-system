@@ -68,7 +68,7 @@ export class TestCaseService {
   }
 
   async generateTestCases(config: TestCaseGenerationConfig): Promise<TestCase[]> {
-    const response = await apiClient.post(this.path('generate'), config)
+    const response = await apiClient.post(this.path('generate'), config, { timeout: 240000 })
     return unwrapData<TestCase[]>(response.data)
   }
 
