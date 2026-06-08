@@ -18,7 +18,14 @@ const normalizeParams = (filters?: Record<string, any>) => {
 
   Object.entries(filters).forEach(([key, value]) => {
     if (value === undefined || value === null || value === '' || value === 'all') return
-    params.append(key === 'size' ? 'page_size' : key, String(value))
+    const paramKey = key === 'size'
+      ? 'page_size'
+      : key === 'started_after'
+        ? 'start_date'
+        : key === 'started_before'
+          ? 'end_date'
+          : key
+    params.append(paramKey, String(value))
   })
   return params
 }
@@ -143,7 +150,7 @@ export class ExecutionService {
 
   async getExecutionLogs(id: number): Promise<any[]> {
     const response = await apiClient.get(`${this.baseUrl}/${id}/logs`)
-    return response.data
+    return unwrapData<any[]>(response.data)
   }
 
   async uploadScreenshot(id: number, file: File): Promise<any> {

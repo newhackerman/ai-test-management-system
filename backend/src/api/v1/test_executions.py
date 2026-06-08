@@ -15,6 +15,7 @@ from pathlib import Path as FilePath
 from typing import Optional, List, Dict, Any
 from fastapi import APIRouter, Depends, HTTPException, Query, Path, Body, BackgroundTasks, UploadFile, File
 from fastapi.security import HTTPBearer
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, Field
 import logging
@@ -48,6 +49,7 @@ def _is_missing_table_error(error: Exception) -> bool:
 
 
 def _build_execution_response(execution):
+    test_case = execution.test_case
     return TestExecutionResponse(
         id=execution.id,
         execution_code=execution.execution_code,
@@ -65,6 +67,9 @@ def _build_execution_response(execution):
         completed_at=execution.completed_at,
         duration=execution.duration,
         executor_id=execution.executor_id,
+        test_case_code=test_case.case_code if test_case else None,
+        test_case_title=test_case.case_title if test_case else None,
+        test_case_priority=_normalize_enum_value(test_case.priority) if test_case and test_case.priority else None,
         screenshots=execution.screenshots,
         logs=execution.logs,
         videos=execution.videos,
@@ -78,6 +83,30 @@ def _generate_execution_code(db: Session, case_code: str) -> str:
     prefix = f"EX-{case_code}-{today}"
     count = db.query(TestExecution).filter(TestExecution.execution_code.like(f"{prefix}-%")).count()
     return f"{prefix}-{count + 1:03d}"
+
+
+def _sync_test_case_execution_state(
+    test_case: Optional[TestCase],
+    status: ModelExecutionStatus,
+    *,
+    occurred_at: Optional[datetime] = None,
+    count_completed: bool = False,
+    duration: Optional[int] = None,
+) -> None:
+    if not test_case:
+        return
+
+    now = occurred_at or datetime.utcnow()
+    test_case.last_execution_status = status
+    test_case.last_execution_date = now
+    if count_completed:
+        test_case.execution_count = (test_case.execution_count or 0) + 1
+        if status == ModelExecutionStatus.PASSED:
+            test_case.pass_count = (test_case.pass_count or 0) + 1
+        elif status == ModelExecutionStatus.FAILED:
+            test_case.fail_count = (test_case.fail_count or 0) + 1
+        if duration is not None:
+            test_case.actual_execution_time = max(1, round(duration / 60))
 
 
 def _normalize_enum_value(value) -> str:
@@ -268,6 +297,7 @@ async def start_manual_execution(
             started_at=datetime.utcnow()
         )
         db.add(execution)
+        _sync_test_case_execution_state(test_case, ModelExecutionStatus.IN_PROGRESS, occurred_at=execution.started_at)
         db.commit()
         db.refresh(execution)
         
@@ -308,6 +338,7 @@ async def complete_manual_execution(
             raise HTTPException(status_code=404, detail="测试执行记录不存在")
 
         completed_at = datetime.utcnow()
+        was_unfinished = execution.completed_at is None
         execution.execution_status = ModelExecutionStatus(request.execution_status.value)
         execution.actual_result = request.actual_result
         execution.failure_reason = request.failure_reason
@@ -319,6 +350,13 @@ async def complete_manual_execution(
         if execution.started_at:
             execution.duration = int((completed_at - execution.started_at).total_seconds())
         execution.updated_at = completed_at
+        _sync_test_case_execution_state(
+            execution.test_case,
+            execution.execution_status,
+            occurred_at=completed_at,
+            count_completed=was_unfinished,
+            duration=execution.duration,
+        )
         db.commit()
         db.refresh(execution)
         
@@ -363,6 +401,7 @@ async def pause_execution(
         execution.execution_status = ModelExecutionStatus.BLOCKED
         execution.execution_notes = request.pause_reason or execution.execution_notes
         execution.updated_at = datetime.utcnow()
+        _sync_test_case_execution_state(execution.test_case, ModelExecutionStatus.BLOCKED, occurred_at=execution.updated_at)
         db.commit()
         db.refresh(execution)
         
@@ -401,6 +440,7 @@ async def resume_execution(
         execution.execution_status = ModelExecutionStatus.IN_PROGRESS
         execution.execution_notes = request.resume_notes or execution.execution_notes
         execution.updated_at = datetime.utcnow()
+        _sync_test_case_execution_state(execution.test_case, ModelExecutionStatus.IN_PROGRESS, occurred_at=execution.updated_at)
         db.commit()
         db.refresh(execution)
         
@@ -475,8 +515,7 @@ async def start_automation_execution_real(
             )
             db.add(execution)
             executions.append(execution)
-            case.last_execution_status = ModelExecutionStatus.IN_PROGRESS
-            case.last_execution_date = now
+            _sync_test_case_execution_state(case, ModelExecutionStatus.IN_PROGRESS, occurred_at=now)
 
         db.commit()
         for execution in executions:
@@ -551,11 +590,19 @@ async def cancel_automation_execution_real(
         now = datetime.utcnow()
         for execution in executions:
             if execution.execution_status == ModelExecutionStatus.IN_PROGRESS:
+                was_unfinished = execution.completed_at is None
                 execution.execution_status = ModelExecutionStatus.SKIPPED
                 execution.completed_at = now
                 execution.updated_at = now
                 if execution.started_at:
                     execution.duration = int((now - execution.started_at).total_seconds())
+                _sync_test_case_execution_state(
+                    execution.test_case,
+                    ModelExecutionStatus.SKIPPED,
+                    occurred_at=now,
+                    count_completed=was_unfinished,
+                    duration=execution.duration,
+                )
 
         db.commit()
         for execution in executions:
@@ -574,112 +621,6 @@ async def cancel_automation_execution_real(
     except Exception as e:
         db.rollback()
         logger.error(f"取消自动化执行失败: {str(e)}")
-        raise HTTPException(status_code=500, detail="内部服务器错误")
-
-
-@router.post("/automation/start", response_model=BaseResponse[AutomationExecutionResponse])
-async def start_automation_execution(
-    request: AutomationExecutionRequest,
-    background_tasks: BackgroundTasks,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    """
-    开始自动化测试执行
-    
-    启动自动化测试执行，支持批量执行和并发控制。
-    """
-    try:
-        service = TestExecutionService(db)
-        
-        # 构建自动化配置
-        automation_config = {
-            'framework': request.framework,
-            'test_environment': request.test_environment,
-            'browser': request.browser,
-            'parallel_count': request.parallel_count,
-            'retry_count': request.retry_count,
-            'timeout': request.timeout,
-            'execution_config': request.execution_config,
-            'executor_id': current_user.id
-        }
-        
-        # 开始自动化执行
-        automation_execution = await service.start_automation_execution(
-            request.test_case_ids,
-            automation_config
-        )
-        
-        # 构建响应
-        response_data = AutomationExecutionResponse(
-            execution_id=automation_execution.execution_code,
-            framework=automation_execution.framework,
-            test_environment=automation_execution.environment,
-            status=automation_execution.status,
-            total_cases=len(request.test_case_ids),
-            completed_cases=0,
-            passed_cases=0,
-            failed_cases=0,
-            progress_percentage=0.0,
-            started_at=automation_execution.started_at,
-            estimated_completion=automation_execution.estimated_completion,
-            execution_logs=[],
-            test_results=[]
-        )
-        
-        return BaseResponse(
-            success=True,
-            message="自动化测试执行启动成功",
-            data=response_data
-        )
-        
-    except Exception as e:
-        logger.error(f"启动自动化测试执行失败: {str(e)}")
-        raise HTTPException(status_code=500, detail="内部服务器错误")
-
-
-@router.get("/automation/{execution_id}/status", response_model=BaseResponse[AutomationExecutionResponse])
-async def get_automation_execution_status(
-    execution_id: str = Path(..., description="自动化执行ID"),
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    """
-    获取自动化执行状态
-    
-    实时获取自动化测试执行的状态和进度。
-    """
-    try:
-        service = TestExecutionService(db)
-        
-        # 监控自动化执行
-        execution_status = await service.monitor_automation_execution(execution_id)
-        
-        # 构建响应
-        response_data = AutomationExecutionResponse(
-            execution_id=execution_status.execution_id,
-            framework="",  # 需要从执行记录获取
-            test_environment="",  # 需要从执行记录获取
-            status=execution_status.status,
-            total_cases=execution_status.total_cases,
-            completed_cases=execution_status.completed_cases,
-            passed_cases=execution_status.passed_cases,
-            failed_cases=execution_status.failed_cases,
-            progress_percentage=execution_status.progress,
-            started_at=execution_status.start_time,
-            estimated_completion=execution_status.estimated_completion,
-            execution_logs=[],
-            test_results=[]
-        )
-        
-        return BaseResponse(
-            success=True,
-            message="获取自动化执行状态成功",
-            data=response_data
-        )
-        
-    except Exception as e:
-        logger.error(f"获取自动化执行状态失败: {str(e)}")
         raise HTTPException(status_code=500, detail="内部服务器错误")
 
 
@@ -856,8 +797,27 @@ async def get_test_execution(
         raise HTTPException(status_code=500, detail="内部服务器错误")
 
 
+@router.get("/{execution_id}/logs", response_model=BaseResponse[List[Dict[str, Any]]])
+async def get_execution_logs(
+    execution_id: int = Path(..., description="执行记录ID"),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    try:
+        execution = db.query(TestExecution).filter(TestExecution.id == execution_id).first()
+        if not execution:
+            raise HTTPException(status_code=404, detail="测试执行记录不存在")
+        return BaseResponse(success=True, message="获取执行日志成功", data=execution.logs or [])
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"获取执行日志失败: {str(e)}")
+        raise HTTPException(status_code=500, detail="内部服务器错误")
+
+
 @router.get("/", response_model=PaginatedResponse[TestExecutionResponse])
 async def list_test_executions(
+    search: Optional[str] = Query(None, description="执行编号或用例关键词"),
     test_case_id: Optional[int] = Query(None, description="测试用例ID"),
     test_plan_id: Optional[int] = Query(None, description="测试计划ID"),
     execution_type: Optional[ExecutionType] = Query(None, description="执行类型"),
@@ -890,6 +850,15 @@ async def list_test_executions(
             query = query.filter(TestExecution.executor_id == executor_id)
         if test_environment:
             query = query.filter(TestExecution.test_environment == test_environment)
+        if search:
+            like_pattern = f"%{search.strip()}%"
+            query = query.join(TestCase, TestExecution.test_case_id == TestCase.id).filter(
+                or_(
+                    TestExecution.execution_code.like(like_pattern),
+                    TestCase.case_code.like(like_pattern),
+                    TestCase.case_title.like(like_pattern),
+                )
+            )
         if start_date:
             query = query.filter(TestExecution.started_at >= start_date)
         if end_date:

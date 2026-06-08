@@ -140,6 +140,9 @@ class TestExecutionResponse(BaseModel):
     
     # 人员信息
     executor_id: int = Field(..., description="执行人ID")
+    test_case_code: Optional[str] = Field(None, description="测试用例编号")
+    test_case_title: Optional[str] = Field(None, description="测试用例标题")
+    test_case_priority: Optional[str] = Field(None, description="测试用例优先级")
     
     # 附件信息
     screenshots: Optional[List[Dict[str, Any]]] = Field(None, description="截图信息")

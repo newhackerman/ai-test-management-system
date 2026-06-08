@@ -106,6 +106,7 @@ const TestCaseCreate = React.lazy(() => import('@/pages/TestManager/TestCase/Tes
 const TestCaseEdit = React.lazy(() => import('@/pages/TestManager/TestCase/TestCaseEdit'))
 const TestCaseDetail = React.lazy(() => import('@/pages/TestManager/TestCase/TestCaseDetail'))
 const ExecutionDashboard = React.lazy(() => import('@/pages/TestManager/Execution/ExecutionDashboard'))
+const ExecutionDetail = React.lazy(() => import('@/pages/TestManager/Execution/ExecutionDetail'))
 const ManualExecution = React.lazy(() => import('@/pages/TestManager/Execution/ManualExecution'))
 const AutomationExecution = React.lazy(() => import('@/pages/TestManager/Execution/AutomationExecution'))
 const DefectList = React.lazy(() => import('@/pages/TestManager/Defect/DefectList'))
@@ -182,6 +183,7 @@ export const routes: RouteObject[] = [
       { path: 'test-manager/test-cases/:id/edit', element: withModule('testing', TestCaseEdit) },
       { path: 'test-manager/test-cases/:id', element: withModule('testing', TestCaseDetail) },
       { path: 'test-manager/executions', element: withModule('testing', ExecutionDashboard) },
+      { path: 'test-manager/executions/:executionId', element: withModule('testing', ExecutionDetail) },
       { path: 'test-manager/executions/manual', element: withModule('testing', ManualExecution) },
       { path: 'test-manager/executions/manual/:testCaseId', element: withModule('testing', ManualExecution) },
       { path: 'test-manager/executions/automation', element: withModule('testing', AutomationExecution) },

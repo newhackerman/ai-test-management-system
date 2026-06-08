@@ -11,7 +11,10 @@ import {
 import { useToast } from '../useToast'
 
 const getErrorMessage = (error: any, fallback: string) => (
-  error?.response?.data?.message || error?.message || fallback
+  error?.response?.data?.detail ||
+  error?.response?.data?.message ||
+  error?.message ||
+  fallback
 )
 
 export const useExecutions = (filters?: ExecutionFilters) => {

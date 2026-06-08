@@ -1,0 +1,258 @@
+import React from 'react'
+import { Link, useParams } from 'react-router-dom'
+import { ArrowLeft, FileText, Pause, Play, Square } from 'lucide-react'
+import { Badge } from '../../../components/ui/Badge'
+import { Button } from '../../../components/ui/Button'
+import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/Card'
+import { ScrollArea } from '../../../components/ui/ScrollArea'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../components/ui/Table'
+import {
+  useCancelExecution,
+  useExecution,
+  usePauseExecution,
+  useResumeExecution,
+} from '../../../hooks/testmanager/useExecution'
+import { ExecutionStatus, ExecutionType } from '../../../types/testmanager'
+import { formatDate } from '../../../utils/date'
+
+const statusLabels: Record<string, string> = {
+  NOT_EXECUTED: '未执行',
+  IN_PROGRESS: '执行中',
+  PASSED: '通过',
+  FAILED: '失败',
+  BLOCKED: '暂停/阻塞',
+  SKIPPED: '已取消',
+}
+
+const statusVariants: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
+  NOT_EXECUTED: 'secondary',
+  IN_PROGRESS: 'default',
+  PASSED: 'default',
+  FAILED: 'destructive',
+  BLOCKED: 'secondary',
+  SKIPPED: 'outline',
+}
+
+const formatDuration = (seconds?: number) => {
+  if (!seconds) return '-'
+  if (seconds < 60) return `${seconds}秒`
+  const minutes = Math.floor(seconds / 60)
+  if (minutes < 60) return `${minutes}分钟`
+  return `${Math.floor(minutes / 60)}小时${minutes % 60}分钟`
+}
+
+const getStepText = (log: any, key: string) => {
+  const value = log?.[key]
+  if (value === undefined || value === null || value === '') return '-'
+  return String(value)
+}
+
+const ExecutionDetail: React.FC = () => {
+  const { executionId } = useParams<{ executionId: string }>()
+  const id = Number(executionId)
+  const { data: execution, isLoading } = useExecution(id)
+  const pauseExecution = usePauseExecution()
+  const resumeExecution = useResumeExecution()
+  const cancelExecution = useCancelExecution()
+
+  if (isLoading) {
+    return <div className="flex h-64 items-center justify-center text-muted-foreground">加载中...</div>
+  }
+
+  if (!execution) {
+    return <div className="py-16 text-center text-destructive">执行记录不存在</div>
+  }
+
+  const logs = execution.logs || []
+  const stepLogs = logs.filter((item: any) => item?.type === 'step' || item?.step_index !== undefined)
+  const otherLogs = logs.filter((item: any) => !(item?.type === 'step' || item?.step_index !== undefined))
+  const canPause = execution.execution_status === ExecutionStatus.IN_PROGRESS
+  const canResume = execution.execution_status === ExecutionStatus.BLOCKED
+  const canCancel = execution.execution_status === ExecutionStatus.IN_PROGRESS || execution.execution_status === ExecutionStatus.BLOCKED
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div className="flex items-center gap-3">
+          <Button asChild variant="ghost" size="sm">
+            <Link to="/test-manager/executions">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              返回执行管理
+            </Link>
+          </Button>
+          <div>
+            <h1 className="text-2xl font-bold">{execution.execution_code}</h1>
+            <p className="text-sm text-muted-foreground">{execution.test_case_title || `用例 #${execution.test_case_id}`}</p>
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {canPause && (
+            <Button variant="outline" onClick={() => pauseExecution.mutate(execution.id)}>
+              <Pause className="mr-2 h-4 w-4" />
+              暂停
+            </Button>
+          )}
+          {canResume && (
+            <Button variant="outline" onClick={() => resumeExecution.mutate(execution.id)}>
+              <Play className="mr-2 h-4 w-4" />
+              恢复
+            </Button>
+          )}
+          {canCancel && (
+            <Button variant="outline" onClick={() => cancelExecution.mutate(execution.id)}>
+              <Square className="mr-2 h-4 w-4" />
+              取消执行
+            </Button>
+          )}
+          {execution.execution_type === ExecutionType.MANUAL && (
+            <Button asChild>
+              <Link to={`/test-manager/executions/manual/${execution.test_case_id}`}>重新执行该用例</Link>
+            </Button>
+          )}
+        </div>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <Card>
+          <CardContent className="pt-6">
+            <p className="text-sm text-muted-foreground">状态</p>
+            <div className="mt-2">
+              <Badge variant={statusVariants[execution.execution_status] || 'secondary'}>
+                {statusLabels[execution.execution_status] || execution.execution_status}
+              </Badge>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <p className="text-sm text-muted-foreground">执行类型</p>
+            <p className="mt-2 text-lg font-semibold">{execution.execution_type === ExecutionType.MANUAL ? '手工执行' : '自动化执行'}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <p className="text-sm text-muted-foreground">执行环境</p>
+            <p className="mt-2 text-lg font-semibold">{execution.test_environment || '-'}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <p className="text-sm text-muted-foreground">耗时</p>
+            <p className="mt-2 text-lg font-semibold">{formatDuration(execution.duration)}</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-3">
+        <div className="space-y-6 lg:col-span-2">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">步骤执行结果</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-16">步骤</TableHead>
+                    <TableHead>操作</TableHead>
+                    <TableHead>预期结果</TableHead>
+                    <TableHead>实际结果</TableHead>
+                    <TableHead className="w-24">状态</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {stepLogs.length ? stepLogs.map((log: any, index: number) => (
+                    <TableRow key={`${log.step_index}-${index}`}>
+                      <TableCell>{Number(log.step_index ?? index) + 1}</TableCell>
+                      <TableCell>{getStepText(log, 'action')}</TableCell>
+                      <TableCell>{getStepText(log, 'expected_result')}</TableCell>
+                      <TableCell>{getStepText(log, 'actual_result')}</TableCell>
+                      <TableCell>
+                        <Badge variant={statusVariants[log.status] || 'secondary'}>{statusLabels[log.status] || log.status || '-'}</Badge>
+                      </TableCell>
+                    </TableRow>
+                  )) : (
+                    <TableRow>
+                      <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
+                        暂无步骤日志
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">执行结论</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">实际结果</p>
+                <p className="mt-1 whitespace-pre-wrap">{execution.actual_result || '-'}</p>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">失败原因</p>
+                <p className="mt-1 whitespace-pre-wrap">{execution.failure_reason || '-'}</p>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">执行备注</p>
+                <p className="mt-1 whitespace-pre-wrap">{execution.execution_notes || '-'}</p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">基础信息</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 text-sm">
+              <div className="flex justify-between gap-3"><span className="text-muted-foreground">用例编号</span><span>{execution.test_case_code || execution.test_case_id}</span></div>
+              <div className="flex justify-between gap-3"><span className="text-muted-foreground">优先级</span><span>{execution.test_case_priority || '-'}</span></div>
+              <div className="flex justify-between gap-3"><span className="text-muted-foreground">执行人ID</span><span>{execution.executor_id}</span></div>
+              <div className="flex justify-between gap-3"><span className="text-muted-foreground">浏览器</span><span>{execution.browser_info || '-'}</span></div>
+              <div className="flex justify-between gap-3"><span className="text-muted-foreground">操作系统</span><span>{execution.os_info || '-'}</span></div>
+              <div className="flex justify-between gap-3"><span className="text-muted-foreground">开始时间</span><span>{execution.started_at ? formatDate(execution.started_at) : '-'}</span></div>
+              <div className="flex justify-between gap-3"><span className="text-muted-foreground">结束时间</span><span>{execution.completed_at ? formatDate(execution.completed_at) : '-'}</span></div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <FileText className="h-5 w-5" />
+                执行日志
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ScrollArea className="h-72 rounded border bg-muted/30 p-3">
+                {otherLogs.length ? otherLogs.map((log: any, index: number) => (
+                  <pre key={index} className="mb-3 whitespace-pre-wrap text-xs">
+                    {typeof log === 'string' ? log : JSON.stringify(log, null, 2)}
+                  </pre>
+                )) : (
+                  <div className="text-sm text-muted-foreground">暂无其他日志</div>
+                )}
+              </ScrollArea>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">附件</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2 text-sm">
+              <p>截图：{execution.screenshots?.length || 0}</p>
+              <p>视频：{execution.videos?.length || 0}</p>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+export default ExecutionDetail

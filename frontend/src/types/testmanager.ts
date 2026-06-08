@@ -136,6 +136,9 @@ export interface TestExecution {
   completed_at?: string
   duration?: number
   executor_id: number
+  test_case_code?: string
+  test_case_title?: string
+  test_case_priority?: string
   screenshots?: any[]
   logs?: any[]
   videos?: any[]

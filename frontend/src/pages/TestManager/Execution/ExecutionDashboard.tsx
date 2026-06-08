@@ -1,25 +1,91 @@
-import React from 'react'
+import React, { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Play, Pause, CheckCircle, XCircle, Clock, Users, TrendingUp, Activity } from 'lucide-react'
-import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/Card'
-import { Button } from '../../../components/ui/Button'
+import {
+  Activity,
+  CheckCircle,
+  Eye,
+  Pause,
+  Play,
+  RotateCcw,
+  Search,
+  Square,
+  TrendingUp,
+} from 'lucide-react'
 import { Badge } from '../../../components/ui/Badge'
-import { Progress } from '../../../components/ui/Progress'
+import { Button } from '../../../components/ui/Button'
+import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/Card'
+import { Input } from '../../../components/ui/Input'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/Select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../components/ui/Table'
-import { useExecutions, useExecutionStatistics, usePauseExecution } from '../../../hooks/testmanager/useExecution'
+import {
+  useCancelExecution,
+  useExecutionStatistics,
+  useExecutions,
+  usePauseExecution,
+  useResumeExecution,
+} from '../../../hooks/testmanager/useExecution'
 import { ExecutionStatus, ExecutionType } from '../../../types/testmanager'
 import { formatDate } from '../../../utils/date'
 
+const statusLabels: Record<ExecutionStatus, string> = {
+  [ExecutionStatus.NOT_EXECUTED]: '未执行',
+  [ExecutionStatus.IN_PROGRESS]: '执行中',
+  [ExecutionStatus.PASSED]: '通过',
+  [ExecutionStatus.FAILED]: '失败',
+  [ExecutionStatus.BLOCKED]: '暂停/阻塞',
+  [ExecutionStatus.SKIPPED]: '已取消',
+}
+
+const statusVariants: Record<ExecutionStatus, 'default' | 'secondary' | 'destructive' | 'outline'> = {
+  [ExecutionStatus.NOT_EXECUTED]: 'secondary',
+  [ExecutionStatus.IN_PROGRESS]: 'default',
+  [ExecutionStatus.PASSED]: 'default',
+  [ExecutionStatus.FAILED]: 'destructive',
+  [ExecutionStatus.BLOCKED]: 'secondary',
+  [ExecutionStatus.SKIPPED]: 'outline',
+}
+
+const typeLabels: Record<ExecutionType, string> = {
+  [ExecutionType.MANUAL]: '手工',
+  [ExecutionType.AUTOMATED]: '自动化',
+}
+
+const formatDuration = (seconds?: number, startedAt?: string, status?: ExecutionStatus) => {
+  let value = seconds
+  if (!value && startedAt && status === ExecutionStatus.IN_PROGRESS) {
+    value = Math.max(0, Math.floor((Date.now() - new Date(startedAt).getTime()) / 1000))
+  }
+  if (!value) return '-'
+  if (value < 60) return `${value}秒`
+  const minutes = Math.floor(value / 60)
+  if (minutes < 60) return `${minutes}分钟`
+  return `${Math.floor(minutes / 60)}小时${minutes % 60}分钟`
+}
+
 const ExecutionDashboard: React.FC = () => {
-  const { data: executionsData, isLoading } = useExecutions({ 
-    page: 1, 
-    size: 10,
-    execution_status: ExecutionStatus.IN_PROGRESS 
-  })
+  const [page, setPage] = useState(1)
+  const [search, setSearch] = useState('')
+  const [status, setStatus] = useState<string>('all')
+  const [type, setType] = useState<string>('all')
+  const pageSize = 12
+
+  const filters = useMemo(() => ({
+    page,
+    size: pageSize,
+    search,
+    execution_status: status === 'all' ? undefined : status as ExecutionStatus,
+    execution_type: type === 'all' ? undefined : type,
+  }), [page, search, status, type])
+
+  const { data: executionsData, isLoading, refetch } = useExecutions(filters)
   const { data: statistics } = useExecutionStatistics()
   const pauseExecution = usePauseExecution()
+  const resumeExecution = useResumeExecution()
+  const cancelExecution = useCancelExecution()
 
   const executions = executionsData?.data || []
+  const total = executionsData?.total || 0
+  const totalPages = Math.max(1, Math.ceil(total / pageSize))
   const stats = statistics || {
     total_executions: 0,
     in_progress: 0,
@@ -29,289 +95,209 @@ const ExecutionDashboard: React.FC = () => {
     active_executors: 0,
   }
 
-  const getStatusBadge = (status: ExecutionStatus) => {
-    const statusConfig = {
-      [ExecutionStatus.NOT_EXECUTED]: { label: '未执行', variant: 'secondary' as const, icon: Clock },
-      [ExecutionStatus.IN_PROGRESS]: { label: '执行中', variant: 'default' as const, icon: Play },
-      [ExecutionStatus.PASSED]: { label: '通过', variant: 'default' as const, icon: CheckCircle },
-      [ExecutionStatus.FAILED]: { label: '失败', variant: 'destructive' as const, icon: XCircle },
-      [ExecutionStatus.BLOCKED]: { label: '阻塞', variant: 'secondary' as const, icon: Pause },
-      [ExecutionStatus.SKIPPED]: { label: '跳过', variant: 'outline' as const, icon: Clock },
-    }
-    
-    const config = statusConfig[status]
-    const Icon = config.icon
-    return (
-      <Badge variant={config.variant} className="flex items-center gap-1">
-        <Icon className="w-3 h-3" />
-        {config.label}
-      </Badge>
-    )
+  const resetFilters = () => {
+    setSearch('')
+    setStatus('all')
+    setType('all')
+    setPage(1)
   }
 
-  const getTypeLabel = (type: ExecutionType) => {
-    return type === ExecutionType.MANUAL ? '手动' : '自动化'
-  }
-
-  if (isLoading) {
-    return <div className="flex justify-center items-center h-64">加载中...</div>
-  }
+  const statusBadge = (value: ExecutionStatus) => (
+    <Badge variant={statusVariants[value] || 'secondary'}>{statusLabels[value] || value}</Badge>
+  )
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-2xl font-bold">测试执行仪表板</h1>
-          <p className="text-gray-600">实时监控测试执行状态和进度</p>
+          <h1 className="text-2xl font-bold">执行管理</h1>
+          <p className="text-sm text-muted-foreground">管理手工执行、自动化执行和执行结果追踪</p>
         </div>
-        <div className="flex space-x-2">
-          <Link to="/test-manager/executions/manual">
-            <Button>
-              <Play className="w-4 h-4 mr-2" />
-              开始手动测试
-            </Button>
-          </Link>
-          <Link to="/test-manager/executions/automation">
-            <Button variant="outline">
-              <Activity className="w-4 h-4 mr-2" />
-              自动化测试
-            </Button>
-          </Link>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" onClick={() => refetch()}>
+            <RotateCcw className="mr-2 h-4 w-4" />
+            刷新
+          </Button>
+          <Button asChild>
+            <Link to="/test-manager/executions/manual">
+              <Play className="mr-2 h-4 w-4" />
+              手工执行
+            </Link>
+          </Button>
+          <Button asChild variant="outline">
+            <Link to="/test-manager/executions/automation">
+              <Activity className="mr-2 h-4 w-4" />
+              自动化执行
+            </Link>
+          </Button>
         </div>
       </div>
 
-      {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center space-x-2">
-              <Activity className="w-5 h-5 text-blue-500" />
-              <div>
-                <p className="text-sm font-medium text-gray-600">总执行数</p>
-                <p className="text-2xl font-bold">{stats.total_executions}</p>
-              </div>
+          <CardContent className="flex items-center gap-3 pt-6">
+            <Activity className="h-5 w-5 text-blue-600" />
+            <div>
+              <p className="text-sm text-muted-foreground">总执行数</p>
+              <p className="text-2xl font-semibold">{stats.total_executions}</p>
             </div>
           </CardContent>
         </Card>
-
         <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center space-x-2">
-              <Play className="w-5 h-5 text-green-500" />
-              <div>
-                <p className="text-sm font-medium text-gray-600">执行中</p>
-                <p className="text-2xl font-bold">{stats.in_progress}</p>
-              </div>
+          <CardContent className="flex items-center gap-3 pt-6">
+            <Play className="h-5 w-5 text-emerald-600" />
+            <div>
+              <p className="text-sm text-muted-foreground">执行中</p>
+              <p className="text-2xl font-semibold">{stats.in_progress}</p>
             </div>
           </CardContent>
         </Card>
-
         <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center space-x-2">
-              <CheckCircle className="w-5 h-5 text-purple-500" />
-              <div>
-                <p className="text-sm font-medium text-gray-600">今日完成</p>
-                <p className="text-2xl font-bold">{stats.completed_today}</p>
-              </div>
+          <CardContent className="flex items-center gap-3 pt-6">
+            <CheckCircle className="h-5 w-5 text-violet-600" />
+            <div>
+              <p className="text-sm text-muted-foreground">今日完成</p>
+              <p className="text-2xl font-semibold">{stats.completed_today}</p>
             </div>
           </CardContent>
         </Card>
-
         <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center space-x-2">
-              <TrendingUp className="w-5 h-5 text-orange-500" />
-              <div>
-                <p className="text-sm font-medium text-gray-600">通过率</p>
-                <p className="text-2xl font-bold">{stats.pass_rate}%</p>
-              </div>
+          <CardContent className="flex items-center gap-3 pt-6">
+            <TrendingUp className="h-5 w-5 text-amber-600" />
+            <div>
+              <p className="text-sm text-muted-foreground">通过率</p>
+              <p className="text-2xl font-semibold">{stats.pass_rate}%</p>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Progress Overview */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
-          <Card>
-            <CardHeader>
-              <CardTitle>执行进度概览</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div>
-                  <div className="flex justify-between text-sm mb-2">
-                    <span>总体进度</span>
-                    <span>{stats.pass_rate}%</span>
-                  </div>
-                  <Progress value={stats.pass_rate} className="h-3" />
-                </div>
-                
-                <div className="grid grid-cols-2 gap-4 mt-4">
-                  <div className="text-center">
-                    <p className="text-2xl font-bold text-green-600">{stats.completed_today}</p>
-                    <p className="text-sm text-gray-600">今日完成</p>
-                  </div>
-                  <div className="text-center">
-                    <p className="text-2xl font-bold text-blue-600">{stats.avg_duration}min</p>
-                    <p className="text-sm text-gray-600">平均时长</p>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>执行统计</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <span className="text-sm">活跃执行者</span>
-                <div className="flex items-center space-x-1">
-                  <Users className="w-4 h-4 text-gray-500" />
-                  <span className="font-medium">{stats.active_executors}</span>
-                </div>
-              </div>
-              
-              <div className="flex justify-between items-center">
-                <span className="text-sm">平均执行时长</span>
-                <span className="font-medium">{stats.avg_duration} 分钟</span>
-              </div>
-              
-              <div className="flex justify-between items-center">
-                <span className="text-sm">执行效率</span>
-                <Badge variant="default">良好</Badge>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Active Executions */}
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>正在执行的测试</CardTitle>
-          <Link to="/test-manager/executions">
-            <Button variant="outline" size="sm">查看全部</Button>
-          </Link>
+        <CardHeader className="gap-4 md:flex-row md:items-center md:justify-between">
+          <CardTitle className="text-lg">执行记录</CardTitle>
+          <div className="flex flex-col gap-2 md:flex-row md:items-center">
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                className="pl-9 md:w-64"
+                placeholder="搜索执行编号、用例编号或标题"
+                value={search}
+                onChange={(event) => {
+                  setSearch(event.target.value)
+                  setPage(1)
+                }}
+              />
+            </div>
+            <Select value={status} onValueChange={(value) => { setStatus(value); setPage(1) }}>
+              <SelectTrigger className="md:w-36"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">全部状态</SelectItem>
+                <SelectItem value={ExecutionStatus.IN_PROGRESS}>执行中</SelectItem>
+                <SelectItem value={ExecutionStatus.BLOCKED}>暂停/阻塞</SelectItem>
+                <SelectItem value={ExecutionStatus.PASSED}>通过</SelectItem>
+                <SelectItem value={ExecutionStatus.FAILED}>失败</SelectItem>
+                <SelectItem value={ExecutionStatus.SKIPPED}>已取消</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={type} onValueChange={(value) => { setType(value); setPage(1) }}>
+              <SelectTrigger className="md:w-32"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">全部类型</SelectItem>
+                <SelectItem value={ExecutionType.MANUAL}>手工</SelectItem>
+                <SelectItem value={ExecutionType.AUTOMATED}>自动化</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button variant="outline" onClick={resetFilters}>重置</Button>
+          </div>
         </CardHeader>
         <CardContent>
-          {executions.length > 0 ? (
-            <Table>
-              <TableHeader>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-[190px]">执行编号</TableHead>
+                <TableHead>测试用例</TableHead>
+                <TableHead className="w-[90px]">类型</TableHead>
+                <TableHead className="w-[110px]">状态</TableHead>
+                <TableHead className="w-[110px]">环境</TableHead>
+                <TableHead className="w-[150px]">开始时间</TableHead>
+                <TableHead className="w-[90px]">耗时</TableHead>
+                <TableHead className="w-[170px] text-right">操作</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {isLoading ? (
                 <TableRow>
-                  <TableHead>执行编号</TableHead>
-                  <TableHead>测试用例</TableHead>
-                  <TableHead>类型</TableHead>
-                  <TableHead>状态</TableHead>
-                  <TableHead>执行者</TableHead>
-                  <TableHead>开始时间</TableHead>
-                  <TableHead>持续时间</TableHead>
-                  <TableHead className="text-right">操作</TableHead>
+                  <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">加载中...</TableCell>
                 </TableRow>
-              </TableHeader>
-              <TableBody>
-                {executions.map((execution) => {
-                  const duration = execution.started_at 
-                    ? Math.floor((new Date().getTime() - new Date(execution.started_at).getTime()) / 1000 / 60)
-                    : 0
+              ) : executions.length ? executions.map((execution) => (
+                <TableRow key={execution.id}>
+                  <TableCell>
+                    <Link to={`/test-manager/executions/${execution.id}`} className="font-medium text-primary hover:underline">
+                      {execution.execution_code}
+                    </Link>
+                  </TableCell>
+                  <TableCell>
+                    <div className="min-w-0">
+                      <p className="truncate font-medium">{execution.test_case_title || `用例 #${execution.test_case_id}`}</p>
+                      <p className="text-xs text-muted-foreground">{execution.test_case_code || `ID: ${execution.test_case_id}`}</p>
+                    </div>
+                  </TableCell>
+                  <TableCell><Badge variant="outline">{typeLabels[execution.execution_type]}</Badge></TableCell>
+                  <TableCell>{statusBadge(execution.execution_status)}</TableCell>
+                  <TableCell>{execution.test_environment || '-'}</TableCell>
+                  <TableCell>{execution.started_at ? formatDate(execution.started_at) : '-'}</TableCell>
+                  <TableCell>{formatDuration(execution.duration, execution.started_at, execution.execution_status)}</TableCell>
+                  <TableCell>
+                    <div className="flex justify-end gap-1">
+                      <Button asChild variant="ghost" size="icon" title="查看详情">
+                        <Link to={`/test-manager/executions/${execution.id}`}><Eye className="h-4 w-4" /></Link>
+                      </Button>
+                      {execution.execution_status === ExecutionStatus.IN_PROGRESS && (
+                        <Button variant="ghost" size="icon" title="暂停" onClick={() => pauseExecution.mutate(execution.id)}>
+                          <Pause className="h-4 w-4" />
+                        </Button>
+                      )}
+                      {execution.execution_status === ExecutionStatus.BLOCKED && (
+                        <Button variant="ghost" size="icon" title="恢复" onClick={() => resumeExecution.mutate(execution.id)}>
+                          <Play className="h-4 w-4" />
+                        </Button>
+                      )}
+                      {(execution.execution_status === ExecutionStatus.IN_PROGRESS || execution.execution_status === ExecutionStatus.BLOCKED) && (
+                        <Button variant="ghost" size="icon" title="取消" onClick={() => cancelExecution.mutate(execution.id)}>
+                          <Square className="h-4 w-4" />
+                        </Button>
+                      )}
+                      {execution.execution_type === ExecutionType.MANUAL && (
+                        <Button asChild variant="ghost" size="icon" title="执行该用例">
+                          <Link to={`/test-manager/executions/manual/${execution.test_case_id}`}><CheckCircle className="h-4 w-4" /></Link>
+                        </Button>
+                      )}
+                    </div>
+                  </TableCell>
+                </TableRow>
+              )) : (
+                <TableRow>
+                  <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
+                    暂无执行记录
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
 
-                  return (
-                    <TableRow key={execution.id}>
-                      <TableCell>
-                        <Link 
-                          to={`/test-manager/executions/${execution.id}`}
-                          className="font-medium text-blue-600 hover:text-blue-800"
-                        >
-                          {execution.execution_code}
-                        </Link>
-                      </TableCell>
-                      <TableCell>测试用例</TableCell>
-                      <TableCell>
-                        <Badge variant="outline">{getTypeLabel(execution.execution_type)}</Badge>
-                      </TableCell>
-                      <TableCell>{getStatusBadge(execution.execution_status)}</TableCell>
-                      <TableCell>执行者</TableCell>
-                      <TableCell>{execution.started_at ? formatDate(execution.started_at) : '-'}</TableCell>
-                      <TableCell>{duration > 0 ? `${duration} 分钟` : '-'}</TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end space-x-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => window.alert(`执行编号：${execution.execution_code}\n状态：${execution.execution_status}\n环境：${execution.test_environment || '-'}`)}
-                          >
-                            查看
-                          </Button>
-                          {execution.execution_status === ExecutionStatus.IN_PROGRESS && (
-                            <Button variant="ghost" size="sm" onClick={() => pauseExecution.mutate(execution.id)}>
-                              <Pause className="w-4 h-4" />
-                            </Button>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  )
-                })}
-              </TableBody>
-            </Table>
-          ) : (
-            <div className="text-center py-8 text-gray-500">
-              当前没有正在执行的测试
+          <div className="mt-4 flex flex-col gap-2 text-sm text-muted-foreground md:flex-row md:items-center md:justify-between">
+            <span>共 {total} 条记录，第 {page} / {totalPages} 页</span>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage((value) => Math.max(1, value - 1))}>
+                上一页
+              </Button>
+              <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage((value) => Math.min(totalPages, value + 1))}>
+                下一页
+              </Button>
             </div>
-          )}
+          </div>
         </CardContent>
       </Card>
-
-      {/* Quick Actions */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Link to="/test-manager/executions/manual">
-          <Card className="hover:shadow-md transition-shadow cursor-pointer">
-            <CardContent className="pt-6">
-              <div className="flex items-center space-x-3">
-                <Play className="w-8 h-8 text-green-500" />
-                <div>
-                  <h3 className="font-semibold">手动测试执行</h3>
-                  <p className="text-sm text-gray-600">开始手动执行测试用例</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </Link>
-
-        <Link to="/test-manager/executions/automation">
-          <Card className="hover:shadow-md transition-shadow cursor-pointer">
-            <CardContent className="pt-6">
-              <div className="flex items-center space-x-3">
-                <Activity className="w-8 h-8 text-blue-500" />
-                <div>
-                  <h3 className="font-semibold">自动化测试</h3>
-                  <p className="text-sm text-gray-600">配置和运行自动化测试</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </Link>
-
-        <Link to="/test-manager/executions/history">
-          <Card className="hover:shadow-md transition-shadow cursor-pointer">
-            <CardContent className="pt-6">
-              <div className="flex items-center space-x-3">
-                <Clock className="w-8 h-8 text-purple-500" />
-                <div>
-                  <h3 className="font-semibold">执行历史</h3>
-                  <p className="text-sm text-gray-600">查看历史执行记录</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </Link>
-      </div>
     </div>
   )
 }
