@@ -64,9 +64,6 @@ const TestCaseList: React.FC = () => {
   const [generateForm, setGenerateForm] = useState({
     requirement_id: '',
     test_plan_id: '',
-    case_type: TestCaseType.FUNCTIONAL,
-    priority: Priority.MEDIUM,
-    max_cases: '6',
   })
 
   const {
@@ -216,11 +213,7 @@ const TestCaseList: React.FC = () => {
       {
         requirement_id: requirementId,
         test_plan_id: Number(generateForm.test_plan_id || 0) || undefined,
-        case_type: generateForm.case_type,
-        priority: generateForm.priority,
         generation_config: {
-          max_cases: Math.max(1, Math.min(Number(generateForm.max_cases || 6), 30)),
-          detail_level: 'medium',
           include_negative_cases: true,
           include_boundary_cases: true,
           include_edge_cases: true,
@@ -360,17 +353,6 @@ const TestCaseList: React.FC = () => {
                     </SelectContent>
                   </Select>
                 </Field>
-                <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-                  <Field label="类型">
-                    <EnumSelect value={generateForm.case_type} options={TEST_CASE_TYPE_LABELS} onChange={(value) => setGenerateForm((current) => ({ ...current, case_type: value }))} />
-                  </Field>
-                  <Field label="优先级">
-                    <EnumSelect value={generateForm.priority} options={PRIORITY_LABELS} onChange={(value) => setGenerateForm((current) => ({ ...current, priority: value }))} />
-                  </Field>
-                  <Field label="生成数量">
-                    <Input value={generateForm.max_cases} onChange={(event) => setGenerateForm((current) => ({ ...current, max_cases: event.target.value }))} />
-                  </Field>
-                </div>
                 <div className="flex justify-end gap-2">
                   <Button variant="outline" onClick={() => setShowGenerateDialog(false)}>取消</Button>
                   <Button onClick={handleGenerate} disabled={generateTestCases.isPending}>

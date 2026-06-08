@@ -1182,8 +1182,8 @@ class AIAssistantService:
         endpoint = (config.get("api_endpoint") or "https://api.openai.com/v1").rstrip("/")
         model = (config.get("models") or ["gpt-4"])[0]
         timeout_seconds = float(getattr(settings, "OPENAI_TIMEOUT", 90.0) or 90.0)
-        max_tokens = int(os.getenv("AI_MAX_TOKENS") or getattr(settings, "OPENAI_MAX_TOKENS", config.get("max_tokens", 4000)) or 4000)
-        temperature = float(os.getenv("AI_TEMPERATURE") or getattr(settings, "OPENAI_TEMPERATURE", config.get("temperature", 0.7)) or 0.7)
+        max_tokens = int(config.get("max_tokens") or os.getenv("AI_MAX_TOKENS") or getattr(settings, "OPENAI_MAX_TOKENS", 4000) or 4000)
+        temperature = float(config.get("temperature") or os.getenv("AI_TEMPERATURE") or getattr(settings, "OPENAI_TEMPERATURE", 0.7) or 0.7)
 
         user_content: Any = prompt
         image_attachments = [

@@ -13,6 +13,7 @@ from datetime import datetime
 from typing import Optional, List, Dict, Any, Tuple
 from sqlalchemy.orm import Session
 from enum import Enum
+import asyncio
 import logging
 import json
 import re
@@ -72,6 +73,7 @@ class AITestCaseGenerator:
         self.db = db
         self.ai_service = AIAssistantService()
         self.test_case_service = TestCaseService(db)
+        self.generation_timeout_seconds = 120
         self._init_templates()
     
     def _init_templates(self):
@@ -301,9 +303,9 @@ UI功能信息：
             prompt = self._build_generation_prompt(requirement, config, template_info)
             
             # 4. 调用AI生成服务
-            ai_response = await self.ai_service.generate_content(
+            ai_response = await self._generate_ai_content(
                 prompt=prompt,
-                max_tokens=4000,
+                max_tokens=self._max_tokens_for_config(config),
                 temperature=0.7
             )
             
@@ -311,7 +313,7 @@ UI功能信息：
             generated_cases = self._parse_ai_response(ai_response, config)
             
             # 6. 质量检查和优化
-            validated_cases = await self._validate_and_optimize_cases(generated_cases, requirement)
+            validated_cases = await self._validate_and_optimize_cases(generated_cases, requirement, config)
             
             # 7. 构建返回结果
             result = {
@@ -366,9 +368,9 @@ UI功能信息：
             prompt = self._build_generation_prompt(temp_requirement, config, template_info)
             
             # 4. 调用AI生成服务
-            ai_response = await self.ai_service.generate_content(
+            ai_response = await self._generate_ai_content(
                 prompt=prompt,
-                max_tokens=4000,
+                max_tokens=self._max_tokens_for_config(config),
                 temperature=0.7
             )
             
@@ -376,7 +378,7 @@ UI功能信息：
             generated_cases = self._parse_ai_response(ai_response, config)
             
             # 6. 质量检查和优化
-            validated_cases = await self._validate_and_optimize_cases(generated_cases, temp_requirement)
+            validated_cases = await self._validate_and_optimize_cases(generated_cases, temp_requirement, config)
             
             # 7. 构建返回结果
             result = {
@@ -523,6 +525,28 @@ UI功能信息：
             return case_data
     
     # 私有方法
+    async def _generate_ai_content(self, prompt: str, max_tokens: int, temperature: float) -> str:
+        try:
+            return await asyncio.wait_for(
+                self.ai_service.generate_content(
+                    prompt=prompt,
+                    max_tokens=max_tokens,
+                    temperature=temperature,
+                ),
+                timeout=self.generation_timeout_seconds,
+            )
+        except asyncio.TimeoutError as exc:
+            raise BusinessLogicError("AI生成测试用例超时，请稍后重试或选择内容更少的需求") from exc
+
+    def _max_tokens_for_config(self, config: GenerationConfig) -> int:
+        return max(1000, min(3000, 500 + config.max_cases * 300))
+
+    def _limit_prompt_text(self, value: Any, limit: int) -> str:
+        text = str(value or "").strip()
+        if len(text) <= limit:
+            return text
+        return text[:limit].rstrip()
+
     def _build_generation_prompt(
         self, 
         requirement: Any, 
@@ -534,8 +558,8 @@ UI功能信息：
         
         return prompt_template.format(
             requirement_title=getattr(requirement, 'title', ''),
-            requirement_description=getattr(requirement, 'description', ''),
-            acceptance_criteria=getattr(requirement, 'acceptance_criteria', ''),
+            requirement_description=self._limit_prompt_text(getattr(requirement, 'description', ''), 1800),
+            acceptance_criteria=self._limit_prompt_text(getattr(requirement, 'acceptance_criteria', ''), 1200),
             max_cases=config.max_cases,
             priority=config.priority.value,
             language=config.language,
@@ -587,9 +611,10 @@ UI功能信息：
         return cases
     
     async def _validate_and_optimize_cases(
-        self, 
-        cases: List[Dict[str, Any]], 
-        requirement: Any
+        self,
+        cases: List[Dict[str, Any]],
+        requirement: Any,
+        config: GenerationConfig
     ) -> List[Dict[str, Any]]:
         """验证和优化用例"""
         validated_cases = []
@@ -609,8 +634,8 @@ UI功能信息：
                     case['expected_result'] = '功能正常工作'
                 
                 # 设置默认值
-                case.setdefault('case_type', 'FUNCTIONAL')
-                case.setdefault('priority', 'MEDIUM')
+                case.setdefault('case_type', config.case_type.value)
+                case.setdefault('priority', config.priority.value)
                 case.setdefault('complexity', 'MEDIUM')
                 case.setdefault('automation_level', 'MANUAL')
                 

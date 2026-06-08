@@ -30,6 +30,12 @@ from ...services.automation_script_generator import (
 from ...services.auth_dependencies import get_current_user
 from ...models.user import User
 from ...models.test_case import TestCase, TestCaseType, TestCasePriority, TestCaseStatus
+from ...models.requirement import (
+    Complexity as RequirementComplexity,
+    Priority as RequirementPriority,
+    Requirement,
+    RequirementType,
+)
 from ...schemas.base import BaseResponse, PaginatedResponse
 
 logger = logging.getLogger(__name__)
@@ -93,6 +99,102 @@ def _build_automation_config(request: "GenerateAutomationScriptRequest") -> Auto
         value = automation_config.get(attr)
         if isinstance(value, str) and value.strip():
             setattr(config, attr, value.strip())
+
+    return config
+
+
+def _text_contains_any(text: str, keywords: List[str]) -> bool:
+    return any(keyword in text for keyword in keywords)
+
+
+def _infer_case_type(requirement: Requirement, requested_type: Optional[TestCaseType]) -> TestCaseType:
+    if requested_type:
+        return requested_type
+
+    text = " ".join([
+        requirement.title or "",
+        requirement.description or "",
+        requirement.acceptance_criteria or "",
+        requirement.category or "",
+        " ".join(requirement.tags or []) if isinstance(requirement.tags, list) else "",
+    ]).lower()
+
+    if requirement.requirement_type == RequirementType.INTERFACE or _text_contains_any(text, ["api", "接口", "http", "webhook"]):
+        return TestCaseType.INTEGRATION
+    if _text_contains_any(text, ["性能", "并发", "响应时间", "吞吐", "压测", "load", "performance"]):
+        return TestCaseType.PERFORMANCE
+    if _text_contains_any(text, ["安全", "权限", "加密", "认证", "授权", "漏洞", "security", "auth"]):
+        return TestCaseType.SECURITY
+    if _text_contains_any(text, ["易用", "体验", "可用性", "ui", "ux", "usability"]):
+        return TestCaseType.USABILITY
+    if requirement.requirement_type in {RequirementType.NON_FUNCTIONAL, RequirementType.CONSTRAINT}:
+        return TestCaseType.NON_FUNCTIONAL
+    return TestCaseType.FUNCTIONAL
+
+
+def _infer_priority(requirement: Requirement, requested_priority: Optional[TestCasePriority]) -> TestCasePriority:
+    if requested_priority:
+        return requested_priority
+
+    mapping = {
+        RequirementPriority.CRITICAL: TestCasePriority.CRITICAL,
+        RequirementPriority.HIGH: TestCasePriority.HIGH,
+        RequirementPriority.MEDIUM: TestCasePriority.MEDIUM,
+        RequirementPriority.LOW: TestCasePriority.LOW,
+        RequirementPriority.OPTIONAL: TestCasePriority.LOW,
+    }
+    return mapping.get(requirement.priority, TestCasePriority.MEDIUM)
+
+
+def _infer_max_cases(requirement: Requirement) -> int:
+    complexity_cases = {
+        RequirementComplexity.SIMPLE: 4,
+        RequirementComplexity.MEDIUM: 6,
+        RequirementComplexity.COMPLEX: 10,
+        RequirementComplexity.VERY_COMPLEX: 14,
+    }
+    max_cases = complexity_cases.get(requirement.complexity, 6)
+    content_length = len(requirement.description or "") + len(requirement.acceptance_criteria or "")
+    if content_length > 2500:
+        max_cases += 4
+    elif content_length > 1200:
+        max_cases += 2
+    return max(3, min(max_cases, 18))
+
+
+def _template_for_case_type(case_type: TestCaseType) -> GenerationTemplate:
+    return {
+        TestCaseType.INTEGRATION: GenerationTemplate.INTEGRATION_TESTING,
+        TestCaseType.PERFORMANCE: GenerationTemplate.PERFORMANCE_TESTING,
+        TestCaseType.SECURITY: GenerationTemplate.SECURITY_TESTING,
+        TestCaseType.USABILITY: GenerationTemplate.UI_TESTING,
+    }.get(case_type, GenerationTemplate.FUNCTIONAL_BASIC)
+
+
+def _build_generation_config(request: "GenerateTestCasesRequest", db: Session) -> GenerationConfig:
+    requirement = db.query(Requirement).filter(Requirement.id == request.requirement_id).first()
+    if not requirement:
+        raise NotFoundError("需求不存在")
+
+    config = GenerationConfig()
+    config.case_type = _infer_case_type(requirement, request.case_type)
+    config.priority = _infer_priority(requirement, request.priority)
+    config.template = _template_for_case_type(config.case_type)
+    config.max_cases = _infer_max_cases(requirement)
+    if requirement.complexity in {RequirementComplexity.COMPLEX, RequirementComplexity.VERY_COMPLEX}:
+        config.detail_level = "high"
+    elif requirement.complexity == RequirementComplexity.SIMPLE:
+        config.detail_level = "low"
+
+    raw_config = request.generation_config or {}
+    if isinstance(raw_config.get("include_negative_cases"), bool):
+        config.include_negative_cases = raw_config["include_negative_cases"]
+    if isinstance(raw_config.get("include_boundary_cases"), bool):
+        config.include_boundary_cases = raw_config["include_boundary_cases"]
+    if isinstance(raw_config.get("include_edge_cases"), bool):
+        config.include_edge_cases = raw_config["include_edge_cases"]
+    if raw_config.get("detail_level") in {"low", "medium", "high"}:
+        config.detail_level = raw_config["detail_level"]
 
     return config
 
@@ -188,8 +290,8 @@ class CopyTestCaseRequest(BaseModel):
 class GenerateTestCasesRequest(BaseModel):
     """AI生成测试用例请求"""
     requirement_id: int = Field(..., description="需求ID")
-    case_type: TestCaseType = Field(..., description="用例类型")
-    priority: TestCasePriority = Field(TestCasePriority.MEDIUM, description="优先级")
+    case_type: Optional[TestCaseType] = Field(None, description="用例类型")
+    priority: Optional[TestCasePriority] = Field(None, description="优先级")
     test_plan_id: Optional[int] = Field(None, description="测试计划ID")
     generation_config: Optional[Dict[str, Any]] = Field(None, description="生成配置")
 
@@ -449,28 +551,7 @@ async def generate_test_cases_persisted(
 ):
     """Generate test cases from a requirement and save them as real test cases."""
     try:
-        config = GenerationConfig()
-        config.case_type = request.case_type
-        config.priority = request.priority
-        config.template = {
-            TestCaseType.INTEGRATION: GenerationTemplate.INTEGRATION_TESTING,
-            TestCaseType.PERFORMANCE: GenerationTemplate.PERFORMANCE_TESTING,
-            TestCaseType.SECURITY: GenerationTemplate.SECURITY_TESTING,
-        }.get(request.case_type, GenerationTemplate.FUNCTIONAL_BASIC)
-
-        raw_config = request.generation_config or {}
-        if isinstance(raw_config.get("max_cases"), int):
-            config.max_cases = max(1, min(raw_config["max_cases"], 30))
-        if isinstance(raw_config.get("include_negative_cases"), bool):
-            config.include_negative_cases = raw_config["include_negative_cases"]
-        if isinstance(raw_config.get("include_boundary_cases"), bool):
-            config.include_boundary_cases = raw_config["include_boundary_cases"]
-        if isinstance(raw_config.get("include_edge_cases"), bool):
-            config.include_edge_cases = raw_config["include_edge_cases"]
-        if raw_config.get("detail_level") in {"low", "medium", "high"}:
-            config.detail_level = raw_config["detail_level"]
-        if raw_config.get("template") in {item.value for item in GenerationTemplate}:
-            config.template = GenerationTemplate(raw_config["template"])
+        config = _build_generation_config(request, db)
 
         generator = AITestCaseGenerator(db)
         generation_result = await generator.generate_test_cases_from_requirement(
@@ -486,6 +567,12 @@ async def generate_test_cases_persisted(
         )
         response_data = [_build_test_case_response(case) for case in saved_cases]
         return BaseResponse(success=True, message=f"AI生成测试用例成功，共保存{len(response_data)}个用例", data=response_data)
+    except NotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except ValidationError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except BusinessLogicError as e:
+        raise HTTPException(status_code=504, detail=str(e))
     except Exception as e:
         logger.error(f"AI generate persisted test cases failed: {str(e)}")
         raise HTTPException(status_code=500, detail="AI生成测试用例失败")
@@ -500,13 +587,13 @@ async def generate_test_cases_compat(
     """AI生成测试用例（放在动态ID路由前，避免被 /{case_id} 拦截）。"""
     try:
         generator = AITestCaseGenerator(db)
-        generated_cases = await generator.generate_test_cases_from_requirement(
+        config = _build_generation_config(request, db)
+        generation_result = await generator.generate_test_cases_from_requirement(
             requirement_id=request.requirement_id,
-            case_type=request.case_type,
-            priority=request.priority,
-            test_plan_id=request.test_plan_id,
-            generation_config=request.generation_config or {}
+            config=config,
+            user_id=current_user.id
         )
+        generated_cases = generation_result.get("generated_cases", [])
         response_data = [
             GeneratedTestCaseResponse(
                 case_title=case.get('case_title', ''),
@@ -956,7 +1043,7 @@ async def batch_update_test_cases(
         raise HTTPException(status_code=500, detail="内部服务器错误")
 
 
-@router.post("/generate", response_model=BaseResponse[List[GeneratedTestCaseResponse]])
+@router.post("/generate-preview-internal-unused", response_model=BaseResponse[List[GeneratedTestCaseResponse]], include_in_schema=False)
 async def generate_test_cases(
     request: GenerateTestCasesRequest,
     current_user: User = Depends(get_current_user),
@@ -971,13 +1058,13 @@ async def generate_test_cases(
         generator = AITestCaseGenerator(db)
         
         # 生成测试用例
-        generated_cases = await generator.generate_test_cases_from_requirement(
+        config = _build_generation_config(request, db)
+        generation_result = await generator.generate_test_cases_from_requirement(
             requirement_id=request.requirement_id,
-            case_type=request.case_type,
-            priority=request.priority,
-            test_plan_id=request.test_plan_id,
-            generation_config=request.generation_config or {}
+            config=config,
+            user_id=current_user.id
         )
+        generated_cases = generation_result.get("generated_cases", [])
         
         # 构建响应数据
         response_data = []

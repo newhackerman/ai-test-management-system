@@ -454,8 +454,8 @@ export interface TestCoverageData {
 // AI 生成相关
 export interface TestCaseGenerationConfig {
   requirement_id: number
-  case_type: TestCaseType
-  priority: Priority
+  case_type?: TestCaseType
+  priority?: Priority
   test_plan_id?: number
   complexity?: Complexity
   framework?: string
