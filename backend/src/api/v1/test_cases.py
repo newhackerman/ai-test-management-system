@@ -565,6 +565,8 @@ async def generate_test_cases_persisted(
             requirement_id=request.requirement_id,
             user_id=current_user.id
         )
+        if not saved_cases:
+            raise BusinessLogicError("AI未生成可保存的测试用例，请调整需求内容后重试")
         response_data = [_build_test_case_response(case) for case in saved_cases]
         return BaseResponse(success=True, message=f"AI生成测试用例成功，共保存{len(response_data)}个用例", data=response_data)
     except NotFoundError as e:
@@ -572,7 +574,8 @@ async def generate_test_cases_persisted(
     except ValidationError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except BusinessLogicError as e:
-        raise HTTPException(status_code=504, detail=str(e))
+        status_code = 504 if "超时" in str(e) else 422
+        raise HTTPException(status_code=status_code, detail=str(e))
     except Exception as e:
         logger.error(f"AI generate persisted test cases failed: {str(e)}")
         raise HTTPException(status_code=500, detail="AI生成测试用例失败")

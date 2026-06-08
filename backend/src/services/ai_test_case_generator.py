@@ -270,6 +270,8 @@ UI功能信息：
                 """
             }
         }
+        self.templates.setdefault(GenerationTemplate.INTEGRATION_TESTING, self.templates[GenerationTemplate.API_TESTING])
+        self.templates.setdefault(GenerationTemplate.FUNCTIONAL_ADVANCED, self.templates[GenerationTemplate.FUNCTIONAL_BASIC])
     
     async def generate_test_cases_from_requirement(
         self, 
@@ -297,7 +299,9 @@ UI功能信息：
             # 2. 获取模板
             template_info = self.templates.get(config.template)
             if not template_info:
-                raise ValidationError("无效的生成模板")
+                logger.warning("Invalid generation template %s, falling back to functional basic", config.template)
+                config.template = GenerationTemplate.FUNCTIONAL_BASIC
+                template_info = self.templates[GenerationTemplate.FUNCTIONAL_BASIC]
             
             # 3. 构建AI提示
             prompt = self._build_generation_prompt(requirement, config, template_info)
@@ -362,7 +366,9 @@ UI功能信息：
             # 2. 获取模板
             template_info = self.templates.get(config.template)
             if not template_info:
-                raise ValidationError("无效的生成模板")
+                logger.warning("Invalid generation template %s, falling back to functional basic", config.template)
+                config.template = GenerationTemplate.FUNCTIONAL_BASIC
+                template_info = self.templates[GenerationTemplate.FUNCTIONAL_BASIC]
             
             # 3. 构建AI提示
             prompt = self._build_generation_prompt(temp_requirement, config, template_info)
@@ -569,13 +575,26 @@ UI功能信息：
     def _parse_ai_response(self, ai_response: str, config: GenerationConfig) -> List[Dict[str, Any]]:
         """解析AI响应"""
         try:
-            # 尝试解析JSON响应
-            if ai_response.strip().startswith('{'):
-                response_data = json.loads(ai_response)
+            response_text = str(ai_response or "").strip()
+            if response_text.startswith("```"):
+                response_text = re.sub(r"^```(?:json)?\s*", "", response_text, flags=re.IGNORECASE)
+                response_text = re.sub(r"\s*```$", "", response_text).strip()
+
+            json_start = response_text.find("{")
+            json_end = response_text.rfind("}")
+            if json_start >= 0 and json_end > json_start:
+                response_data = json.loads(response_text[json_start:json_end + 1])
                 return response_data.get('test_cases', [])
+
+            array_start = response_text.find("[")
+            array_end = response_text.rfind("]")
+            if array_start >= 0 and array_end > array_start:
+                response_data = json.loads(response_text[array_start:array_end + 1])
+                if isinstance(response_data, list):
+                    return response_data
             
             # 如果不是JSON格式，尝试提取结构化信息
-            return self._extract_cases_from_text(ai_response, config)
+            return self._extract_cases_from_text(response_text, config)
             
         except json.JSONDecodeError:
             logger.warning("AI响应不是有效的JSON格式，尝试文本解析")
@@ -585,9 +604,23 @@ UI功能信息：
         """从文本中提取测试用例"""
         cases = []
         
-        # 使用正则表达式提取用例信息
-        case_pattern = r'用例标题[：:]\s*(.+?)(?:\n|$)'
-        titles = re.findall(case_pattern, text, re.MULTILINE)
+        title_patterns = [
+            r'(?:用例标题|测试用例标题|Case Title|Title)[：:]\s*(.+?)(?:\n|$)',
+            r'(?:测试用例|用例|Test Case)\s*\d*\s*[：:]\s*(.+?)(?:\n|$)',
+            r'^\s*#{1,6}\s*(?:测试用例|用例|Test Case)\s*\d*[\s：:.-]+(.+?)\s*$',
+            r'^\s*\d+[\.、]\s*(.+?)\s*$',
+        ]
+        titles = []
+        for pattern in title_patterns:
+            for match in re.findall(pattern, text, re.MULTILINE | re.IGNORECASE):
+                title = str(match).strip().strip('"').strip("'")
+                if title and title not in titles and len(title) <= 120:
+                    titles.append(title)
+
+        if not titles and text.strip():
+            first_line = next((line.strip() for line in text.splitlines() if line.strip()), "")
+            if first_line:
+                titles.append(first_line[:120])
         
         for i, title in enumerate(titles):
             if i >= config.max_cases:
