@@ -119,7 +119,19 @@ const DefectList: React.FC = () => {
   useEffect(() => {
     const initialSearch = searchParams.get('search')?.trim()
     if (initialSearch) handleSearch(initialSearch)
-  }, [handleSearch, searchParams])
+    const testPlanId = Number(searchParams.get('test_plan_id') || searchParams.get('plan_id') || 0)
+    const testCaseId = Number(searchParams.get('test_case_id') || 0)
+    const testExecutionId = Number(searchParams.get('test_execution_id') || 0)
+    const status = searchParams.get('status') as DefectStatus | null
+    const severity = searchParams.get('severity') as DefectSeverity | null
+    const nextFilters: any = {}
+    if (testPlanId > 0) nextFilters.test_plan_id = testPlanId
+    if (testCaseId > 0) nextFilters.test_case_id = testCaseId
+    if (testExecutionId > 0) nextFilters.test_execution_id = testExecutionId
+    if (status && Object.values(DefectStatus).includes(status)) nextFilters.status = status
+    if (severity && Object.values(DefectSeverity).includes(severity)) nextFilters.severity = severity
+    if (Object.keys(nextFilters).length) handleUpdateFilters(nextFilters)
+  }, [handleSearch, handleUpdateFilters, searchParams])
 
   const defects = defectsData?.data || []
   const totalCount = defectsData?.total || 0

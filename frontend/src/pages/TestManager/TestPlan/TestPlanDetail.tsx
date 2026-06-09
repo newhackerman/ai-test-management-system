@@ -176,6 +176,16 @@ const TestPlanDetail: React.FC = () => {
   const defects = defectsData?.data || []
   const reports = reportsData?.data || []
   const linkedCaseIdSet = new Set(linkedCases.map((testCase: any) => Number(testCase.id)))
+  const latestExecutionByCaseId = new Map<number, any>()
+  executions.forEach((execution: any) => {
+    const caseId = Number(execution.test_case_id)
+    if (caseId && !latestExecutionByCaseId.has(caseId)) latestExecutionByCaseId.set(caseId, execution)
+  })
+  const defectCountByCaseId = defects.reduce((result: Record<number, number>, defect: any) => {
+    const caseId = Number(defect.test_case_id)
+    if (caseId) result[caseId] = (result[caseId] || 0) + 1
+    return result
+  }, {})
   const candidateCases = (candidateCasesData?.data || []).filter((testCase: any) => Number(testCase.test_plan_id) !== planId)
   const selectableCandidateIds = candidateCases.map((testCase: any) => Number(testCase.id))
   const selectedCandidateIds = selectedCaseIds.filter((caseId) => selectableCandidateIds.includes(caseId))
@@ -509,34 +519,62 @@ const TestPlanDetail: React.FC = () => {
                       <TableHead>优先级</TableHead>
                       <TableHead>状态</TableHead>
                       <TableHead>模块</TableHead>
+                      <TableHead>最近执行</TableHead>
+                      <TableHead>缺陷</TableHead>
                       <TableHead className="text-right">操作</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {linkedCases.map((testCase: any) => (
-                      <TableRow key={testCase.id}>
-                        <TableCell>
-                          <Link to={`/test-manager/test-cases/${testCase.id}`} className="font-medium text-blue-600 hover:text-blue-800">
-                            {testCase.case_title}
-                          </Link>
-                          <div className="text-xs text-gray-500">{testCase.case_code}</div>
-                        </TableCell>
-                        <TableCell>{getPriorityBadge(testCase.priority)}</TableCell>
-                        <TableCell>{getCaseStatusBadge(testCase.status)}</TableCell>
-                        <TableCell>{testCase.module || '-'}</TableCell>
-                        <TableCell className="text-right">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            disabled={linking}
-                            onClick={() => handleDetachCase(Number(testCase.id))}
-                          >
-                            <Unlink className="w-4 h-4 mr-2" />
-                            移除关联
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                    {linkedCases.map((testCase: any) => {
+                      const latestExecution = latestExecutionByCaseId.get(Number(testCase.id))
+                      const defectCount = defectCountByCaseId[Number(testCase.id)] || 0
+                      return (
+                        <TableRow key={testCase.id}>
+                          <TableCell>
+                            <Link to={`/test-manager/test-cases/${testCase.id}`} className="font-medium text-blue-600 hover:text-blue-800">
+                              {testCase.case_title}
+                            </Link>
+                            <div className="text-xs text-gray-500">{testCase.case_code}</div>
+                          </TableCell>
+                          <TableCell>{getPriorityBadge(testCase.priority)}</TableCell>
+                          <TableCell>{getCaseStatusBadge(testCase.status)}</TableCell>
+                          <TableCell>{testCase.module || '-'}</TableCell>
+                          <TableCell>
+                            {latestExecution ? (
+                              <Link to={`/test-manager/executions/${latestExecution.id}`}>
+                                {getExecutionStatusBadge(latestExecution.execution_status)}
+                              </Link>
+                            ) : (
+                              <Badge variant="secondary">未执行</Badge>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <Link to={`/test-manager/defects?test_plan_id=${planId}&test_case_id=${testCase.id}`} className="text-blue-600 hover:text-blue-800">
+                              {defectCount}
+                            </Link>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex justify-end gap-2">
+                              <Button asChild size="sm">
+                                <Link to={`/test-manager/executions/manual/${testCase.id}`}>
+                                  <Play className="w-4 h-4 mr-2" />
+                                  执行
+                                </Link>
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                disabled={linking}
+                                onClick={() => handleDetachCase(Number(testCase.id))}
+                              >
+                                <Unlink className="w-4 h-4 mr-2" />
+                                移除
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })}
                   </TableBody>
                 </Table>
               )}
@@ -631,7 +669,7 @@ const TestPlanDetail: React.FC = () => {
                   <Clock className="w-5 h-5" />
                   执行记录 ({executionsData?.total ?? executions.length})
                 </CardTitle>
-                <Link to="/test-manager/executions">
+                <Link to={`/test-manager/executions?test_plan_id=${planId}`}>
                   <Button variant="outline" size="sm">查看全部</Button>
                 </Link>
               </div>
@@ -687,7 +725,7 @@ const TestPlanDetail: React.FC = () => {
                   <Bug className="w-5 h-5" />
                   相关缺陷 ({defectsData?.total ?? defects.length})
                 </CardTitle>
-                <Link to="/test-manager/defects">
+                <Link to={`/test-manager/defects?test_plan_id=${planId}`}>
                   <Button variant="outline" size="sm">查看全部</Button>
                 </Link>
               </div>
@@ -746,9 +784,14 @@ const TestPlanDetail: React.FC = () => {
                   <FileText className="w-5 h-5" />
                   测试报告 ({reportsData?.total ?? reports.length})
                 </CardTitle>
-                <Link to={`/test-manager/reports/generate?test_plan_id=${planId}`}>
-                  <Button variant="outline" size="sm">生成报告</Button>
-                </Link>
+                <div className="flex gap-2">
+                  <Link to={`/test-manager/reports/generate?type=execution&test_plan_id=${planId}`}>
+                    <Button variant="outline" size="sm">执行报告</Button>
+                  </Link>
+                  <Link to={`/test-manager/reports/generate?type=defect&test_plan_id=${planId}`}>
+                    <Button variant="outline" size="sm">缺陷报告</Button>
+                  </Link>
+                </div>
               </div>
             </CardHeader>
             <CardContent>

@@ -89,9 +89,12 @@ const ReportGenerate: React.FC = () => {
   const navigate = useNavigate()
   const location = useLocation()
   const [aiDraft] = useState(() => readAiDraft((location.state as any)?.aiImport, 'report'))
-  const initialReportType = queryTypeToReportType(new URLSearchParams(location.search).get('type'))
+  const searchParams = new URLSearchParams(location.search)
+  const initialReportType = queryTypeToReportType(searchParams.get('type'))
+  const initialPlanId = Number(searchParams.get('test_plan_id') || searchParams.get('plan_id') || 0) || undefined
+  const initialReportTypeLabel = reportTypes.find((item) => item.value === initialReportType)?.label || '测试报告'
   const [config, setConfig] = useState(() => ({
-    report_name: buildReportName(aiDraft),
+    report_name: buildReportName(aiDraft) || (initialPlanId ? `测试计划 #${initialPlanId} - ${initialReportTypeLabel}` : ''),
     report_type: initialReportType,
     report_format: ReportFormat.HTML,
     report_period_start: '',
@@ -130,9 +133,15 @@ const ReportGenerate: React.FC = () => {
         formats: [formatToBackend(config.report_format)],
         include_charts: config.include_charts,
         include_details: config.include_details,
+        custom_fields: {
+          test_plan_id: initialPlanId,
+          report_period_start: config.report_period_start || undefined,
+          report_period_end: config.report_period_end || undefined,
+        },
         title: config.report_name.trim(),
         summary: {
           来源: aiDraft ? 'AI 助手' : '手工生成',
+          测试计划: initialPlanId ? `#${initialPlanId}` : '未指定',
           报告类型: reportTypes.find((item) => item.value === config.report_type)?.label || config.report_type,
           正文字数: sourceContent.length,
           生成时间: new Date().toLocaleString('zh-CN', { hour12: false }),
@@ -146,6 +155,7 @@ const ReportGenerate: React.FC = () => {
         ],
         metadata: {
           来源页面: aiDraft ? 'AI 助手' : '报告生成',
+          测试计划ID: initialPlanId || '-',
           开始日期: config.report_period_start || '-',
           结束日期: config.report_period_end || '-',
         },
@@ -181,6 +191,7 @@ const ReportGenerate: React.FC = () => {
           <div>
             <h1 className="text-2xl font-bold">生成测试报告</h1>
             <p className="text-gray-600">配置并生成自定义测试报告。</p>
+            {initialPlanId && <p className="text-sm text-muted-foreground">当前关联测试计划 #{initialPlanId}</p>}
           </div>
         </div>
       </div>

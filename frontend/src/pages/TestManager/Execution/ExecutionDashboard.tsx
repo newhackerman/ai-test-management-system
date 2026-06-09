@@ -68,15 +68,17 @@ const ExecutionDashboard: React.FC = () => {
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState<string>(searchParams.get('status') || 'all')
   const [type, setType] = useState<string>(searchParams.get('type') || 'all')
+  const planId = Number(searchParams.get('test_plan_id') || searchParams.get('plan_id') || 0) || undefined
   const pageSize = 12
 
   const filters = useMemo(() => ({
     page,
     size: pageSize,
     search,
+    test_plan_id: planId,
     execution_status: status === 'all' ? undefined : status as ExecutionStatus,
     execution_type: type === 'all' ? undefined : type,
-  }), [page, search, status, type])
+  }), [page, planId, search, status, type])
 
   const { data: executionsData, isLoading, refetch } = useExecutions(filters)
   const { data: statistics } = useExecutionStatistics()

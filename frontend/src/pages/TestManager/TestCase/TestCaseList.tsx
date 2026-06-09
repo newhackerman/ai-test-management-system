@@ -1,6 +1,6 @@
 // @ts-nocheck
 import React, { useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { Bot, Copy, Download, Play, Plus, Search, Trash2, Upload, Wand2 } from 'lucide-react'
 import { Button } from '../../../components/ui/Button'
 import { Input } from '../../../components/ui/Input'
@@ -54,6 +54,7 @@ const priorityVariant = {
 } as const
 
 const TestCaseList: React.FC = () => {
+  const [searchParams] = useSearchParams()
   const [showImportDialog, setShowImportDialog] = useState(false)
   const [showGenerateDialog, setShowGenerateDialog] = useState(false)
   const [importFile, setImportFile] = useState<File | null>(null)
@@ -98,6 +99,26 @@ const TestCaseList: React.FC = () => {
   const requirementMap = useMemo(() => new Map(requirements.map((item) => [Number(item.id), item])), [requirements])
   const planMap = useMemo(() => new Map(testPlans.map((item) => [Number(item.id), item])), [testPlans])
   const userMap = useMemo(() => new Map(users.map((item) => [Number(item.id), item])), [users])
+
+  useEffect(() => {
+    const initialSearch = searchParams.get('search')?.trim()
+    if (initialSearch) handleSearch(initialSearch)
+
+    const testPlanId = Number(searchParams.get('test_plan_id') || searchParams.get('plan_id') || 0)
+    const requirementId = Number(searchParams.get('requirement_id') || 0)
+    const assigneeId = Number(searchParams.get('assignee_id') || 0)
+    const status = searchParams.get('status') as TestCaseStatus | null
+    const priority = searchParams.get('priority') as Priority | null
+    const caseType = searchParams.get('case_type') as TestCaseType | null
+    const nextFilters: any = {}
+    if (testPlanId > 0) nextFilters.test_plan_id = testPlanId
+    if (requirementId > 0) nextFilters.requirement_id = requirementId
+    if (assigneeId > 0) nextFilters.assignee_id = assigneeId
+    if (status && Object.values(TestCaseStatus).includes(status)) nextFilters.status = status
+    if (priority && Object.values(Priority).includes(priority)) nextFilters.priority = priority
+    if (caseType && Object.values(TestCaseType).includes(caseType)) nextFilters.case_type = caseType
+    if (Object.keys(nextFilters).length) handleUpdateFilters(nextFilters)
+  }, [handleSearch, handleUpdateFilters, searchParams])
 
   useEffect(() => {
     let cancelled = false
