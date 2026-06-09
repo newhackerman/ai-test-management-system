@@ -174,6 +174,22 @@ export const useUploadScreenshot = () => {
   })
 }
 
+export const useUploadVideo = () => {
+  const queryClient = useQueryClient()
+  const { toast } = useToast()
+
+  return useMutation({
+    mutationFn: ({ id, file }: { id: number; file: File }) => executionService.uploadVideo(id, file),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['execution', variables.id] })
+      toast({ title: '成功', description: '执行录像上传成功', variant: 'success' })
+    },
+    onError: (error: any) => {
+      toast({ title: '错误', description: getErrorMessage(error, '执行录像上传失败'), variant: 'destructive' })
+    },
+  })
+}
+
 export const useExecutionManagement = () => {
   const [selectedExecutions, setSelectedExecutions] = useState<number[]>([])
   const [filters, setFilters] = useState<ExecutionFilters>({})

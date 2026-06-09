@@ -41,6 +41,12 @@ const formatDuration = (seconds?: number) => {
   return `${Math.floor(minutes / 60)}小时${minutes % 60}分钟`
 }
 
+const formatFileSize = (size?: number) => {
+  if (!size) return '-'
+  if (size < 1024 * 1024) return `${Math.max(1, Math.round(size / 1024))}KB`
+  return `${(size / 1024 / 1024).toFixed(1)}MB`
+}
+
 const getStepText = (log: any, key: string) => {
   const value = log?.[key]
   if (value === undefined || value === null || value === '') return '-'
@@ -244,9 +250,43 @@ const ExecutionDetail: React.FC = () => {
             <CardHeader>
               <CardTitle className="text-lg">附件</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-2 text-sm">
-              <p>截图：{execution.screenshots?.length || 0}</p>
-              <p>视频：{execution.videos?.length || 0}</p>
+            <CardContent className="space-y-4 text-sm">
+              <div>
+                <div className="mb-2 flex items-center justify-between">
+                  <span className="font-medium">截图</span>
+                  <Badge variant="secondary">{execution.screenshots?.length || 0}</Badge>
+                </div>
+                {execution.screenshots?.length ? (
+                  <div className="space-y-1">
+                    {execution.screenshots.map((item: any, index: number) => (
+                      <div key={`${item.file_path || item.filename}-${index}`} className="rounded bg-muted/40 px-2 py-1">
+                        <div className="truncate">{item.filename || `截图 ${index + 1}`}</div>
+                        <div className="text-xs text-muted-foreground">{formatFileSize(item.file_size)}</div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-muted-foreground">暂无截图</div>
+                )}
+              </div>
+              <div>
+                <div className="mb-2 flex items-center justify-between">
+                  <span className="font-medium">录像</span>
+                  <Badge variant="secondary">{execution.videos?.length || 0}</Badge>
+                </div>
+                {execution.videos?.length ? (
+                  <div className="space-y-1">
+                    {execution.videos.map((item: any, index: number) => (
+                      <div key={`${item.file_path || item.filename}-${index}`} className="rounded bg-muted/40 px-2 py-1">
+                        <div className="truncate">{item.filename || `录像 ${index + 1}`}</div>
+                        <div className="text-xs text-muted-foreground">{formatFileSize(item.file_size)}</div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-muted-foreground">暂无录像</div>
+                )}
+              </div>
             </CardContent>
           </Card>
         </div>

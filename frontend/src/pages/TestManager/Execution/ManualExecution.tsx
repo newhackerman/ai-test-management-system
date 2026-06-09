@@ -1,6 +1,6 @@
-import React, { useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, Camera, CheckCircle, Clock, Play, Search, XCircle } from 'lucide-react'
+import { ArrowLeft, Camera, CheckCircle, Clock, Image, Play, Search, Video, XCircle } from 'lucide-react'
 import { Badge } from '../../../components/ui/Badge'
 import { Button } from '../../../components/ui/Button'
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/Card'
@@ -9,8 +9,9 @@ import { Input } from '../../../components/ui/Input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/Select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../components/ui/Table'
 import { Textarea } from '../../../components/ui/Textarea'
-import { useCompleteExecution, useStartManualExecution, useUploadScreenshot } from '../../../hooks/testmanager/useExecution'
+import { useCompleteExecution, useStartManualExecution, useUploadScreenshot, useUploadVideo } from '../../../hooks/testmanager/useExecution'
 import { useTestCase, useTestCases } from '../../../hooks/testmanager/useTestCase'
+import { useToast } from '../../../hooks/useToast'
 import { ExecutionStatus, Priority, TestCaseStatus } from '../../../types/testmanager'
 
 type StepResult = {
@@ -36,6 +37,13 @@ const statusLabels: Record<string, string> = {
 const getStepNumber = (step: any, index: number) => step?.step_number ?? step?.step ?? step?.index ?? index + 1
 const getStepAction = (step: any) => step?.action ?? step?.description ?? step?.step_description ?? step?.operation ?? '-'
 const getStepExpected = (step: any) => step?.expected_result ?? step?.expected ?? step?.expectedResult ?? '-'
+const MAX_VIDEO_SIZE = 100 * 1024 * 1024
+
+const formatFileSize = (size?: number) => {
+  if (!size) return '-'
+  if (size < 1024 * 1024) return `${Math.max(1, Math.round(size / 1024))}KB`
+  return `${(size / 1024 / 1024).toFixed(1)}MB`
+}
 
 const ManualExecution: React.FC = () => {
   const { testCaseId } = useParams<{ testCaseId?: string }>()
@@ -51,6 +59,9 @@ const ManualExecution: React.FC = () => {
   const [executionNotes, setExecutionNotes] = useState('')
   const [search, setSearch] = useState('')
   const [showScreenshotDialog, setShowScreenshotDialog] = useState(false)
+  const [uploadedScreenshots, setUploadedScreenshots] = useState<any[]>([])
+  const [uploadedVideos, setUploadedVideos] = useState<any[]>([])
+  const [isPastingImage, setIsPastingImage] = useState(false)
 
   const { data: testCasesData, isLoading: isCaseListLoading } = useTestCases({
     page: 1,
@@ -60,6 +71,8 @@ const ManualExecution: React.FC = () => {
   const startExecution = useStartManualExecution()
   const completeExecution = useCompleteExecution()
   const uploadScreenshot = useUploadScreenshot()
+  const uploadVideo = useUploadVideo()
+  const { toast } = useToast()
 
   const executableCases = useMemo(() => {
     const keyword = search.trim().toLowerCase()
@@ -76,6 +89,11 @@ const ManualExecution: React.FC = () => {
   const failedCount = completedSteps.filter((item) => item.status === ExecutionStatus.FAILED).length
   const passedCount = completedSteps.filter((item) => item.status === ExecutionStatus.PASSED).length
   const blockedCount = completedSteps.filter((item) => item.status === ExecutionStatus.BLOCKED).length
+
+  useEffect(() => {
+    setUploadedScreenshots(currentExecution?.screenshots || [])
+    setUploadedVideos(currentExecution?.videos || [])
+  }, [currentExecution])
 
   const updateStepResult = (stepIndex: number, patch: Partial<StepResult>) => {
     setStepResults((prev) => ({
@@ -96,6 +114,10 @@ const ManualExecution: React.FC = () => {
       browser_info: browserInfo,
       os_info: navigator.userAgent,
     })
+    setStepResults({})
+    setActualResult('')
+    setFailureReason('')
+    setExecutionNotes('')
     setCurrentExecution(execution)
   }
 
@@ -156,8 +178,46 @@ const ManualExecution: React.FC = () => {
 
   const handleScreenshotUpload = async (file: File) => {
     if (!currentExecution) return
-    await uploadScreenshot.mutateAsync({ id: currentExecution.id, file })
+    const metadata = await uploadScreenshot.mutateAsync({ id: currentExecution.id, file })
+    setUploadedScreenshots((prev) => [...prev, metadata])
     setShowScreenshotDialog(false)
+  }
+
+  const handlePasteImages = async (event: React.ClipboardEvent) => {
+    if (!currentExecution) return
+    const imageFiles = Array.from(event.clipboardData.items)
+      .filter((item) => item.kind === 'file' && item.type.startsWith('image/'))
+      .map((item) => item.getAsFile())
+      .filter(Boolean) as File[]
+
+    if (!imageFiles.length) return
+
+    event.preventDefault()
+    setIsPastingImage(true)
+    try {
+      for (const file of imageFiles) {
+        const metadata = await uploadScreenshot.mutateAsync({ id: currentExecution.id, file })
+        setUploadedScreenshots((prev) => [...prev, metadata])
+      }
+    } finally {
+      setIsPastingImage(false)
+    }
+  }
+
+  const handleVideoUpload = async (files: FileList | File[]) => {
+    if (!currentExecution) return
+    const videoFiles = Array.from(files)
+    if (!videoFiles.length) return
+
+    const oversized = videoFiles.filter((file) => file.size > MAX_VIDEO_SIZE)
+    if (oversized.length > 0) {
+      toast({ title: '错误', description: '执行录像不能超过100MB', variant: 'destructive' })
+    }
+
+    for (const file of videoFiles.filter((item) => item.size <= MAX_VIDEO_SIZE)) {
+      const metadata = await uploadVideo.mutateAsync({ id: currentExecution.id, file })
+      setUploadedVideos((prev) => [...prev, metadata])
+    }
   }
 
   const stepStatusBadge = (status?: ExecutionStatus) => {
@@ -393,10 +453,82 @@ const ManualExecution: React.FC = () => {
           {currentExecution && (
             <Card>
               <CardHeader><CardTitle className="text-lg">执行结论</CardTitle></CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent
+                className="space-y-4"
+                data-testid="manual-execution-result"
+                tabIndex={0}
+                onPaste={handlePasteImages}
+              >
                 <div>
                   <label className="mb-2 block text-sm font-medium">整体实际结果</label>
                   <Textarea rows={3} value={actualResult} onChange={(event) => setActualResult(event.target.value)} placeholder="概述本次执行观察到的结果" />
+                </div>
+                <div className="rounded-md border border-dashed p-3">
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 text-sm font-medium">
+                      <Image className="h-4 w-4" />
+                      <span>截图证据</span>
+                      <Badge variant="secondary">{uploadedScreenshots.length}</Badge>
+                    </div>
+                    <span className="text-xs text-muted-foreground">{isPastingImage ? '图片上传中...' : '可在结果区域粘贴图片'}</span>
+                  </div>
+                  {uploadedScreenshots.length > 0 ? (
+                    <div className="space-y-1">
+                      {uploadedScreenshots.map((item, index) => (
+                        <div key={`${item.file_path || item.filename}-${index}`} className="flex items-center justify-between rounded bg-muted/40 px-2 py-1 text-xs">
+                          <span className="truncate">{item.filename || `截图 ${index + 1}`}</span>
+                          <span className="ml-2 text-muted-foreground">{formatFileSize(item.file_size)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-xs text-muted-foreground">暂无截图</div>
+                  )}
+                </div>
+                <div className="rounded-md border p-3">
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 text-sm font-medium">
+                      <Video className="h-4 w-4" />
+                      <span>执行录像</span>
+                      <Badge variant="secondary">{uploadedVideos.length}</Badge>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      data-testid="execution-video-upload-button"
+                      disabled={uploadVideo.isPending}
+                      onClick={() => document.getElementById('execution-video-input')?.click()}
+                    >
+                      上传录像
+                    </Button>
+                    <input
+                      id="execution-video-input"
+                      data-testid="execution-video-input"
+                      type="file"
+                      accept="video/*"
+                      multiple
+                      className="hidden"
+                      onChange={(event) => {
+                        const files = event.currentTarget.files
+                        if (files?.length) handleVideoUpload(files)
+                        event.currentTarget.value = ''
+                      }}
+                    />
+                  </div>
+                  <p className="mb-2 text-xs text-muted-foreground">单个视频最大100MB</p>
+                  {uploadedVideos.length > 0 ? (
+                    <div className="space-y-1">
+                      {uploadedVideos.map((item, index) => (
+                        <div key={`${item.file_path || item.filename}-${index}`} className="flex items-center justify-between rounded bg-muted/40 px-2 py-1 text-xs">
+                          <span className="truncate">{item.filename || `录像 ${index + 1}`}</span>
+                          <span className="ml-2 text-muted-foreground">{formatFileSize(item.file_size)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-xs text-muted-foreground">暂无录像</div>
+                  )}
                 </div>
                 {failedCount > 0 && (
                   <div>

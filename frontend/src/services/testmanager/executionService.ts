@@ -57,6 +57,7 @@ export interface CompleteExecutionRequest {
   execution_notes?: string
   screenshots?: any[]
   logs?: any[]
+  videos?: any[]
 }
 
 export interface AutomationExecutionRequest {
@@ -162,7 +163,19 @@ export class ExecutionService {
         'Content-Type': 'multipart/form-data'
       }
     })
-    return response.data
+    return unwrapData<any>(response.data)
+  }
+
+  async uploadVideo(id: number, file: File): Promise<any> {
+    const formData = new FormData()
+    formData.append('video', file)
+
+    const response = await apiClient.post(`${this.baseUrl}/${id}/videos`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    })
+    return unwrapData<any>(response.data)
   }
 
   async getExecutionStatistics(filters?: ExecutionFilters): Promise<any> {

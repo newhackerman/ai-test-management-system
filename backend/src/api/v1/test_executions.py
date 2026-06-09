@@ -41,6 +41,8 @@ from ...schemas.base import BaseResponse, PaginatedResponse
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/test-executions", tags=["测试执行管理"])
 security = HTTPBearer()
+MAX_VIDEO_UPLOAD_SIZE = 100 * 1024 * 1024
+UPLOAD_CHUNK_SIZE = 1024 * 1024
 
 
 def _is_missing_table_error(error: Exception) -> bool:
@@ -343,9 +345,12 @@ async def complete_manual_execution(
         execution.actual_result = request.actual_result
         execution.failure_reason = request.failure_reason
         execution.execution_notes = request.execution_notes
-        execution.screenshots = request.screenshots
-        execution.logs = request.logs
-        execution.videos = request.videos
+        if request.screenshots is not None:
+            execution.screenshots = request.screenshots
+        if request.logs is not None:
+            execution.logs = request.logs
+        if request.videos is not None:
+            execution.videos = request.videos
         execution.completed_at = completed_at
         if execution.started_at:
             execution.duration = int((completed_at - execution.started_at).total_seconds())
@@ -669,6 +674,69 @@ async def upload_execution_screenshot(
     except Exception as e:
         db.rollback()
         logger.error(f"上传执行截图失败: {str(e)}")
+        raise HTTPException(status_code=500, detail="内部服务器错误")
+
+
+@router.post("/{execution_id}/videos", response_model=BaseResponse[Dict[str, Any]])
+async def upload_execution_video(
+    execution_id: int = Path(..., description="执行记录ID"),
+    video: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Upload a video attachment for a manual execution record."""
+    try:
+        execution = db.query(TestExecution).filter(TestExecution.id == execution_id).first()
+        if not execution:
+            raise HTTPException(status_code=404, detail="测试执行记录不存在")
+
+        content_type = video.content_type or ""
+        if not content_type.startswith("video/"):
+            raise HTTPException(status_code=422, detail="只能上传视频文件")
+
+        upload_dir = FilePath("uploads/test_executions/videos")
+        upload_dir.mkdir(parents=True, exist_ok=True)
+        safe_name = FilePath(video.filename or "execution-video.webm").name
+        file_name = f"{execution_id}_{datetime.utcnow().strftime('%Y%m%d%H%M%S')}_{safe_name}"
+        file_path = upload_dir / file_name
+        file_size = 0
+
+        with file_path.open("wb") as buffer:
+            while True:
+                chunk = await video.read(UPLOAD_CHUNK_SIZE)
+                if not chunk:
+                    break
+                file_size += len(chunk)
+                if file_size > MAX_VIDEO_UPLOAD_SIZE:
+                    buffer.close()
+                    file_path.unlink(missing_ok=True)
+                    raise HTTPException(status_code=413, detail="视频文件不能超过100MB")
+                buffer.write(chunk)
+
+        if file_size == 0:
+            file_path.unlink(missing_ok=True)
+            raise HTTPException(status_code=422, detail="视频文件不能为空")
+
+        metadata = {
+            "filename": safe_name,
+            "file_path": str(file_path).replace("\\", "/"),
+            "file_size": file_size,
+            "content_type": content_type,
+            "uploaded_at": datetime.utcnow().isoformat(),
+            "uploaded_by": current_user.id,
+        }
+        videos = execution.videos or []
+        videos.append(metadata)
+        execution.videos = videos
+        execution.updated_at = datetime.utcnow()
+        db.commit()
+
+        return BaseResponse(success=True, message="录像上传成功", data=metadata)
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        logger.error(f"上传执行录像失败: {str(e)}")
         raise HTTPException(status_code=500, detail="内部服务器错误")
 
 
