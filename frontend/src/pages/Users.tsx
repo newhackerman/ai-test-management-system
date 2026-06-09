@@ -111,11 +111,11 @@ const Users: React.FC = () => {
   const endIndex = Math.min(page * pageSize, total)
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">用户管理</h1>
-          <p className="mt-2 text-gray-600">管理系统账号、角色分配、状态和导入导出，共 {total} 个用户</p>
+          <h1 className="text-2xl font-bold text-foreground">用户管理</h1>
+          <p className="text-sm text-muted-foreground">管理系统账号、角色分配、状态和导入导出，共 {total} 个用户</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Button variant="outline" onClick={() => exportUsers(filters)} disabled={isExporting}>
@@ -144,58 +144,55 @@ const Users: React.FC = () => {
       </div>
 
       <Card>
-        <CardContent className="pt-6">
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-[1fr_160px_180px_auto]">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-              <Input
-                placeholder="搜索用户名、邮箱、昵称"
-                value={filters.search || ''}
-                onChange={(event) => updateFilter('search', event.target.value)}
-                className="pl-10"
-              />
+        <CardHeader className="gap-3 p-4">
+          <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+            <div>
+              <CardTitle>用户列表</CardTitle>
+              <CardDescription>显示 {startIndex} - {endIndex} 条，共 {total} 条记录</CardDescription>
             </div>
-            <Select value={filters.status || ''} onValueChange={(value) => updateFilter('status', value)}>
-              <SelectTrigger>
-                <SelectValue placeholder="状态" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="">全部状态</SelectItem>
-                <SelectItem value="active">启用</SelectItem>
-                <SelectItem value="locked">锁定</SelectItem>
-                <SelectItem value="disabled">禁用</SelectItem>
-                <SelectItem value="pending">待审核</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={filters.role || ''} onValueChange={(value) => updateFilter('role', value)}>
-              <SelectTrigger>
-                <SelectValue placeholder="角色" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="">全部角色</SelectItem>
-                {roles.map((role) => (
-                  <SelectItem key={role.id} value={role.code}>
-                    {role.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Button variant="outline" onClick={resetFilters}>
-              <Filter className="mr-2 h-4 w-4" />
-              重置
-            </Button>
+            <div className="grid grid-cols-1 gap-2 md:grid-cols-[minmax(220px,1fr)_150px_170px_auto] xl:w-[720px]">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  placeholder="搜索用户名、邮箱、昵称"
+                  value={filters.search || ''}
+                  onChange={(event) => updateFilter('search', event.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              <Select value={filters.status || ''} onValueChange={(value) => updateFilter('status', value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="状态" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">全部状态</SelectItem>
+                  <SelectItem value="active">启用</SelectItem>
+                  <SelectItem value="locked">锁定</SelectItem>
+                  <SelectItem value="disabled">禁用</SelectItem>
+                  <SelectItem value="pending">待审核</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={filters.role || ''} onValueChange={(value) => updateFilter('role', value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="角色" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">全部角色</SelectItem>
+                  {roles.map((role) => (
+                    <SelectItem key={role.id} value={role.code}>
+                      {role.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button variant="outline" onClick={resetFilters}>
+                <Filter className="mr-2 h-4 w-4" />
+                重置
+              </Button>
+            </div>
           </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>用户管理</CardTitle>
-          <CardDescription>
-            显示 {startIndex} - {endIndex} 条，共 {total} 条记录
-          </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="px-4 pb-4">
           <UserTable
             users={users}
             loading={isLoading}
