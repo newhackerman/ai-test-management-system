@@ -464,15 +464,12 @@ function RiskManagement() {
       {projects.length === 0 && !loading && <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">请先创建项目，再登记风险。</div>}
 
       <Card>
-        <CardContent className="space-y-3 p-4">
+        <CardContent className="space-y-2 p-3">
           <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-4">
             {statusCards.map((item) => (
-              <div key={item.label} className="rounded-md border bg-muted/20 px-3 py-2">
-                <div className="flex items-center justify-between gap-3">
-                  <span className="text-xs text-muted-foreground">{item.label}</span>
-                  <span className="text-lg font-semibold leading-5 text-foreground">{item.value}</span>
-                </div>
-                <div className="mt-1 text-xs text-muted-foreground">{item.hint}</div>
+              <div key={item.label} className="flex items-center justify-between gap-3 rounded-md border bg-muted/20 px-3 py-1.5">
+                <span className="text-xs text-muted-foreground">{item.label}</span>
+                <span className="text-base font-semibold leading-5 text-foreground">{item.value}</span>
               </div>
             ))}
           </div>
@@ -514,10 +511,6 @@ function RiskManagement() {
               </Button>
               <Button variant="ghost" onClick={resetFilters} disabled={loading}>清空</Button>
             </div>
-          </div>
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <Filter className="h-4 w-4" />
-            支持按项目、负责人、类别、等级和状态筛选风险台账
           </div>
         </CardContent>
       </Card>

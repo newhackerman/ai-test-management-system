@@ -500,15 +500,12 @@ function RequirementsManagement() {
       </div>
 
       <Card>
-        <CardContent className="space-y-3 p-4">
+        <CardContent className="space-y-2 p-3">
           <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-4">
             {statusCards.map((item) => (
-              <div key={item.label} className="rounded-md border bg-muted/20 px-3 py-2">
-                <div className="flex items-center justify-between gap-3">
-                  <span className="text-xs text-muted-foreground">{item.label}</span>
-                  <span className="text-lg font-semibold leading-5 text-foreground">{item.value}</span>
-                </div>
-                <div className="mt-1 text-xs text-muted-foreground">{item.hint}</div>
+              <div key={item.label} className="flex items-center justify-between gap-3 rounded-md border bg-muted/20 px-3 py-1.5">
+                <span className="text-xs text-muted-foreground">{item.label}</span>
+                <span className="text-base font-semibold leading-5 text-foreground">{item.value}</span>
               </div>
             ))}
           </div>
@@ -559,11 +556,7 @@ function RequirementsManagement() {
               <Button variant="ghost" onClick={resetFilters} disabled={loading}>清空</Button>
             </div>
           </div>
-          <div className="flex flex-wrap justify-between gap-2">
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <Filter className="h-4 w-4" />
-              支持按项目、负责人、状态、优先级、类型和分类筛选
-            </div>
+          <div className="flex justify-end">
             <Button variant="outline" onClick={batchToReview} disabled={saving || selectedIds.length === 0}>
               <CheckCircle2 className="mr-2 h-4 w-4" />
               批量提交评审
@@ -576,14 +569,6 @@ function RequirementsManagement() {
       {error && <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
 
       <Card>
-        <CardHeader>
-          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <CardTitle>需求列表</CardTitle>
-            <div className="text-sm text-muted-foreground">
-              共 {total} 条，已选择 {selectedIds.length} 条
-            </div>
-          </div>
-        </CardHeader>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
