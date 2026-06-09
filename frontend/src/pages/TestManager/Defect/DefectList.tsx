@@ -502,10 +502,26 @@ const DefectList: React.FC = () => {
           <h1 className="text-2xl font-bold">缺陷管理</h1>
           <p className="text-gray-600">跟踪缺陷提交、分配、处理和关闭的完整流程</p>
         </div>
-        <Button onClick={openCreateForm}>
-          <Plus className="w-4 h-4 mr-2" />
-          创建缺陷
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button onClick={openCreateForm}>
+            <Plus className="w-4 h-4 mr-2" />
+            创建缺陷
+          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline">
+                <Download className="w-4 h-4 mr-2" />
+                导出
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              <DropdownMenuItem onClick={() => handleExport('csv')}>导出为 CSV</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <Link to={`/test-manager/reports/generate?${reportQuery}`}>
+            <Button variant="outline">生成缺陷报告</Button>
+          </Link>
+        </div>
       </div>
 
       {referenceError && (
@@ -621,32 +637,9 @@ const DefectList: React.FC = () => {
       )}
 
       <Card>
-        <CardContent className="pt-6">
-          <div className="flex items-center justify-between">
-            <div className="flex gap-2">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm">
-                    <Download className="w-4 h-4 mr-2" />
-                    导出
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent>
-                  <DropdownMenuItem onClick={() => handleExport('csv')}>导出为 CSV</DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-              <Link to={`/test-manager/reports/generate?${reportQuery}`}>
-                <Button variant="outline" size="sm">生成缺陷报告</Button>
-              </Link>
-            </div>
-            <div className="text-sm text-gray-600">共 {totalCount} 个缺陷</div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>缺陷列表</CardTitle>
+          <div className="text-sm text-gray-600">共 {totalCount} 个缺陷</div>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
