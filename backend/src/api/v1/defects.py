@@ -95,6 +95,9 @@ class CreateDefectRequest(BaseModel):
 
 class UpdateDefectRequest(BaseModel):
     """更新缺陷请求"""
+    test_execution_id: Optional[int] = Field(None, description="关联测试执行ID")
+    test_case_id: Optional[int] = Field(None, description="关联测试用例ID")
+    requirement_id: Optional[int] = Field(None, description="关联需求ID")
     title: Optional[str] = Field(None, min_length=1, max_length=200, description="缺陷标题")
     description: Optional[str] = Field(None, min_length=1, description="缺陷描述")
     steps_to_reproduce: Optional[str] = Field(None, description="重现步骤")

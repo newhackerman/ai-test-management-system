@@ -1,7 +1,7 @@
 // @ts-nocheck
 import React, { useEffect, useMemo, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
-import { Calendar, Download, Eye, Pencil, Plus, Search, User, UserCheck } from 'lucide-react'
+import { Link, useSearchParams } from 'react-router-dom'
+import { Calendar, Download, Eye, Pencil, Plus, Search, Trash2, User, UserCheck } from 'lucide-react'
 import { Button } from '../../../components/ui/Button'
 import { Input } from '../../../components/ui/Input'
 import { Textarea } from '../../../components/ui/Textarea'
@@ -12,6 +12,7 @@ import { Checkbox } from '../../../components/ui/Checkbox'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/Select'
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '../../../components/ui/Dialog'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../../../components/ui/DropdownMenu'
+import ConfirmDialog from '../../../components/ui/ConfirmDialog'
 import {
   useDefects,
   useDefectManagement,
@@ -19,9 +20,14 @@ import {
   useUpdateDefect,
   useUpdateDefectStatus,
   useAssignDefect,
+  useDeleteDefect,
   useExportDefects,
 } from '../../../hooks/testmanager/useDefect'
 import userService from '../../../services/user-service'
+import requirementService from '../../../services/requirementService'
+import { testPlanService } from '../../../services/testmanager/testPlanService'
+import { testCaseService } from '../../../services/testmanager/testCaseService'
+import { executionService } from '../../../services/testmanager/executionService'
 import { DefectStatus, DefectSeverity, DefectType, Priority } from '../../../types/testmanager'
 import { formatDate } from '../../../utils/date'
 
@@ -81,6 +87,10 @@ const emptyForm = {
   found_in_version: '',
   test_environment: '',
   assignee_id: '',
+  test_plan_id: '',
+  test_case_id: '',
+  test_execution_id: '',
+  requirement_id: '',
 }
 
 const labelOf = (options, value) => options.find((item) => item.value === value)?.label || value || '-'
@@ -104,14 +114,20 @@ const DefectList: React.FC = () => {
   const updateDefect = useUpdateDefect()
   const updateDefectStatus = useUpdateDefectStatus()
   const assignDefect = useAssignDefect()
+  const deleteDefect = useDeleteDefect()
   const exportDefects = useExportDefects()
 
   const [users, setUsers] = useState([])
+  const [testPlans, setTestPlans] = useState([])
+  const [testCases, setTestCases] = useState([])
+  const [executions, setExecutions] = useState([])
+  const [requirements, setRequirements] = useState([])
   const [referenceError, setReferenceError] = useState('')
   const [formOpen, setFormOpen] = useState(false)
   const [editingDefect, setEditingDefect] = useState(null)
   const [detailDefect, setDetailDefect] = useState(null)
   const [assignDefectRow, setAssignDefectRow] = useState(null)
+  const [deleteDefectRow, setDeleteDefectRow] = useState(null)
   const [assignUserId, setAssignUserId] = useState('')
   const [form, setForm] = useState(emptyForm)
   const [formError, setFormError] = useState('')
@@ -142,17 +158,44 @@ const DefectList: React.FC = () => {
       return result
     }, {})
   }, [users])
+  const planMap = useMemo(() => new Map(testPlans.map((item) => [Number(item.id), item])), [testPlans])
+  const caseMap = useMemo(() => new Map(testCases.map((item) => [Number(item.id), item])), [testCases])
+  const executionMap = useMemo(() => new Map(executions.map((item) => [Number(item.id), item])), [executions])
+  const requirementMap = useMemo(() => new Map(requirements.map((item) => [Number(item.id), item])), [requirements])
+  const filteredCases = useMemo(() => {
+    const planId = Number(form.test_plan_id || 0)
+    if (!planId) return testCases
+    return testCases.filter((item) => Number(item.test_plan_id) === planId)
+  }, [form.test_plan_id, testCases])
+  const filteredExecutions = useMemo(() => {
+    const planId = Number(form.test_plan_id || 0)
+    const caseId = Number(form.test_case_id || 0)
+    return executions.filter((item) => {
+      if (planId && Number(item.test_plan_id) !== planId) return false
+      if (caseId && Number(item.test_case_id) !== caseId) return false
+      return true
+    })
+  }, [executions, form.test_case_id, form.test_plan_id])
 
   useEffect(() => {
     let cancelled = false
-    userService
-      .getUsers({ page: 1, size: 100, status: 'active', sort_by: 'username', sort_order: 'asc' })
-      .then((response) => {
-        if (!cancelled) setUsers(response.users || [])
-      })
-      .catch((err) => {
-        if (!cancelled) setReferenceError(err?.message || '加载人员列表失败')
-      })
+    Promise.allSettled([
+      userService.getUsers({ page: 1, size: 100, status: 'active', sort_by: 'username', sort_order: 'asc' }),
+      testPlanService.getTestPlans({ page: 1, size: 100 }),
+      testCaseService.getTestCases({ page: 1, size: 100 }),
+      executionService.getExecutions({ page: 1, size: 100 }),
+      requirementService.getRequirements({ page: 1, size: 100 }),
+    ]).then((results) => {
+      if (cancelled) return
+      const [usersResult, plansResult, casesResult, executionsResult, requirementsResult] = results
+      if (usersResult.status === 'fulfilled') setUsers(usersResult.value.users || [])
+      if (plansResult.status === 'fulfilled') setTestPlans(plansResult.value.data || [])
+      if (casesResult.status === 'fulfilled') setTestCases(casesResult.value.data || [])
+      if (executionsResult.status === 'fulfilled') setExecutions(executionsResult.value.data || [])
+      if (requirementsResult.status === 'fulfilled') setRequirements(requirementsResult.value.data || [])
+      const failed = results.find((result) => result.status === 'rejected')
+      if (failed) setReferenceError(failed.reason?.message || '部分关联数据加载失败')
+    })
     return () => {
       cancelled = true
     }
@@ -160,7 +203,13 @@ const DefectList: React.FC = () => {
 
   const openCreateForm = () => {
     setEditingDefect(null)
-    setForm(emptyForm)
+    setForm({
+      ...emptyForm,
+      test_plan_id: searchParams.get('test_plan_id') || searchParams.get('plan_id') || '',
+      test_case_id: searchParams.get('test_case_id') || '',
+      test_execution_id: searchParams.get('test_execution_id') || '',
+      requirement_id: searchParams.get('requirement_id') || '',
+    })
     setFormError('')
     setFormOpen(true)
   }
@@ -177,9 +226,45 @@ const DefectList: React.FC = () => {
       found_in_version: defect.found_in_version || '',
       test_environment: defect.test_environment || '',
       assignee_id: defect.assignee_id ? String(defect.assignee_id) : '',
+      test_plan_id: String(defect.test_plan_id || caseMap.get(Number(defect.test_case_id))?.test_plan_id || executionMap.get(Number(defect.test_execution_id))?.test_plan_id || ''),
+      test_case_id: defect.test_case_id ? String(defect.test_case_id) : '',
+      test_execution_id: defect.test_execution_id ? String(defect.test_execution_id) : '',
+      requirement_id: defect.requirement_id ? String(defect.requirement_id) : '',
     })
     setFormError('')
     setFormOpen(true)
+  }
+
+  const updateForm = (patch) => setForm((current) => ({ ...current, ...patch }))
+
+  const handlePlanChange = (value) => {
+    const planId = Number(value || 0)
+    updateForm({
+      test_plan_id: value,
+      test_case_id: form.test_case_id && Number(caseMap.get(Number(form.test_case_id))?.test_plan_id) === planId ? form.test_case_id : '',
+      test_execution_id: '',
+    })
+  }
+
+  const handleCaseChange = (value) => {
+    const testCase = caseMap.get(Number(value))
+    updateForm({
+      test_case_id: value,
+      test_plan_id: testCase?.test_plan_id ? String(testCase.test_plan_id) : form.test_plan_id,
+      requirement_id: testCase?.requirement_id ? String(testCase.requirement_id) : form.requirement_id,
+      test_execution_id: '',
+    })
+  }
+
+  const handleExecutionChange = (value) => {
+    const execution = executionMap.get(Number(value))
+    const testCase = caseMap.get(Number(execution?.test_case_id))
+    updateForm({
+      test_execution_id: value,
+      test_case_id: execution?.test_case_id ? String(execution.test_case_id) : form.test_case_id,
+      test_plan_id: execution?.test_plan_id ? String(execution.test_plan_id) : (testCase?.test_plan_id ? String(testCase.test_plan_id) : form.test_plan_id),
+      requirement_id: testCase?.requirement_id ? String(testCase.requirement_id) : form.requirement_id,
+    })
   }
 
   const submitForm = async (event) => {
@@ -194,6 +279,10 @@ const DefectList: React.FC = () => {
       setFormError('请输入缺陷描述')
       return
     }
+    if (form.test_plan_id && !form.test_case_id && !form.test_execution_id) {
+      setFormError('已选择测试计划，请继续选择该计划下的测试用例或执行记录，缺陷才能归集到计划。')
+      return
+    }
 
     const payload = {
       title,
@@ -205,6 +294,9 @@ const DefectList: React.FC = () => {
       found_in_version: form.found_in_version.trim() || undefined,
       test_environment: form.test_environment.trim() || undefined,
       assignee_id: form.assignee_id ? Number(form.assignee_id) : undefined,
+      test_case_id: form.test_case_id ? Number(form.test_case_id) : null,
+      test_execution_id: form.test_execution_id ? Number(form.test_execution_id) : null,
+      requirement_id: form.requirement_id ? Number(form.requirement_id) : null,
     }
 
     try {
@@ -245,9 +337,45 @@ const DefectList: React.FC = () => {
     updateDefectStatus.mutate({ id, status })
   }
 
+  const confirmDelete = async () => {
+    if (!deleteDefectRow) return
+    await deleteDefect.mutateAsync(deleteDefectRow.id)
+    setDeleteDefectRow(null)
+  }
+
   const handleExport = (format: string) => {
     exportDefects.mutate({ filters, format })
   }
+
+  const getPlanLabel = (planId?: number) => {
+    if (!planId) return ''
+    const plan = planMap.get(Number(planId))
+    return plan ? `${plan.plan_name} (${plan.plan_code || plan.id})` : `测试计划 #${planId}`
+  }
+
+  const getCaseLabel = (caseId?: number) => {
+    if (!caseId) return ''
+    const testCase = caseMap.get(Number(caseId))
+    return testCase ? `${testCase.case_title} (${testCase.case_code || testCase.id})` : `测试用例 #${caseId}`
+  }
+
+  const getExecutionLabel = (executionId?: number) => {
+    if (!executionId) return ''
+    const execution = executionMap.get(Number(executionId))
+    return execution ? `${execution.execution_code || `执行 #${execution.id}`} - ${execution.execution_status}` : `执行记录 #${executionId}`
+  }
+
+  const getRequirementLabel = (requirementId?: number) => {
+    if (!requirementId) return ''
+    const requirement = requirementMap.get(Number(requirementId))
+    return requirement ? `${requirement.title} (${requirement.requirement_code || requirement.id})` : `需求 #${requirementId}`
+  }
+
+  const getRelatedPlanId = (defect) => (
+    Number(defect.test_plan_id || 0) ||
+    Number(caseMap.get(Number(defect.test_case_id))?.test_plan_id || 0) ||
+    Number(executionMap.get(Number(defect.test_execution_id))?.test_plan_id || 0)
+  )
 
   const getStatusBadge = (status: DefectStatus) => {
     const variants = {
@@ -314,7 +442,22 @@ const DefectList: React.FC = () => {
                 />
               </div>
             </div>
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4">
+              <Select
+                value={filters.test_plan_id ? String(filters.test_plan_id) : 'all'}
+                onValueChange={(value) => handleUpdateFilters({ test_plan_id: value === 'all' ? undefined : Number(value) })}
+              >
+                <SelectTrigger className="w-full sm:w-40">
+                  <SelectValue placeholder="测试计划" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">全部计划</SelectItem>
+                  {testPlans.map((plan) => (
+                    <SelectItem key={plan.id} value={String(plan.id)}>{plan.plan_name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
               <Select
                 value={filters.status || 'all'}
                 onValueChange={(value) => handleUpdateFilters({ status: value === 'all' ? undefined : value as DefectStatus })}
@@ -430,6 +573,7 @@ const DefectList: React.FC = () => {
                   <TableHead>严重程度</TableHead>
                   <TableHead>优先级</TableHead>
                   <TableHead>状态</TableHead>
+                  <TableHead>关联对象</TableHead>
                   <TableHead>报告人</TableHead>
                   <TableHead>负责人</TableHead>
                   <TableHead>报告时间</TableHead>
@@ -462,6 +606,31 @@ const DefectList: React.FC = () => {
                     <TableCell>{getSeverityBadge(defect.severity)}</TableCell>
                     <TableCell><Badge variant="secondary">{labelOf(priorityOptions, defect.priority)}</Badge></TableCell>
                     <TableCell>{getStatusBadge(defect.status)}</TableCell>
+                    <TableCell>
+                      <div className="max-w-[220px] space-y-1 text-xs">
+                        {getRelatedPlanId(defect) ? (
+                          <Link to={`/test-manager/test-plans/${getRelatedPlanId(defect)}`} className="block truncate text-blue-600 hover:text-blue-800">
+                            {getPlanLabel(getRelatedPlanId(defect))}
+                          </Link>
+                        ) : null}
+                        {defect.test_case_id ? (
+                          <Link to={`/test-manager/test-cases/${defect.test_case_id}`} className="block truncate text-blue-600 hover:text-blue-800">
+                            {getCaseLabel(defect.test_case_id)}
+                          </Link>
+                        ) : null}
+                        {defect.test_execution_id ? (
+                          <Link to={`/test-manager/executions/${defect.test_execution_id}`} className="block truncate text-blue-600 hover:text-blue-800">
+                            {getExecutionLabel(defect.test_execution_id)}
+                          </Link>
+                        ) : null}
+                        {defect.requirement_id ? (
+                          <Link to={`/requirements?search=${encodeURIComponent(getRequirementLabel(defect.requirement_id))}`} className="block truncate text-blue-600 hover:text-blue-800">
+                            {getRequirementLabel(defect.requirement_id)}
+                          </Link>
+                        ) : null}
+                        {!getRelatedPlanId(defect) && !defect.test_case_id && !defect.test_execution_id && !defect.requirement_id && '-'}
+                      </div>
+                    </TableCell>
                     <TableCell>
                       <div className="flex items-center space-x-2">
                         <User className="w-4 h-4 text-gray-400" />
@@ -503,6 +672,12 @@ const DefectList: React.FC = () => {
                               设为{labelOf(statusOptions, status)}
                             </DropdownMenuItem>
                           ))}
+                          {[DefectStatus.NEW, DefectStatus.REJECTED].includes(defect.status) && (
+                            <DropdownMenuItem onClick={() => setDeleteDefectRow(defect)}>
+                              <Trash2 className="w-4 h-4 mr-2" />
+                              删除
+                            </DropdownMenuItem>
+                          )}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </TableCell>
@@ -550,6 +725,76 @@ const DefectList: React.FC = () => {
                   onChange={(event) => setForm({ ...form, steps_to_reproduce: event.target.value })}
                 />
               </label>
+
+              <div className="space-y-3 rounded-md border bg-muted/20 p-3 md:col-span-2">
+                <div>
+                  <div className="text-sm font-medium">业务关联</div>
+                  <p className="text-xs text-muted-foreground">把缺陷关联到用例、执行记录或需求。测试计划用于筛选用例，最终通过用例或执行记录归集到计划。</p>
+                </div>
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                  <label className="space-y-1">
+                    <span className="text-sm font-medium">测试计划</span>
+                    <select
+                      value={form.test_plan_id}
+                      onChange={(event) => handlePlanChange(event.target.value)}
+                      className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                    >
+                      <option value="">暂不关联计划</option>
+                      {testPlans.map((plan) => (
+                        <option key={plan.id} value={String(plan.id)}>{plan.plan_name}</option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label className="space-y-1">
+                    <span className="text-sm font-medium">测试用例</span>
+                    <select
+                      value={form.test_case_id}
+                      onChange={(event) => handleCaseChange(event.target.value)}
+                      className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                    >
+                      <option value="">暂不关联用例</option>
+                      {filteredCases.map((testCase) => (
+                        <option key={testCase.id} value={String(testCase.id)}>
+                          {testCase.case_title} ({testCase.case_code})
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label className="space-y-1">
+                    <span className="text-sm font-medium">执行记录</span>
+                    <select
+                      value={form.test_execution_id}
+                      onChange={(event) => handleExecutionChange(event.target.value)}
+                      className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                    >
+                      <option value="">暂不关联执行</option>
+                      {filteredExecutions.map((execution) => (
+                        <option key={execution.id} value={String(execution.id)}>
+                          {execution.execution_code || `执行 #${execution.id}`} - {execution.execution_status}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label className="space-y-1">
+                    <span className="text-sm font-medium">关联需求</span>
+                    <select
+                      value={form.requirement_id}
+                      onChange={(event) => updateForm({ requirement_id: event.target.value })}
+                      className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                    >
+                      <option value="">暂不关联需求</option>
+                      {requirements.map((requirement) => (
+                        <option key={requirement.id} value={String(requirement.id)}>
+                          {requirement.title} ({requirement.requirement_code || requirement.id})
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+              </div>
 
               <label className="space-y-1">
                 <span className="text-sm font-medium">缺陷类型</span>
@@ -641,6 +886,31 @@ const DefectList: React.FC = () => {
                 <div><span className="text-gray-500">负责人：</span>{detailDefect.assignee_id ? (userNameById[Number(detailDefect.assignee_id)] || `用户 #${detailDefect.assignee_id}`) : '未分配'}</div>
               </div>
               <div>
+                <div className="mb-1 text-sm font-medium">关联对象</div>
+                <div className="grid grid-cols-1 gap-2 rounded-md bg-gray-50 p-3 text-sm md:grid-cols-2">
+                  {getRelatedPlanId(detailDefect) ? (
+                    <Link to={`/test-manager/test-plans/${getRelatedPlanId(detailDefect)}`} className="text-blue-600 hover:text-blue-800">
+                      计划：{getPlanLabel(getRelatedPlanId(detailDefect))}
+                    </Link>
+                  ) : <span className="text-gray-500">计划：未关联</span>}
+                  {detailDefect.test_case_id ? (
+                    <Link to={`/test-manager/test-cases/${detailDefect.test_case_id}`} className="text-blue-600 hover:text-blue-800">
+                      用例：{getCaseLabel(detailDefect.test_case_id)}
+                    </Link>
+                  ) : <span className="text-gray-500">用例：未关联</span>}
+                  {detailDefect.test_execution_id ? (
+                    <Link to={`/test-manager/executions/${detailDefect.test_execution_id}`} className="text-blue-600 hover:text-blue-800">
+                      执行：{getExecutionLabel(detailDefect.test_execution_id)}
+                    </Link>
+                  ) : <span className="text-gray-500">执行：未关联</span>}
+                  {detailDefect.requirement_id ? (
+                    <Link to={`/requirements?search=${encodeURIComponent(getRequirementLabel(detailDefect.requirement_id))}`} className="text-blue-600 hover:text-blue-800">
+                      需求：{getRequirementLabel(detailDefect.requirement_id)}
+                    </Link>
+                  ) : <span className="text-gray-500">需求：未关联</span>}
+                </div>
+              </div>
+              <div>
                 <div className="mb-1 text-sm font-medium">缺陷描述</div>
                 <div className="rounded-md bg-gray-50 p-3 text-sm whitespace-pre-wrap">{detailDefect.description || '-'}</div>
               </div>
@@ -681,6 +951,17 @@ const DefectList: React.FC = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={Boolean(deleteDefectRow)}
+        title="删除缺陷"
+        description={`确认删除缺陷“${deleteDefectRow?.title || ''}”？删除后无法恢复。`}
+        confirmText="删除"
+        cancelText="取消"
+        variant="destructive"
+        onCancel={() => setDeleteDefectRow(null)}
+        onConfirm={confirmDelete}
+      />
     </div>
   )
 }

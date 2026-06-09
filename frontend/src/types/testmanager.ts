@@ -350,6 +350,9 @@ export interface CreateDefectRequest {
 }
 
 export interface UpdateDefectRequest {
+  test_execution_id?: number | null
+  test_case_id?: number | null
+  requirement_id?: number | null
   title?: string
   description?: string
   steps_to_reproduce?: string
