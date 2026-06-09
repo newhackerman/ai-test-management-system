@@ -416,6 +416,16 @@ const DefectList: React.FC = () => {
     exportDefects.mutate({ filters, format })
   }
 
+  const reportQuery = useMemo(() => {
+    const params = new URLSearchParams({ type: 'defect' })
+    if (filters.test_plan_id) params.set('test_plan_id', String(filters.test_plan_id))
+    if (filters.status) params.set('status', String(filters.status))
+    if (filters.severity) params.set('severity', String(filters.severity))
+    if (filters.defect_type) params.set('defect_type', String(filters.defect_type))
+    if (filters.search) params.set('search', String(filters.search))
+    return params.toString()
+  }, [filters])
+
   const formatFileSize = (size?: number) => {
     const value = Number(size || 0)
     if (value >= 1024 * 1024) return `${(value / 1024 / 1024).toFixed(1)}MB`
@@ -613,17 +623,22 @@ const DefectList: React.FC = () => {
       <Card>
         <CardContent className="pt-6">
           <div className="flex items-center justify-between">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm">
-                  <Download className="w-4 h-4 mr-2" />
-                  导出
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent>
-                <DropdownMenuItem onClick={() => handleExport('csv')}>导出为 CSV</DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <div className="flex gap-2">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <Download className="w-4 h-4 mr-2" />
+                    导出
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  <DropdownMenuItem onClick={() => handleExport('csv')}>导出为 CSV</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <Link to={`/test-manager/reports/generate?${reportQuery}`}>
+                <Button variant="outline" size="sm">生成缺陷报告</Button>
+              </Link>
+            </div>
             <div className="text-sm text-gray-600">共 {totalCount} 个缺陷</div>
           </div>
         </CardContent>

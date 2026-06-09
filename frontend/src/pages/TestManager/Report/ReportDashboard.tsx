@@ -1,13 +1,15 @@
 // @ts-nocheck
 import React, { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { BarChart3, Calendar, Download, FileText, Plus, RefreshCw, Search } from 'lucide-react'
+import { BarChart3, Calendar, Download, Eye, FileText, Plus, RefreshCw, Search, Trash2 } from 'lucide-react'
 import { Button } from '../../../components/ui/Button'
 import { Input } from '../../../components/ui/Input'
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/Card'
 import { Badge } from '../../../components/ui/Badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../components/ui/Table'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/Select'
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '../../../components/ui/Dialog'
+import ConfirmDialog from '../../../components/ui/ConfirmDialog'
 import { reportsApi } from '../../../services/api/reports'
 import { testPlanService } from '../../../services/testmanager/testPlanService'
 import { formatDate } from '../../../utils/date'
@@ -34,6 +36,9 @@ const ReportDashboard: React.FC = () => {
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(false)
   const [downloadingId, setDownloadingId] = useState('')
+  const [previewLoadingId, setPreviewLoadingId] = useState('')
+  const [previewReport, setPreviewReport] = useState<any>(null)
+  const [deleteReport, setDeleteReport] = useState<any>(null)
   const [error, setError] = useState('')
   const [testPlans, setTestPlans] = useState([])
   const [filters, setFilters] = useState({
@@ -127,6 +132,42 @@ const ReportDashboard: React.FC = () => {
       window.URL.revokeObjectURL(url)
     } finally {
       setDownloadingId('')
+    }
+  }
+
+  const handlePreview = async (report: any) => {
+    if (report.type !== 'generated') return
+    const format = String(report.format || '').toLowerCase()
+    if (!['html', 'json', 'csv', 'txt'].includes(format)) {
+      setPreviewReport({
+        ...report,
+        preview_content: '该格式不支持内联预览，请下载后查看。',
+      })
+      return
+    }
+    setPreviewLoadingId(report.id)
+    try {
+      const content = await reportsApi.previewReport(report.id, report.format)
+      setPreviewReport({ ...report, preview_content: content })
+    } catch (err: any) {
+      setError(err?.response?.data?.detail || err?.message || '预览报告失败')
+    } finally {
+      setPreviewLoadingId('')
+    }
+  }
+
+  const confirmDeleteReport = async () => {
+    if (!deleteReport) return
+    try {
+      if (deleteReport.type === 'generated') {
+        await reportsApi.deleteGeneratedReport(deleteReport.id)
+      } else {
+        await reportsApi.deleteImportedReport(deleteReport.id)
+      }
+      setDeleteReport(null)
+      await loadReports()
+    } catch (err: any) {
+      setError(err?.response?.data?.detail || err?.message || '删除报告失败')
     }
   }
 
@@ -315,14 +356,34 @@ const ReportDashboard: React.FC = () => {
                     <TableCell>{formatDate(report.created_at)}</TableCell>
                     <TableCell>{report.status || '-'}</TableCell>
                     <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        disabled={report.type !== 'generated' || downloadingId === report.id}
-                        onClick={() => handleDownload(report)}
-                      >
-                        <Download className="h-4 w-4" />
-                      </Button>
+                      <div className="flex justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          title="预览"
+                          disabled={report.type !== 'generated' || previewLoadingId === report.id}
+                          onClick={() => handlePreview(report)}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          title="下载"
+                          disabled={report.type !== 'generated' || downloadingId === report.id}
+                          onClick={() => handleDownload(report)}
+                        >
+                          <Download className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          title="删除"
+                          onClick={() => setDeleteReport(report)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -335,6 +396,44 @@ const ReportDashboard: React.FC = () => {
           )}
         </CardContent>
       </Card>
+
+      <Dialog open={Boolean(previewReport)} onOpenChange={(open) => !open && setPreviewReport(null)}>
+        <DialogContent className="max-w-5xl">
+          {previewReport && (
+            <div className="space-y-4">
+              <DialogHeader>
+                <DialogTitle>{previewReport.name}</DialogTitle>
+              </DialogHeader>
+              {String(previewReport.format || '').toLowerCase() === 'html' ? (
+                <iframe
+                  title="报告预览"
+                  className="h-[70vh] w-full rounded-md border bg-white"
+                  srcDoc={previewReport.preview_content}
+                />
+              ) : (
+                <pre className="max-h-[70vh] overflow-auto rounded-md border bg-gray-950 p-4 text-sm text-gray-100">
+                  {previewReport.preview_content}
+                </pre>
+              )}
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setPreviewReport(null)}>关闭</Button>
+                <Button onClick={() => handleDownload(previewReport)}>下载</Button>
+              </DialogFooter>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <ConfirmDialog
+        open={Boolean(deleteReport)}
+        title="删除报告"
+        description={`确认删除报告“${deleteReport?.name || ''}”？生成报告的所有格式文件也会一并删除。`}
+        confirmText="删除"
+        cancelText="取消"
+        variant="destructive"
+        onCancel={() => setDeleteReport(null)}
+        onConfirm={confirmDeleteReport}
+      />
     </div>
   )
 }

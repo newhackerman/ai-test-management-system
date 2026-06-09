@@ -80,6 +80,21 @@ def _save_report_metadata(report_id: str, metadata: Dict[str, Any]) -> None:
     metadata_path.write_text(json.dumps(metadata, ensure_ascii=False, indent=2, default=str), encoding="utf-8")
 
 
+def _find_generated_report_files(report_id: str, format_filter: Optional[str] = None) -> List[Path]:
+    reports_dir = Path("reports")
+    if not reports_dir.exists():
+        return []
+
+    normalized_format = (format_filter or "").lower().lstrip(".")
+    candidates = [path for path in reports_dir.glob(f"{report_id}_*") if path.is_file()]
+    exact_candidates = [path for path in reports_dir.glob(f"{report_id}.*") if path.is_file()]
+    files = candidates + exact_candidates
+    files = [path for path in files if not path.name.endswith(".metadata.json")]
+    if normalized_format:
+        files = [path for path in files if path.suffix.lower().lstrip(".") == normalized_format]
+    return files
+
+
 def _list_generated_reports() -> List[Any]:
     reports_dir = Path("reports")
     if not reports_dir.exists():
@@ -869,22 +884,7 @@ async def download_report(
     涓嬭浇鎸囧畾鏍煎紡鐨勬姤鍛婃枃浠?
     """
     try:
-        # 鏋勫缓鏂囦欢璺緞锛堣繖閲岄渶瑕佹牴鎹疄闄呭瓨鍌ㄦ柟寮忚皟鏁达級
-        reports_dir = Path("reports")
-        file_pattern = f"{report_id}_*.{format}"
-        
-        # 鏌ユ壘鍖归厤鐨勬枃浠?
-        matching_files = list(reports_dir.glob(file_pattern))
-        if not matching_files:
-            exact_file = reports_dir / f"{report_id}.{format}"
-            if exact_file.exists() and exact_file.is_file():
-                matching_files = [exact_file]
-        if not matching_files:
-            matching_files = [
-                path for path in reports_dir.glob(f"{report_id}*.{format}")
-                if path.is_file()
-            ]
-        
+        matching_files = _find_generated_report_files(report_id, format)
         if not matching_files:
             raise HTTPException(status_code=404, detail="report file not found")
         
@@ -912,6 +912,67 @@ async def download_report(
     except Exception as e:
         logger.error(f"涓嬭浇鎶ュ憡澶辫触: {e}")
         raise HTTPException(status_code=500, detail="涓嬭浇鎶ュ憡澶辫触")
+
+
+@router.get("/view/{report_id}/{format}")
+async def view_report(
+    report_id: str = PathParam(..., description="报告ID"),
+    format: str = PathParam(..., description="文件格式"),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """内联预览生成的报告文件。"""
+    try:
+        matching_files = _find_generated_report_files(report_id, format)
+        if not matching_files:
+            raise HTTPException(status_code=404, detail="report file not found")
+
+        file_path = matching_files[0]
+        mime_types = {
+            "html": "text/html; charset=utf-8",
+            "pdf": "application/pdf",
+            "json": "application/json; charset=utf-8",
+            "csv": "text/csv; charset=utf-8",
+            "xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        }
+        return FileResponse(
+            path=str(file_path),
+            filename=file_path.name,
+            media_type=mime_types.get(format.lower(), "application/octet-stream"),
+            headers={"Content-Disposition": f'inline; filename="{file_path.name}"'},
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"预览报告失败: {e}")
+        raise HTTPException(status_code=500, detail="预览报告失败")
+
+
+@router.delete("/generated/{report_id}", response_model=BaseResponse[bool])
+async def delete_generated_report(
+    report_id: str = PathParam(..., description="报告ID"),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """删除生成报告及其元数据。"""
+    try:
+        files = _find_generated_report_files(report_id)
+        metadata_path = _metadata_file(report_id)
+        if not files and not metadata_path.exists():
+            raise HTTPException(status_code=404, detail="report file not found")
+
+        deleted = 0
+        for file_path in files:
+            file_path.unlink(missing_ok=True)
+            deleted += 1
+        metadata_path.unlink(missing_ok=True)
+
+        return BaseResponse(success=True, message=f"已删除 {deleted} 个报告文件", data=True)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"删除生成报告失败: {e}")
+        raise HTTPException(status_code=500, detail="删除生成报告失败")
 
 
 @router.post("/demo/generate", response_model=BaseResponse[GeneratedReportResponse])

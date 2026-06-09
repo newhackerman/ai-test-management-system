@@ -74,6 +74,16 @@ export const reportsApi = {
       responseType: 'blob',
     }).then(response => response.data),
 
+  // 预览生成报告
+  previewReport: (reportId: string, format: string) =>
+    apiClient.get(`/reports/view/${reportId}/${format}`, {
+      responseType: 'text',
+    }).then(response => response.data),
+
+  // 删除生成报告
+  deleteGeneratedReport: (reportId: string) =>
+    apiClient.delete(`/reports/generated/${reportId}`).then(response => response.data),
+
   // 删除导入的报告
   deleteImportedReport: (importId: string) =>
     apiClient.delete(`/reports/imported/${importId}`).then(response => response.data),

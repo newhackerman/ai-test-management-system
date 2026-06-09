@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { AlertTriangle, BarChart3, Calendar, PieChart, TrendingUp } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/Card'
 import { Badge } from '../../../components/ui/Badge'
+import { Button } from '../../../components/ui/Button'
 import { Progress } from '../../../components/ui/Progress'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/Select'
 import { useDefectStatistics, useDefectTrendsWithFilters } from '../../../hooks/testmanager/useDefect'
@@ -122,6 +123,9 @@ const DefectAnalytics: React.FC = () => {
           <p className="text-gray-600">基于缺陷库的实时统计、分布和趋势</p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <Link to={`/test-manager/reports/generate?type=defect${testPlanId !== 'all' ? `&test_plan_id=${testPlanId}` : ''}`}>
+            <Button variant="outline">生成缺陷报告</Button>
+          </Link>
           <Select value={testPlanId} onValueChange={setTestPlanId}>
             <SelectTrigger className="w-56">
               <SelectValue placeholder="测试计划" />

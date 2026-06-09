@@ -96,10 +96,16 @@ const ReportGenerate: React.FC = () => {
   const searchParams = new URLSearchParams(location.search)
   const initialReportType = queryTypeToReportType(searchParams.get('type'))
   const initialPlanId = Number(searchParams.get('test_plan_id') || searchParams.get('plan_id') || 0) || undefined
+  const initialDefectFilters = useMemo(() => ({
+    status: searchParams.get('status') || undefined,
+    severity: searchParams.get('severity') || undefined,
+    defect_type: searchParams.get('defect_type') || undefined,
+    search: searchParams.get('search') || undefined,
+  }), [location.search])
   const initialReportTypeLabel = reportTypes.find((item) => item.value === initialReportType)?.label || '测试报告'
   const [selectedPlanId, setSelectedPlanId] = useState<number | undefined>(initialPlanId)
   const [config, setConfig] = useState(() => ({
-    report_name: buildReportName(aiDraft) || (initialPlanId ? `测试计划 #${initialPlanId} - ${initialReportTypeLabel}` : ''),
+    report_name: buildReportName(aiDraft) || (initialPlanId ? `测试计划 #${initialPlanId} - ${initialReportTypeLabel}` : (initialReportType === ReportType.DEFECT ? `缺陷报告 - ${new Date().toLocaleDateString('zh-CN')}` : '')),
     report_type: initialReportType,
     report_format: ReportFormat.HTML,
     report_period_start: '',
@@ -119,6 +125,7 @@ const ReportGenerate: React.FC = () => {
     executions: [],
     defects: [],
   })
+  const [filteredDefects, setFilteredDefects] = useState([])
 
   useEffect(() => {
     if (aiDraft) sessionStorage.removeItem(AI_IMPORT_DRAFT_KEY)
@@ -175,10 +182,34 @@ const ReportGenerate: React.FC = () => {
     }
   }, [selectedPlanId])
 
+  useEffect(() => {
+    const hasDefectFilters = Object.values(initialDefectFilters).some(Boolean)
+    if (selectedPlanId || config.report_type !== ReportType.DEFECT || !hasDefectFilters) {
+      setFilteredDefects([])
+      return
+    }
+
+    let cancelled = false
+    setReferenceLoading(true)
+    defectService.getDefects({ ...initialDefectFilters, page: 1, size: 100 })
+      .then((response) => {
+        if (!cancelled) setFilteredDefects(response.data || [])
+      })
+      .catch(() => {
+        if (!cancelled) setFilteredDefects([])
+      })
+      .finally(() => {
+        if (!cancelled) setReferenceLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [config.report_type, initialDefectFilters, selectedPlanId])
+
   const reportMetrics = useMemo(() => {
     const cases = planContext.cases || []
     const executions = planContext.executions || []
-    const defects = planContext.defects || []
+    const defects = selectedPlanId ? (planContext.defects || []) : (filteredDefects || [])
     const totalCases = cases.length
     const latestByCase = new Map<number, any>()
     executions.forEach((execution: any) => {
@@ -208,9 +239,31 @@ const ReportGenerate: React.FC = () => {
       openDefects,
       highRiskDefects,
     }
-  }, [planContext])
+  }, [filteredDefects, planContext, selectedPlanId])
 
   const buildAutoContent = () => {
+    if (config.report_type === ReportType.DEFECT && !selectedPlanId && filteredDefects.length) {
+      return [
+        `# 缺陷报告`,
+        '',
+        '## 筛选条件',
+        `- 状态：${initialDefectFilters.status || '全部'}`,
+        `- 严重程度：${initialDefectFilters.severity || '全部'}`,
+        `- 类型：${initialDefectFilters.defect_type || '全部'}`,
+        `- 关键词：${initialDefectFilters.search || '无'}`,
+        '',
+        '## 核心指标',
+        `- 缺陷总数：${filteredDefects.length}`,
+        `- 未关闭缺陷：${reportMetrics.openDefects}`,
+        `- 高风险缺陷：${reportMetrics.highRiskDefects}`,
+        '',
+        '## 缺陷明细',
+        ...filteredDefects.map((defect: any, index: number) =>
+          `${index + 1}. ${defect.defect_code || defect.id} ${defect.title} - ${defect.status}/${defect.severity}/${defect.priority}`
+        ),
+      ].join('\n')
+    }
+
     if (!selectedPlanId || !planContext.plan) return sourceContent
     const plan: any = planContext.plan
     const metrics = reportMetrics
@@ -264,9 +317,14 @@ const ReportGenerate: React.FC = () => {
   }
 
   useEffect(() => {
-    if (aiDraft || sourceContent.trim() || !selectedPlanId || !planContext.plan) return
+    if (aiDraft || sourceContent.trim()) return
+    if (config.report_type === ReportType.DEFECT && !selectedPlanId && filteredDefects.length) {
+      setSourceContent(buildAutoContent())
+      return
+    }
+    if (!selectedPlanId || !planContext.plan) return
     setSourceContent(buildAutoContent())
-  }, [aiDraft, planContext, selectedPlanId])
+  }, [aiDraft, filteredDefects, planContext, selectedPlanId])
 
   const handleGenerate = async () => {
     if (!config.report_name.trim()) {
@@ -300,6 +358,7 @@ const ReportGenerate: React.FC = () => {
         summary: {
           来源: aiDraft ? 'AI 助手' : (selectedPlanId ? '测试计划数据' : '手工生成'),
           测试计划: selectedPlanId ? `${planContext.plan?.plan_name || `#${selectedPlanId}`}` : '未指定',
+          缺陷筛选: Object.entries(initialDefectFilters).filter(([, value]) => value).map(([key, value]) => `${key}=${value}`).join(', ') || '无',
           报告类型: reportTypes.find((item) => item.value === config.report_type)?.label || config.report_type,
           用例总数: reportMetrics.totalCases,
           已执行: reportMetrics.executed,
@@ -491,6 +550,16 @@ const ReportGenerate: React.FC = () => {
                   </span>
                   <Button type="button" variant="outline" size="sm" onClick={regeneratePlanContent} disabled={referenceLoading || !planContext.plan}>
                     从计划数据生成正文
+                  </Button>
+                </div>
+              )}
+              {!selectedPlanId && config.report_type === ReportType.DEFECT && filteredDefects.length > 0 && (
+                <div className="mb-3 flex flex-col gap-2 rounded-md border bg-muted/30 p-3 text-sm md:flex-row md:items-center md:justify-between">
+                  <span className="text-muted-foreground">
+                    已按缺陷筛选读取 {filteredDefects.length} 个缺陷，其中未关闭 {reportMetrics.openDefects} 个，高风险 {reportMetrics.highRiskDefects} 个。
+                  </span>
+                  <Button type="button" variant="outline" size="sm" onClick={regeneratePlanContent} disabled={referenceLoading}>
+                    从缺陷数据生成正文
                   </Button>
                 </div>
               )}
