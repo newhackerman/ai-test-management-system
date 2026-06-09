@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import {
   Activity,
   CheckCircle,
@@ -63,10 +63,11 @@ const formatDuration = (seconds?: number, startedAt?: string, status?: Execution
 }
 
 const ExecutionDashboard: React.FC = () => {
+  const [searchParams] = useSearchParams()
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState('')
-  const [status, setStatus] = useState<string>('all')
-  const [type, setType] = useState<string>('all')
+  const [status, setStatus] = useState<string>(searchParams.get('status') || 'all')
+  const [type, setType] = useState<string>(searchParams.get('type') || 'all')
   const pageSize = 12
 
   const filters = useMemo(() => ({

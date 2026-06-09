@@ -1,5 +1,6 @@
 // @ts-nocheck
 import React, { useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { Calendar, Download, Eye, Pencil, Plus, Search, User, UserCheck } from 'lucide-react'
 import { Button } from '../../../components/ui/Button'
 import { Input } from '../../../components/ui/Input'
@@ -86,6 +87,7 @@ const labelOf = (options, value) => options.find((item) => item.value === value)
 const userName = (user) => user?.real_name || user?.nickname || user?.username || `用户 #${user?.id}`
 
 const DefectList: React.FC = () => {
+  const [searchParams] = useSearchParams()
   const {
     selectedDefects,
     filters,
@@ -113,6 +115,11 @@ const DefectList: React.FC = () => {
   const [assignUserId, setAssignUserId] = useState('')
   const [form, setForm] = useState(emptyForm)
   const [formError, setFormError] = useState('')
+
+  useEffect(() => {
+    const initialSearch = searchParams.get('search')?.trim()
+    if (initialSearch) handleSearch(initialSearch)
+  }, [handleSearch, searchParams])
 
   const defects = defectsData?.data || []
   const totalCount = defectsData?.total || 0

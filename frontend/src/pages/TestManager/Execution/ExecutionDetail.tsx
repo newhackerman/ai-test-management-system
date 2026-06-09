@@ -1,6 +1,6 @@
 import React from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { ArrowLeft, FileText, Pause, Play, Square } from 'lucide-react'
+import { ArrowLeft, Bug, FileText, Pause, Play, Square } from 'lucide-react'
 import { Badge } from '../../../components/ui/Badge'
 import { Button } from '../../../components/ui/Button'
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/Card'
@@ -12,7 +12,8 @@ import {
   usePauseExecution,
   useResumeExecution,
 } from '../../../hooks/testmanager/useExecution'
-import { ExecutionStatus, ExecutionType } from '../../../types/testmanager'
+import { useCreateDefect, useDefects } from '../../../hooks/testmanager/useDefect'
+import { DefectSeverity, DefectType, ExecutionStatus, ExecutionType, Priority } from '../../../types/testmanager'
 import { formatDate } from '../../../utils/date'
 
 const statusLabels: Record<string, string> = {
@@ -53,6 +54,24 @@ const getStepText = (log: any, key: string) => {
   return String(value)
 }
 
+const buildFailureSteps = (logs: any[]) => {
+  const failedLogs = logs.filter((log: any) => log?.status === ExecutionStatus.FAILED)
+  const source = failedLogs.length ? failedLogs : logs
+  if (!source.length) return '查看执行结论和失败原因。'
+
+  return source.map((log: any, index: number) => [
+    `${index + 1}. 操作：${getStepText(log, 'action')}`,
+    `   预期：${getStepText(log, 'expected_result')}`,
+    `   实际：${getStepText(log, 'actual_result')}`,
+  ].join('\n')).join('\n\n')
+}
+
+const inferDefectSeverity = (priority?: string) => {
+  if (priority === Priority.CRITICAL) return DefectSeverity.CRITICAL
+  if (priority === Priority.HIGH) return DefectSeverity.HIGH
+  return DefectSeverity.MEDIUM
+}
+
 const ExecutionDetail: React.FC = () => {
   const { executionId } = useParams<{ executionId: string }>()
   const id = Number(executionId)
@@ -60,6 +79,10 @@ const ExecutionDetail: React.FC = () => {
   const pauseExecution = usePauseExecution()
   const resumeExecution = useResumeExecution()
   const cancelExecution = useCancelExecution()
+  const createDefect = useCreateDefect()
+  const { data: linkedDefectsData } = useDefects(
+    Number.isFinite(id) && id > 0 ? { page: 1, size: 5, test_execution_id: id } : undefined
+  )
 
   if (isLoading) {
     return <div className="flex h-64 items-center justify-center text-muted-foreground">加载中...</div>
@@ -75,6 +98,33 @@ const ExecutionDetail: React.FC = () => {
   const canPause = execution.execution_status === ExecutionStatus.IN_PROGRESS
   const canResume = execution.execution_status === ExecutionStatus.BLOCKED
   const canCancel = execution.execution_status === ExecutionStatus.IN_PROGRESS || execution.execution_status === ExecutionStatus.BLOCKED
+  const linkedDefects = linkedDefectsData?.data || []
+  const canCreateDefect = execution.execution_status === ExecutionStatus.FAILED && linkedDefects.length === 0
+
+  const handleCreateDefect = async () => {
+    const defect = await createDefect.mutateAsync({
+      title: `${execution.test_case_code || `用例 #${execution.test_case_id}`} 执行失败`,
+      description: [
+        `执行记录：${execution.execution_code}`,
+        `测试用例：${execution.test_case_title || execution.test_case_code || execution.test_case_id}`,
+        `失败原因：${execution.failure_reason || '未填写'}`,
+        `实际结果：${execution.actual_result || '未填写'}`,
+        `执行环境：${execution.test_environment || '-'}`,
+      ].join('\n'),
+      steps_to_reproduce: buildFailureSteps(stepLogs),
+      defect_type: DefectType.FUNCTIONAL,
+      severity: inferDefectSeverity(execution.test_case_priority),
+      priority: (execution.test_case_priority as Priority) || Priority.MEDIUM,
+      test_execution_id: execution.id,
+      test_case_id: execution.test_case_id,
+      test_environment: execution.test_environment,
+      attachments: [
+        ...(execution.screenshots || []),
+        ...(execution.videos || []),
+      ],
+    })
+    window.location.href = `/test-manager/defects?search=${encodeURIComponent(defect.defect_code || defect.title)}`
+  }
 
   return (
     <div className="space-y-6">
@@ -113,6 +163,17 @@ const ExecutionDetail: React.FC = () => {
           {execution.execution_type === ExecutionType.MANUAL && (
             <Button asChild>
               <Link to={`/test-manager/executions/manual/${execution.test_case_id}`}>重新执行该用例</Link>
+            </Button>
+          )}
+          {execution.execution_status === ExecutionStatus.FAILED && (
+            <Button
+              variant={canCreateDefect ? 'default' : 'outline'}
+              disabled={!canCreateDefect || createDefect.isPending}
+              onClick={handleCreateDefect}
+              title={linkedDefects.length > 0 ? '该执行记录已关联缺陷' : '根据失败执行创建缺陷'}
+            >
+              <Bug className="mr-2 h-4 w-4" />
+              {linkedDefects.length > 0 ? '已关联缺陷' : createDefect.isPending ? '创建中...' : '转缺陷'}
             </Button>
           )}
         </div>
@@ -225,6 +286,25 @@ const ExecutionDetail: React.FC = () => {
               <div className="flex justify-between gap-3"><span className="text-muted-foreground">结束时间</span><span>{execution.completed_at ? formatDate(execution.completed_at) : '-'}</span></div>
             </CardContent>
           </Card>
+
+          {linkedDefects.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">关联缺陷</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2 text-sm">
+                {linkedDefects.map((defect: any) => (
+                  <Link key={defect.id} to={`/test-manager/defects?search=${encodeURIComponent(defect.defect_code)}`} className="block rounded border p-3 hover:bg-muted/40">
+                    <div className="font-medium">{defect.title}</div>
+                    <div className="mt-1 flex items-center justify-between gap-3 text-xs text-muted-foreground">
+                      <span>{defect.defect_code}</span>
+                      <Badge variant="secondary">{defect.status}</Badge>
+                    </div>
+                  </Link>
+                ))}
+              </CardContent>
+            </Card>
+          )}
 
           <Card>
             <CardHeader>
