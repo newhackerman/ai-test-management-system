@@ -210,8 +210,9 @@ const AutoRecoveryPage: React.FC = () => {
   };
 
   const renderOverview = () => (
-    <Space direction="vertical" size={16} style={{ width: '100%' }}>
+    <Space direction="vertical" size={12} style={{ width: '100%' }}>
       <Card
+        size="small"
         title="监控状态"
         extra={
           <Space wrap>
@@ -232,7 +233,7 @@ const AutoRecoveryPage: React.FC = () => {
           </Space>
         }
       >
-        <Row gutter={[16, 16]}>
+        <Row gutter={[8, 8]}>
           <Col xs={24} sm={12} lg={6}>
             <Statistic
               title="监控状态"
@@ -277,7 +278,7 @@ const AutoRecoveryPage: React.FC = () => {
       </Card>
 
       {failureDetection && failureDetection.failures_detected > 0 && (
-        <Card title="最近检测到的故障">
+        <Card size="small" title="最近检测到的故障">
           <Timeline
             items={failureDetection.failures.map((failure, index) => ({
               key: `${failure.failure_type}-${index}`,
@@ -299,8 +300,8 @@ const AutoRecoveryPage: React.FC = () => {
       )}
 
       {recoveryStatistics?.failure_type_statistics && (
-        <Card title="故障类型统计">
-          <Row gutter={[16, 16]}>
+        <Card size="small" title="故障类型统计">
+          <Row gutter={[8, 8]}>
             {Object.entries(recoveryStatistics.failure_type_statistics).map(([type, statistic]) => (
               <Col xs={24} md={12} xl={8} key={type}>
                 <Card size="small" title={type}>
@@ -320,6 +321,7 @@ const AutoRecoveryPage: React.FC = () => {
 
   const renderHistory = () => (
     <Card
+      size="small"
       title="恢复历史记录"
       extra={
         <Button icon={<ReloadOutlined />} onClick={refreshRecoveryHistory} loading={loading}>
@@ -330,7 +332,7 @@ const AutoRecoveryPage: React.FC = () => {
       <Table
         columns={recoveryHistoryColumns}
         dataSource={recoveryHistory as RecoveryHistoryItem[]}
-        rowKey={(record, index) => String(record.id || record.recovery_id || index)}
+        rowKey={(record) => String(record.id || record.recovery_id || `${record.failure_type || 'history'}-${record.execution_time || record.recovery_message || 'unknown'}`)}
         size="small"
         pagination={{
           showSizeChanger: true,
@@ -342,8 +344,9 @@ const AutoRecoveryPage: React.FC = () => {
   );
 
   const renderSettings = () => (
-    <Space direction="vertical" size={16} style={{ width: '100%' }}>
+    <Space direction="vertical" size={12} style={{ width: '100%' }}>
       <Card
+        size="small"
         title="故障阈值配置"
         extra={
           <Button
@@ -358,7 +361,7 @@ const AutoRecoveryPage: React.FC = () => {
           </Button>
         }
       >
-        <Descriptions column={{ xs: 1, sm: 2, lg: 3 }} bordered>
+        <Descriptions column={{ xs: 1, sm: 2, lg: 3 }} bordered size="small">
           {Object.entries(currentThresholds).map(([key, value]) => (
             <Descriptions.Item key={key} label={thresholdLabelMap[key] || key}>
               {value}
@@ -369,6 +372,7 @@ const AutoRecoveryPage: React.FC = () => {
       </Card>
 
       <Card
+        size="small"
         title="手动恢复操作"
         extra={
           <Button
@@ -390,20 +394,26 @@ const AutoRecoveryPage: React.FC = () => {
   );
 
   return (
-    <div className="auto-recovery-page">
-      <Card
-        title={
-          <Space>
-            自动恢复服务
-            <Badge status={monitoringStatus?.is_monitoring ? 'processing' : 'default'} />
-          </Space>
-        }
-        extra={
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold text-foreground">自动恢复</h1>
+            <Badge status={monitoringStatus?.is_monitoring ? 'processing' : 'default'} text={monitoringStatus?.is_monitoring ? '监控中' : '未启动'} />
+          </div>
+          <p className="text-sm text-muted-foreground">监控关键服务故障，支持检测、健康检查、手动恢复和阈值配置</p>
+        </div>
+        <Space wrap size={8}>
           <Button icon={<BarChartOutlined />} onClick={refreshRecoveryStatistics} loading={loading}>
             刷新统计
           </Button>
-        }
-      >
+          <Button icon={<ThunderboltOutlined />} onClick={() => setManualRecoveryModalVisible(true)}>
+            手动恢复
+          </Button>
+        </Space>
+      </div>
+
+      <Card size="small">
         <Tabs
           activeKey={activeTab}
           onChange={setActiveTab}

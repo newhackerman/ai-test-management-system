@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react'
+import { Activity, RefreshCw, ShieldAlert, UserCog, Users } from 'lucide-react'
 import { apiClient } from '@/services/api/client'
 
 type RecentActivity = {
@@ -169,76 +170,79 @@ const Statistics: React.FC = () => {
     return new Date(dateString).toLocaleString('zh-CN')
   }
 
-  const StatCard = ({ title, value, subtitle, color = 'blue', icon }: {
+  const StatCard = ({ title, value, subtitle, tone = 'blue', icon: Icon }: {
     title: string
     value: string | number
     subtitle?: string
-    color?: 'blue' | 'green' | 'yellow' | 'red' | 'purple'
-    icon?: string
+    tone?: 'blue' | 'green' | 'yellow' | 'red' | 'purple'
+    icon: React.ElementType
   }) => {
     const colorClasses = {
-      blue: 'bg-blue-50 border-blue-200 text-blue-800',
-      green: 'bg-green-50 border-green-200 text-green-800',
-      yellow: 'bg-yellow-50 border-yellow-200 text-yellow-800',
-      red: 'bg-red-50 border-red-200 text-red-800',
-      purple: 'bg-purple-50 border-purple-200 text-purple-800'
+      blue: 'text-blue-600',
+      green: 'text-green-600',
+      yellow: 'text-amber-600',
+      red: 'text-red-600',
+      purple: 'text-purple-600'
     }
 
     return (
-      <div className={`p-6 rounded-lg border ${colorClasses[color]}`}>
-        <div className="flex items-center justify-between">
+      <div className="rounded-lg border bg-card p-3 text-card-foreground">
+        <div className="flex items-start justify-between gap-3">
           <div>
-            <p className="text-sm font-medium opacity-75">{title}</p>
-            <p className="text-3xl font-bold mt-2">{value}</p>
-            {subtitle && <p className="text-sm opacity-75 mt-1">{subtitle}</p>}
+            <p className="text-xs text-muted-foreground">{title}</p>
+            <p className={`mt-1 text-2xl font-bold leading-7 ${colorClasses[tone]}`}>{value}</p>
+            {subtitle && <p className="mt-1 text-xs text-muted-foreground">{subtitle}</p>}
           </div>
-          {icon && <div className="text-3xl opacity-50">{icon}</div>}
+          <Icon className={`h-4 w-4 ${colorClasses[tone]}`} />
         </div>
       </div>
     )
   }
 
-  const ChartPlaceholder = ({ title, height = 300 }: { title: string; height?: number }) => (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-      <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">{title}</h3>
-      <div 
-        className="bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center"
-        style={{ height: `${height}px` }}
-      >
-        <div className="text-center text-gray-500 dark:text-gray-400">
-          <div className="text-4xl mb-2">📊</div>
-          <p>图表数据加载中...</p>
-          <p className="text-sm mt-1">时间范围: {timeRange === '7d' ? '最近7天' : timeRange === '30d' ? '最近30天' : '最近90天'}</p>
-        </div>
+  const DetailPanel = ({ title, items }: { title: string; items: Array<{ label: string; value: number | string; hint?: string; percent?: string }> }) => (
+    <div className="rounded-lg border bg-card p-4 text-card-foreground">
+      <div className="mb-3 text-base font-semibold">{title}</div>
+      <div className="space-y-3">
+        {items.map((item) => (
+          <div key={item.label}>
+            <div className="flex items-center justify-between gap-3 text-sm">
+              <span className="text-muted-foreground">{item.label}</span>
+              <span className="font-medium">{item.value}</span>
+            </div>
+            {item.percent && (
+              <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-muted">
+                <div className="h-full rounded-full bg-primary" style={{ width: item.percent }} />
+              </div>
+            )}
+            {item.hint && <div className="mt-1 text-xs text-muted-foreground">{item.hint}</div>}
+          </div>
+        ))}
       </div>
     </div>
   )
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="flex min-h-[320px] items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-primary"></div>
       </div>
     )
   }
 
+  const rangeLabel = timeRange === '7d' ? '最近 7 天' : timeRange === '30d' ? '最近 30 天' : '最近 90 天'
+
   return (
-    <div className="space-y-6">
-      {/* 页面标题 */}
-      <div className="flex items-center justify-between">
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-            数据统计
-          </h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-2">
-            系统运行状态和用户活动统计
-          </p>
+          <h1 className="text-2xl font-bold text-foreground">数据统计</h1>
+          <p className="text-sm text-muted-foreground">系统运行状态、用户活跃度和安全概览，当前范围：{rangeLabel}</p>
         </div>
-        <div className="flex items-center space-x-2">
+        <div className="flex flex-wrap items-center gap-2">
           <select 
             value={timeRange}
             onChange={(e) => setTimeRange(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
+            className="h-9 rounded-md border border-input bg-background px-3 text-sm focus:ring-2 focus:ring-ring"
           >
             <option value="7d">最近7天</option>
             <option value="30d">最近30天</option>
@@ -247,9 +251,10 @@ const Statistics: React.FC = () => {
           <button 
             onClick={loadStats}
             disabled={isLoading}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md"
+            className="inline-flex h-9 items-center gap-2 rounded-md bg-primary px-3 text-sm text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
           >
-            {isLoading ? '刷新中...' : '刷新数据'}
+            <RefreshCw className="h-4 w-4" />
+            {isLoading ? '刷新中...' : '刷新'}
           </button>
         </div>
       </div>
@@ -260,186 +265,82 @@ const Statistics: React.FC = () => {
         </div>
       )}
 
-      {/* 用户统计卡片 */}
-      <div>
-        <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">用户统计</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
-          <StatCard
-            title="总用户数"
-            value={stats.users.total}
-            icon="👥"
-            color="blue"
-          />
-          <StatCard
-            title="活跃用户"
-            value={stats.users.active}
-            subtitle={percent(stats.users.active, stats.users.total)}
-            icon="✅"
-            color="green"
-          />
-          <StatCard
-            title="非活跃用户"
-            value={stats.users.inactive}
-            subtitle={percent(stats.users.inactive, stats.users.total)}
-            icon="⏸️"
-            color="yellow"
-          />
-          <StatCard
-            title="锁定用户"
-            value={stats.users.locked}
-            subtitle={percent(stats.users.locked, stats.users.total)}
-            icon="🔒"
-            color="red"
-          />
-          <StatCard
-            title="本月新增"
-            value={stats.users.newThisMonth}
-            subtitle="后端暂未提供"
-            icon="🆕"
-            color="purple"
-          />
-        </div>
+      <div className="grid grid-cols-2 gap-2 lg:grid-cols-5">
+        <StatCard title="总用户数" value={stats.users.total} icon={Users} />
+        <StatCard title="活跃用户" value={stats.users.active} subtitle={percent(stats.users.active, stats.users.total)} icon={Activity} tone="green" />
+        <StatCard title="锁定用户" value={stats.users.locked} subtitle={percent(stats.users.locked, stats.users.total)} icon={ShieldAlert} tone="red" />
+        <StatCard title="总角色数" value={stats.roles.total} icon={UserCog} tone="purple" />
+        <StatCard title="今日登录" value={stats.sessions.todayLogins} subtitle="登录次数" icon={Activity} tone="blue" />
       </div>
 
-      {/* 角色统计卡片 */}
-      <div>
-        <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">角色统计</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <StatCard
-            title="总角色数"
-            value={stats.roles.total}
-            icon="🎭"
-            color="blue"
-          />
-          <StatCard
-            title="系统角色"
-            value={stats.roles.system}
-            subtitle="内置角色"
-            icon="⚙️"
-            color="green"
-          />
-          <StatCard
-            title="自定义角色"
-            value={stats.roles.custom}
-            subtitle="用户创建"
-            icon="🎨"
-            color="purple"
-          />
-          <StatCard
-            title="启用角色"
-            value={stats.roles.active}
-            subtitle={percent(stats.roles.active, stats.roles.total)}
-            icon="✅"
-            color="green"
-          />
-        </div>
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-4">
+        <DetailPanel
+          title="用户状态"
+          items={[
+            { label: '活跃用户', value: stats.users.active, percent: percent(stats.users.active, stats.users.total) },
+            { label: '非活跃用户', value: stats.users.inactive, percent: percent(stats.users.inactive, stats.users.total) },
+            { label: '锁定用户', value: stats.users.locked, percent: percent(stats.users.locked, stats.users.total) },
+            { label: '本月新增', value: stats.users.newThisMonth, hint: '后端暂未提供该统计' }
+          ]}
+        />
+        <DetailPanel
+          title="角色状态"
+          items={[
+            { label: '系统角色', value: stats.roles.system, hint: '内置角色' },
+            { label: '自定义角色', value: stats.roles.custom, hint: '用户创建' },
+            { label: '启用角色', value: stats.roles.active, percent: percent(stats.roles.active, stats.roles.total) }
+          ]}
+        />
+        <DetailPanel
+          title="登录与会话"
+          items={[
+            { label: '在线用户', value: stats.sessions.online, hint: '后端暂未提供该统计' },
+            { label: '今日登录', value: stats.sessions.todayLogins },
+            { label: '本周登录', value: stats.sessions.weeklyLogins, hint: '后端暂未提供该统计' },
+            { label: '本月登录', value: stats.sessions.monthlyLogins, hint: '后端暂未提供该统计' }
+          ]}
+        />
+        <DetailPanel
+          title="安全概览"
+          items={[
+            { label: '登录失败', value: stats.security.failedLogins, hint: '后端暂未提供该统计' },
+            { label: '锁定账户', value: stats.security.lockedAccounts },
+            { label: '安全事件', value: stats.security.securityEvents, hint: '后端暂未提供该统计' },
+            { label: '最后事件', value: formatDate(stats.security.lastSecurityEvent) }
+          ]}
+        />
       </div>
 
-      {/* 会话统计卡片 */}
-      <div>
-        <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">会话统计</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <StatCard
-            title="在线用户"
-            value={stats.sessions.online}
-            subtitle="后端暂未提供"
-            icon="🟢"
-            color="green"
-          />
-          <StatCard
-            title="今日登录"
-            value={stats.sessions.todayLogins}
-            subtitle="登录次数"
-            icon="📅"
-            color="blue"
-          />
-          <StatCard
-            title="本周登录"
-            value={stats.sessions.weeklyLogins}
-            subtitle="后端暂未提供"
-            icon="📊"
-            color="purple"
-          />
-          <StatCard
-            title="本月登录"
-            value={stats.sessions.monthlyLogins}
-            subtitle="后端暂未提供"
-            icon="📈"
-            color="green"
-          />
+      <div className="rounded-lg border bg-card text-card-foreground">
+        <div className="flex items-center justify-between gap-3 border-b px-4 py-3">
+          <div>
+            <h3 className="text-base font-semibold">最近活动</h3>
+            <p className="text-xs text-muted-foreground">展示项目、需求、用例、缺陷和会议相关动态</p>
+          </div>
+          <span className="text-xs text-muted-foreground">共 {recentActivities.length} 条</span>
         </div>
-      </div>
-
-      {/* 安全统计卡片 */}
-      <div>
-        <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">安全统计</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <StatCard
-            title="登录失败"
-            value={stats.security.failedLogins}
-            subtitle="后端暂未提供"
-            icon="❌"
-            color="red"
-          />
-          <StatCard
-            title="锁定账户"
-            value={stats.security.lockedAccounts}
-            subtitle="当前锁定"
-            icon="🔐"
-            color="red"
-          />
-          <StatCard
-            title="安全事件"
-            value={stats.security.securityEvents}
-            subtitle="后端暂未提供"
-            icon="⚠️"
-            color="yellow"
-          />
-          <StatCard
-            title="最后事件"
-            value={formatDate(stats.security.lastSecurityEvent)}
-            subtitle="安全事件时间"
-            icon="🕐"
-            color="blue"
-          />
-        </div>
-      </div>
-
-      {/* 图表区域 */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <ChartPlaceholder title="用户活动趋势" />
-        <ChartPlaceholder title="登录统计" />
-        <ChartPlaceholder title="角色分布" />
-        <ChartPlaceholder title="安全事件趋势" />
-      </div>
-
-      {/* 详细数据表格 */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
-        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-          <h3 className="text-lg font-medium text-gray-900 dark:text-white">最近活动</h3>
-        </div>
-        <div className="p-6">
+        <div className="p-4">
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="border-b">
-                  <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-white">时间</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-white">用户</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-white">操作</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-white">状态</th>
+                  <th className="px-3 py-2 text-left text-sm font-medium text-foreground">时间</th>
+                  <th className="px-3 py-2 text-left text-sm font-medium text-foreground">类型</th>
+                  <th className="px-3 py-2 text-left text-sm font-medium text-foreground">内容</th>
+                  <th className="px-3 py-2 text-left text-sm font-medium text-foreground">状态</th>
                 </tr>
               </thead>
               <tbody>
                 {(recentActivities.length ? recentActivities : []).map((activity, index) => (
-                  <tr key={index} className="border-b hover:bg-gray-50 dark:hover:bg-gray-700">
-                    <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{formatDate(activity.occurred_at || null)}</td>
-                    <td className="py-3 px-4 font-medium">{typeLabels[activity.type || ''] || activity.type || '-'}</td>
-                    <td className="py-3 px-4">{activity.title || '未命名记录'}</td>
-                    <td className="py-3 px-4">
-                      <span className={`px-2 py-1 text-xs rounded-full ${
+                  <tr key={index} className="border-b hover:bg-muted/50">
+                    <td className="px-3 py-2 text-sm text-muted-foreground">{formatDate(activity.occurred_at || null)}</td>
+                    <td className="px-3 py-2 text-sm font-medium">{typeLabels[activity.type || ''] || activity.type || '-'}</td>
+                    <td className="px-3 py-2 text-sm">{activity.title || '未命名记录'}</td>
+                    <td className="px-3 py-2">
+                      <span className={`rounded-full px-2 py-1 text-xs ${
                         ['COMPLETED', 'PASSED', 'RESOLVED', 'CLOSED', 'completed'].includes(activity.status || '')
-                          ? 'bg-green-100 text-green-800' 
-                          : 'bg-blue-100 text-blue-800'
+                          ? 'bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300'
+                          : 'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300'
                       }`}>
                         {statusLabels[activity.status || ''] || activity.status || '无状态'}
                       </span>
@@ -448,7 +349,7 @@ const Statistics: React.FC = () => {
                 ))}
                 {!recentActivities.length && (
                   <tr>
-                    <td className="py-8 px-4 text-center text-gray-500" colSpan={4}>
+                    <td className="px-4 py-8 text-center text-sm text-muted-foreground" colSpan={4}>
                       暂无最近活动
                     </td>
                   </tr>
