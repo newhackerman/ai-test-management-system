@@ -171,19 +171,27 @@ const ReportDashboard: React.FC = () => {
     }
   }
 
+  const buildGenerateLink = (type?: string) => {
+    const params = new URLSearchParams()
+    if (type) params.set('type', type)
+    if (filters.test_plan_id !== 'all') params.set('test_plan_id', filters.test_plan_id)
+    const query = params.toString()
+    return `/test-manager/reports/generate${query ? `?${query}` : ''}`
+  }
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-2xl font-bold">测试报告</h1>
-          <p className="text-gray-600">生成、查看和下载测试报告</p>
+          <p className="text-sm text-gray-600">生成、查看、预览和下载测试报告</p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={loadReports} disabled={loading}>
             <RefreshCw className="mr-2 h-4 w-4" />
             刷新
           </Button>
-          <Link to={`/test-manager/reports/generate${filters.test_plan_id !== 'all' ? `?test_plan_id=${filters.test_plan_id}` : ''}`}>
+          <Link to={buildGenerateLink()}>
             <Button>
               <Plus className="mr-2 h-4 w-4" />
               生成报告
@@ -198,127 +206,103 @@ const ReportDashboard: React.FC = () => {
         </div>
       )}
 
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center space-x-2">
-              <FileText className="h-5 w-5 text-blue-500" />
-              <div>
-                <p className="text-sm font-medium text-gray-600">报告总数</p>
-                <p className="text-2xl font-bold">{loading ? '-' : statistics.totalReports}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center space-x-2">
-              <Calendar className="h-5 w-5 text-green-500" />
-              <div>
-                <p className="text-sm font-medium text-gray-600">本月生成</p>
-                <p className="text-2xl font-bold">{loading ? '-' : statistics.thisMonth}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center space-x-2">
-              <BarChart3 className="h-5 w-5 text-purple-500" />
-              <div>
-                <p className="text-sm font-medium text-gray-600">导入报告</p>
-                <p className="text-2xl font-bold">{loading ? '-' : statistics.importedReports}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center space-x-2">
-              <Download className="h-5 w-5 text-orange-500" />
-              <div>
-                <p className="text-sm font-medium text-gray-600">常用格式</p>
-                <p className="text-2xl font-bold">{loading ? '-' : statistics.mostUsedFormat}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
       <Card>
-        <CardContent className="pt-6">
-          <div className="grid grid-cols-1 gap-3 lg:grid-cols-[1fr_180px_160px_220px]">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-              <Input
-                value={filters.search}
-                onChange={(event) => updateFilter('search', event.target.value)}
-                placeholder="搜索报告名称"
-                className="pl-10"
-              />
+        <CardContent className="p-4">
+          <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+            <div className="grid flex-1 grid-cols-2 gap-2 sm:grid-cols-4">
+              <div className="flex items-center gap-2 rounded-md border bg-gray-50 px-3 py-2">
+                <FileText className="h-4 w-4 text-blue-500" />
+                <div>
+                  <p className="text-xs text-gray-500">报告总数</p>
+                  <p className="text-lg font-semibold leading-5">{loading ? '-' : statistics.totalReports}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 rounded-md border bg-gray-50 px-3 py-2">
+                <Calendar className="h-4 w-4 text-green-500" />
+                <div>
+                  <p className="text-xs text-gray-500">本月生成</p>
+                  <p className="text-lg font-semibold leading-5">{loading ? '-' : statistics.thisMonth}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 rounded-md border bg-gray-50 px-3 py-2">
+                <BarChart3 className="h-4 w-4 text-purple-500" />
+                <div>
+                  <p className="text-xs text-gray-500">导入报告</p>
+                  <p className="text-lg font-semibold leading-5">{loading ? '-' : statistics.importedReports}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 rounded-md border bg-gray-50 px-3 py-2">
+                <Download className="h-4 w-4 text-orange-500" />
+                <div>
+                  <p className="text-xs text-gray-500">常用格式</p>
+                  <p className="text-lg font-semibold leading-5">{loading ? '-' : statistics.mostUsedFormat}</p>
+                </div>
+              </div>
             </div>
-            <Select value={filters.report_type} onValueChange={(value) => updateFilter('report_type', value)}>
-              <SelectTrigger><SelectValue placeholder="报告类型" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">全部类型</SelectItem>
-                {reportTypeCards.map((item) => (
-                  <SelectItem key={item.type} value={item.type}>{item.title}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={filters.format_filter} onValueChange={(value) => updateFilter('format_filter', value)}>
-              <SelectTrigger><SelectValue placeholder="格式" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">全部格式</SelectItem>
-                <SelectItem value="html">HTML</SelectItem>
-                <SelectItem value="xlsx">Excel</SelectItem>
-                <SelectItem value="json">JSON</SelectItem>
-                <SelectItem value="pdf">PDF</SelectItem>
-                <SelectItem value="csv">CSV</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={filters.test_plan_id} onValueChange={(value) => updateFilter('test_plan_id', value)}>
-              <SelectTrigger><SelectValue placeholder="测试计划" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">全部测试计划</SelectItem>
-                {testPlans.map((plan: any) => (
-                  <SelectItem key={plan.id} value={String(plan.id)}>{plan.plan_name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="flex flex-wrap gap-2">
+              {reportTypeCards.map((item) => {
+                const Icon = item.icon
+                return (
+                  <Link key={item.type} to={buildGenerateLink(item.type)}>
+                    <Button variant="outline" size="sm" title={item.description}>
+                      <Icon className={`mr-2 h-4 w-4 ${item.color}`} />
+                      {item.title}
+                    </Button>
+                  </Link>
+                )
+              })}
+            </div>
           </div>
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-        {reportTypeCards.map((item) => {
-          const Icon = item.icon
-          return (
-            <Link key={item.type} to={`/test-manager/reports/generate?type=${item.type}${filters.test_plan_id !== 'all' ? `&test_plan_id=${filters.test_plan_id}` : ''}`}>
-              <Card className="cursor-pointer transition-shadow hover:shadow-md">
-                <CardContent className="pt-6">
-                  <div className="flex items-center space-x-3">
-                    <Icon className={`h-8 w-8 ${item.color}`} />
-                    <div>
-                      <h3 className="font-semibold">{item.title}</h3>
-                      <p className="text-sm text-gray-600">{item.description}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
-          )
-        })}
-      </div>
-
       <Card>
-        <CardHeader>
-          <CardTitle>最近的报告</CardTitle>
+        <CardHeader className="gap-3 p-4">
+          <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+            <CardTitle className="text-lg">报告列表 <span className="text-sm font-normal text-gray-500">共 {loading ? '-' : total} 条</span></CardTitle>
+            <div className="grid grid-cols-1 gap-2 md:grid-cols-[minmax(220px,1fr)_150px_130px_190px] xl:w-[760px]">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                <Input
+                  value={filters.search}
+                  onChange={(event) => updateFilter('search', event.target.value)}
+                  placeholder="搜索报告名称"
+                  className="h-9 pl-10"
+                />
+              </div>
+              <Select value={filters.report_type} onValueChange={(value) => updateFilter('report_type', value)}>
+                <SelectTrigger className="h-9"><SelectValue placeholder="报告类型" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">全部类型</SelectItem>
+                  {reportTypeCards.map((item) => (
+                    <SelectItem key={item.type} value={item.type}>{item.title}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={filters.format_filter} onValueChange={(value) => updateFilter('format_filter', value)}>
+                <SelectTrigger className="h-9"><SelectValue placeholder="格式" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">全部格式</SelectItem>
+                  <SelectItem value="html">HTML</SelectItem>
+                  <SelectItem value="xlsx">Excel</SelectItem>
+                  <SelectItem value="json">JSON</SelectItem>
+                  <SelectItem value="pdf">PDF</SelectItem>
+                  <SelectItem value="csv">CSV</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={filters.test_plan_id} onValueChange={(value) => updateFilter('test_plan_id', value)}>
+                <SelectTrigger className="h-9"><SelectValue placeholder="测试计划" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">全部测试计划</SelectItem>
+                  {testPlans.map((plan: any) => (
+                    <SelectItem key={plan.id} value={String(plan.id)}>{plan.plan_name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="px-4 pb-4">
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
