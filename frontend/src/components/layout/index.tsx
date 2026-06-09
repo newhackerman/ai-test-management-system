@@ -266,7 +266,7 @@ const AppLayout: React.FC = () => {
         >
           {sidebarCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
         </button>
-        <div className={`flex h-16 items-center justify-between border-b border-white/10 px-4 ${sidebarCollapsed ? 'lg:justify-center lg:px-3' : ''}`}>
+        <div className={`flex h-14 items-center justify-between border-b border-white/10 px-4 ${sidebarCollapsed ? 'lg:justify-center lg:px-3' : ''}`}>
           <Link to="/" className={`font-semibold ${sidebarCollapsed ? 'lg:hidden' : ''}`}>
             AI 测试管理系统
           </Link>
@@ -283,10 +283,10 @@ const AppLayout: React.FC = () => {
             <X className="h-5 w-5" />
           </button>
         </div>
-        <nav className={`h-[calc(100vh-4rem)] overflow-y-auto ${sidebarCollapsed ? 'space-y-3 p-3 lg:px-2' : 'space-y-6 p-4'}`}>
+        <nav className={`h-[calc(100vh-3.5rem)] overflow-y-auto ${sidebarCollapsed ? 'space-y-3 p-3 lg:px-2' : 'space-y-4 p-3'}`}>
           {visibleNavGroups.map((group) => (
             <div key={group.title}>
-              <div className={`mb-2 px-2 text-xs font-medium uppercase tracking-wide text-slate-400 ${sidebarCollapsed ? 'lg:hidden' : ''}`}>{group.title}</div>
+              <div className={`mb-1.5 px-2 text-xs font-medium uppercase tracking-wide text-slate-400 ${sidebarCollapsed ? 'lg:hidden' : ''}`}>{group.title}</div>
               <div className="space-y-1">
                 {group.items.map((item) => {
                   const Icon = item.icon
@@ -299,7 +299,7 @@ const AppLayout: React.FC = () => {
                       title={sidebarCollapsed ? item.label : undefined}
                       className={({ isActive }) =>
                         `flex items-center rounded-md px-3 py-2 text-sm transition-colors ${
-                          sidebarCollapsed ? 'lg:justify-center lg:px-0 lg:py-3' : ''
+                          sidebarCollapsed ? 'lg:justify-center lg:px-0 lg:py-2.5' : ''
                         } ${
                           isActive ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-white/10 hover:text-white'
                         }`
@@ -319,7 +319,7 @@ const AppLayout: React.FC = () => {
       {sidebarOpen && <div className="fixed inset-0 z-30 bg-black/40 lg:hidden" onClick={() => setSidebarOpen(false)} />}
 
       <div className={`transition-[padding] ${sidebarCollapsed ? 'lg:pl-20' : 'lg:pl-64'}`}>
-        <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b bg-white px-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+        <header className="sticky top-0 z-20 flex h-14 items-center justify-between border-b bg-white px-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
           <div className="flex min-w-0 items-center gap-3">
             <button className="rounded-md p-2 hover:bg-gray-100 dark:hover:bg-slate-800 lg:hidden" onClick={() => setSidebarOpen(true)} aria-label="打开菜单">
               <Menu className="h-5 w-5" />
@@ -333,15 +333,14 @@ const AppLayout: React.FC = () => {
               <Menu className="h-5 w-5" />
             </button>
             <div className="min-w-0">
-              <div className="truncate text-sm text-gray-500 dark:text-gray-400">当前位置</div>
-              <div className="truncate text-base font-medium">{currentTitle}</div>
+              <div className="truncate text-base font-semibold">{currentTitle}</div>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
             <button
               onClick={() => setDarkMode((value) => !value)}
-              className="inline-flex items-center gap-2 rounded-md border px-3 py-1.5 text-sm hover:bg-gray-50 dark:border-slate-700 dark:hover:bg-slate-800"
+              className="inline-flex h-9 items-center gap-2 rounded-md border px-3 text-sm hover:bg-gray-50 dark:border-slate-700 dark:hover:bg-slate-800"
               title={darkMode ? '切换到浅色主题' : '切换到深色主题'}
             >
               {darkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
@@ -350,7 +349,7 @@ const AppLayout: React.FC = () => {
 
             <div className="relative">
               <button
-                className="relative rounded-md border p-2 hover:bg-gray-50 dark:border-slate-700 dark:hover:bg-slate-800"
+                className="relative inline-flex h-9 w-9 items-center justify-center rounded-md border hover:bg-gray-50 dark:border-slate-700 dark:hover:bg-slate-800"
                 title="消息通知"
                 onClick={() => setNotificationOpen((value) => !value)}
               >
@@ -408,7 +407,7 @@ const AppLayout: React.FC = () => {
 
             <Link
               to="/profile"
-              className="hidden items-center gap-2 rounded-md border px-3 py-1.5 hover:bg-gray-50 dark:border-slate-700 dark:hover:bg-slate-800 sm:flex"
+              className="hidden h-9 items-center gap-2 rounded-md border px-3 hover:bg-gray-50 dark:border-slate-700 dark:hover:bg-slate-800 sm:flex"
             >
               <User className="h-4 w-4" />
               <span className="max-w-32 truncate text-sm">{user?.real_name || user?.nickname || user?.username || '用户'}</span>
@@ -417,7 +416,7 @@ const AppLayout: React.FC = () => {
 
             <button
               onClick={handleLogout}
-              className="inline-flex items-center gap-1 rounded-md border px-3 py-1.5 text-sm hover:bg-gray-50 dark:border-slate-700 dark:hover:bg-slate-800"
+              className="inline-flex h-9 items-center gap-1 rounded-md border px-3 text-sm hover:bg-gray-50 dark:border-slate-700 dark:hover:bg-slate-800"
             >
               <LogOut className="h-4 w-4" />
               <span className="hidden sm:inline">退出</span>
@@ -425,7 +424,7 @@ const AppLayout: React.FC = () => {
           </div>
         </header>
 
-        <main className="p-4 sm:p-6">
+        <main className="p-3 sm:p-4">
           <Outlet />
         </main>
       </div>

@@ -48,10 +48,10 @@ export const DialogContent: React.FC<DialogContentProps> = ({ className = '', ch
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div 
-        className="fixed inset-0 bg-black bg-opacity-50"
+        className="fixed inset-0 bg-black/50"
         onClick={() => context?.onOpenChange(false)}
       />
-      <div className={`relative z-10 bg-white rounded-lg shadow-lg p-6 w-full max-w-md mx-4 ${className}`}>
+      <div className={`relative z-10 mx-4 max-h-[calc(100vh-2rem)] w-full max-w-md overflow-auto rounded-lg border bg-card p-4 text-card-foreground shadow-lg ${className}`}>
         {children}
       </div>
     </div>
@@ -71,7 +71,7 @@ export const DialogTrigger: React.FC<{ asChild?: boolean; children: React.ReactE
 
 export const DialogHeader: React.FC<DialogHeaderProps> = ({ children }) => {
   return (
-    <div className="mb-4">
+    <div className="mb-3">
       {children}
     </div>
   )
@@ -79,7 +79,7 @@ export const DialogHeader: React.FC<DialogHeaderProps> = ({ children }) => {
 
 export const DialogTitle: React.FC<DialogTitleProps> = ({ className = '', children, ...props }) => {
   return (
-    <h2 className={`text-lg font-semibold text-gray-900 ${className}`} {...props}>
+    <h2 className={`text-lg font-semibold text-foreground ${className}`} {...props}>
       {children}
     </h2>
   )
@@ -87,7 +87,7 @@ export const DialogTitle: React.FC<DialogTitleProps> = ({ className = '', childr
 
 export const DialogDescription: React.FC<DialogDescriptionProps> = ({ children }) => {
   return (
-    <p className="text-sm text-gray-600 mt-2">
+    <p className="mt-1 text-sm text-muted-foreground">
       {children}
     </p>
   )
@@ -95,7 +95,7 @@ export const DialogDescription: React.FC<DialogDescriptionProps> = ({ children }
 
 export const DialogFooter: React.FC<DialogFooterProps> = ({ children }) => {
   return (
-    <div className="flex justify-end space-x-2 mt-6">
+    <div className="mt-4 flex justify-end space-x-2">
       {children}
     </div>
   )

@@ -184,7 +184,7 @@ const TestManager: React.FC = () => {
   ]
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-2xl font-bold">测试概览</h1>
@@ -206,19 +206,19 @@ const TestManager: React.FC = () => {
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         {metricCards.map((item) => {
           const Icon = item.icon
           return (
             <Link key={item.label} to={item.link}>
               <Card className="transition-shadow hover:shadow-sm">
-                <CardContent className="flex items-center gap-3 pt-6">
+                <CardContent className="flex items-center gap-3 p-3">
                   <div className="rounded-md bg-muted p-2">
                     <Icon className="h-5 w-5 text-primary" />
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">{item.label}</p>
-                    <p className="text-2xl font-semibold">{item.value}</p>
+                    <p className="text-xl font-semibold leading-6">{item.value}</p>
                     <p className="text-xs text-muted-foreground">{item.sub}</p>
                   </div>
                 </CardContent>
@@ -228,70 +228,7 @@ const TestManager: React.FC = () => {
         })}
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        <Card className="lg:col-span-2">
-          <CardHeader className="gap-3 md:flex-row md:items-center md:justify-between">
-            <CardTitle className="text-lg">测试闭环</CardTitle>
-            <Button asChild variant="outline" size="sm">
-              <Link to="/test-manager/reports/generate">
-                <FileText className="mr-2 h-4 w-4" />
-                生成报告
-              </Link>
-            </Button>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-4 md:grid-cols-3">
-              <div className="rounded-md border p-4">
-                <div className="mb-2 flex items-center justify-between text-sm">
-                  <span className="font-medium">计划执行率</span>
-                  <span>{metrics.planExecutionRate}%</span>
-                </div>
-                <Progress value={metrics.planExecutionRate} className="h-2" />
-                <p className="mt-2 text-xs text-muted-foreground">按最近计划的执行率均值估算</p>
-              </div>
-              <div className="rounded-md border p-4">
-                <div className="mb-2 flex items-center justify-between text-sm">
-                  <span className="font-medium">执行通过率</span>
-                  <span>{metrics.passRate}%</span>
-                </div>
-                <Progress value={metrics.passRate} className="h-2" />
-                <p className="mt-2 text-xs text-muted-foreground">来自执行统计接口</p>
-              </div>
-              <div className="rounded-md border p-4">
-                <div className="mb-2 flex items-center justify-between text-sm">
-                  <span className="font-medium">用例执行覆盖</span>
-                  <span>{metrics.executionCoverage}%</span>
-                </div>
-                <Progress value={metrics.executionCoverage} className="h-2" />
-                <p className="mt-2 text-xs text-muted-foreground">执行记录数 / 用例总数</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">待处理风险</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {riskItems.map((item) => (
-              <Link key={item.title} to={item.link} className="block rounded-md border p-3 hover:bg-muted/40">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="font-medium">{item.title}</p>
-                    <p className="mt-1 text-xs text-muted-foreground">{item.description}</p>
-                  </div>
-                  <Badge variant={item.tone === 'danger' ? 'destructive' : item.tone === 'warning' ? 'secondary' : 'outline'}>
-                    {item.value}
-                  </Badge>
-                </div>
-              </Link>
-            ))}
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader className="gap-3 md:flex-row md:items-center md:justify-between">
             <CardTitle className="text-lg">测试计划进度</CardTitle>
@@ -370,7 +307,70 @@ const TestManager: React.FC = () => {
         </Card>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid gap-4 lg:grid-cols-3">
+        <Card className="lg:col-span-2">
+          <CardHeader className="gap-3 md:flex-row md:items-center md:justify-between">
+            <CardTitle className="text-lg">测试闭环</CardTitle>
+            <Button asChild variant="outline" size="sm">
+              <Link to="/test-manager/reports/generate">
+                <FileText className="mr-2 h-4 w-4" />
+                生成报告
+              </Link>
+            </Button>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-3 md:grid-cols-3">
+              <div className="rounded-md border p-3">
+                <div className="mb-2 flex items-center justify-between text-sm">
+                  <span className="font-medium">计划执行率</span>
+                  <span>{metrics.planExecutionRate}%</span>
+                </div>
+                <Progress value={metrics.planExecutionRate} className="h-2" />
+                <p className="mt-2 text-xs text-muted-foreground">按最近计划的执行率均值估算</p>
+              </div>
+              <div className="rounded-md border p-3">
+                <div className="mb-2 flex items-center justify-between text-sm">
+                  <span className="font-medium">执行通过率</span>
+                  <span>{metrics.passRate}%</span>
+                </div>
+                <Progress value={metrics.passRate} className="h-2" />
+                <p className="mt-2 text-xs text-muted-foreground">来自执行统计接口</p>
+              </div>
+              <div className="rounded-md border p-3">
+                <div className="mb-2 flex items-center justify-between text-sm">
+                  <span className="font-medium">用例执行覆盖</span>
+                  <span>{metrics.executionCoverage}%</span>
+                </div>
+                <Progress value={metrics.executionCoverage} className="h-2" />
+                <p className="mt-2 text-xs text-muted-foreground">执行记录数 / 用例总数</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">待处理风险</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {riskItems.map((item) => (
+              <Link key={item.title} to={item.link} className="block rounded-md border p-2.5 hover:bg-muted/40">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="font-medium">{item.title}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">{item.description}</p>
+                  </div>
+                  <Badge variant={item.tone === 'danger' ? 'destructive' : item.tone === 'warning' ? 'secondary' : 'outline'}>
+                    {item.value}
+                  </Badge>
+                </div>
+              </Link>
+            ))}
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-3">
         <Card className="lg:col-span-2">
           <CardHeader className="gap-3 md:flex-row md:items-center md:justify-between">
             <CardTitle className="text-lg">缺陷态势</CardTitle>

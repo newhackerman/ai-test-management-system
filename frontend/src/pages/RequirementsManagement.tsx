@@ -481,11 +481,11 @@ function RequirementsManagement() {
   }, [statistics, total])
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+    <div className="space-y-4">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">需求管理</h1>
-          <p className="mt-1 text-muted-foreground">统一维护项目需求、负责人、评审人、状态流转和交付信息。</p>
+          <h1 className="text-2xl font-bold text-foreground">需求管理</h1>
+          <p className="text-sm text-muted-foreground">统一维护项目需求、负责人、评审人、状态流转和交付信息。</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" onClick={() => { loadRequirements(page); loadStatistics() }} disabled={loading}>
@@ -499,25 +499,20 @@ function RequirementsManagement() {
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        {statusCards.map((item) => (
-          <Card key={item.label}>
-            <CardContent className="p-4">
-              <div className="text-sm text-muted-foreground">{item.label}</div>
-              <div className="mt-2 text-2xl font-semibold text-foreground">{item.value}</div>
-              <div className="mt-1 text-xs text-muted-foreground">{item.hint}</div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
       <Card>
-        <CardContent className="space-y-4 p-4">
-          <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-            <Filter className="h-4 w-4" />
-            筛选条件
+        <CardContent className="space-y-3 p-4">
+          <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-4">
+            {statusCards.map((item) => (
+              <div key={item.label} className="rounded-md border bg-muted/20 px-3 py-2">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-xs text-muted-foreground">{item.label}</span>
+                  <span className="text-lg font-semibold leading-5 text-foreground">{item.value}</span>
+                </div>
+                <div className="mt-1 text-xs text-muted-foreground">{item.hint}</div>
+              </div>
+            ))}
           </div>
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-6">
             <div className="relative xl:col-span-2">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
@@ -556,14 +551,18 @@ function RequirementsManagement() {
               <option value="">全部分类</option>
               {categories.map((category) => <option key={category} value={category}>{category}</option>)}
             </SelectField>
-          </div>
-          <div className="flex flex-wrap justify-between gap-2">
             <div className="flex gap-2">
-              <Button variant="outline" onClick={() => { loadRequirements(1); loadStatistics() }} disabled={loading}>
+              <Button className="flex-1" variant="outline" onClick={() => { loadRequirements(1); loadStatistics() }} disabled={loading}>
                 <Search className="mr-2 h-4 w-4" />
                 查询
               </Button>
               <Button variant="ghost" onClick={resetFilters} disabled={loading}>清空</Button>
+            </div>
+          </div>
+          <div className="flex flex-wrap justify-between gap-2">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Filter className="h-4 w-4" />
+              支持按项目、负责人、状态、优先级、类型和分类筛选
             </div>
             <Button variant="outline" onClick={batchToReview} disabled={saving || selectedIds.length === 0}>
               <CheckCircle2 className="mr-2 h-4 w-4" />
@@ -590,19 +589,19 @@ function RequirementsManagement() {
             <table className="w-full text-sm">
               <thead className="border-y bg-muted/40 text-left text-muted-foreground">
                 <tr>
-                  <th className="w-12 px-4 py-3">
+                  <th className="w-12 px-3 py-2.5">
                     <Checkbox checked={allCurrentSelected} onCheckedChange={(checked) => {
                       setSelectedIds(checked ? Array.from(new Set([...selectedIds, ...requirements.map((item) => item.id)])) : selectedIds.filter((id) => !requirements.some((item) => item.id === id)))
                     }} />
                   </th>
-                  <th className="min-w-[280px] px-4 py-3">需求</th>
-                  <th className="min-w-[180px] px-4 py-3">项目</th>
-                  <th className="px-4 py-3">类型</th>
-                  <th className="px-4 py-3">状态</th>
-                  <th className="px-4 py-3">优先级</th>
-                  <th className="min-w-[120px] px-4 py-3">负责人</th>
-                  <th className="min-w-[110px] px-4 py-3">计划完成</th>
-                  <th className="min-w-[180px] px-4 py-3 text-right">操作</th>
+                  <th className="min-w-[280px] px-3 py-2.5">需求</th>
+                  <th className="min-w-[180px] px-3 py-2.5">项目</th>
+                  <th className="px-3 py-2.5">类型</th>
+                  <th className="px-3 py-2.5">状态</th>
+                  <th className="px-3 py-2.5">优先级</th>
+                  <th className="min-w-[120px] px-3 py-2.5">负责人</th>
+                  <th className="min-w-[110px] px-3 py-2.5">计划完成</th>
+                  <th className="min-w-[180px] px-3 py-2.5 text-right">操作</th>
                 </tr>
               </thead>
               <tbody>
@@ -617,7 +616,7 @@ function RequirementsManagement() {
                 ) : (
                   requirements.map((requirement) => (
                     <tr key={requirement.id} className="border-b hover:bg-muted/30">
-                      <td className="px-4 py-4">
+                      <td className="px-3 py-2.5">
                         <Checkbox
                           checked={selectedIds.includes(requirement.id)}
                           onCheckedChange={(checked) => {
@@ -625,7 +624,7 @@ function RequirementsManagement() {
                           }}
                         />
                       </td>
-                      <td className="px-4 py-4">
+                      <td className="px-3 py-2.5">
                         <div className="flex items-start gap-3">
                           <div className="rounded-md bg-blue-50 p-2 text-blue-600">
                             <FileText className="h-4 w-4" />
@@ -641,13 +640,13 @@ function RequirementsManagement() {
                           </div>
                         </div>
                       </td>
-                      <td className="px-4 py-4 text-muted-foreground">{projectLabel(projects, requirement.project_id)}</td>
-                      <td className="px-4 py-4">{optionLabel(requirementTypes, requirement.requirement_type)}</td>
-                      <td className="px-4 py-4"><StatusBadge status={requirement.status} /></td>
-                      <td className="px-4 py-4"><PriorityBadge priority={requirement.priority} /></td>
-                      <td className="px-4 py-4">{userLabel(users, requirement.assignee_id)}</td>
-                      <td className="px-4 py-4">{formatDate(requirement.planned_end_date)}</td>
-                      <td className="px-4 py-4">
+                      <td className="px-3 py-2.5 text-muted-foreground">{projectLabel(projects, requirement.project_id)}</td>
+                      <td className="px-3 py-2.5">{optionLabel(requirementTypes, requirement.requirement_type)}</td>
+                      <td className="px-3 py-2.5"><StatusBadge status={requirement.status} /></td>
+                      <td className="px-3 py-2.5"><PriorityBadge priority={requirement.priority} /></td>
+                      <td className="px-3 py-2.5">{userLabel(users, requirement.assignee_id)}</td>
+                      <td className="px-3 py-2.5">{formatDate(requirement.planned_end_date)}</td>
+                      <td className="px-3 py-2.5">
                         <div className="flex justify-end gap-2">
                           <Button size="sm" variant="ghost" onClick={() => setSelectedRequirement(requirement)} title="查看详情">
                             <Eye className="h-4 w-4" />

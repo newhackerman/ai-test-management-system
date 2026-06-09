@@ -2,9 +2,10 @@
 import React, { useState } from 'react'
 import { Calendar, Copy, Download, Edit, Plus, RefreshCw, Search, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
+import { Card, CardContent } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
 import { Badge } from '@/components/ui/Badge'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/Table'
 import ProjectCreateModal from '@/components/projects/ProjectCreateModal'
 import { useProjects } from '@/hooks/useProjects'
 import type { CreateProjectRequest, Project, UpdateProjectRequest } from '@/types/project'
@@ -105,11 +106,11 @@ const Projects: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4">
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">项目管理</h1>
-          <p className="mt-2 text-gray-600">查看项目列表，执行刷新、复制、导出和删除操作。</p>
+          <h1 className="text-2xl font-bold text-foreground">项目管理</h1>
+          <p className="text-sm text-muted-foreground">查看项目列表，执行刷新、复制、导出和删除操作。</p>
         </div>
         <Button onClick={openCreateModal}>
           <Plus className="mr-2 h-4 w-4" />
@@ -118,7 +119,7 @@ const Projects: React.FC = () => {
       </div>
 
       <Card>
-        <CardContent className="pt-6">
+        <CardContent className="p-4">
           <div className="flex flex-col gap-3 md:flex-row">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
@@ -141,62 +142,74 @@ const Projects: React.FC = () => {
 
       {error && <div className="rounded-md bg-red-50 px-4 py-3 text-sm text-red-600">{error}</div>}
 
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-        {loading && projects.length === 0 ? (
-          <Card>
-            <CardContent className="p-8 text-center text-gray-500">加载中...</CardContent>
-          </Card>
-        ) : projects.length === 0 ? (
-          <Card>
-            <CardContent className="p-8 text-center text-gray-500">暂无项目数据</CardContent>
-          </Card>
-        ) : (
-          projects.map((project) => (
-            <Card key={project.id}>
-              <CardHeader>
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <CardTitle className="text-lg">{project.project_name}</CardTitle>
-                    <p className="mt-1 text-sm text-gray-500">{project.project_code || `#${project.id}`}</p>
-                  </div>
-                  <Badge>{statusLabels[project.status] || project.status}</Badge>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <p className="text-sm text-gray-600">{project.description || '暂无描述'}</p>
-                <div className="grid grid-cols-2 gap-3 text-sm">
-                  <Info label="类型" value={getProjectTypeLabel(project.project_type)} />
-                  <Info label="优先级" value={getProjectPriorityLabel(project.priority)} />
-                  <Info label="进度" value={`${project.progress_percentage || 0}%`} />
-                  <Info label="预算" value={project.budget ? `¥${project.budget}` : '-'} />
-                </div>
-                <div className="flex items-center gap-2 text-sm text-gray-500">
-                  <Calendar className="h-4 w-4" />
-                  <span>{project.planned_start_date || '-'} 至 {project.planned_end_date || '-'}</span>
-                </div>
-                <div className="flex flex-wrap gap-2 pt-2">
-                  <Button size="sm" variant="outline" onClick={() => openEditModal(project)}>
-                    <Edit className="mr-1 h-3 w-3" />
-                    编辑
-                  </Button>
-                  <Button size="sm" variant="outline" onClick={() => duplicateProject(project.id, `${project.project_name} - 副本`)}>
-                    <Copy className="mr-1 h-3 w-3" />
-                    复制
-                  </Button>
-                  <Button size="sm" variant="outline" onClick={() => exportProject(project.id, 'csv')}>
-                    <Download className="mr-1 h-3 w-3" />
-                    导出
-                  </Button>
-                  <Button size="sm" variant="destructive" onClick={() => handleDelete(project)}>
-                    <Trash2 className="mr-1 h-3 w-3" />
-                    删除
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))
-        )}
-      </div>
+      <Card>
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="min-w-[260px]">项目</TableHead>
+                <TableHead className="w-24">状态</TableHead>
+                <TableHead className="w-32">类型</TableHead>
+                <TableHead className="w-24">优先级</TableHead>
+                <TableHead className="w-28">进度</TableHead>
+                <TableHead className="w-28">预算</TableHead>
+                <TableHead className="w-52">周期</TableHead>
+                <TableHead className="w-56 text-right">操作</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {loading && projects.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">加载中...</TableCell>
+                </TableRow>
+              ) : projects.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">暂无项目数据</TableCell>
+                </TableRow>
+              ) : (
+                projects.map((project) => (
+                  <TableRow key={project.id}>
+                    <TableCell>
+                      <div className="font-medium text-foreground">{project.project_name}</div>
+                      <div className="text-xs text-muted-foreground">{project.project_code || `#${project.id}`}</div>
+                      <div className="mt-1 line-clamp-1 max-w-xl text-xs text-muted-foreground">{project.description || '暂无描述'}</div>
+                    </TableCell>
+                    <TableCell><Badge>{statusLabels[project.status] || project.status}</Badge></TableCell>
+                    <TableCell>{getProjectTypeLabel(project.project_type)}</TableCell>
+                    <TableCell>{getProjectPriorityLabel(project.priority)}</TableCell>
+                    <TableCell>{project.progress_percentage || 0}%</TableCell>
+                    <TableCell>{project.budget ? `¥${project.budget}` : '-'}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Calendar className="h-4 w-4" />
+                        <span>{project.planned_start_date || '-'} 至 {project.planned_end_date || '-'}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex justify-end gap-1">
+                        <Button size="sm" variant="outline" onClick={() => openEditModal(project)}>
+                          <Edit className="mr-1 h-3 w-3" />
+                          编辑
+                        </Button>
+                        <Button size="sm" variant="outline" onClick={() => duplicateProject(project.id, `${project.project_name} - 副本`)}>
+                          <Copy className="mr-1 h-3 w-3" />
+                          复制
+                        </Button>
+                        <Button size="sm" variant="outline" onClick={() => exportProject(project.id, 'csv')} title="导出">
+                          <Download className="h-3 w-3" />
+                        </Button>
+                        <Button size="sm" variant="destructive" onClick={() => handleDelete(project)} title="删除">
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
 
       <ProjectCreateModal
         open={projectModalOpen}
@@ -211,13 +224,6 @@ const Projects: React.FC = () => {
     </div>
   )
 }
-
-const Info = ({ label, value }: { label: string; value: string }) => (
-  <div>
-    <div className="text-gray-500">{label}</div>
-    <div className="font-medium text-gray-900">{value}</div>
-  </div>
-)
 
 const userIdFromStorage = () => {
   try {

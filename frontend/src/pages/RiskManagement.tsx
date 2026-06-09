@@ -433,14 +433,14 @@ function RiskManagement() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+    <div className="space-y-4">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <h1 className="flex items-center gap-2 text-3xl font-bold text-foreground">
-            <ShieldAlert className="h-7 w-7" />
+          <h1 className="flex items-center gap-2 text-2xl font-bold text-foreground">
+            <ShieldAlert className="h-6 w-6" />
             风险管理
           </h1>
-          <p className="mt-1 text-muted-foreground">统一维护项目风险、负责人、应对计划、状态流转和风险矩阵。</p>
+          <p className="text-sm text-muted-foreground">统一维护项目风险、负责人、应对计划、状态流转和风险矩阵。</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" onClick={() => loadRisks(page)} disabled={loading}>
@@ -463,25 +463,20 @@ function RiskManagement() {
       {notice && <div className="rounded-md border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">{notice}</div>}
       {projects.length === 0 && !loading && <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">请先创建项目，再登记风险。</div>}
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        {statusCards.map((item) => (
-          <Card key={item.label}>
-            <CardContent className="p-4">
-              <div className="text-sm text-muted-foreground">{item.label}</div>
-              <div className="mt-2 text-2xl font-semibold text-foreground">{item.value}</div>
-              <div className="mt-1 text-xs text-muted-foreground">{item.hint}</div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
       <Card>
-        <CardContent className="space-y-4 p-4">
-          <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-            <Filter className="h-4 w-4" />
-            筛选条件
+        <CardContent className="space-y-3 p-4">
+          <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-4">
+            {statusCards.map((item) => (
+              <div key={item.label} className="rounded-md border bg-muted/20 px-3 py-2">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-xs text-muted-foreground">{item.label}</span>
+                  <span className="text-lg font-semibold leading-5 text-foreground">{item.value}</span>
+                </div>
+                <div className="mt-1 text-xs text-muted-foreground">{item.hint}</div>
+              </div>
+            ))}
           </div>
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-6">
             <div className="relative xl:col-span-2">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
@@ -512,19 +507,23 @@ function RiskManagement() {
               <option value="">全部状态</option>
               {statusOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
             </SelectField>
+            <div className="flex gap-2">
+              <Button className="flex-1" variant="outline" onClick={() => loadRisks(1)} disabled={loading}>
+                <Search className="mr-2 h-4 w-4" />
+                查询
+              </Button>
+              <Button variant="ghost" onClick={resetFilters} disabled={loading}>清空</Button>
+            </div>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <Button variant="outline" onClick={() => loadRisks(1)} disabled={loading}>
-              <Search className="mr-2 h-4 w-4" />
-              查询
-            </Button>
-            <Button variant="ghost" onClick={resetFilters} disabled={loading}>清空</Button>
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <Filter className="h-4 w-4" />
+            支持按项目、负责人、类别、等级和状态筛选风险台账
           </div>
         </CardContent>
       </Card>
 
       <Tabs defaultValue="list">
-        <TabsList>
+        <TabsList className="h-9">
           <TabsTrigger value="list">风险台账</TabsTrigger>
           <TabsTrigger value="matrix">风险矩阵</TabsTrigger>
           <TabsTrigger value="analysis">风险分析</TabsTrigger>
@@ -537,15 +536,15 @@ function RiskManagement() {
                 <table className="w-full min-w-[1080px] text-sm">
                   <thead className="border-b bg-muted/40 text-left text-muted-foreground">
                     <tr>
-                      <th className="px-4 py-3 font-medium">风险</th>
-                      <th className="px-4 py-3 font-medium">项目</th>
-                      <th className="px-4 py-3 font-medium">负责人</th>
-                      <th className="px-4 py-3 font-medium">类别</th>
-                      <th className="px-4 py-3 font-medium">等级</th>
-                      <th className="px-4 py-3 font-medium">概率/影响</th>
-                      <th className="px-4 py-3 font-medium">状态</th>
-                      <th className="px-4 py-3 font-medium">目标解决</th>
-                      <th className="px-4 py-3 text-right font-medium">操作</th>
+                      <th className="px-3 py-2.5 font-medium">风险</th>
+                      <th className="px-3 py-2.5 font-medium">项目</th>
+                      <th className="px-3 py-2.5 font-medium">负责人</th>
+                      <th className="px-3 py-2.5 font-medium">类别</th>
+                      <th className="px-3 py-2.5 font-medium">等级</th>
+                      <th className="px-3 py-2.5 font-medium">概率/影响</th>
+                      <th className="px-3 py-2.5 font-medium">状态</th>
+                      <th className="px-3 py-2.5 font-medium">目标解决</th>
+                      <th className="px-3 py-2.5 text-right font-medium">操作</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -555,21 +554,21 @@ function RiskManagement() {
                       <tr><td colSpan={9} className="px-4 py-10 text-center text-muted-foreground">暂无风险数据</td></tr>
                     ) : risks.map((risk) => (
                       <tr key={risk.id} className="border-b last:border-0">
-                        <td className="px-4 py-3">
+                        <td className="px-3 py-2.5">
                           <div className="font-medium text-foreground">{risk.risk_name}</div>
                           <div className="mt-1 line-clamp-1 max-w-md text-xs text-muted-foreground">{risk.description || '-'}</div>
                         </td>
-                        <td className="px-4 py-3">{projectNameById[risk.project_id] || `项目 #${risk.project_id}`}</td>
-                        <td className="px-4 py-3">{userNameById[risk.owner_id] || `用户 #${risk.owner_id}`}</td>
-                        <td className="px-4 py-3">{getRiskCategoryText(risk.risk_category)}</td>
-                        <td className="px-4 py-3"><RiskLevelBadge level={risk.risk_level} /></td>
-                        <td className="px-4 py-3">
+                        <td className="px-3 py-2.5">{projectNameById[risk.project_id] || `项目 #${risk.project_id}`}</td>
+                        <td className="px-3 py-2.5">{userNameById[risk.owner_id] || `用户 #${risk.owner_id}`}</td>
+                        <td className="px-3 py-2.5">{getRiskCategoryText(risk.risk_category)}</td>
+                        <td className="px-3 py-2.5"><RiskLevelBadge level={risk.risk_level} /></td>
+                        <td className="px-3 py-2.5">
                           <div>{Number(risk.probability).toFixed(2)} / {risk.impact_score}</div>
                           <div className="text-xs text-muted-foreground">评分 {scoreValue(risk).toFixed(2)}</div>
                         </td>
-                        <td className="px-4 py-3"><RiskStatusBadge status={risk.status} /></td>
-                        <td className="px-4 py-3">{formatDate(risk.target_resolution_date)}</td>
-                        <td className="px-4 py-3">
+                        <td className="px-3 py-2.5"><RiskStatusBadge status={risk.status} /></td>
+                        <td className="px-3 py-2.5">{formatDate(risk.target_resolution_date)}</td>
+                        <td className="px-3 py-2.5">
                           <div className="flex justify-end gap-2">
                             <Button size="sm" variant="outline" onClick={() => setSelectedRisk(risk)}>
                               <Eye className="mr-1 h-3 w-3" />

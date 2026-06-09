@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/DropdownMenu'
 import { Input } from '@/components/ui/Input'
 import { Label } from '@/components/ui/Label'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/Table'
 import { Textarea } from '@/components/ui/Textarea'
 import ProjectService from '@/services/projectService'
 import TaskService, { CreateTaskRequest } from '@/services/taskService'
@@ -302,11 +303,11 @@ function TaskManagement() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4">
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">任务管理</h1>
-          <p className="mt-1 text-muted-foreground">跟踪项目中的开发、测试和修复任务。</p>
+          <h1 className="text-2xl font-bold text-foreground">任务管理</h1>
+          <p className="text-sm text-muted-foreground">跟踪项目中的开发、测试和修复任务。</p>
         </div>
         <Button onClick={openCreateModal} disabled={projectsLoading || projects.length === 0}>
           <Plus className="mr-2 h-4 w-4" />
@@ -331,7 +332,7 @@ function TaskManagement() {
               {selectedFilter === 'all' ? '全部状态' : getTaskStatusLabel(selectedFilter)}
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent className="z-[100] bg-white text-gray-900">
+          <DropdownMenuContent className="z-[100]">
             <DropdownMenuItem onClick={() => setSelectedFilter('all')}>全部状态</DropdownMenuItem>
             {taskStatusOptions.map((status) => (
               <DropdownMenuItem key={status.value} onClick={() => setSelectedFilter(status.value)}>
@@ -351,78 +352,106 @@ function TaskManagement() {
         <div className="rounded-md bg-yellow-50 px-4 py-3 text-sm text-yellow-800">请先创建项目，再新建任务。</div>
       )}
 
-      <div className="space-y-4">
-        {loading && filteredTasks.length === 0 && (
-          <Card><CardContent className="p-8 text-center text-muted-foreground">加载中...</CardContent></Card>
-        )}
-        {!loading && filteredTasks.length === 0 && (
-          <Card><CardContent className="p-8 text-center text-muted-foreground">暂无任务数据</CardContent></Card>
-        )}
-        {filteredTasks.map((task) => {
-          const config = statusConfig[task.status] || statusConfig.TODO
-          const Icon = config.icon
-          const progress = task.status === 'COMPLETED' ? 100 : task.status === 'IN_PROGRESS' ? 50 : 0
-          return (
-            <Card key={task.id}>
-              <CardContent className="p-6">
-                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                  <div className="space-y-3">
-                    <div className="flex flex-wrap items-center gap-3">
-                      <h3 className="font-semibold text-foreground">{task.task_name}</h3>
-                      <Badge variant={config.variant}>
-                        <Icon className="mr-1 inline h-3 w-3" />
-                        {getTaskStatusLabel(task.status)}
-                      </Badge>
-                      <Badge variant={task.priority === 'HIGH' || task.priority === 'URGENT' ? 'destructive' : 'secondary'}>
-                        优先级：{getTaskPriorityLabel(task.priority)}
-                      </Badge>
-                      <Badge variant="outline">{getTaskTypeLabel(task.task_type)}</Badge>
-                    </div>
-                    <p className="text-sm text-muted-foreground">{task.description || '暂无描述'}</p>
-                    <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
-                      <span>编号：{task.task_code || `#${task.id}`}</span>
-                      <span>项目：{projectNameById[task.project_id] || `#${task.project_id}`}</span>
-                      <span>执行人：{getAssigneeText(task)}</span>
-                      <span>截止：{task.planned_end_date || '-'}</span>
-                    </div>
-                  </div>
-                  <div className="min-w-36">
-                    <div className="mb-1 flex justify-between text-sm">
-                      <span>进度</span>
-                      <span>{progress}%</span>
-                    </div>
-                    <div className="h-2 rounded-full bg-gray-200">
-                      <div className="h-2 rounded-full bg-blue-600" style={{ width: `${progress}%` }} />
-                    </div>
-                    <div className="mt-3 flex justify-end gap-2">
-                      <Button size="sm" variant="outline" onClick={() => openAssignModal(task)}>分配</Button>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button size="sm" variant="outline">改状态</Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent className="z-[100] bg-white text-gray-900">
-                          {taskStatusOptions.map((status) => (
-                            <DropdownMenuItem
-                              key={status.value}
-                              disabled={status.value === task.status}
-                              onClick={() => updateStatus(task, status.value)}
-                            >
-                              {status.label}
-                            </DropdownMenuItem>
-                          ))}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                      <Button size="sm" variant="destructive" onClick={() => deleteTask(task)} aria-label={`删除${task.task_name}`}>
-                        <Trash2 className="h-3 w-3" />
+      <Card>
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="min-w-[260px]">任务</TableHead>
+                <TableHead className="w-32">状态</TableHead>
+                <TableHead className="w-28">优先级</TableHead>
+                <TableHead className="w-32">类型</TableHead>
+                <TableHead className="w-40">项目</TableHead>
+                <TableHead className="w-44">执行人</TableHead>
+                <TableHead className="w-28">截止</TableHead>
+                <TableHead className="w-28">进度</TableHead>
+                <TableHead className="w-52 text-right">操作</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {loading && filteredTasks.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={9} className="h-24 text-center text-muted-foreground">加载中...</TableCell>
+                </TableRow>
+              ) : !loading && filteredTasks.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={9} className="h-32 text-center">
+                    <div className="flex flex-col items-center gap-3 text-muted-foreground">
+                      <div>暂无任务数据</div>
+                      <Button onClick={openCreateModal} disabled={projectsLoading || projects.length === 0}>
+                        <Plus className="mr-2 h-4 w-4" />
+                        新建任务
                       </Button>
                     </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )
-        })}
-      </div>
+                  </TableCell>
+                </TableRow>
+              ) : (
+                filteredTasks.map((task) => {
+                  const config = statusConfig[task.status] || statusConfig.TODO
+                  const Icon = config.icon
+                  const progress = task.status === 'COMPLETED' ? 100 : task.status === 'IN_PROGRESS' ? 50 : 0
+                  return (
+                    <TableRow key={task.id}>
+                      <TableCell>
+                        <div className="font-medium text-foreground">{task.task_name}</div>
+                        <div className="text-xs text-muted-foreground">{task.task_code || `#${task.id}`}</div>
+                        <div className="mt-1 line-clamp-1 max-w-xl text-xs text-muted-foreground">{task.description || '暂无描述'}</div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={config.variant}>
+                          <Icon className="mr-1 inline h-3 w-3" />
+                          {getTaskStatusLabel(task.status)}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={task.priority === 'HIGH' || task.priority === 'URGENT' ? 'destructive' : 'secondary'}>
+                          {getTaskPriorityLabel(task.priority)}
+                        </Badge>
+                      </TableCell>
+                      <TableCell><Badge variant="outline">{getTaskTypeLabel(task.task_type)}</Badge></TableCell>
+                      <TableCell>{projectNameById[task.project_id] || `#${task.project_id}`}</TableCell>
+                      <TableCell>{getAssigneeText(task)}</TableCell>
+                      <TableCell>{task.planned_end_date || '-'}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <div className="h-2 flex-1 rounded-full bg-muted">
+                            <div className="h-2 rounded-full bg-primary" style={{ width: `${progress}%` }} />
+                          </div>
+                          <span className="w-9 text-right text-xs text-muted-foreground">{progress}%</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex justify-end gap-1">
+                          <Button size="sm" variant="outline" onClick={() => openAssignModal(task)}>分配</Button>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button size="sm" variant="outline">改状态</Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent className="z-[100]">
+                              {taskStatusOptions.map((status) => (
+                                <DropdownMenuItem
+                                  key={status.value}
+                                  disabled={status.value === task.status}
+                                  onClick={() => updateStatus(task, status.value)}
+                                >
+                                  {status.label}
+                                </DropdownMenuItem>
+                              ))}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                          <Button size="sm" variant="destructive" onClick={() => deleteTask(task)} aria-label={`删除${task.task_name}`}>
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  )
+                })
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
 
       <Dialog open={assignOpen} onOpenChange={(nextOpen) => !nextOpen && closeAssignModal()}>
         <DialogContent className="max-h-[80vh] max-w-xl overflow-y-auto">
