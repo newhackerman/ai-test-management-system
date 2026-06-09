@@ -431,14 +431,14 @@ export default function ConfigManagement() {
   }
 
   return (
-    <div className="p-6">
-      <div className="mb-6">
-        <div className="flex items-center justify-between mb-4">
+    <div className="space-y-4">
+      <div>
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <Title level={2} className="m-0">配置管理</Title>
-            <Text type="secondary">系统配置参数的统一管理</Text>
+            <Title level={2} className="!m-0 !text-2xl">配置管理</Title>
+            <Text type="secondary" className="text-sm">系统配置参数的统一管理</Text>
           </div>
-          <div className="flex items-center space-x-3">
+          <div className="flex flex-wrap items-center gap-2">
             <Button
               icon={<ImportOutlined />}
               onClick={() => setIsImportExportVisible(true)}
@@ -460,17 +460,14 @@ export default function ConfigManagement() {
             >
               环境同步
             </Button>
-            <Button
+            <Tag
               icon={<WifiOutlined />}
-              type={wsConnected ? 'default' : 'dashed'}
-              style={{ 
-                color: wsConnected ? '#52c41a' : '#ff4d4f',
-                borderColor: wsConnected ? '#52c41a' : '#ff4d4f'
-              }}
+              color={wsConnected ? 'success' : 'default'}
+              className="m-0 flex h-8 items-center"
               title={wsConnected ? 'WebSocket已连接，实时接收配置更新' : 'WebSocket未连接'}
             >
               {wsConnected ? '实时更新' : '离线模式'}
-            </Button>
+            </Tag>
             <Button
               type="primary"
               icon={<PlusOutlined />}
@@ -484,56 +481,50 @@ export default function ConfigManagement() {
             </Button>
           </div>
         </div>
-
-        <Card className="mb-4">
-          <div className="flex items-center space-x-4">
-            <div className="flex items-center space-x-2">
-              <span>环境:</span>
-              <Select
-                value={selectedEnvironment}
-                onChange={setSelectedEnvironment}
-                style={{ width: 120 }}
-              >
-                <Option value="dev">开发环境</Option>
-                <Option value="test">测试环境</Option>
-                <Option value="prod">生产环境</Option>
-              </Select>
-            </div>
-            <div className="flex items-center space-x-2">
-              <span>分组:</span>
-              <Select
-                value={selectedGroup}
-                onChange={setSelectedGroup}
-                placeholder="全部分组"
-                allowClear
-                style={{ width: 150 }}
-              >
-                {groups.map(group => (
-                  <Option key={group.id} value={group.id}>
-                    {group.group_name}
-                  </Option>
-                ))}
-              </Select>
-            </div>
-            <div className="flex-1">
-              <Search
-                placeholder="搜索配置键或描述"
-                value={searchText}
-                onChange={(e) => setSearchText(e.target.value)}
-                onSearch={loadData}
-                style={{ maxWidth: 300 }}
-              />
-            </div>
-          </div>
-        </Card>
       </div>
 
-      <Card>
+      <Card size="small">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <div className="text-base font-semibold">配置列表</div>
+            <div className="text-xs text-muted-foreground">共 {pagination.total} 条记录</div>
+          </div>
+          <div className="grid w-full grid-cols-1 gap-2 md:w-auto md:grid-cols-[130px_170px_260px]">
+            <Select
+              value={selectedEnvironment}
+              onChange={setSelectedEnvironment}
+              placeholder="环境"
+            >
+              {Object.entries(ENVIRONMENT_MAP).map(([value, item]) => (
+                <Option key={value} value={value}>{item.label}</Option>
+              ))}
+            </Select>
+            <Select
+              value={selectedGroup}
+              onChange={setSelectedGroup}
+              placeholder="全部分组"
+              allowClear
+            >
+              {groups.map(group => (
+                <Option key={group.id} value={group.id}>
+                  {group.group_name}
+                </Option>
+              ))}
+            </Select>
+            <Search
+              placeholder="搜索配置键或描述"
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+              onSearch={loadData}
+            />
+          </div>
+        </div>
         <Table
           columns={columns}
           dataSource={configs}
           rowKey="id"
           loading={loading}
+          size="middle"
           scroll={{ x: 1200 }}
           pagination={{
             ...pagination,

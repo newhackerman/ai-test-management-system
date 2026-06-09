@@ -587,13 +587,13 @@ const Roles: React.FC = () => {
   )
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">角色管理</h1>
-          <p className="mt-2 text-gray-600 dark:text-gray-400">管理角色、权限分配和角色下的用户关系</p>
+          <h1 className="text-2xl font-bold text-foreground">角色管理</h1>
+          <p className="text-sm text-muted-foreground">管理角色、权限分配和角色下的用户关系</p>
         </div>
-        <Space>
+        <Space wrap size={8}>
           <Button icon={<ReloadOutlined />} onClick={refresh}>
             刷新
           </Button>
@@ -614,7 +614,7 @@ const Roles: React.FC = () => {
       </div>
 
       <Spin spinning={statsLoading}>
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-5">
+        <div className="grid grid-cols-2 gap-2 rounded-lg border bg-card p-3 md:grid-cols-5">
           <StatCard value={stats?.total_roles ?? 0} label="总角色数" className="text-blue-600" />
           <StatCard value={stats?.active_roles ?? 0} label="启用角色" className="text-green-600" />
           <StatCard value={stats?.inactive_roles ?? 0} label="停用角色" className="text-gray-600" />
@@ -623,9 +623,13 @@ const Roles: React.FC = () => {
         </div>
       </Spin>
 
-      <Card>
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <Space wrap>
+      <Card size="small">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <div className="text-base font-semibold">角色列表</div>
+            <div className="text-xs text-muted-foreground">共 {pagination.total} 条记录</div>
+          </div>
+          <Space wrap size={8}>
             <Search
               allowClear
               placeholder="搜索角色名称、代码、描述"
@@ -658,20 +662,18 @@ const Roles: React.FC = () => {
                 { label: '停用', value: 'inactive' },
               ]}
             />
+            {selectedRowKeys.length > 0 && (
+              <Button danger onClick={handleBatchDelete}>
+                批量删除 ({selectedRowKeys.length})
+              </Button>
+            )}
           </Space>
-          {selectedRowKeys.length > 0 && (
-            <Button danger onClick={handleBatchDelete}>
-              批量删除 ({selectedRowKeys.length})
-            </Button>
-          )}
         </div>
-      </Card>
-
-      <Card>
         <Table
           columns={columns}
           dataSource={roles}
           loading={loading}
+          size="middle"
           rowKey="id"
           rowSelection={{
             selectedRowKeys,
@@ -698,7 +700,8 @@ const Roles: React.FC = () => {
         }}
         onOk={() => form.submit()}
         width={720}
-        destroyOnClose
+        destroyOnHidden
+        forceRender
       >
         {roleForm}
       </Modal>
@@ -712,7 +715,8 @@ const Roles: React.FC = () => {
         }}
         onOk={() => form.submit()}
         width={640}
-        destroyOnClose
+        destroyOnHidden
+        forceRender
       >
         {roleForm}
       </Modal>
@@ -805,12 +809,10 @@ const Roles: React.FC = () => {
 }
 
 const StatCard = ({ value, label, className }: { value: React.ReactNode; label: string; className: string }) => (
-  <Card>
-    <div className="text-center">
-      <div className={`text-2xl font-bold ${className}`}>{value}</div>
-      <div className="text-sm text-gray-600">{label}</div>
-    </div>
-  </Card>
+  <div className="rounded-md border bg-background px-3 py-2">
+    <div className={`text-xl font-bold leading-6 ${className}`}>{value}</div>
+    <div className="text-xs text-muted-foreground">{label}</div>
+  </div>
 )
 
 export default Roles

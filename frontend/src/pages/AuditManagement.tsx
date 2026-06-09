@@ -38,7 +38,6 @@ import { ConfigService } from '@/services/config-service'
 const { Title, Text } = Typography
 const { TextArea } = Input
 const { Option } = Select
-const { TabPane } = Tabs
 
 interface AuditRecord {
   id: number
@@ -389,150 +388,110 @@ export default function AuditManagement() {
   ]
 
   return (
-    <div className="p-6">
-      <div className="mb-6">
-        <Title level={2} className="m-0">审核管理</Title>
-        <Text type="secondary">配置变更审核申请的处理和管理</Text>
+    <div className="space-y-4">
+      <div>
+        <Title level={2} className="!m-0 !text-2xl">审计日志</Title>
+        <Text type="secondary" className="text-sm">配置变更审核申请的处理和管理</Text>
       </div>
 
       {/* 统计信息 */}
       {statistics && (
-        <Row gutter={16} className="mb-6">
-          <Col span={6}>
-            <Card>
-              <Statistic
-                title="待审核"
-                value={statistics.status_stats.pending}
-                prefix={<ClockCircleOutlined />}
-                valueStyle={{ color: '#faad14' }}
-              />
-            </Card>
-          </Col>
-          <Col span={6}>
-            <Card>
-              <Statistic
-                title="审核通过率"
-                value={statistics.approval_rate}
-                suffix="%"
-                precision={1}
-                valueStyle={{ color: '#52c41a' }}
-              />
-            </Card>
-          </Col>
-          <Col span={6}>
-            <Card>
-              <Statistic
-                title="本月审核"
-                value={statistics.processed_count}
-                prefix={<SettingOutlined />}
-                valueStyle={{ color: '#1890ff' }}
-              />
-            </Card>
-          </Col>
-          <Col span={6}>
-            <Card>
-              <Statistic
-                title="总申请数"
-                value={statistics.status_stats.total}
-                prefix={<UserOutlined />}
-              />
-            </Card>
-          </Col>
-        </Row>
+        <div className="grid grid-cols-2 gap-2 rounded-lg border bg-card p-3 md:grid-cols-4">
+          <AuditStat icon={<ClockCircleOutlined />} label="待审核" value={statistics.status_stats.pending} className="text-amber-600" />
+          <AuditStat label="审核通过率" value={`${Number(statistics.approval_rate || 0).toFixed(1)}%`} className="text-green-600" />
+          <AuditStat icon={<SettingOutlined />} label="本月审核" value={statistics.processed_count} className="text-blue-600" />
+          <AuditStat icon={<UserOutlined />} label="总申请数" value={statistics.status_stats.total} className="text-foreground" />
+        </div>
       )}
 
-      <Card>
-        <Tabs activeKey={activeTab} onChange={setActiveTab}>
-          <TabPane 
-            tab={
+      <Card size="small">
+        <Tabs
+          activeKey={activeTab}
+          onChange={setActiveTab}
+          items={[
+            {
+              key: 'pending',
+              label: (
               <Badge count={pendingAudits.length} offset={[10, 0]}>
                 <span>待审核</span>
               </Badge>
-            } 
-            key="pending"
-          >
-            <Table
-              columns={columns}
-              dataSource={pendingAudits}
-              rowKey="id"
-              loading={loading}
-              size="middle"
-              scroll={{ x: 1200 }}
-            />
-          </TabPane>
-          
-          <TabPane tab="全部审核" key="all">
-            <div className="mb-4">
-              <Row gutter={16}>
-                <Col span={6}>
-                  <Select
-                    placeholder="审核状态"
-                    allowClear
-                    style={{ width: '100%' }}
-                    value={filters.audit_status}
-                    onChange={(value) => setFilters(prev => ({ ...prev, audit_status: value }))}
-                  >
-                    <Option value="PENDING">待审核</Option>
-                    <Option value="APPROVED">已通过</Option>
-                    <Option value="REJECTED">已驳回</Option>
-                    <Option value="CANCELLED">已取消</Option>
-                  </Select>
-                </Col>
-                <Col span={6}>
-                  <Select
-                    placeholder="环境"
-                    allowClear
-                    style={{ width: '100%' }}
-                    value={filters.environment}
-                    onChange={(value) => setFilters(prev => ({ ...prev, environment: value }))}
-                  >
-                    <Option value="dev">开发环境</Option>
-                    <Option value="test">测试环境</Option>
-                    <Option value="prod">生产环境</Option>
-                  </Select>
-                </Col>
-                <Col span={6}>
-                  <Select
-                    placeholder="优先级"
-                    allowClear
-                    style={{ width: '100%' }}
-                    value={filters.priority}
-                    onChange={(value) => setFilters(prev => ({ ...prev, priority: value }))}
-                  >
-                    <Option value="LOW">低</Option>
-                    <Option value="MEDIUM">中</Option>
-                    <Option value="HIGH">高</Option>
-                    <Option value="URGENT">紧急</Option>
-                  </Select>
-                </Col>
-                <Col span={6}>
-                  <Input
-                    placeholder="搜索配置键"
-                    allowClear
-                    value={filters.config_key}
-                    onChange={(e) => setFilters(prev => ({ ...prev, config_key: e.target.value }))}
-                  />
-                </Col>
-              </Row>
+              ),
+              children: (
+                <Table
+                  columns={columns}
+                  dataSource={pendingAudits}
+                  rowKey="id"
+                  loading={loading}
+                  size="middle"
+                  scroll={{ x: 1200 }}
+                />
+              ),
+            },
+            {
+              key: 'all',
+              label: '全部审核',
+              children: (
+                <>
+                  <div className="mb-3 grid grid-cols-1 gap-2 md:grid-cols-4">
+                    <Select
+                      placeholder="审核状态"
+                      allowClear
+                      value={filters.audit_status}
+                      onChange={(value) => setFilters(prev => ({ ...prev, audit_status: value }))}
+                    >
+                      <Option value="PENDING">待审核</Option>
+                      <Option value="APPROVED">已通过</Option>
+                      <Option value="REJECTED">已驳回</Option>
+                      <Option value="CANCELLED">已取消</Option>
+                    </Select>
+                    <Select
+                      placeholder="环境"
+                      allowClear
+                      value={filters.environment}
+                      onChange={(value) => setFilters(prev => ({ ...prev, environment: value }))}
+                    >
+                      <Option value="dev">开发环境</Option>
+                      <Option value="test">测试环境</Option>
+                      <Option value="prod">生产环境</Option>
+                    </Select>
+                    <Select
+                      placeholder="优先级"
+                      allowClear
+                      value={filters.priority}
+                      onChange={(value) => setFilters(prev => ({ ...prev, priority: value }))}
+                    >
+                      <Option value="LOW">低</Option>
+                      <Option value="MEDIUM">中</Option>
+                      <Option value="HIGH">高</Option>
+                      <Option value="URGENT">紧急</Option>
+                    </Select>
+                    <Input
+                      placeholder="搜索配置键"
+                      allowClear
+                      value={filters.config_key}
+                      onChange={(e) => setFilters(prev => ({ ...prev, config_key: e.target.value }))}
+                    />
+                  </div>
 
-            </div>
-            
-            <Table
-              columns={columns}
-              dataSource={audits}
-              rowKey="id"
-              loading={loading}
-              pagination={pagination}
-              onChange={(paginationConfig) => setPagination(prev => ({
-                ...prev,
-                current: paginationConfig.current || 1,
-                pageSize: paginationConfig.pageSize || 20
-              }))}
-              size="middle"
-              scroll={{ x: 1200 }}
-            />
-          </TabPane>
-        </Tabs>
+                  <Table
+                    columns={columns}
+                    dataSource={audits}
+                    rowKey="id"
+                    loading={loading}
+                    pagination={pagination}
+                    onChange={(paginationConfig) => setPagination(prev => ({
+                      ...prev,
+                      current: paginationConfig.current || 1,
+                      pageSize: paginationConfig.pageSize || 20
+                    }))}
+                    size="middle"
+                    scroll={{ x: 1200 }}
+                  />
+                </>
+              ),
+            },
+          ]}
+        />
       </Card>
 
       {/* 审核详情模态框 */}
@@ -648,3 +607,23 @@ export default function AuditManagement() {
     </div>
   )
 }
+
+const AuditStat = ({
+  icon,
+  label,
+  value,
+  className,
+}: {
+  icon?: React.ReactNode
+  label: string
+  value: React.ReactNode
+  className: string
+}) => (
+  <div className="rounded-md border bg-background px-3 py-2">
+    <div className={`flex items-center gap-2 text-xl font-bold leading-6 ${className}`}>
+      {icon}
+      <span>{value}</span>
+    </div>
+    <div className="text-xs text-muted-foreground">{label}</div>
+  </div>
+)

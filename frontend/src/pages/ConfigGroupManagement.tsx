@@ -181,11 +181,11 @@ export default function ConfigGroupManagement() {
   }
 
   return (
-    <div className="p-6">
-      <div className="flex items-center justify-between mb-6">
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-2xl font-bold m-0">配置分组管理</h2>
-          <p className="text-gray-500 mt-1">管理配置项的分组分类</p>
+          <h1 className="m-0 text-2xl font-bold text-foreground">配置分组</h1>
+          <p className="text-sm text-muted-foreground">管理配置项的分组分类，共 {groups.length} 个分组</p>
         </div>
         <Button
           type="primary"
@@ -200,12 +200,20 @@ export default function ConfigGroupManagement() {
         </Button>
       </div>
 
-      <Card>
+      <Card size="small">
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <div>
+            <div className="text-base font-semibold">分组列表</div>
+            <div className="text-xs text-muted-foreground">系统分组不可直接编辑或删除</div>
+          </div>
+          <Button onClick={loadGroups}>刷新</Button>
+        </div>
         <Table
           columns={columns}
           dataSource={groups}
           rowKey="id"
           loading={loading}
+          size="middle"
           pagination={{
             showSizeChanger: true,
             showQuickJumper: true,
