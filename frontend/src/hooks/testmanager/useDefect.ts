@@ -41,6 +41,23 @@ export const useDefectTrends = (timeRange = '30d') => {
   })
 }
 
+export const useDefectTrendsWithFilters = (timeRange = '30d', filters?: DefectFilters) => {
+  return useQuery({
+    queryKey: ['defectTrends', timeRange, filters],
+    queryFn: () => defectService.getDefectTrendsWithFilters(timeRange, filters),
+    staleTime: 5 * 60 * 1000,
+  })
+}
+
+export const useDefectComments = (id?: number) => {
+  return useQuery({
+    queryKey: ['defectComments', id],
+    queryFn: () => defectService.getComments(id!),
+    enabled: Number.isFinite(id) && Number(id) > 0,
+    staleTime: 30 * 1000,
+  })
+}
+
 export const useCreateDefect = () => {
   const queryClient = useQueryClient()
   const { toast } = useToast()
@@ -95,8 +112,8 @@ export const useUpdateDefectStatus = () => {
   const { toast } = useToast()
 
   return useMutation({
-    mutationFn: ({ id, status, resolution, notes }: { id: number; status: string; resolution?: string; notes?: string }) =>
-      defectService.updateDefectStatus(id, status, resolution, notes),
+    mutationFn: ({ id, status, resolution, notes, fixed_in_version }: { id: number; status: string; resolution?: string; notes?: string; fixed_in_version?: string }) =>
+      defectService.updateDefectStatusWithPayload(id, { status, resolution, notes, fixed_in_version }),
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['defects'] })
       queryClient.invalidateQueries({ queryKey: ['defect', data.id] })
@@ -104,6 +121,22 @@ export const useUpdateDefectStatus = () => {
     },
     onError: (error: any) => {
       toast({ title: '错误', description: getErrorMessage(error, '更新状态失败'), variant: 'destructive' })
+    },
+  })
+}
+
+export const useAddDefectComment = () => {
+  const queryClient = useQueryClient()
+  const { toast } = useToast()
+
+  return useMutation({
+    mutationFn: ({ id, content }: { id: number; content: string }) => defectService.addComment(id, content),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['defectComments', variables.id] })
+      toast({ title: '成功', description: '评论已添加', variant: 'success' })
+    },
+    onError: (error: any) => {
+      toast({ title: '错误', description: getErrorMessage(error, '添加评论失败'), variant: 'destructive' })
     },
   })
 }
@@ -156,6 +189,7 @@ export const useUploadAttachment = () => {
     mutationFn: ({ id, file }: { id: number; file: File }) => defectService.uploadAttachment(id, file),
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['defect', variables.id] })
+      queryClient.invalidateQueries({ queryKey: ['defects'] })
       toast({ title: '成功', description: '附件上传成功', variant: 'success' })
     },
     onError: (error: any) => {

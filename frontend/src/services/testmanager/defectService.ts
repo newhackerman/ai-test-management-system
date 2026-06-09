@@ -63,6 +63,11 @@ export class DefectService {
     return unwrapData<Defect>(response.data)
   }
 
+  async updateDefectStatusWithPayload(id: number, data: Record<string, any>): Promise<Defect> {
+    const response = await apiClient.patch(`${this.baseUrl}/${id}/status`, data)
+    return unwrapData<Defect>(response.data)
+  }
+
   async assignDefect(id: number, assigneeId: number): Promise<Defect> {
     const response = await apiClient.post(`${this.baseUrl}/${id}/assign`, { assignee_id: assigneeId })
     return unwrapData<Defect>(response.data)
@@ -77,6 +82,13 @@ export class DefectService {
 
   async getDefectTrends(timeRange: string = '30d'): Promise<any> {
     const response = await apiClient.get(`${this.baseUrl}/trends?time_range=${timeRange}`)
+    return unwrapData<any[]>(response.data) || []
+  }
+
+  async getDefectTrendsWithFilters(timeRange: string = '30d', filters?: DefectFilters): Promise<any> {
+    const params = normalizeParams(filters)
+    params.set('time_range', timeRange)
+    const response = await apiClient.get(`${this.baseUrl}/trends?${params.toString()}`)
     return unwrapData<any[]>(response.data) || []
   }
 
@@ -99,7 +111,17 @@ export class DefectService {
         'Content-Type': 'multipart/form-data'
       }
     })
+    return unwrapData<any>(response.data)
+  }
+
+  async getComments(id: number): Promise<PaginatedResponse<any>> {
+    const response = await apiClient.get(`${this.baseUrl}/${id}/comments?page=1&page_size=50`)
     return response.data
+  }
+
+  async addComment(id: number, content: string): Promise<any> {
+    const response = await apiClient.post(`${this.baseUrl}/${id}/comments`, { content })
+    return unwrapData<any>(response.data)
   }
 }
 

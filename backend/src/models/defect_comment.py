@@ -3,7 +3,7 @@
 
 本模块定义了缺陷评论相关的数据库模型
 """
-from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey
+from sqlalchemy import BigInteger, Column, Integer, Text, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
 from datetime import datetime
 
@@ -14,7 +14,7 @@ class DefectComment(Base):
     __tablename__ = "defect_comments"
     
     id = Column(Integer, primary_key=True, index=True)
-    defect_id = Column(Integer, ForeignKey("defects.id"), nullable=False, index=True)
+    defect_id = Column(BigInteger, ForeignKey("defects.id"), nullable=False, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     content = Column(Text, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)

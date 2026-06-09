@@ -1,7 +1,7 @@
 // @ts-nocheck
 import React, { useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { Calendar, Download, Eye, Pencil, Plus, Search, Trash2, User, UserCheck } from 'lucide-react'
+import { Calendar, Download, Eye, MessageSquare, Paperclip, Pencil, Plus, Search, Trash2, User, UserCheck } from 'lucide-react'
 import { Button } from '../../../components/ui/Button'
 import { Input } from '../../../components/ui/Input'
 import { Textarea } from '../../../components/ui/Textarea'
@@ -20,15 +20,18 @@ import {
   useUpdateDefect,
   useUpdateDefectStatus,
   useAssignDefect,
+  useAddDefectComment,
+  useDefectComments,
   useDeleteDefect,
   useExportDefects,
+  useUploadAttachment,
 } from '../../../hooks/testmanager/useDefect'
 import userService from '../../../services/user-service'
 import requirementService from '../../../services/requirementService'
 import { testPlanService } from '../../../services/testmanager/testPlanService'
 import { testCaseService } from '../../../services/testmanager/testCaseService'
 import { executionService } from '../../../services/testmanager/executionService'
-import { DefectStatus, DefectSeverity, DefectType, Priority } from '../../../types/testmanager'
+import { DefectResolution, DefectStatus, DefectSeverity, DefectType, Priority } from '../../../types/testmanager'
 import { formatDate } from '../../../utils/date'
 
 const defectTypeOptions = [
@@ -64,6 +67,15 @@ const statusOptions = [
   { value: DefectStatus.CLOSED, label: '已关闭' },
   { value: DefectStatus.REOPENED, label: '重新打开' },
   { value: DefectStatus.REJECTED, label: '已拒绝' },
+]
+
+const resolutionOptions = [
+  { value: DefectResolution.FIXED, label: '已修复' },
+  { value: DefectResolution.DUPLICATE, label: '重复缺陷' },
+  { value: DefectResolution.NOT_A_BUG, label: '非缺陷' },
+  { value: DefectResolution.WONT_FIX, label: '不修复' },
+  { value: DefectResolution.CANNOT_REPRODUCE, label: '无法复现' },
+  { value: DefectResolution.DEFERRED, label: '延期处理' },
 ]
 
 const statusTransitions = {
@@ -116,6 +128,8 @@ const DefectList: React.FC = () => {
   const assignDefect = useAssignDefect()
   const deleteDefect = useDeleteDefect()
   const exportDefects = useExportDefects()
+  const addDefectComment = useAddDefectComment()
+  const uploadAttachment = useUploadAttachment()
 
   const [users, setUsers] = useState([])
   const [testPlans, setTestPlans] = useState([])
@@ -129,8 +143,15 @@ const DefectList: React.FC = () => {
   const [assignDefectRow, setAssignDefectRow] = useState(null)
   const [deleteDefectRow, setDeleteDefectRow] = useState(null)
   const [assignUserId, setAssignUserId] = useState('')
+  const [statusDialog, setStatusDialog] = useState(null)
+  const [statusNotes, setStatusNotes] = useState('')
+  const [statusResolution, setStatusResolution] = useState(DefectResolution.FIXED)
+  const [statusFixedVersion, setStatusFixedVersion] = useState('')
+  const [statusError, setStatusError] = useState('')
+  const [commentText, setCommentText] = useState('')
   const [form, setForm] = useState(emptyForm)
   const [formError, setFormError] = useState('')
+  const detailComments = useDefectComments(detailDefect?.id)
 
   useEffect(() => {
     const initialSearch = searchParams.get('search')?.trim()
@@ -140,12 +161,14 @@ const DefectList: React.FC = () => {
     const testExecutionId = Number(searchParams.get('test_execution_id') || 0)
     const status = searchParams.get('status') as DefectStatus | null
     const severity = searchParams.get('severity') as DefectSeverity | null
+    const defectType = searchParams.get('defect_type') as DefectType | null
     const nextFilters: any = {}
     if (testPlanId > 0) nextFilters.test_plan_id = testPlanId
     if (testCaseId > 0) nextFilters.test_case_id = testCaseId
     if (testExecutionId > 0) nextFilters.test_execution_id = testExecutionId
     if (status && Object.values(DefectStatus).includes(status)) nextFilters.status = status
     if (severity && Object.values(DefectSeverity).includes(severity)) nextFilters.severity = severity
+    if (defectType && Object.values(DefectType).includes(defectType)) nextFilters.defect_type = defectType
     if (Object.keys(nextFilters).length) handleUpdateFilters(nextFilters)
   }, [handleSearch, handleUpdateFilters, searchParams])
 
@@ -333,8 +356,54 @@ const DefectList: React.FC = () => {
     setAssignUserId('')
   }
 
-  const handleStatusChange = (id: number, status: DefectStatus) => {
-    updateDefectStatus.mutate({ id, status })
+  const handleStatusChange = (defect, status: DefectStatus) => {
+    setStatusDialog({ defect, status })
+    setStatusNotes('')
+    setStatusResolution(DefectResolution.FIXED)
+    setStatusFixedVersion(defect.fixed_in_version || '')
+    setStatusError('')
+  }
+
+  const submitStatusChange = async () => {
+    if (!statusDialog) return
+    const notes = statusNotes.trim()
+    if ([DefectStatus.RESOLVED, DefectStatus.REOPENED, DefectStatus.REJECTED].includes(statusDialog.status) && !notes) {
+      setStatusError('请填写处理说明，便于后续追踪原因和验证依据。')
+      return
+    }
+
+    try {
+      const updated = await updateDefectStatus.mutateAsync({
+        id: statusDialog.defect.id,
+        status: statusDialog.status,
+        resolution: statusDialog.status === DefectStatus.RESOLVED ? statusResolution : undefined,
+        notes: notes || undefined,
+        fixed_in_version: statusDialog.status === DefectStatus.RESOLVED ? statusFixedVersion.trim() || undefined : undefined,
+      })
+      if (detailDefect?.id === updated.id) setDetailDefect(updated)
+      setStatusDialog(null)
+      setStatusNotes('')
+      setStatusError('')
+    } catch (err) {
+      setStatusError(err?.response?.data?.detail || err?.message || '状态更新失败')
+    }
+  }
+
+  const submitComment = async () => {
+    if (!detailDefect || !commentText.trim()) return
+    await addDefectComment.mutateAsync({ id: detailDefect.id, content: commentText.trim() })
+    setCommentText('')
+  }
+
+  const handleAttachmentChange = async (event) => {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (!detailDefect || !file) return
+    const metadata = await uploadAttachment.mutateAsync({ id: detailDefect.id, file })
+    setDetailDefect({
+      ...detailDefect,
+      attachments: [...(detailDefect.attachments || []), metadata],
+    })
   }
 
   const confirmDelete = async () => {
@@ -345,6 +414,13 @@ const DefectList: React.FC = () => {
 
   const handleExport = (format: string) => {
     exportDefects.mutate({ filters, format })
+  }
+
+  const formatFileSize = (size?: number) => {
+    const value = Number(size || 0)
+    if (value >= 1024 * 1024) return `${(value / 1024 / 1024).toFixed(1)}MB`
+    if (value >= 1024) return `${(value / 1024).toFixed(1)}KB`
+    return `${value}B`
   }
 
   const getPlanLabel = (planId?: number) => {
@@ -668,7 +744,7 @@ const DefectList: React.FC = () => {
                             分配负责人
                           </DropdownMenuItem>
                           {(statusTransitions[defect.status] || []).map((status) => (
-                            <DropdownMenuItem key={status} onClick={() => handleStatusChange(defect.id, status)}>
+                            <DropdownMenuItem key={status} onClick={() => handleStatusChange(defect, status)}>
                               设为{labelOf(statusOptions, status)}
                             </DropdownMenuItem>
                           ))}
@@ -871,7 +947,7 @@ const DefectList: React.FC = () => {
       </Dialog>
 
       <Dialog open={Boolean(detailDefect)} onOpenChange={(open) => !open && setDetailDefect(null)}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-4xl">
           {detailDefect && (
             <div className="space-y-4">
               <DialogHeader>
@@ -918,6 +994,88 @@ const DefectList: React.FC = () => {
                 <div className="mb-1 text-sm font-medium">复现步骤</div>
                 <div className="rounded-md bg-gray-50 p-3 text-sm whitespace-pre-wrap">{detailDefect.steps_to_reproduce || '-'}</div>
               </div>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div className="space-y-3 rounded-md border p-3">
+                  <div className="flex items-center justify-between">
+                    <div className="text-sm font-medium">状态处理</div>
+                    {getStatusBadge(detailDefect.status)}
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {(statusTransitions[detailDefect.status] || []).map((status) => (
+                      <Button key={status} variant="outline" size="sm" onClick={() => handleStatusChange(detailDefect, status)}>
+                        设为{labelOf(statusOptions, status)}
+                      </Button>
+                    ))}
+                    {(statusTransitions[detailDefect.status] || []).length === 0 && (
+                      <span className="text-sm text-gray-500">当前状态暂无后续流转</span>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-xs text-gray-500">
+                    <span>报告：{formatDate(detailDefect.reported_at)}</span>
+                    <span>解决：{detailDefect.resolved_at ? formatDate(detailDefect.resolved_at) : '-'}</span>
+                    <span>验证：{detailDefect.verified_at ? formatDate(detailDefect.verified_at) : '-'}</span>
+                    <span>修复版本：{detailDefect.fixed_in_version || '-'}</span>
+                  </div>
+                </div>
+
+                <div className="space-y-3 rounded-md border p-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center text-sm font-medium">
+                      <Paperclip className="mr-2 h-4 w-4" />
+                      附件
+                    </div>
+                    <label className="inline-flex h-8 cursor-pointer items-center rounded-md border px-3 text-sm hover:bg-accent">
+                      上传
+                      <input type="file" className="hidden" onChange={handleAttachmentChange} />
+                    </label>
+                  </div>
+                  <div className="max-h-32 space-y-2 overflow-y-auto">
+                    {(detailDefect.attachments || []).length ? detailDefect.attachments.map((file, index) => (
+                      <div key={`${file.file_path || file.filename}-${index}`} className="flex items-center justify-between rounded bg-gray-50 px-2 py-1 text-xs">
+                        <span className="truncate">{file.filename || `附件 ${index + 1}`}</span>
+                        <span className="ml-2 text-gray-500">{formatFileSize(file.file_size)}</span>
+                      </div>
+                    )) : (
+                      <div className="text-sm text-gray-500">暂无附件</div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-3 rounded-md border p-3">
+                <div className="flex items-center text-sm font-medium">
+                  <MessageSquare className="mr-2 h-4 w-4" />
+                  处理评论
+                </div>
+                <div className="max-h-40 space-y-2 overflow-y-auto">
+                  {detailComments.isLoading ? (
+                    <div className="text-sm text-gray-500">评论加载中...</div>
+                  ) : (detailComments.data?.data || []).length ? (
+                    (detailComments.data?.data || []).map((comment) => (
+                      <div key={comment.id} className="rounded bg-gray-50 p-2 text-sm">
+                        <div className="mb-1 flex items-center justify-between text-xs text-gray-500">
+                          <span>{userNameById[Number(comment.user_id)] || `用户 #${comment.user_id}`}</span>
+                          <span>{formatDate(comment.created_at)}</span>
+                        </div>
+                        <div className="whitespace-pre-wrap">{comment.content}</div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-sm text-gray-500">暂无评论</div>
+                  )}
+                </div>
+                <div className="flex gap-2">
+                  <Textarea
+                    rows={2}
+                    value={commentText}
+                    onChange={(event) => setCommentText(event.target.value)}
+                    placeholder="补充处理说明、验证结论或沟通记录"
+                  />
+                  <Button className="self-end" disabled={!commentText.trim() || addDefectComment.isPending} onClick={submitComment}>
+                    发送
+                  </Button>
+                </div>
+              </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setDetailDefect(null)}>关闭</Button>
                 <Button onClick={() => { setDetailDefect(null); openEditForm(detailDefect) }}>编辑</Button>
@@ -948,6 +1106,60 @@ const DefectList: React.FC = () => {
           <DialogFooter>
             <Button variant="outline" onClick={() => setAssignDefectRow(null)}>取消</Button>
             <Button disabled={!assignUserId || assignDefect.isPending} onClick={submitAssign}>确认分配</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={Boolean(statusDialog)} onOpenChange={(open) => !open && setStatusDialog(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>流转缺陷状态</DialogTitle>
+          </DialogHeader>
+          {statusDialog && (
+            <div className="space-y-4">
+              <div className="rounded-md bg-gray-50 p-3 text-sm">
+                <div className="font-medium">{statusDialog.defect.title}</div>
+                <div className="mt-1 text-gray-600">
+                  {labelOf(statusOptions, statusDialog.defect.status)} → {labelOf(statusOptions, statusDialog.status)}
+                </div>
+              </div>
+
+              {statusDialog.status === DefectStatus.RESOLVED && (
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                  <label className="space-y-1">
+                    <span className="text-sm font-medium">解决方案</span>
+                    <select
+                      value={statusResolution}
+                      onChange={(event) => setStatusResolution(event.target.value)}
+                      className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                    >
+                      {resolutionOptions.map((option) => (
+                        <option key={option.value} value={option.value}>{option.label}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="space-y-1">
+                    <span className="text-sm font-medium">修复版本</span>
+                    <Input value={statusFixedVersion} onChange={(event) => setStatusFixedVersion(event.target.value)} />
+                  </label>
+                </div>
+              )}
+
+              <label className="space-y-1">
+                <span className="text-sm font-medium">处理说明</span>
+                <Textarea
+                  rows={4}
+                  value={statusNotes}
+                  onChange={(event) => setStatusNotes(event.target.value)}
+                  placeholder="说明处理原因、修复范围、验证依据或重开原因"
+                />
+              </label>
+              {statusError && <div className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{statusError}</div>}
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setStatusDialog(null)}>取消</Button>
+            <Button disabled={updateDefectStatus.isPending} onClick={submitStatusChange}>确认流转</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

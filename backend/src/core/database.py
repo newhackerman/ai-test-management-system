@@ -185,6 +185,7 @@ async def init_database():
             "automation_scripts",
             "test_executions",
             "defects",
+            "defect_comments",
             "test_coverage",
         ]
         testmanager_tables = [

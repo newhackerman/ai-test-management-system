@@ -1,10 +1,12 @@
 import React from 'react'
+import { Link } from 'react-router-dom'
 import { AlertTriangle, BarChart3, Calendar, PieChart, TrendingUp } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/Card'
 import { Badge } from '../../../components/ui/Badge'
 import { Progress } from '../../../components/ui/Progress'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/Select'
-import { useDefectStatistics, useDefectTrends } from '../../../hooks/testmanager/useDefect'
+import { useDefectStatistics, useDefectTrendsWithFilters } from '../../../hooks/testmanager/useDefect'
+import { testPlanService } from '../../../services/testmanager/testPlanService'
 
 const severityLabels: Record<string, string> = {
   CRITICAL: '严重',
@@ -61,9 +63,28 @@ const formatDate = (value: string) => {
 
 const DefectAnalytics: React.FC = () => {
   const [timeRange, setTimeRange] = React.useState('30d')
+  const [testPlanId, setTestPlanId] = React.useState('all')
+  const [testPlans, setTestPlans] = React.useState<any[]>([])
 
-  const { data: statistics, isLoading: statsLoading, error: statsError } = useDefectStatistics()
-  const { data: trends, isLoading: trendsLoading, error: trendsError } = useDefectTrends(timeRange)
+  const filters = React.useMemo(() => ({
+    test_plan_id: testPlanId === 'all' ? undefined : Number(testPlanId),
+  }), [testPlanId])
+  const { data: statistics, isLoading: statsLoading, error: statsError } = useDefectStatistics(filters)
+  const { data: trends, isLoading: trendsLoading, error: trendsError } = useDefectTrendsWithFilters(timeRange, filters)
+
+  React.useEffect(() => {
+    let cancelled = false
+    testPlanService.getTestPlans({ page: 1, size: 100 })
+      .then((result: any) => {
+        if (!cancelled) setTestPlans(result.data || [])
+      })
+      .catch(() => {
+        if (!cancelled) setTestPlans([])
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const stats = { ...defaultStats, ...(statistics || {}) }
   const trendData = (trends || []).filter((item: any) => item.new_defects || item.resolved_defects || item.total_defects).slice(-14)
@@ -87,6 +108,7 @@ const DefectAnalytics: React.FC = () => {
   const openDefects = total - Number(stats.resolved_defects || 0)
   const loading = statsLoading || trendsLoading
   const error = statsError || trendsError
+  const listQueryPrefix = testPlanId === 'all' ? '' : `test_plan_id=${testPlanId}&`
 
   if (error) {
     return <div className="text-center text-red-500">加载缺陷分析失败：{(error as Error).message}</div>
@@ -99,17 +121,30 @@ const DefectAnalytics: React.FC = () => {
           <h1 className="text-2xl font-bold">缺陷分析</h1>
           <p className="text-gray-600">基于缺陷库的实时统计、分布和趋势</p>
         </div>
-        <Select value={timeRange} onValueChange={setTimeRange}>
-          <SelectTrigger className="w-36">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="7d">最近7天</SelectItem>
-            <SelectItem value="30d">最近30天</SelectItem>
-            <SelectItem value="90d">最近90天</SelectItem>
-            <SelectItem value="1y">最近1年</SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="flex flex-wrap gap-2">
+          <Select value={testPlanId} onValueChange={setTestPlanId}>
+            <SelectTrigger className="w-56">
+              <SelectValue placeholder="测试计划" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">全部测试计划</SelectItem>
+              {testPlans.map((plan) => (
+                <SelectItem key={plan.id} value={String(plan.id)}>{plan.plan_name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={timeRange} onValueChange={setTimeRange}>
+            <SelectTrigger className="w-36">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="7d">最近7天</SelectItem>
+              <SelectItem value="30d">最近30天</SelectItem>
+              <SelectItem value="90d">最近90天</SelectItem>
+              <SelectItem value="1y">最近1年</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
@@ -119,7 +154,7 @@ const DefectAnalytics: React.FC = () => {
               <BarChart3 className="h-5 w-5 text-blue-500" />
               <div>
                 <p className="text-sm font-medium text-gray-600">缺陷总数</p>
-                <p className="text-2xl font-bold">{loading ? '-' : total}</p>
+                <Link to={`/test-manager/defects?${listQueryPrefix}`} className="text-2xl font-bold hover:text-blue-700">{loading ? '-' : total}</Link>
                 <p className="mt-1 text-xs text-gray-500">当前库内全部缺陷</p>
               </div>
             </div>
@@ -132,9 +167,9 @@ const DefectAnalytics: React.FC = () => {
               <AlertTriangle className="h-5 w-5 text-red-500" />
               <div>
                 <p className="text-sm font-medium text-gray-600">高危缺陷</p>
-                <p className="text-2xl font-bold text-red-600">
+                <Link to={`/test-manager/defects?${listQueryPrefix}`} className="block text-2xl font-bold text-red-600 hover:text-red-700">
                   {loading ? '-' : Number(stats.critical_defects || 0) + Number(stats.high_defects || 0)}
-                </p>
+                </Link>
                 <p className="mt-1 text-xs text-gray-500">严重 + 高优先处理</p>
               </div>
             </div>
@@ -219,7 +254,9 @@ const DefectAnalytics: React.FC = () => {
                   <div className="h-2 flex-1 rounded-full bg-gray-200">
                     <div className="h-2 rounded-full bg-red-500" style={{ width: `${percent(item.value, total)}%` }} />
                   </div>
-                  <Badge variant={item.key === 'CRITICAL' || item.key === 'HIGH' ? 'destructive' : 'secondary'}>{item.value}</Badge>
+                  <Link to={`/test-manager/defects?${listQueryPrefix}severity=${item.key}`}>
+                    <Badge variant={item.key === 'CRITICAL' || item.key === 'HIGH' ? 'destructive' : 'secondary'}>{item.value}</Badge>
+                  </Link>
                 </div>
               ))}
             </div>
@@ -267,7 +304,9 @@ const DefectAnalytics: React.FC = () => {
                 <div className="mb-2 text-sm font-medium">状态分布</div>
                 <div className="flex flex-wrap gap-2">
                   {statusRows.length ? statusRows.map((item) => (
-                    <Badge key={item.key} variant="outline">{item.label} {item.value}</Badge>
+                    <Link key={item.key} to={`/test-manager/defects?${listQueryPrefix}status=${item.key}`}>
+                      <Badge variant="outline">{item.label} {item.value}</Badge>
+                    </Link>
                   )) : <span className="text-sm text-gray-500">暂无状态数据</span>}
                 </div>
               </div>
@@ -275,7 +314,9 @@ const DefectAnalytics: React.FC = () => {
                 <div className="mb-2 text-sm font-medium">类型分布</div>
                 <div className="flex flex-wrap gap-2">
                   {typeRows.length ? typeRows.map((item) => (
-                    <Badge key={item.key} variant="secondary">{item.label} {item.value}</Badge>
+                    <Link key={item.key} to={`/test-manager/defects?${listQueryPrefix}defect_type=${item.key}`}>
+                      <Badge variant="secondary">{item.label} {item.value}</Badge>
+                    </Link>
                   )) : <span className="text-sm text-gray-500">暂无类型数据</span>}
                 </div>
               </div>
