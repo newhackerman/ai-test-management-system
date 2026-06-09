@@ -22,6 +22,7 @@ export interface UnifiedReportsParams {
   page_size?: number;
   report_type?: string;
   format_filter?: string;
+  test_plan_id?: number;
   search?: string;
 }
 

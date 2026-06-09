@@ -59,6 +59,27 @@ def _split_generated_report_file(file_path: Path) -> Dict[str, Any]:
     }
 
 
+def _metadata_file(report_id: str) -> Path:
+    return Path("reports") / f"{report_id}.metadata.json"
+
+
+def _load_report_metadata(report_id: str) -> Dict[str, Any]:
+    metadata_path = _metadata_file(report_id)
+    if not metadata_path.exists():
+        return {}
+    try:
+        return json.loads(metadata_path.read_text(encoding="utf-8"))
+    except Exception as exc:
+        logger.warning(f"读取报告元数据失败 {metadata_path}: {exc}")
+        return {}
+
+
+def _save_report_metadata(report_id: str, metadata: Dict[str, Any]) -> None:
+    metadata_path = _metadata_file(report_id)
+    metadata_path.parent.mkdir(exist_ok=True)
+    metadata_path.write_text(json.dumps(metadata, ensure_ascii=False, indent=2, default=str), encoding="utf-8")
+
+
 def _list_generated_reports() -> List[Any]:
     reports_dir = Path("reports")
     if not reports_dir.exists():
@@ -70,17 +91,27 @@ def _list_generated_reports() -> List[Any]:
     for file_path in reports_dir.iterdir():
         if not file_path.is_file() or file_path.suffix.lower() not in supported_suffixes:
             continue
+        if file_path.name.endswith(".metadata.json"):
+            continue
 
         info = _split_generated_report_file(file_path)
+        metadata = _load_report_metadata(info["id"])
         generated_reports.append(UnifiedReportResponse(
             id=info["id"],
-            name=info["name"],
+            name=metadata.get("report_name") or info["name"],
             type="generated",
             format=info["format"],
             size=info["size"],
             created_at=info["created_at"],
             status="completed",
-            summary={"file_path": str(file_path)}
+            summary={
+                "file_path": str(file_path),
+                "report_type": metadata.get("report_type"),
+                "business_report_type": metadata.get("business_report_type"),
+                "test_plan_id": metadata.get("test_plan_id"),
+                "source": metadata.get("source"),
+                "formats": metadata.get("formats"),
+            }
         ))
 
     return generated_reports
@@ -482,6 +513,19 @@ async def generate_report(
                 "status": report.status,
                 "error_message": report.error_message
             })
+
+        custom_fields = request.custom_fields or {}
+        _save_report_metadata(config.report_id, {
+            "report_id": config.report_id,
+            "report_name": config.report_name,
+            "report_type": request.report_type,
+            "business_report_type": custom_fields.get("business_report_type") or request.report_type,
+            "test_plan_id": custom_fields.get("test_plan_id"),
+            "source": custom_fields.get("source") or request.summary.get("来源"),
+            "formats": [item["format"] for item in format_list],
+            "generated_by": current_user.id,
+            "created_at": datetime.now().isoformat(),
+        })
         
         response_data = GeneratedReportResponse(
             report_id=config.report_id,
@@ -587,6 +631,7 @@ async def import_report(
 async def get_unified_reports(
     report_type: Optional[str] = Query(None, description="鎶ュ憡绫诲瀷杩囨护"),
     format_filter: Optional[str] = Query(None, description="鏍煎紡杩囨护"),
+    test_plan_id: Optional[int] = Query(None, description="测试计划ID"),
     search: Optional[str] = Query(None, description="search keyword"),
     page: int = Query(1, ge=1, description="椤电爜"),
     page_size: int = Query(20, ge=1, le=100, description="姣忛〉澶у皬"),
@@ -623,10 +668,22 @@ async def get_unified_reports(
         
         # 搴旂敤杩囨护鍣?
         if report_type:
-            unified_reports = [r for r in unified_reports if r.type == report_type]
+            normalized_type = report_type.lower()
+            unified_reports = [
+                r for r in unified_reports
+                if r.type == normalized_type
+                or str((r.summary or {}).get("business_report_type") or "").lower() == normalized_type
+                or str((r.summary or {}).get("report_type") or "").lower() == normalized_type
+            ]
         
         if format_filter:
             unified_reports = [r for r in unified_reports if r.format == format_filter]
+
+        if test_plan_id:
+            unified_reports = [
+                r for r in unified_reports
+                if str((r.summary or {}).get("test_plan_id") or "") == str(test_plan_id)
+            ]
         
         if search:
             unified_reports = [r for r in unified_reports if search.lower() in r.name.lower()]

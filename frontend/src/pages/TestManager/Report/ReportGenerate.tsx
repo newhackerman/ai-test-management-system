@@ -1,5 +1,5 @@
 // @ts-nocheck
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { AlertCircle, ArrowLeft, Download, Eye, FileText, Settings } from 'lucide-react'
 import { Button } from '../../../components/ui/Button'
@@ -9,7 +9,11 @@ import { Textarea } from '../../../components/ui/Textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/Select'
 import { Checkbox } from '../../../components/ui/Checkbox'
 import { reportsApi } from '../../../services/api/reports'
-import { ReportFormat, ReportType } from '../../../types/testmanager'
+import { defectService } from '../../../services/testmanager/defectService'
+import { executionService } from '../../../services/testmanager/executionService'
+import { testCaseService } from '../../../services/testmanager/testCaseService'
+import { testPlanService } from '../../../services/testmanager/testPlanService'
+import { DefectSeverity, DefectStatus, ExecutionStatus, ReportFormat, ReportType } from '../../../types/testmanager'
 
 const reportTypes = [
   { value: ReportType.EXECUTION, label: '执行报告' },
@@ -93,6 +97,7 @@ const ReportGenerate: React.FC = () => {
   const initialReportType = queryTypeToReportType(searchParams.get('type'))
   const initialPlanId = Number(searchParams.get('test_plan_id') || searchParams.get('plan_id') || 0) || undefined
   const initialReportTypeLabel = reportTypes.find((item) => item.value === initialReportType)?.label || '测试报告'
+  const [selectedPlanId, setSelectedPlanId] = useState<number | undefined>(initialPlanId)
   const [config, setConfig] = useState(() => ({
     report_name: buildReportName(aiDraft) || (initialPlanId ? `测试计划 #${initialPlanId} - ${initialReportTypeLabel}` : ''),
     report_type: initialReportType,
@@ -106,12 +111,162 @@ const ReportGenerate: React.FC = () => {
   const [isGenerating, setIsGenerating] = useState(false)
   const [previewData, setPreviewData] = useState<any>(null)
   const [error, setError] = useState('')
+  const [referenceLoading, setReferenceLoading] = useState(false)
+  const [testPlans, setTestPlans] = useState([])
+  const [planContext, setPlanContext] = useState({
+    plan: null,
+    cases: [],
+    executions: [],
+    defects: [],
+  })
 
   useEffect(() => {
     if (aiDraft) sessionStorage.removeItem(AI_IMPORT_DRAFT_KEY)
   }, [aiDraft])
 
   const updateConfig = (key: string, value: any) => setConfig((current) => ({ ...current, [key]: value }))
+  const regeneratePlanContent = () => setSourceContent(buildAutoContent())
+
+  useEffect(() => {
+    let cancelled = false
+    testPlanService.getTestPlans({ page: 1, size: 100 })
+      .then((response) => {
+        if (!cancelled) setTestPlans(response.data || [])
+      })
+      .catch(() => {
+        if (!cancelled) setTestPlans([])
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!selectedPlanId) {
+      setPlanContext({ plan: null, cases: [], executions: [], defects: [] })
+      return
+    }
+
+    let cancelled = false
+    setReferenceLoading(true)
+    Promise.allSettled([
+      testPlanService.getTestPlan(selectedPlanId),
+      testCaseService.getTestCases({ test_plan_id: selectedPlanId, page: 1, size: 100 }),
+      executionService.getExecutions({ test_plan_id: selectedPlanId, page: 1, size: 100 }),
+      defectService.getDefects({ test_plan_id: selectedPlanId, page: 1, size: 100 }),
+    ]).then((results) => {
+      if (cancelled) return
+      const [planResult, casesResult, executionsResult, defectsResult] = results
+      const plan = planResult.status === 'fulfilled' ? planResult.value : null
+      const cases = casesResult.status === 'fulfilled' ? casesResult.value.data || [] : []
+      const executions = executionsResult.status === 'fulfilled' ? executionsResult.value.data || [] : []
+      const defects = defectsResult.status === 'fulfilled' ? defectsResult.value.data || [] : []
+      setPlanContext({ plan, cases, executions, defects })
+
+      const typeLabel = reportTypes.find((item) => item.value === config.report_type)?.label || '测试报告'
+      if (!aiDraft && (!config.report_name.trim() || /^测试计划 #\d+ - /.test(config.report_name))) {
+        updateConfig('report_name', `${plan?.plan_name || `测试计划 #${selectedPlanId}`} - ${typeLabel}`)
+      }
+    }).finally(() => {
+      if (!cancelled) setReferenceLoading(false)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [selectedPlanId])
+
+  const reportMetrics = useMemo(() => {
+    const cases = planContext.cases || []
+    const executions = planContext.executions || []
+    const defects = planContext.defects || []
+    const totalCases = cases.length
+    const latestByCase = new Map<number, any>()
+    executions.forEach((execution: any) => {
+      const caseId = Number(execution.test_case_id)
+      if (!caseId || latestByCase.has(caseId)) return
+      latestByCase.set(caseId, execution)
+    })
+    const latestExecutions = Array.from(latestByCase.values())
+    const passed = latestExecutions.filter((item: any) => item.execution_status === ExecutionStatus.PASSED).length
+    const failed = latestExecutions.filter((item: any) => item.execution_status === ExecutionStatus.FAILED).length
+    const blocked = latestExecutions.filter((item: any) => item.execution_status === ExecutionStatus.BLOCKED).length
+    const skipped = latestExecutions.filter((item: any) => item.execution_status === ExecutionStatus.SKIPPED).length
+    const executed = latestExecutions.filter((item: any) => item.execution_status && item.execution_status !== ExecutionStatus.NOT_EXECUTED).length
+    const openDefects = defects.filter((item: any) => ![DefectStatus.CLOSED, DefectStatus.VERIFIED, DefectStatus.REJECTED].includes(item.status)).length
+    const highRiskDefects = defects.filter((item: any) => [DefectSeverity.CRITICAL, DefectSeverity.HIGH].includes(item.severity)).length
+    return {
+      totalCases,
+      executed,
+      passed,
+      failed,
+      blocked,
+      skipped,
+      notExecuted: Math.max(0, totalCases - executed),
+      passRate: executed ? Math.round((passed / executed) * 1000) / 10 : 0,
+      executionRate: totalCases ? Math.round((executed / totalCases) * 1000) / 10 : 0,
+      totalDefects: defects.length,
+      openDefects,
+      highRiskDefects,
+    }
+  }, [planContext])
+
+  const buildAutoContent = () => {
+    if (!selectedPlanId || !planContext.plan) return sourceContent
+    const plan: any = planContext.plan
+    const metrics = reportMetrics
+    const base = [
+      `# ${plan.plan_name} 测试报告`,
+      '',
+      `测试计划：${plan.plan_name} (${plan.plan_code || plan.id})`,
+      `计划状态：${plan.status || '-'}`,
+      `测试范围：${plan.test_scope || '-'}`,
+      '',
+      '## 核心指标',
+      `- 用例总数：${metrics.totalCases}`,
+      `- 已执行：${metrics.executed}，未执行：${metrics.notExecuted}`,
+      `- 通过：${metrics.passed}，失败：${metrics.failed}，阻塞：${metrics.blocked}，跳过：${metrics.skipped}`,
+      `- 执行率：${metrics.executionRate}%`,
+      `- 通过率：${metrics.passRate}%`,
+      `- 缺陷总数：${metrics.totalDefects}，未关闭：${metrics.openDefects}，高风险：${metrics.highRiskDefects}`,
+    ]
+
+    if (config.report_type === ReportType.DEFECT) {
+      return [
+        ...base,
+        '',
+        '## 缺陷明细',
+        ...(planContext.defects.length ? planContext.defects.map((defect: any, index: number) =>
+          `${index + 1}. ${defect.defect_code || defect.id} ${defect.title} - ${defect.status}/${defect.severity}/${defect.priority}`
+        ) : ['暂无缺陷。']),
+      ].join('\n')
+    }
+
+    if (config.report_type === ReportType.COVERAGE) {
+      const requirementIds = new Set(planContext.cases.map((item: any) => item.requirement_id).filter(Boolean))
+      return [
+        ...base,
+        '',
+        '## 覆盖情况',
+        `- 关联需求数：${requirementIds.size}`,
+        `- 已关联需求的用例：${planContext.cases.filter((item: any) => item.requirement_id).length}`,
+        `- 未关联需求的用例：${planContext.cases.filter((item: any) => !item.requirement_id).length}`,
+      ].join('\n')
+    }
+
+    return [
+      ...base,
+      '',
+      '## 最近执行',
+      ...(planContext.executions.length ? planContext.executions.slice(0, 20).map((execution: any, index: number) =>
+        `${index + 1}. ${execution.execution_code || execution.id} ${execution.test_case_title || `用例 #${execution.test_case_id}`} - ${execution.execution_status}`
+      ) : ['暂无执行记录。']),
+    ].join('\n')
+  }
+
+  useEffect(() => {
+    if (aiDraft || sourceContent.trim() || !selectedPlanId || !planContext.plan) return
+    setSourceContent(buildAutoContent())
+  }, [aiDraft, planContext, selectedPlanId])
 
   const handleGenerate = async () => {
     if (!config.report_name.trim()) {
@@ -122,7 +277,8 @@ const ReportGenerate: React.FC = () => {
     setIsGenerating(true)
     setError('')
     try {
-      const lines = sourceContent
+      const effectiveContent = sourceContent.trim() || buildAutoContent()
+      const lines = effectiveContent
         .split('\n')
         .map((line) => line.trim())
         .filter(Boolean)
@@ -134,28 +290,63 @@ const ReportGenerate: React.FC = () => {
         include_charts: config.include_charts,
         include_details: config.include_details,
         custom_fields: {
-          test_plan_id: initialPlanId,
+          test_plan_id: selectedPlanId,
+          business_report_type: String(config.report_type).toLowerCase(),
+          source: aiDraft ? 'AI 助手' : (selectedPlanId ? '测试计划数据' : '手工生成'),
           report_period_start: config.report_period_start || undefined,
           report_period_end: config.report_period_end || undefined,
         },
         title: config.report_name.trim(),
         summary: {
-          来源: aiDraft ? 'AI 助手' : '手工生成',
-          测试计划: initialPlanId ? `#${initialPlanId}` : '未指定',
+          来源: aiDraft ? 'AI 助手' : (selectedPlanId ? '测试计划数据' : '手工生成'),
+          测试计划: selectedPlanId ? `${planContext.plan?.plan_name || `#${selectedPlanId}`}` : '未指定',
           报告类型: reportTypes.find((item) => item.value === config.report_type)?.label || config.report_type,
-          正文字数: sourceContent.length,
+          用例总数: reportMetrics.totalCases,
+          已执行: reportMetrics.executed,
+          通过率: `${reportMetrics.passRate}%`,
+          未关闭缺陷: reportMetrics.openDefects,
+          正文字数: effectiveContent.length,
           生成时间: new Date().toLocaleString('zh-CN', { hour12: false }),
         },
         sections: [
+          selectedPlanId ? {
+            title: '测试计划指标',
+            description: planContext.plan?.plan_name || `测试计划 #${selectedPlanId}`,
+            data: [
+              `用例总数：${reportMetrics.totalCases}`,
+              `执行率：${reportMetrics.executionRate}%`,
+              `通过率：${reportMetrics.passRate}%`,
+              `未关闭缺陷：${reportMetrics.openDefects}`,
+              `高风险缺陷：${reportMetrics.highRiskDefects}`,
+            ],
+          } : null,
           {
             title: aiDraft ? 'AI 分析内容' : '报告内容',
             description: aiDraft?.sessionTitle || '由报告生成页提交',
             data: lines.length ? lines : ['暂无正文内容，请返回补充报告内容。'],
           },
-        ],
+        ].filter(Boolean),
+        charts: config.include_charts ? [
+          {
+            type: 'bar',
+            title: '执行结果分布',
+            data: {
+              labels: ['通过', '失败', '阻塞', '跳过', '未执行'],
+              values: [reportMetrics.passed, reportMetrics.failed, reportMetrics.blocked, reportMetrics.skipped, reportMetrics.notExecuted],
+            },
+          },
+          {
+            type: 'pie',
+            title: '缺陷状态概览',
+            data: {
+              labels: ['未关闭', '已关闭/验证/拒绝'],
+              values: [reportMetrics.openDefects, Math.max(0, reportMetrics.totalDefects - reportMetrics.openDefects)],
+            },
+          },
+        ] : undefined,
         metadata: {
           来源页面: aiDraft ? 'AI 助手' : '报告生成',
-          测试计划ID: initialPlanId || '-',
+          测试计划ID: selectedPlanId || '-',
           开始日期: config.report_period_start || '-',
           结束日期: config.report_period_end || '-',
         },
@@ -173,8 +364,11 @@ const ReportGenerate: React.FC = () => {
       report_name: config.report_name || '-',
       report_type: reportTypes.find((item) => item.value === config.report_type)?.label || '-',
       report_format: formats.find((item) => item.value === config.report_format)?.label || '-',
-      source: aiDraft ? 'AI 助手' : '手工生成',
+      source: aiDraft ? 'AI 助手' : (selectedPlanId ? '测试计划数据' : '手工生成'),
       content_lines: sourceContent.split('\n').filter((line) => line.trim()).length,
+      test_plan: selectedPlanId ? (planContext.plan?.plan_name || `#${selectedPlanId}`) : '未指定',
+      pass_rate: `${reportMetrics.passRate}%`,
+      open_defects: reportMetrics.openDefects,
     })
   }
 
@@ -191,7 +385,7 @@ const ReportGenerate: React.FC = () => {
           <div>
             <h1 className="text-2xl font-bold">生成测试报告</h1>
             <p className="text-gray-600">配置并生成自定义测试报告。</p>
-            {initialPlanId && <p className="text-sm text-muted-foreground">当前关联测试计划 #{initialPlanId}</p>}
+            {selectedPlanId && <p className="text-sm text-muted-foreground">当前关联测试计划 #{selectedPlanId}</p>}
           </div>
         </div>
       </div>
@@ -222,6 +416,17 @@ const ReportGenerate: React.FC = () => {
               </Field>
 
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <Field label="测试计划">
+                  <Select value={selectedPlanId ? String(selectedPlanId) : 'none'} onValueChange={(value) => setSelectedPlanId(value === 'none' ? undefined : Number(value))}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">不关联测试计划</SelectItem>
+                      {testPlans.map((plan: any) => (
+                        <SelectItem key={plan.id} value={String(plan.id)}>{plan.plan_name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </Field>
                 <Field label="报告类型">
                   <Select value={config.report_type} onValueChange={(value) => updateConfig('report_type', value)}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
@@ -279,6 +484,16 @@ const ReportGenerate: React.FC = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
+              {selectedPlanId && (
+                <div className="mb-3 flex flex-col gap-2 rounded-md border bg-muted/30 p-3 text-sm md:flex-row md:items-center md:justify-between">
+                  <span className="text-muted-foreground">
+                    {referenceLoading ? '正在读取测试计划数据...' : `已读取 ${reportMetrics.totalCases} 个用例、${planContext.executions.length} 条执行记录、${reportMetrics.totalDefects} 个缺陷。`}
+                  </span>
+                  <Button type="button" variant="outline" size="sm" onClick={regeneratePlanContent} disabled={referenceLoading || !planContext.plan}>
+                    从计划数据生成正文
+                  </Button>
+                </div>
+              )}
               <Textarea
                 rows={12}
                 value={sourceContent}
@@ -323,6 +538,9 @@ const ReportGenerate: React.FC = () => {
                 <Info label="输出格式" value={previewData.report_format} />
                 <Info label="来源" value={previewData.source} />
                 <Info label="正文行数" value={previewData.content_lines} />
+                <Info label="测试计划" value={previewData.test_plan} />
+                <Info label="通过率" value={previewData.pass_rate} />
+                <Info label="未关闭缺陷" value={previewData.open_defects} />
               </CardContent>
             </Card>
           )}

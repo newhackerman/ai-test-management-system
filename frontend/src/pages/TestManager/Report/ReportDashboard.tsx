@@ -1,12 +1,15 @@
 // @ts-nocheck
 import React, { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { BarChart3, Calendar, Download, FileText, Plus, RefreshCw } from 'lucide-react'
+import { BarChart3, Calendar, Download, FileText, Plus, RefreshCw, Search } from 'lucide-react'
 import { Button } from '../../../components/ui/Button'
+import { Input } from '../../../components/ui/Input'
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/Card'
 import { Badge } from '../../../components/ui/Badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../components/ui/Table'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/Select'
 import { reportsApi } from '../../../services/api/reports'
+import { testPlanService } from '../../../services/testmanager/testPlanService'
 import { formatDate } from '../../../utils/date'
 
 const reportTypeCards = [
@@ -16,6 +19,7 @@ const reportTypeCards = [
 ]
 
 const formatLabel = (format?: string) => String(format || '-').toUpperCase()
+const reportTypeLabel = (value?: string) => reportTypeCards.find((item) => item.type === value)?.title || value || '-'
 const sizeLabel = (size?: number) => {
   const value = Number(size || 0)
   if (!value) return '-'
@@ -31,13 +35,27 @@ const ReportDashboard: React.FC = () => {
   const [loading, setLoading] = useState(false)
   const [downloadingId, setDownloadingId] = useState('')
   const [error, setError] = useState('')
+  const [testPlans, setTestPlans] = useState([])
+  const [filters, setFilters] = useState({
+    search: '',
+    report_type: 'all',
+    format_filter: 'all',
+    test_plan_id: 'all',
+  })
 
   const loadReports = async () => {
     setLoading(true)
     setError('')
     try {
       const [listResponse, analyticsResponse] = await Promise.all([
-        reportsApi.getUnifiedReports({ page: 1, page_size: 10 }),
+        reportsApi.getUnifiedReports({
+          page: 1,
+          page_size: 20,
+          search: filters.search.trim() || undefined,
+          report_type: filters.report_type === 'all' ? undefined : filters.report_type,
+          format_filter: filters.format_filter === 'all' ? undefined : filters.format_filter,
+          test_plan_id: filters.test_plan_id === 'all' ? undefined : Number(filters.test_plan_id),
+        }),
         reportsApi.getAnalytics(30),
       ])
       setReports(listResponse?.data || [])
@@ -54,7 +72,25 @@ const ReportDashboard: React.FC = () => {
 
   useEffect(() => {
     loadReports()
+  }, [filters])
+
+  useEffect(() => {
+    let cancelled = false
+    testPlanService.getTestPlans({ page: 1, size: 100 })
+      .then((response) => {
+        if (!cancelled) setTestPlans(response.data || [])
+      })
+      .catch(() => {
+        if (!cancelled) setTestPlans([])
+      })
+    return () => {
+      cancelled = true
+    }
   }, [])
+
+  const updateFilter = (key: string, value: string) => {
+    setFilters((current) => ({ ...current, [key]: value }))
+  }
 
   const statistics = useMemo(() => {
     const now = new Date()
@@ -106,7 +142,7 @@ const ReportDashboard: React.FC = () => {
             <RefreshCw className="mr-2 h-4 w-4" />
             刷新
           </Button>
-          <Link to="/test-manager/reports/generate">
+          <Link to={`/test-manager/reports/generate${filters.test_plan_id !== 'all' ? `?test_plan_id=${filters.test_plan_id}` : ''}`}>
             <Button>
               <Plus className="mr-2 h-4 w-4" />
               生成报告
@@ -171,11 +207,56 @@ const ReportDashboard: React.FC = () => {
         </Card>
       </div>
 
+      <Card>
+        <CardContent className="pt-6">
+          <div className="grid grid-cols-1 gap-3 lg:grid-cols-[1fr_180px_160px_220px]">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+              <Input
+                value={filters.search}
+                onChange={(event) => updateFilter('search', event.target.value)}
+                placeholder="搜索报告名称"
+                className="pl-10"
+              />
+            </div>
+            <Select value={filters.report_type} onValueChange={(value) => updateFilter('report_type', value)}>
+              <SelectTrigger><SelectValue placeholder="报告类型" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">全部类型</SelectItem>
+                {reportTypeCards.map((item) => (
+                  <SelectItem key={item.type} value={item.type}>{item.title}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={filters.format_filter} onValueChange={(value) => updateFilter('format_filter', value)}>
+              <SelectTrigger><SelectValue placeholder="格式" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">全部格式</SelectItem>
+                <SelectItem value="html">HTML</SelectItem>
+                <SelectItem value="xlsx">Excel</SelectItem>
+                <SelectItem value="json">JSON</SelectItem>
+                <SelectItem value="pdf">PDF</SelectItem>
+                <SelectItem value="csv">CSV</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={filters.test_plan_id} onValueChange={(value) => updateFilter('test_plan_id', value)}>
+              <SelectTrigger><SelectValue placeholder="测试计划" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">全部测试计划</SelectItem>
+                {testPlans.map((plan: any) => (
+                  <SelectItem key={plan.id} value={String(plan.id)}>{plan.plan_name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </CardContent>
+      </Card>
+
       <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
         {reportTypeCards.map((item) => {
           const Icon = item.icon
           return (
-            <Link key={item.type} to={`/test-manager/reports/generate?type=${item.type}`}>
+            <Link key={item.type} to={`/test-manager/reports/generate?type=${item.type}${filters.test_plan_id !== 'all' ? `&test_plan_id=${filters.test_plan_id}` : ''}`}>
               <Card className="cursor-pointer transition-shadow hover:shadow-md">
                 <CardContent className="pt-6">
                   <div className="flex items-center space-x-3">
@@ -202,6 +283,7 @@ const ReportDashboard: React.FC = () => {
               <TableHeader>
                 <TableRow>
                   <TableHead>报告名称</TableHead>
+                  <TableHead>业务类型</TableHead>
                   <TableHead>来源</TableHead>
                   <TableHead>格式</TableHead>
                   <TableHead>大小</TableHead>
@@ -216,6 +298,12 @@ const ReportDashboard: React.FC = () => {
                     <TableCell>
                       <div className="font-medium">{report.name}</div>
                       <div className="text-xs text-gray-500">{report.id}</div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline">{reportTypeLabel(report.summary?.business_report_type || report.summary?.report_type)}</Badge>
+                      {report.summary?.test_plan_id && (
+                        <div className="mt-1 text-xs text-gray-500">计划 #{report.summary.test_plan_id}</div>
+                      )}
                     </TableCell>
                     <TableCell>
                       <Badge variant={report.type === 'generated' ? 'default' : 'secondary'}>
