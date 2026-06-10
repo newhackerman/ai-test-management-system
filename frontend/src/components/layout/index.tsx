@@ -249,25 +249,25 @@ const AppLayout: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 text-gray-900 dark:bg-gray-950 dark:text-gray-100">
+    <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
       <aside
-        className={`fixed inset-y-0 left-0 z-40 w-64 transform bg-slate-900 text-white transition-[width,transform] lg:translate-x-0 ${
-          sidebarCollapsed ? 'lg:w-20' : 'lg:w-64'
+        className={`fixed inset-y-0 left-0 z-40 w-64 transform border-r border-slate-200 bg-white text-slate-700 shadow-sm transition-[width,transform] dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200 lg:translate-x-0 ${
+          sidebarCollapsed ? 'lg:w-16' : 'lg:w-48'
         } ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
         <button
           type="button"
-          className="absolute -right-3 top-5 z-50 hidden h-7 w-7 items-center justify-center rounded-full border border-slate-700 bg-slate-900 text-slate-200 shadow-md transition hover:bg-slate-800 hover:text-white lg:flex"
+          className="absolute -right-3 top-5 z-50 hidden h-7 w-7 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 shadow-sm transition hover:bg-slate-50 hover:text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white lg:flex"
           onClick={() => setSidebarCollapsed((value) => !value)}
           aria-label={sidebarCollapsed ? '展开菜单' : '收起菜单'}
           title={sidebarCollapsed ? '展开菜单' : '收起菜单'}
         >
           {sidebarCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
         </button>
-        <div className={`flex h-14 items-center justify-between border-b border-white/10 px-4 ${sidebarCollapsed ? 'lg:justify-center lg:px-3' : ''}`}>
-          <Link to="/" className={`font-semibold ${sidebarCollapsed ? 'lg:hidden' : ''}`}>
+        <div className={`flex h-14 items-center justify-between border-b border-slate-200 px-3 dark:border-slate-800 ${sidebarCollapsed ? 'lg:justify-center lg:px-2' : ''}`}>
+          <Link to="/" className={`truncate text-sm font-semibold text-slate-900 dark:text-slate-100 ${sidebarCollapsed ? 'lg:hidden' : ''}`}>
             AI 测试管理系统
           </Link>
           <Link
@@ -279,29 +279,31 @@ const AppLayout: React.FC = () => {
           >
             AI
           </Link>
-          <button className="rounded-md p-1 hover:bg-white/10 lg:hidden" onClick={() => setSidebarOpen(false)} aria-label="关闭菜单">
+          <button className="rounded-md p-1 hover:bg-slate-100 dark:hover:bg-slate-800 lg:hidden" onClick={() => setSidebarOpen(false)} aria-label="关闭菜单">
             <X className="h-5 w-5" />
           </button>
         </div>
-        <nav className={`h-[calc(100vh-3.5rem)] overflow-y-auto ${sidebarCollapsed ? 'space-y-3 p-3 lg:px-2' : 'space-y-4 p-3'}`}>
+        <nav className={`h-[calc(100vh-3.5rem)] overflow-y-auto ${sidebarCollapsed ? 'space-y-3 p-2 lg:px-2' : 'space-y-3 p-2'}`}>
           {visibleNavGroups.map((group) => (
             <div key={group.title}>
-              <div className={`mb-1.5 px-2 text-xs font-medium uppercase tracking-wide text-slate-400 ${sidebarCollapsed ? 'lg:hidden' : ''}`}>{group.title}</div>
-              <div className="space-y-1">
+              <div className={`mb-1 px-2 text-[11px] font-medium uppercase tracking-wide text-slate-500 dark:text-slate-500 ${sidebarCollapsed ? 'lg:hidden' : ''}`}>{group.title}</div>
+              <div className="space-y-0.5">
                 {group.items.map((item) => {
                   const Icon = item.icon
                   return (
                     <NavLink
                       key={item.path}
                       to={item.path}
-                      end={item.path === '/'}
+                      end={item.path === '/' || item.path === '/test-manager'}
                       onClick={() => setSidebarOpen(false)}
                       title={sidebarCollapsed ? item.label : undefined}
                       className={({ isActive }) =>
-                        `flex items-center rounded-md px-3 py-2 text-sm transition-colors ${
+                        `flex items-center rounded-md px-2.5 py-1.5 text-sm transition-colors ${
                           sidebarCollapsed ? 'lg:justify-center lg:px-0 lg:py-2.5' : ''
                         } ${
-                          isActive ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-white/10 hover:text-white'
+                          isActive
+                            ? 'bg-blue-50 text-blue-700 dark:bg-blue-500/15 dark:text-blue-200'
+                            : 'text-slate-600 hover:bg-slate-100 hover:text-slate-950 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white'
                         }`
                       }
                     >
@@ -318,8 +320,8 @@ const AppLayout: React.FC = () => {
 
       {sidebarOpen && <div className="fixed inset-0 z-30 bg-black/40 lg:hidden" onClick={() => setSidebarOpen(false)} />}
 
-      <div className={`transition-[padding] ${sidebarCollapsed ? 'lg:pl-20' : 'lg:pl-64'}`}>
-        <header className="sticky top-0 z-20 flex h-14 items-center justify-between border-b bg-white px-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+      <div className={`transition-[padding] ${sidebarCollapsed ? 'lg:pl-16' : 'lg:pl-48'}`}>
+        <header className="sticky top-0 z-20 flex h-14 items-center justify-between border-b border-slate-200 bg-white/95 px-4 shadow-sm backdrop-blur dark:border-slate-800 dark:bg-slate-950/95">
           <div className="flex min-w-0 items-center gap-3">
             <button className="rounded-md p-2 hover:bg-gray-100 dark:hover:bg-slate-800 lg:hidden" onClick={() => setSidebarOpen(true)} aria-label="打开菜单">
               <Menu className="h-5 w-5" />
@@ -355,7 +357,7 @@ const AppLayout: React.FC = () => {
               >
                 <Bell className="h-4 w-4" />
                 {unreadCount > 0 && (
-                  <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] leading-none text-white">
+                  <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-blue-600 px-1 text-[10px] leading-none text-white shadow-sm">
                     {unreadCount > 99 ? '99+' : unreadCount}
                   </span>
                 )}
@@ -389,7 +391,7 @@ const AppLayout: React.FC = () => {
                         >
                           <div className="flex items-start justify-between gap-2">
                             <div className="font-medium">{notification.title}</div>
-                            {!notification.is_read && <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-red-500" />}
+                            {!notification.is_read && <span className="rounded bg-blue-50 px-1.5 py-0.5 text-[11px] text-blue-700 dark:bg-blue-500/15 dark:text-blue-200">未读</span>}
                           </div>
                           {notification.content && (
                             <div className="mt-1 line-clamp-2 text-xs text-gray-500 dark:text-gray-400">{notification.content}</div>

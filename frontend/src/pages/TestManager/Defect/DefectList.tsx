@@ -662,7 +662,7 @@ const DefectList: React.FC = () => {
                   <TableHead className="w-28">报告人</TableHead>
                   <TableHead className="w-28">负责人</TableHead>
                   <TableHead className="w-32">报告时间</TableHead>
-                  <TableHead className="w-32 text-right">操作</TableHead>
+                  <TableHead className="sticky right-0 z-10 w-32 bg-card text-right">操作</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -734,7 +734,7 @@ const DefectList: React.FC = () => {
                         <span>{formatDate(defect.reported_at)}</span>
                       </div>
                     </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="sticky right-0 bg-card text-right">
                       <div className="flex justify-end gap-1">
                         <Button variant="ghost" size="icon" className="h-8 w-8" title="查看详情" onClick={() => setDetailDefect(defect)}>
                           <Eye className="h-4 w-4" />
