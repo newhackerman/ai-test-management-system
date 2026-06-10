@@ -96,7 +96,7 @@ const TestPlanList: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
@@ -112,7 +112,7 @@ const TestPlanList: React.FC = () => {
       </div>  
     {/* Filters and Search */}
       <Card>
-        <CardContent className="pt-6">
+        <CardContent className="p-3">
           <div className="flex flex-col md:flex-row gap-4">
             <div className="flex-1">
               <div className="relative">
@@ -190,10 +190,8 @@ const TestPlanList: React.FC = () => {
 
       {/* Test Plans Table */}
       <Card>
-        <CardHeader>
-          <CardTitle>测试计划列表 ({totalCount})</CardTitle>
-        </CardHeader>
-        <CardContent>
+        <CardContent className="p-4">
+          <div className="mb-3 text-sm text-muted-foreground">共 {totalCount} 个测试计划</div>
           <Table>
             <TableHeader>
               <TableRow>

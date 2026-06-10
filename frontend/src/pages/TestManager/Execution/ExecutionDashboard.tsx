@@ -110,7 +110,7 @@ const ExecutionDashboard: React.FC = () => {
   )
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-2xl font-bold">执行管理</h1>
@@ -136,47 +136,39 @@ const ExecutionDashboard: React.FC = () => {
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <Card>
-          <CardContent className="flex items-center gap-3 pt-6">
+      <div className="grid gap-2 rounded-lg border bg-card p-3 md:grid-cols-2 xl:grid-cols-4">
+        <div className="flex items-center gap-3 rounded-md border bg-background px-3 py-2">
             <Activity className="h-5 w-5 text-blue-600" />
             <div>
-              <p className="text-sm text-muted-foreground">总执行数</p>
-              <p className="text-2xl font-semibold">{stats.total_executions}</p>
+              <p className="text-xs text-muted-foreground">总执行数</p>
+              <p className="text-xl font-semibold leading-6">{stats.total_executions}</p>
             </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="flex items-center gap-3 pt-6">
+        </div>
+        <div className="flex items-center gap-3 rounded-md border bg-background px-3 py-2">
             <Play className="h-5 w-5 text-emerald-600" />
             <div>
-              <p className="text-sm text-muted-foreground">执行中</p>
-              <p className="text-2xl font-semibold">{stats.in_progress}</p>
+              <p className="text-xs text-muted-foreground">执行中</p>
+              <p className="text-xl font-semibold leading-6">{stats.in_progress}</p>
             </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="flex items-center gap-3 pt-6">
+        </div>
+        <div className="flex items-center gap-3 rounded-md border bg-background px-3 py-2">
             <CheckCircle className="h-5 w-5 text-violet-600" />
             <div>
-              <p className="text-sm text-muted-foreground">今日完成</p>
-              <p className="text-2xl font-semibold">{stats.completed_today}</p>
+              <p className="text-xs text-muted-foreground">今日完成</p>
+              <p className="text-xl font-semibold leading-6">{stats.completed_today}</p>
             </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="flex items-center gap-3 pt-6">
+        </div>
+        <div className="flex items-center gap-3 rounded-md border bg-background px-3 py-2">
             <TrendingUp className="h-5 w-5 text-amber-600" />
             <div>
-              <p className="text-sm text-muted-foreground">通过率</p>
-              <p className="text-2xl font-semibold">{stats.pass_rate}%</p>
+              <p className="text-xs text-muted-foreground">通过率</p>
+              <p className="text-xl font-semibold leading-6">{stats.pass_rate}%</p>
             </div>
-          </CardContent>
-        </Card>
+        </div>
       </div>
 
       <Card>
-        <CardHeader className="gap-4 md:flex-row md:items-center md:justify-between">
+        <CardHeader className="gap-3 p-4 md:flex-row md:items-center md:justify-between">
           <CardTitle className="text-lg">执行记录</CardTitle>
           <div className="flex flex-col gap-2 md:flex-row md:items-center">
             <div className="relative">
@@ -213,7 +205,7 @@ const ExecutionDashboard: React.FC = () => {
             <Button variant="outline" onClick={resetFilters}>重置</Button>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="px-4 pb-4">
           <Table>
             <TableHeader>
               <TableRow>

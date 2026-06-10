@@ -265,7 +265,7 @@ const TestCaseList: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-2xl font-bold">测试用例管理</h1>
@@ -393,7 +393,7 @@ const TestCaseList: React.FC = () => {
       </div>
 
       <Card>
-        <CardContent className="pt-6">
+        <CardContent className="p-3">
           <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(220px,1fr)_repeat(5,160px)]">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
@@ -473,11 +473,8 @@ const TestCaseList: React.FC = () => {
 
 
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between gap-3">
-          <CardTitle>测试用例列表</CardTitle>
-          <div className="text-sm text-gray-600">共 {totalCount} 个测试用例</div>
-        </CardHeader>
-        <CardContent>
+        <CardContent className="p-4">
+          <div className="mb-3 text-sm text-muted-foreground">共 {totalCount} 个测试用例</div>
           <Table className="min-w-[1385px] table-fixed">
             <TableHeader>
               <TableRow>
