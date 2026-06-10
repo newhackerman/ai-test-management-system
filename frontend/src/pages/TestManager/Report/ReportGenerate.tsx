@@ -432,9 +432,9 @@ const ReportGenerate: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4">
+    <div className="space-y-4">
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div className="flex items-center gap-3">
           <Link to="/test-manager/reports">
             <Button variant="ghost" size="sm">
               <ArrowLeft className="mr-2 h-4 w-4" />
@@ -443,41 +443,42 @@ const ReportGenerate: React.FC = () => {
           </Link>
           <div>
             <h1 className="text-2xl font-bold">生成测试报告</h1>
-            <p className="text-gray-600">配置并生成自定义测试报告。</p>
+            <p className="text-sm text-muted-foreground">配置并生成自定义测试报告。</p>
             {selectedPlanId && <p className="text-sm text-muted-foreground">当前关联测试计划 #{selectedPlanId}</p>}
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-2">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <div className={previewData ? 'lg:col-span-2' : 'lg:col-span-3'}>
           {error && (
-            <div className="mb-4 flex items-start gap-2 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            <div className="mb-3 flex items-start gap-2 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
               <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
               <span>{error}</span>
             </div>
           )}
 
           <Card>
-            <CardHeader>
+            <CardHeader className="p-4 pb-2">
               <CardTitle className="flex items-center gap-2">
                 <Settings className="h-5 w-5" />
                 报告配置
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <Field label="报告名称">
-                <Input
-                  value={config.report_name}
-                  onChange={(event) => updateConfig('report_name', event.target.value)}
-                  placeholder="请输入报告名称"
-                />
-              </Field>
-
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <CardContent className="p-4 pt-0">
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                <div className="md:col-span-3">
+                  <Field label="报告名称">
+                    <Input
+                      value={config.report_name}
+                      onChange={(event) => updateConfig('report_name', event.target.value)}
+                      placeholder="请输入报告名称"
+                    />
+                  </Field>
+                </div>
                 <Field label="测试计划">
                   <Select value={selectedPlanId ? String(selectedPlanId) : 'none'} onValueChange={(value) => setSelectedPlanId(value === 'none' ? undefined : Number(value))}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="none">不关联测试计划</SelectItem>
                       {testPlans.map((plan: any) => (
@@ -488,7 +489,7 @@ const ReportGenerate: React.FC = () => {
                 </Field>
                 <Field label="报告类型">
                   <Select value={config.report_type} onValueChange={(value) => updateConfig('report_type', value)}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       {reportTypes.map((item) => (
                         <SelectItem key={item.value} value={item.value}>{item.label}</SelectItem>
@@ -498,7 +499,7 @@ const ReportGenerate: React.FC = () => {
                 </Field>
                 <Field label="输出格式">
                   <Select value={config.report_format} onValueChange={(value) => updateConfig('report_format', value)}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       {formats.map((item) => (
                         <SelectItem key={item.value} value={item.value}>{item.label}</SelectItem>
@@ -520,31 +521,40 @@ const ReportGenerate: React.FC = () => {
                     onChange={(event) => updateConfig('report_period_end', event.target.value)}
                   />
                 </Field>
-              </div>
-
-              <div className="space-y-3">
-                <label className="flex items-center gap-2 text-sm">
-                  <Checkbox checked={config.include_charts} onCheckedChange={(checked) => updateConfig('include_charts', Boolean(checked))} />
-                  包含图表
-                </label>
-                <label className="flex items-center gap-2 text-sm">
-                  <Checkbox checked={config.include_details} onCheckedChange={(checked) => updateConfig('include_details', Boolean(checked))} />
-                  包含明细
-                </label>
+                <div className="flex items-end gap-4 pb-2">
+                  <label className="flex items-center gap-2 text-sm">
+                    <Checkbox checked={config.include_charts} onCheckedChange={(checked) => updateConfig('include_charts', Boolean(checked))} />
+                    包含图表
+                  </label>
+                  <label className="flex items-center gap-2 text-sm">
+                    <Checkbox checked={config.include_details} onCheckedChange={(checked) => updateConfig('include_details', Boolean(checked))} />
+                    包含明细
+                  </label>
+                </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="mt-6">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+          <Card className="mt-4">
+            <CardHeader className="flex flex-col gap-3 p-4 pb-2 md:flex-row md:items-center md:justify-between">
+              <CardTitle className="flex items-center gap-2 text-lg">
                 <FileText className="h-5 w-5" />
                 报告内容
               </CardTitle>
+              <div className="flex flex-wrap gap-2">
+                <Button variant="outline" onClick={handlePreview}>
+                  <Eye className="mr-2 h-4 w-4" />
+                  预览
+                </Button>
+                <Button onClick={handleGenerate} disabled={isGenerating || !config.report_name}>
+                  <Download className="mr-2 h-4 w-4" />
+                  {isGenerating ? '生成中...' : '生成报告'}
+                </Button>
+              </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-4 pt-0">
               {selectedPlanId && (
-                <div className="mb-3 flex flex-col gap-2 rounded-md border bg-muted/30 p-3 text-sm md:flex-row md:items-center md:justify-between">
+                <div className="mb-3 flex flex-col gap-2 rounded-md border bg-muted/30 px-3 py-2 text-sm md:flex-row md:items-center md:justify-between">
                   <span className="text-muted-foreground">
                     {referenceLoading ? '正在读取测试计划数据...' : `已读取 ${reportMetrics.totalCases} 个用例、${planContext.executions.length} 条执行记录、${reportMetrics.totalDefects} 个缺陷。`}
                   </span>
@@ -554,7 +564,7 @@ const ReportGenerate: React.FC = () => {
                 </div>
               )}
               {!selectedPlanId && config.report_type === ReportType.DEFECT && filteredDefects.length > 0 && (
-                <div className="mb-3 flex flex-col gap-2 rounded-md border bg-muted/30 p-3 text-sm md:flex-row md:items-center md:justify-between">
+                <div className="mb-3 flex flex-col gap-2 rounded-md border bg-muted/30 px-3 py-2 text-sm md:flex-row md:items-center md:justify-between">
                   <span className="text-muted-foreground">
                     已按缺陷筛选读取 {filteredDefects.length} 个缺陷，其中未关闭 {reportMetrics.openDefects} 个，高风险 {reportMetrics.highRiskDefects} 个。
                   </span>
@@ -564,7 +574,7 @@ const ReportGenerate: React.FC = () => {
                 </div>
               )}
               <Textarea
-                rows={12}
+                rows={10}
                 value={sourceContent}
                 onChange={(event) => setSourceContent(event.target.value)}
                 placeholder="填写或从 AI 助手导入报告正文"
@@ -576,32 +586,16 @@ const ReportGenerate: React.FC = () => {
           </Card>
         </div>
 
-        <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>操作</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <Button variant="outline" onClick={handlePreview} className="w-full">
-                <Eye className="mr-2 h-4 w-4" />
-                预览
-              </Button>
-              <Button onClick={handleGenerate} disabled={isGenerating || !config.report_name} className="w-full">
-                <Download className="mr-2 h-4 w-4" />
-                {isGenerating ? '生成中...' : '生成报告'}
-              </Button>
-            </CardContent>
-          </Card>
-
-          {previewData && (
+        {previewData && (
+          <div>
             <Card>
-              <CardHeader>
+              <CardHeader className="p-4 pb-2">
                 <CardTitle className="flex items-center gap-2">
                   <FileText className="h-5 w-5" />
                   报告预览
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-2 text-sm">
+              <CardContent className="space-y-2 px-4 pb-4 text-sm">
                 <Info label="报告名称" value={previewData.report_name} />
                 <Info label="报告类型" value={previewData.report_type} />
                 <Info label="输出格式" value={previewData.report_format} />
@@ -612,15 +606,15 @@ const ReportGenerate: React.FC = () => {
                 <Info label="未关闭缺陷" value={previewData.open_defects} />
               </CardContent>
             </Card>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     </div>
   )
 }
 
 const Field = ({ label, children }: { label: string; children: React.ReactNode }) => (
-  <label className="block space-y-2 text-sm font-medium">
+  <label className="block space-y-1 text-sm font-medium">
     <span>{label}</span>
     {children}
   </label>

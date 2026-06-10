@@ -1,5 +1,5 @@
 import React from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { AlertTriangle, BarChart3, Calendar, PieChart, TrendingUp } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/Card'
 import { Badge } from '../../../components/ui/Badge'
@@ -63,6 +63,7 @@ const formatDate = (value: string) => {
 }
 
 const DefectAnalytics: React.FC = () => {
+  const navigate = useNavigate()
   const [timeRange, setTimeRange] = React.useState('30d')
   const [testPlanId, setTestPlanId] = React.useState('all')
   const [testPlans, setTestPlans] = React.useState<any[]>([])
@@ -110,22 +111,21 @@ const DefectAnalytics: React.FC = () => {
   const loading = statsLoading || trendsLoading
   const error = statsError || trendsError
   const listQueryPrefix = testPlanId === 'all' ? '' : `test_plan_id=${testPlanId}&`
+  const generateReportPath = `/test-manager/reports/generate?type=defect${testPlanId !== 'all' ? `&test_plan_id=${testPlanId}` : ''}`
 
   if (error) {
     return <div className="text-center text-red-500">加载缺陷分析失败：{(error as Error).message}</div>
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-2xl font-bold">缺陷分析</h1>
-          <p className="text-gray-600">基于缺陷库的实时统计、分布和趋势</p>
+          <p className="text-sm text-muted-foreground">基于缺陷库的实时统计、分布和趋势</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Link to={`/test-manager/reports/generate?type=defect${testPlanId !== 'all' ? `&test_plan_id=${testPlanId}` : ''}`}>
-            <Button variant="outline">生成缺陷报告</Button>
-          </Link>
+          <Button variant="outline" onClick={() => navigate(generateReportPath)}>生成缺陷报告</Button>
           <Select value={testPlanId} onValueChange={setTestPlanId}>
             <SelectTrigger className="w-56">
               <SelectValue placeholder="测试计划" />
@@ -151,75 +151,69 @@ const DefectAnalytics: React.FC = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center space-x-3">
-              <BarChart3 className="h-5 w-5 text-blue-500" />
-              <div>
-                <p className="text-sm font-medium text-gray-600">缺陷总数</p>
-                <Link to={`/test-manager/defects?${listQueryPrefix}`} className="text-2xl font-bold hover:text-blue-700">{loading ? '-' : total}</Link>
-                <p className="mt-1 text-xs text-gray-500">当前库内全部缺陷</p>
+      <Card>
+        <CardContent className="grid gap-2 p-3 md:grid-cols-2 xl:grid-cols-4">
+          <div className="rounded-md border px-3 py-2">
+            <div className="flex items-center gap-3">
+              <BarChart3 className="h-4 w-4 text-blue-500" />
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm text-muted-foreground">缺陷总数</p>
+                <Link to={`/test-manager/defects?${listQueryPrefix}`} className="text-lg font-semibold leading-5 hover:text-blue-700">{loading ? '-' : total}</Link>
+                <p className="truncate text-xs text-muted-foreground">当前库内全部缺陷</p>
               </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
 
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center space-x-3">
-              <AlertTriangle className="h-5 w-5 text-red-500" />
-              <div>
-                <p className="text-sm font-medium text-gray-600">高危缺陷</p>
-                <Link to={`/test-manager/defects?${listQueryPrefix}`} className="block text-2xl font-bold text-red-600 hover:text-red-700">
+          <div className="rounded-md border px-3 py-2">
+            <div className="flex items-center gap-3">
+              <AlertTriangle className="h-4 w-4 text-red-500" />
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm text-muted-foreground">高危缺陷</p>
+                <Link to={`/test-manager/defects?${listQueryPrefix}`} className="block text-lg font-semibold leading-5 text-red-600 hover:text-red-700">
                   {loading ? '-' : Number(stats.critical_defects || 0) + Number(stats.high_defects || 0)}
                 </Link>
-                <p className="mt-1 text-xs text-gray-500">严重 + 高优先处理</p>
+                <p className="truncate text-xs text-muted-foreground">严重 + 高优先处理</p>
               </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
 
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center space-x-3">
-              <TrendingUp className="h-5 w-5 text-green-500" />
-              <div className="w-full">
-                <p className="text-sm font-medium text-gray-600">解决率</p>
-                <p className="text-2xl font-bold">{loading ? '-' : `${stats.resolution_rate}%`}</p>
-                <Progress value={Number(stats.resolution_rate || 0)} className="mt-2 h-2" />
+          <div className="rounded-md border px-3 py-2">
+            <div className="flex items-center gap-3">
+              <TrendingUp className="h-4 w-4 text-green-500" />
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm text-muted-foreground">解决率</p>
+                <p className="text-lg font-semibold leading-5">{loading ? '-' : `${stats.resolution_rate}%`}</p>
+                <Progress value={Number(stats.resolution_rate || 0)} className="mt-1.5 h-1.5" />
               </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
 
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center space-x-3">
-              <Calendar className="h-5 w-5 text-purple-500" />
-              <div>
-                <p className="text-sm font-medium text-gray-600">平均解决时间</p>
-                <p className="text-2xl font-bold">{loading ? '-' : `${stats.avg_resolution_time || 0}天`}</p>
-                <p className="mt-1 text-xs text-gray-500">按已解决缺陷计算</p>
+          <div className="rounded-md border px-3 py-2">
+            <div className="flex items-center gap-3">
+              <Calendar className="h-4 w-4 text-purple-500" />
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm text-muted-foreground">平均解决时间</p>
+                <p className="text-lg font-semibold leading-5">{loading ? '-' : `${stats.avg_resolution_time || 0}天`}</p>
+                <p className="truncate text-xs text-muted-foreground">按已解决缺陷计算</p>
               </div>
             </div>
-          </CardContent>
-        </Card>
-      </div>
+          </div>
+        </CardContent>
+      </Card>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Card>
-          <CardHeader>
+          <CardHeader className="p-4 pb-2">
             <CardTitle className="flex items-center space-x-2">
               <TrendingUp className="h-5 w-5" />
               <span>缺陷趋势</span>
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-4 pb-4">
             {trendData.length === 0 ? (
-              <div className="flex h-64 items-center justify-center text-gray-500">当前时间范围内暂无趋势数据</div>
+              <div className="flex h-56 items-center justify-center text-gray-500">当前时间范围内暂无趋势数据</div>
             ) : (
-              <div className="h-64 space-y-3 overflow-y-auto pr-2">
+              <div className="h-56 space-y-2.5 overflow-y-auto pr-2">
                 {trendData.map((item: any) => (
                   <div key={item.date} className="grid grid-cols-[56px_1fr_72px] items-center gap-3 text-sm">
                     <span className="text-gray-500">{formatDate(item.date)}</span>
@@ -244,14 +238,14 @@ const DefectAnalytics: React.FC = () => {
         </Card>
 
         <Card>
-          <CardHeader>
+          <CardHeader className="p-4 pb-2">
             <CardTitle className="flex items-center space-x-2">
               <PieChart className="h-5 w-5" />
               <span>严重程度分布</span>
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
+          <CardContent className="px-4 pb-4">
+            <div className="space-y-3">
               {severityRows.map((item) => (
                 <div key={item.key} className="flex items-center justify-between gap-4">
                   <span className="w-16 text-sm">{item.label}</span>
@@ -268,11 +262,11 @@ const DefectAnalytics: React.FC = () => {
         </Card>
 
         <Card>
-          <CardHeader>
+          <CardHeader className="p-4 pb-2">
             <CardTitle>解决情况</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
+          <CardContent className="px-4 pb-4">
+            <div className="space-y-3">
               <div>
                 <div className="mb-2 flex justify-between text-sm">
                   <span>已解决/验证/关闭</span>
@@ -299,11 +293,11 @@ const DefectAnalytics: React.FC = () => {
         </Card>
 
         <Card>
-          <CardHeader>
+          <CardHeader className="p-4 pb-2">
             <CardTitle>状态与类型</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-5">
+          <CardContent className="px-4 pb-4">
+            <div className="space-y-4">
               <div>
                 <div className="mb-2 text-sm font-medium">状态分布</div>
                 <div className="flex flex-wrap gap-2">
@@ -330,23 +324,23 @@ const DefectAnalytics: React.FC = () => {
       </div>
 
       <Card>
-        <CardHeader>
+        <CardHeader className="p-4 pb-2">
           <CardTitle>处理建议</CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
+        <CardContent className="px-4 pb-4">
+          <div className="grid gap-2 md:grid-cols-2">
             {Number(stats.critical_defects || 0) + Number(stats.high_defects || 0) > 0 && (
-              <div className="rounded-lg bg-red-50 p-3 text-sm text-red-800">
+              <div className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-800">
                 当前存在高危缺陷，建议优先安排负责人处理严重和高等级问题。
               </div>
             )}
             {openDefects > 0 && (
-              <div className="rounded-lg bg-blue-50 p-3 text-sm text-blue-800">
+              <div className="rounded-md bg-blue-50 px-3 py-2 text-sm text-blue-800">
                 仍有 {openDefects} 个缺陷未完成，建议按负责人和状态持续跟进。
               </div>
             )}
             {total === 0 && (
-              <div className="rounded-lg bg-gray-50 p-3 text-sm text-gray-600">
+              <div className="rounded-md bg-gray-50 px-3 py-2 text-sm text-gray-600">
                 暂无缺陷数据，创建缺陷后这里会展示真实统计。
               </div>
             )}
