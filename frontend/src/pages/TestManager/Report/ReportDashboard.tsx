@@ -1,7 +1,7 @@
 // @ts-nocheck
 import React, { useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
-import { BarChart3, Calendar, Download, Eye, FileText, Plus, RefreshCw, Search, Trash2 } from 'lucide-react'
+import { Link, useNavigate } from 'react-router-dom'
+import { BarChart3, Download, Eye, FileText, Plus, RefreshCw, Search, Trash2 } from 'lucide-react'
 import { Button } from '../../../components/ui/Button'
 import { Input } from '../../../components/ui/Input'
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/Card'
@@ -9,6 +9,7 @@ import { Badge } from '../../../components/ui/Badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../components/ui/Table'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/Select'
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '../../../components/ui/Dialog'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../../../components/ui/DropdownMenu'
 import ConfirmDialog from '../../../components/ui/ConfirmDialog'
 import { reportsApi } from '../../../services/api/reports'
 import { testPlanService } from '../../../services/testmanager/testPlanService'
@@ -31,6 +32,7 @@ const sizeLabel = (size?: number) => {
 }
 
 const ReportDashboard: React.FC = () => {
+  const navigate = useNavigate()
   const [reports, setReports] = useState([])
   const [analytics, setAnalytics] = useState(null)
   const [total, setTotal] = useState(0)
@@ -186,11 +188,30 @@ const ReportDashboard: React.FC = () => {
           <h1 className="text-2xl font-bold">测试报告</h1>
           <p className="text-sm text-gray-600">生成、查看、预览和下载测试报告</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button variant="outline" onClick={loadReports} disabled={loading}>
             <RefreshCw className="mr-2 h-4 w-4" />
             刷新
           </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline">
+                <BarChart3 className="mr-2 h-4 w-4" />
+                快捷生成
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {reportTypeCards.map((item) => {
+                const Icon = item.icon
+                return (
+                  <DropdownMenuItem key={item.type} onSelect={() => navigate(buildGenerateLink(item.type))}>
+                    <Icon className={`mr-2 h-4 w-4 ${item.color}`} />
+                    {item.title}
+                  </DropdownMenuItem>
+                )
+              })}
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Link to={buildGenerateLink()}>
             <Button>
               <Plus className="mr-2 h-4 w-4" />
@@ -207,59 +228,15 @@ const ReportDashboard: React.FC = () => {
       )}
 
       <Card>
-        <CardContent className="p-4">
-          <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-            <div className="grid flex-1 grid-cols-2 gap-2 sm:grid-cols-4">
-              <div className="flex items-center gap-2 rounded-md border bg-gray-50 px-3 py-2">
-                <FileText className="h-4 w-4 text-blue-500" />
-                <div>
-                  <p className="text-xs text-gray-500">报告总数</p>
-                  <p className="text-lg font-semibold leading-5">{loading ? '-' : statistics.totalReports}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2 rounded-md border bg-gray-50 px-3 py-2">
-                <Calendar className="h-4 w-4 text-green-500" />
-                <div>
-                  <p className="text-xs text-gray-500">本月生成</p>
-                  <p className="text-lg font-semibold leading-5">{loading ? '-' : statistics.thisMonth}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2 rounded-md border bg-gray-50 px-3 py-2">
-                <BarChart3 className="h-4 w-4 text-purple-500" />
-                <div>
-                  <p className="text-xs text-gray-500">导入报告</p>
-                  <p className="text-lg font-semibold leading-5">{loading ? '-' : statistics.importedReports}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2 rounded-md border bg-gray-50 px-3 py-2">
-                <Download className="h-4 w-4 text-orange-500" />
-                <div>
-                  <p className="text-xs text-gray-500">常用格式</p>
-                  <p className="text-lg font-semibold leading-5">{loading ? '-' : statistics.mostUsedFormat}</p>
-                </div>
-              </div>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {reportTypeCards.map((item) => {
-                const Icon = item.icon
-                return (
-                  <Link key={item.type} to={buildGenerateLink(item.type)}>
-                    <Button variant="outline" size="sm" title={item.description}>
-                      <Icon className={`mr-2 h-4 w-4 ${item.color}`} />
-                      {item.title}
-                    </Button>
-                  </Link>
-                )
-              })}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
         <CardHeader className="gap-3 p-4">
           <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-            <CardTitle className="text-lg">报告列表 <span className="text-sm font-normal text-gray-500">共 {loading ? '-' : total} 条</span></CardTitle>
+            <div className="flex flex-wrap items-center gap-2">
+              <CardTitle className="mr-2 text-lg">报告列表</CardTitle>
+              <Badge variant="outline">共 {loading ? '-' : total} 条</Badge>
+              <Badge variant="secondary">本月 {loading ? '-' : statistics.thisMonth}</Badge>
+              <Badge variant="outline">导入 {loading ? '-' : statistics.importedReports}</Badge>
+              <Badge variant="outline">常用 {loading ? '-' : statistics.mostUsedFormat}</Badge>
+            </div>
             <div className="grid grid-cols-1 gap-2 md:grid-cols-[minmax(220px,1fr)_150px_130px_190px] xl:w-[760px]">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />

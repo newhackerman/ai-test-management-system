@@ -128,30 +128,6 @@ const TestManager: React.FC = () => {
     plansData?.total,
   ])
 
-  const riskItems = [
-    {
-      title: '阻塞测试计划',
-      value: metrics.pausedPlans,
-      description: '暂停计划需要确认是否继续、调整范围或关闭',
-      link: '/test-manager/test-plans',
-      tone: metrics.pausedPlans > 0 ? 'warning' : 'normal',
-    },
-    {
-      title: '失败执行',
-      value: metrics.failedExecutions,
-      description: '失败执行应补充证据并转缺陷或标记原因',
-      link: '/test-manager/executions?status=FAILED',
-      tone: metrics.failedExecutions > 0 ? 'danger' : 'normal',
-    },
-    {
-      title: '严重/高缺陷',
-      value: metrics.criticalDefects + metrics.highDefects,
-      description: '优先处理影响发布判断的缺陷',
-      link: '/test-manager/defects',
-      tone: metrics.criticalDefects > 0 ? 'danger' : metrics.highDefects > 0 ? 'warning' : 'normal',
-    },
-  ]
-
   const metricCards = [
     {
       label: '测试计划',
@@ -206,26 +182,40 @@ const TestManager: React.FC = () => {
         </div>
       </div>
 
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-        {metricCards.map((item) => {
-          const Icon = item.icon
-          return (
-            <Link key={item.label} to={item.link}>
-              <Card className="transition-shadow hover:shadow-sm">
-                <CardContent className="flex items-center gap-3 p-3">
-                  <div className="rounded-md bg-muted p-2">
-                    <Icon className="h-5 w-5 text-primary" />
+      <div>
+        <Card>
+          <CardContent className="grid gap-2 p-3 md:grid-cols-3 xl:grid-cols-5">
+            {metricCards.map((item) => {
+              const Icon = item.icon
+              return (
+                <Link key={item.label} to={item.link} className="rounded-md border px-3 py-2 transition-colors hover:bg-muted/40">
+                  <div className="flex items-center gap-3">
+                    <Icon className="h-4 w-4 text-primary" />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-baseline justify-between gap-2">
+                        <p className="truncate text-sm text-muted-foreground">{item.label}</p>
+                        <p className="text-lg font-semibold leading-5">{item.value}</p>
+                      </div>
+                      <p className="truncate text-xs text-muted-foreground">{item.sub}</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">{item.label}</p>
-                    <p className="text-xl font-semibold leading-6">{item.value}</p>
-                    <p className="text-xs text-muted-foreground">{item.sub}</p>
+                </Link>
+              )
+            })}
+            <div className="rounded-md border px-3 py-2">
+              <div className="flex items-center gap-3">
+                <AlertTriangle className="h-4 w-4 text-primary" />
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-baseline justify-between gap-2">
+                    <p className="truncate text-sm text-muted-foreground">待处理风险</p>
+                    <p className="text-lg font-semibold leading-5">{metrics.pausedPlans + metrics.failedExecutions + metrics.criticalDefects + metrics.highDefects}</p>
                   </div>
-                </CardContent>
-              </Card>
-            </Link>
-          )
-        })}
+                  <p className="truncate text-xs text-muted-foreground">失败 {metrics.failedExecutions} / 高危 {metrics.criticalDefects + metrics.highDefects}</p>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
@@ -307,8 +297,8 @@ const TestManager: React.FC = () => {
         </Card>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-3">
-        <Card className="lg:col-span-2">
+      <div>
+        <Card>
           <CardHeader className="gap-3 md:flex-row md:items-center md:justify-between">
             <CardTitle className="text-lg">测试闭环</CardTitle>
             <Button asChild variant="outline" size="sm">
@@ -345,27 +335,6 @@ const TestManager: React.FC = () => {
                 <p className="mt-2 text-xs text-muted-foreground">执行记录数 / 用例总数</p>
               </div>
             </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">待处理风险</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            {riskItems.map((item) => (
-              <Link key={item.title} to={item.link} className="block rounded-md border p-2.5 hover:bg-muted/40">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="font-medium">{item.title}</p>
-                    <p className="mt-1 text-xs text-muted-foreground">{item.description}</p>
-                  </div>
-                  <Badge variant={item.tone === 'danger' ? 'destructive' : item.tone === 'warning' ? 'secondary' : 'outline'}>
-                    {item.value}
-                  </Badge>
-                </div>
-              </Link>
-            ))}
           </CardContent>
         </Card>
       </div>

@@ -1,7 +1,7 @@
 // @ts-nocheck
 import React, { useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { Calendar, Download, Eye, MessageSquare, Paperclip, Pencil, Plus, Search, Trash2, User, UserCheck } from 'lucide-react'
+import { AlertTriangle, Calendar, Download, Eye, MessageSquare, MoreHorizontal, Paperclip, Pencil, Plus, Search, Trash2, User, UserCheck } from 'lucide-react'
 import { Button } from '../../../components/ui/Button'
 import { Input } from '../../../components/ui/Input'
 import { Textarea } from '../../../components/ui/Textarea'
@@ -174,6 +174,14 @@ const DefectList: React.FC = () => {
 
   const defects = defectsData?.data || []
   const totalCount = defectsData?.total || 0
+  const summary = useMemo(() => {
+    const openStatuses = [DefectStatus.NEW, DefectStatus.ASSIGNED, DefectStatus.IN_PROGRESS, DefectStatus.REOPENED]
+    return {
+      open: defects.filter((defect) => openStatuses.includes(defect.status)).length,
+      highRisk: defects.filter((defect) => [DefectSeverity.CRITICAL, DefectSeverity.HIGH].includes(defect.severity)).length,
+      unassigned: defects.filter((defect) => !defect.assignee_id).length,
+    }
+  }, [defects])
 
   const userNameById = useMemo(() => {
     return users.reduce((result, user) => {
@@ -496,11 +504,11 @@ const DefectList: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-2xl font-bold">缺陷管理</h1>
-          <p className="text-gray-600">跟踪缺陷提交、分配、处理和关闭的完整流程</p>
+          <p className="text-sm text-muted-foreground">跟踪缺陷提交、分配、处理和关闭的完整流程</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Button onClick={openCreateForm}>
@@ -531,25 +539,30 @@ const DefectList: React.FC = () => {
       )}
 
       <Card>
-        <CardContent className="pt-6">
-          <div className="flex flex-col gap-4 lg:flex-row">
-            <div className="flex-1">
+        <CardHeader className="space-y-3 p-4 pb-3">
+          <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+            <div className="flex flex-wrap items-center gap-2">
+              <CardTitle className="mr-2 text-lg">缺陷列表</CardTitle>
+              <Badge variant="outline">共 {totalCount} 个</Badge>
+              <Badge variant={summary.open ? 'secondary' : 'outline'}>未关闭 {summary.open}</Badge>
+              <Badge variant={summary.highRisk ? 'destructive' : 'outline'}>高风险 {summary.highRisk}</Badge>
+              <Badge variant={summary.unassigned ? 'secondary' : 'outline'}>未分配 {summary.unassigned}</Badge>
+            </div>
+            <div className="grid grid-cols-1 gap-2 md:grid-cols-[minmax(220px,1fr)_160px_140px_140px_150px] xl:w-[860px]">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
                 <Input
                   placeholder="搜索缺陷标题、描述或编号"
                   value={searchTerm}
                   onChange={(event) => handleSearch(event.target.value)}
-                  className="pl-10"
+                  className="h-9 pl-10"
                 />
               </div>
-            </div>
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4">
               <Select
                 value={filters.test_plan_id ? String(filters.test_plan_id) : 'all'}
                 onValueChange={(value) => handleUpdateFilters({ test_plan_id: value === 'all' ? undefined : Number(value) })}
               >
-                <SelectTrigger className="w-full sm:w-40">
+                <SelectTrigger className="h-9">
                   <SelectValue placeholder="测试计划" />
                 </SelectTrigger>
                 <SelectContent>
@@ -564,7 +577,7 @@ const DefectList: React.FC = () => {
                 value={filters.status || 'all'}
                 onValueChange={(value) => handleUpdateFilters({ status: value === 'all' ? undefined : value as DefectStatus })}
               >
-                <SelectTrigger className="w-full sm:w-36">
+                <SelectTrigger className="h-9">
                   <SelectValue placeholder="状态" />
                 </SelectTrigger>
                 <SelectContent>
@@ -579,7 +592,7 @@ const DefectList: React.FC = () => {
                 value={filters.severity || 'all'}
                 onValueChange={(value) => handleUpdateFilters({ severity: value === 'all' ? undefined : value as DefectSeverity })}
               >
-                <SelectTrigger className="w-full sm:w-36">
+                <SelectTrigger className="h-9">
                   <SelectValue placeholder="严重程度" />
                 </SelectTrigger>
                 <SelectContent>
@@ -594,7 +607,7 @@ const DefectList: React.FC = () => {
                 value={filters.defect_type || 'all'}
                 onValueChange={(value) => handleUpdateFilters({ defect_type: value === 'all' ? undefined : value as DefectType })}
               >
-                <SelectTrigger className="w-full sm:w-36">
+                <SelectTrigger className="h-9">
                   <SelectValue placeholder="缺陷类型" />
                 </SelectTrigger>
                 <SelectContent>
@@ -606,14 +619,9 @@ const DefectList: React.FC = () => {
               </Select>
             </div>
           </div>
-        </CardContent>
-      </Card>
-
-      {selectedDefects.length > 0 && (
-        <Card>
-          <CardContent className="pt-6">
+          {selectedDefects.length > 0 && (
             <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-              <span className="text-sm text-gray-600">已选择 {selectedDefects.length} 个缺陷</span>
+              <span className="text-sm text-muted-foreground">已选择 {selectedDefects.length} 个缺陷</span>
               <div className="flex flex-wrap gap-2">
                 <select
                   value={assignUserId}
@@ -632,16 +640,9 @@ const DefectList: React.FC = () => {
                 <Button variant="outline" size="sm" onClick={handleClearSelection}>取消选择</Button>
               </div>
             </div>
-          </CardContent>
-        </Card>
-      )}
-
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>缺陷列表</CardTitle>
-          <div className="text-sm text-gray-600">共 {totalCount} 个缺陷</div>
+          )}
         </CardHeader>
-        <CardContent>
+        <CardContent className="px-4 pb-4 pt-0">
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
@@ -652,16 +653,16 @@ const DefectList: React.FC = () => {
                       onCheckedChange={() => handleSelectAllDefects(defects.map((defect) => defect.id))}
                     />
                   </TableHead>
-                  <TableHead>缺陷标题</TableHead>
-                  <TableHead>类型</TableHead>
-                  <TableHead>严重程度</TableHead>
-                  <TableHead>优先级</TableHead>
-                  <TableHead>状态</TableHead>
-                  <TableHead>关联对象</TableHead>
-                  <TableHead>报告人</TableHead>
-                  <TableHead>负责人</TableHead>
-                  <TableHead>报告时间</TableHead>
-                  <TableHead className="text-right">操作</TableHead>
+                  <TableHead className="min-w-[260px]">缺陷标题</TableHead>
+                  <TableHead className="w-28">类型</TableHead>
+                  <TableHead className="w-24">严重程度</TableHead>
+                  <TableHead className="w-20">优先级</TableHead>
+                  <TableHead className="w-24">状态</TableHead>
+                  <TableHead className="min-w-[200px]">关联对象</TableHead>
+                  <TableHead className="w-28">报告人</TableHead>
+                  <TableHead className="w-28">负责人</TableHead>
+                  <TableHead className="w-32">报告时间</TableHead>
+                  <TableHead className="w-32 text-right">操作</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -734,36 +735,38 @@ const DefectList: React.FC = () => {
                       </div>
                     </TableCell>
                     <TableCell className="text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm">操作</Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => setDetailDefect(defect)}>
-                            <Eye className="w-4 h-4 mr-2" />
-                            查看详情
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => openEditForm(defect)}>
-                            <Pencil className="w-4 h-4 mr-2" />
-                            编辑
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => openAssignDialog(defect)}>
-                            <UserCheck className="w-4 h-4 mr-2" />
-                            分配负责人
-                          </DropdownMenuItem>
-                          {(statusTransitions[defect.status] || []).map((status) => (
-                            <DropdownMenuItem key={status} onClick={() => handleStatusChange(defect, status)}>
-                              设为{labelOf(statusOptions, status)}
-                            </DropdownMenuItem>
-                          ))}
-                          {[DefectStatus.NEW, DefectStatus.REJECTED].includes(defect.status) && (
-                            <DropdownMenuItem onClick={() => setDeleteDefectRow(defect)}>
-                              <Trash2 className="w-4 h-4 mr-2" />
-                              删除
-                            </DropdownMenuItem>
-                          )}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                      <div className="flex justify-end gap-1">
+                        <Button variant="ghost" size="icon" className="h-8 w-8" title="查看详情" onClick={() => setDetailDefect(defect)}>
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" title="编辑" onClick={() => openEditForm(defect)}>
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" title="分配负责人" onClick={() => openAssignDialog(defect)}>
+                          <UserCheck className="h-4 w-4" />
+                        </Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8" title="更多操作">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            {(statusTransitions[defect.status] || []).map((status) => (
+                              <DropdownMenuItem key={status} onClick={() => handleStatusChange(defect, status)}>
+                                <AlertTriangle className="w-4 h-4 mr-2" />
+                                设为{labelOf(statusOptions, status)}
+                              </DropdownMenuItem>
+                            ))}
+                            {[DefectStatus.NEW, DefectStatus.REJECTED].includes(defect.status) && (
+                              <DropdownMenuItem onClick={() => setDeleteDefectRow(defect)}>
+                                <Trash2 className="w-4 h-4 mr-2" />
+                                删除
+                              </DropdownMenuItem>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
