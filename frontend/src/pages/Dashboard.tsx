@@ -17,7 +17,6 @@ import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Progress } from '@/components/ui/Progress'
 import { apiClient } from '@/services/api/client'
-import { useAuth } from '@/stores/auth'
 import { cn } from '@/lib/utils'
 
 type DistributionItem = {
@@ -188,7 +187,6 @@ const formatTime = (value?: string | null) => {
 }
 
 const Dashboard: React.FC = () => {
-  const { user } = useAuth()
   const [summary, setSummary] = useState<DashboardSummary | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -212,7 +210,6 @@ const Dashboard: React.FC = () => {
     loadSummary()
   }, [loadSummary])
 
-  const displayName = summary?.user?.display_name || user?.real_name || user?.nickname || user?.username || '用户'
   const canView = useCallback(
     (module: string) => {
       if (!summary?.access?.modules) return true
@@ -292,9 +289,6 @@ const Dashboard: React.FC = () => {
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">仪表盘</h1>
-          <p className="mt-2 text-gray-600">
-            欢迎回来，{displayName}。这里展示当前系统已有业务数据的实时汇总。
-          </p>
           {summary?.generated_at && (
             <p className="mt-1 text-sm text-gray-500">更新时间：{formatTime(summary.generated_at)}</p>
           )}

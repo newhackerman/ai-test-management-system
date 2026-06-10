@@ -230,9 +230,6 @@ const ArchitectDashboard: React.FC = () => {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold mb-2">架构师仪表板</h1>
-            <p className="text-indigo-100">
-              欢迎回来，{user?.real_name || user?.username} | 架构师
-            </p>
           </div>
           <div className="text-right">
             <div className="text-3xl font-bold">{architectureMetrics.systemHealth}%</div>

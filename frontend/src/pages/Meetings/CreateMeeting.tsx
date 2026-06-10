@@ -31,7 +31,6 @@ export default function CreateMeeting() {
         </Button>
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-gray-900">新建会议</h1>
-          <p className="text-sm text-muted-foreground">安排会议时间、议程和参会人员。</p>
         </div>
       </div>
 

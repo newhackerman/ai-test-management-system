@@ -6,7 +6,7 @@ interface RecordingShareProps {
 }
 
 export const RecordingShare: React.FC<RecordingShareProps> = () => (
-  <MeetingPlaceholder title="录制分享" description="录制分享入口已恢复。" />
+  <MeetingPlaceholder title="录制分享" />
 );
 
 export default RecordingShare;

@@ -443,7 +443,6 @@ const ReportGenerate: React.FC = () => {
           </Link>
           <div>
             <h1 className="text-2xl font-bold">生成测试报告</h1>
-            <p className="text-sm text-muted-foreground">配置并生成自定义测试报告。</p>
             {selectedPlanId && <p className="text-sm text-muted-foreground">当前关联测试计划 #{selectedPlanId}</p>}
           </div>
         </div>

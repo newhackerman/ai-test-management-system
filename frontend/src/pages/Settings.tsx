@@ -152,7 +152,6 @@ const Settings: React.FC = () => {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-foreground">系统设置</h1>
-          <p className="text-sm text-muted-foreground">配置系统基础信息、安全策略、邮件、上传和维护参数</p>
         </div>
         <div className="flex items-center space-x-2">
           <button onClick={handleReset} disabled={actionDisabled} className="h-9 rounded-md border bg-background px-3 text-sm hover:bg-accent disabled:opacity-50">

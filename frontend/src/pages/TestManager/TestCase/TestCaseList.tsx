@@ -269,7 +269,6 @@ const TestCaseList: React.FC = () => {
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-2xl font-bold">测试用例管理</h1>
-          <p className="text-gray-600">维护测试用例、需求关联、执行入口和批量状态。</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Dialog open={showImportDialog} onOpenChange={setShowImportDialog}>

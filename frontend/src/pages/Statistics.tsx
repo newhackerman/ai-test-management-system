@@ -229,14 +229,11 @@ const Statistics: React.FC = () => {
     )
   }
 
-  const rangeLabel = timeRange === '7d' ? '最近 7 天' : timeRange === '30d' ? '最近 30 天' : '最近 90 天'
-
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-foreground">数据统计</h1>
-          <p className="text-sm text-muted-foreground">系统运行状态、用户活跃度和安全概览，当前范围：{rangeLabel}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <select 

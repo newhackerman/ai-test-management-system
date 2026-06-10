@@ -6,7 +6,7 @@ interface RecordingDownloadProps {
 }
 
 export const RecordingDownload: React.FC<RecordingDownloadProps> = () => (
-  <MeetingPlaceholder title="录制下载" description="录制下载入口已恢复。" />
+  <MeetingPlaceholder title="录制下载" />
 );
 
 export default RecordingDownload;

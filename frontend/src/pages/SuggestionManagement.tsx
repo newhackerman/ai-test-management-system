@@ -81,7 +81,6 @@ export default function SuggestionManagement() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold">建议管理</h1>
-        <p className="text-sm text-muted-foreground">管理 AI 生成的优化建议、处理状态和实施反馈。</p>
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-4">

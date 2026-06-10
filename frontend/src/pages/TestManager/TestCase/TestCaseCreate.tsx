@@ -161,7 +161,6 @@ const TestCaseCreate: React.FC = () => {
         </Link>
         <div>
           <h1 className="text-2xl font-bold">创建测试用例</h1>
-          <p className="text-gray-600">补齐基础信息、关联对象、步骤和预期结果后保存。</p>
         </div>
       </div>
 

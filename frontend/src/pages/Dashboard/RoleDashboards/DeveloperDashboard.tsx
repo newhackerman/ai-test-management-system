@@ -217,9 +217,6 @@ const DeveloperDashboard: React.FC = () => {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold mb-2">开发者仪表板</h1>
-            <p className="text-indigo-100">
-              欢迎回来，{user?.real_name || user?.username} | 开发人员
-            </p>
           </div>
           <div className="text-right">
             <div className="text-3xl font-bold">{developerMetrics.inProgressTasks}</div>

@@ -218,9 +218,6 @@ const ProjectList: React.FC<ProjectListProps> = ({
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-foreground">项目管理</h1>
-          <p className="text-muted-foreground mt-1">
-            管理和监控所有测试项目的进度和状态
-          </p>
         </div>
         <div className="flex items-center space-x-2">
           <Button variant="outline" onClick={onRefresh} disabled={loading}>

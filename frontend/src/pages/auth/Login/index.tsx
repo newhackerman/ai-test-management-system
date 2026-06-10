@@ -104,7 +104,6 @@ const LoginPage: React.FC = () => {
           <Card className="login-card">
             <div className="login-header">
               <h1>AI 测试管理系统</h1>
-              <p>欢迎回来，请登录您的账户</p>
             </div>
 
             <Tabs

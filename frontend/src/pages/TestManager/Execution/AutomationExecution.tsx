@@ -148,7 +148,6 @@ const AutomationExecution: React.FC = () => {
           </Button>
           <div>
             <h1 className="text-2xl font-bold">自动化执行</h1>
-            <p className="text-sm text-muted-foreground">选择半自动或全自动用例，创建自动化执行批次</p>
           </div>
         </div>
         {!isRunning ? (

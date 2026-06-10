@@ -155,7 +155,6 @@ export default function MeetingList() {
       <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-gray-900">会议管理</h1>
-          <p className="text-sm text-muted-foreground">查看今日会议、安排新会议，并管理会议状态。</p>
         </div>
         <div className="flex gap-2">
           <Button type="button" variant="outline" onClick={loadMeetings} disabled={loading}>

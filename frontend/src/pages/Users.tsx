@@ -115,7 +115,6 @@ const Users: React.FC = () => {
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">用户管理</h1>
-          <p className="text-sm text-muted-foreground">管理系统账号、角色分配、状态和导入导出，共 {total} 个用户</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Button variant="outline" onClick={() => exportUsers(filters)} disabled={isExporting}>

@@ -336,7 +336,6 @@ const TestPlanCreate: React.FC = () => {
           </Link>
           <div>
             <h1 className="text-2xl font-bold">创建测试计划</h1>
-            <p className="text-gray-600">填写计划范围、策略和时间安排</p>
           </div>
         </div>
       </div>

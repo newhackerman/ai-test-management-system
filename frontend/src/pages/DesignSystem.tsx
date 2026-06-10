@@ -24,7 +24,6 @@ function DesignSystem() {
       <div className="flex items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">设计系统</h1>
-          <p className="text-muted-foreground">展示系统中使用的基础 UI 组件和设计规范。</p>
         </div>
         <ThemeToggle />
       </div>

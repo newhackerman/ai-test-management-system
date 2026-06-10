@@ -193,7 +193,6 @@ const SecurityTest: React.FC = () => {
           </Link>
           <div>
             <h1 className="text-2xl font-bold">安全测试</h1>
-            <p className="text-gray-600">创建安全扫描配置并查看真实执行结果</p>
           </div>
         </div>
         <Button variant="outline" onClick={loadData} disabled={loading || scanning}>

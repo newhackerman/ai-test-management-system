@@ -87,9 +87,6 @@ function RequirementReviewManagement() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold text-foreground">需求评审管理</h1>
-              <p className="text-muted-foreground mt-1">
-                管理和跟踪需求评审的整个流程，确保需求质量
-              </p>
             </div>
           </div>
 

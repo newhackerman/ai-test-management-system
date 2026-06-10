@@ -53,7 +53,6 @@ export default function EditMeeting() {
         </Button>
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-gray-900">编辑会议</h1>
-          <p className="text-sm text-muted-foreground">调整会议时间、议程和基础设置。</p>
         </div>
       </div>
 

@@ -95,7 +95,6 @@ export default function RequirementChangeManagement() {
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-2xl font-bold">需求变更管理</h1>
-          <p className="text-sm text-muted-foreground">跟踪需求变更、评审状态、影响分析和实施进度。</p>
         </div>
         <Button type="button">
           <Plus className="mr-2 h-4 w-4" />

@@ -114,7 +114,6 @@ const ExecutionDashboard: React.FC = () => {
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-2xl font-bold">执行管理</h1>
-          <p className="text-sm text-muted-foreground">管理手工执行、自动化执行和执行结果追踪</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" onClick={() => refetch()}>

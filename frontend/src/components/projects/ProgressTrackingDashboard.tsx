@@ -362,7 +362,6 @@ export function ProgressTrackingDashboard({
             <Card className="p-8 text-center">
               <BarChart3 className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
               <h3 className="mb-2 text-lg font-semibold text-foreground">暂无进度数据</h3>
-              <p className="text-muted-foreground">项目进度数据加载后会在这里展示。</p>
             </Card>
           )}
         </TabsContent>

@@ -508,7 +508,6 @@ const DefectList: React.FC = () => {
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-2xl font-bold">缺陷管理</h1>
-          <p className="text-sm text-muted-foreground">跟踪缺陷提交、分配、处理和关闭的完整流程</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Button onClick={openCreateForm}>

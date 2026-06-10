@@ -165,7 +165,6 @@ const TestPlanEdit: React.FC = () => {
           </Link>
           <div>
             <h1 className="text-2xl font-bold">编辑测试计划</h1>
-            <p className="text-gray-600">调整计划名称、范围、策略、时间安排和测试经理</p>
           </div>
         </div>
       </div>

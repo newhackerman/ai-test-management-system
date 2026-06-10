@@ -401,7 +401,6 @@ const AutoRecoveryPage: React.FC = () => {
             <h1 className="text-2xl font-bold text-foreground">自动恢复</h1>
             <Badge status={monitoringStatus?.is_monitoring ? 'processing' : 'default'} text={monitoringStatus?.is_monitoring ? '监控中' : '未启动'} />
           </div>
-          <p className="text-sm text-muted-foreground">监控关键服务故障，支持检测、健康检查、手动恢复和阈值配置</p>
         </div>
         <Space wrap size={8}>
           <Button icon={<BarChartOutlined />} onClick={refreshRecoveryStatistics} loading={loading}>

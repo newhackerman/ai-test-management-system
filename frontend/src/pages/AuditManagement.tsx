@@ -391,7 +391,6 @@ export default function AuditManagement() {
     <div className="space-y-4">
       <div>
         <Title level={2} className="!m-0 !text-2xl">审计日志</Title>
-        <Text type="secondary" className="text-sm">配置变更审核申请的处理和管理</Text>
       </div>
 
       {/* 统计信息 */}

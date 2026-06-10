@@ -185,7 +185,6 @@ export default function ConfigGroupManagement() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="m-0 text-2xl font-bold text-foreground">配置分组</h1>
-          <p className="text-sm text-muted-foreground">管理配置项的分组分类，共 {groups.length} 个分组</p>
         </div>
         <Button
           type="primary"

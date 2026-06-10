@@ -6,7 +6,7 @@ interface MeetingMinutesProps {
 }
 
 export const MeetingMinutes: React.FC<MeetingMinutesProps> = () => (
-  <MeetingPlaceholder title="会议纪要" description="会议纪要入口已恢复。" />
+  <MeetingPlaceholder title="会议纪要" />
 );
 
 export default MeetingMinutes;

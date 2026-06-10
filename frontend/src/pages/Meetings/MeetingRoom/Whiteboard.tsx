@@ -9,7 +9,7 @@ interface WhiteboardProps {
 const Whiteboard: React.FC<WhiteboardProps> = () => (
   <Card>
     <CardHeader><CardTitle className="text-base">白板</CardTitle></CardHeader>
-    <CardContent className="flex h-64 items-center justify-center text-muted-foreground">白板入口已恢复</CardContent>
+    <CardContent className="flex h-64 items-center justify-center text-muted-foreground">暂无内容</CardContent>
   </Card>
 );
 

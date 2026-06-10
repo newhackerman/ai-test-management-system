@@ -127,7 +127,6 @@ export default function Logs() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">日志管理</h1>
-          <p className="text-muted-foreground">查看系统运行日志、用户操作记录和错误信息。</p>
         </div>
         <Button onClick={exportLogs}>
           <Download className="mr-2 h-4 w-4" />

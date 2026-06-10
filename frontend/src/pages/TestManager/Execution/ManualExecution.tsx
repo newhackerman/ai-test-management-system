@@ -242,7 +242,6 @@ const ManualExecution: React.FC = () => {
           </Button>
           <div>
             <h1 className="text-2xl font-bold">选择手工执行用例</h1>
-            <p className="text-sm text-muted-foreground">草稿、已审批和启用状态的用例都可以执行</p>
           </div>
         </div>
 

@@ -81,7 +81,6 @@ export default function Monitoring() {
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">监控告警</h1>
-          <p className="text-muted-foreground">实时监控系统状态、性能指标和服务健康状态。</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Button variant="outline">
@@ -242,8 +241,7 @@ export default function Monitoring() {
           <div className="flex h-64 items-center justify-center rounded-lg border-2 border-dashed border-gray-300">
             <div className="text-center">
               <TrendingUp className="mx-auto mb-2 h-12 w-12 text-gray-400" />
-              <p className="text-muted-foreground">性能趋势图表将在这里展示。</p>
-              <p className="text-sm text-muted-foreground">可接入实时指标或历史监控数据。</p>
+              <p className="text-muted-foreground">暂无性能趋势数据</p>
             </div>
           </div>
         </CardContent>

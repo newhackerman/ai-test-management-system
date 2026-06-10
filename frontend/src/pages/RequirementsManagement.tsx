@@ -485,7 +485,6 @@ function RequirementsManagement() {
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">需求管理</h1>
-          <p className="text-sm text-muted-foreground">统一维护项目需求、负责人、评审人、状态流转和交付信息。</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" onClick={() => { loadRequirements(page); loadStatistics() }} disabled={loading}>
@@ -734,7 +733,6 @@ function RequirementFormDialog({ title, form, setForm, projects, users, onClose,
         <div className="flex items-center justify-between border-b px-6 py-4">
           <div>
             <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
-            <p className="mt-1 text-sm text-gray-500">填写需求所属项目、内容、验收标准和人员安排。</p>
           </div>
           <Button variant="ghost" size="icon" onClick={onClose}><X className="h-4 w-4" /></Button>
         </div>

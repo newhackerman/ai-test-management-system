@@ -307,7 +307,6 @@ function TaskManagement() {
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">任务管理</h1>
-          <p className="text-sm text-muted-foreground">跟踪项目中的开发、测试和修复任务。</p>
         </div>
         <Button onClick={openCreateModal} disabled={projectsLoading || projects.length === 0}>
           <Plus className="mr-2 h-4 w-4" />

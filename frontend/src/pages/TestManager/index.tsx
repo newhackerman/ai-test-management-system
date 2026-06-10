@@ -164,7 +164,6 @@ const TestManager: React.FC = () => {
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-2xl font-bold">测试概览</h1>
-          <p className="text-sm text-muted-foreground">围绕计划、用例、执行、缺陷和报告的测试闭环工作台</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Button asChild variant="outline">

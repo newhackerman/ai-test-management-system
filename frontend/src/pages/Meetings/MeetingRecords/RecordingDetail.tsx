@@ -6,7 +6,7 @@ interface RecordingDetailProps {
 }
 
 export const RecordingDetail: React.FC<RecordingDetailProps> = () => (
-  <MeetingPlaceholder title="录制详情" description="录制详情入口已恢复。" />
+  <MeetingPlaceholder title="录制详情" />
 );
 
 export default RecordingDetail;

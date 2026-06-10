@@ -107,7 +107,6 @@ export default function TestCases() {
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-2xl font-bold">测试用例</h1>
-          <p className="text-sm text-muted-foreground">管理测试用例、执行状态、优先级和标签。</p>
         </div>
         <Button type="button">
           <Plus className="mr-2 h-4 w-4" />

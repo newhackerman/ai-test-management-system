@@ -101,7 +101,6 @@ const TestPlanList: React.FC = () => {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold">测试计划管理</h1>
-          <p className="text-gray-600">管理和监控测试计划的执行进度</p>
         </div>
         <Link to="/test-manager/test-plans/create">
           <Button>

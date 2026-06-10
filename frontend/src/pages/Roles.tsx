@@ -591,7 +591,6 @@ const Roles: React.FC = () => {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-foreground">角色管理</h1>
-          <p className="text-sm text-muted-foreground">管理角色、权限分配和角色下的用户关系</p>
         </div>
         <Space wrap size={8}>
           <Button icon={<ReloadOutlined />} onClick={refresh}>

@@ -282,7 +282,6 @@ const Profile: React.FC = () => {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white">个人资料</h1>
-          <p className="mt-2 text-gray-600 dark:text-gray-400">管理个人信息、偏好设置和账号安全</p>
         </div>
         <button onClick={handleSave} disabled={isSaving} className="rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 disabled:opacity-50">
           {isSaving ? '保存中...' : '保存更改'}

@@ -6,7 +6,7 @@ interface MeetingSummaryProps {
 }
 
 export const MeetingSummary: React.FC<MeetingSummaryProps> = () => (
-  <MeetingPlaceholder title="会议摘要" description="会议摘要入口已恢复。" />
+  <MeetingPlaceholder title="会议摘要" />
 );
 
 export default MeetingSummary;

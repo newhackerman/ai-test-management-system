@@ -251,9 +251,6 @@ const DashboardMainContent: React.FC<DashboardMainProps> = ({ roleType }) => {
                 <h1 className="text-2xl font-bold text-gray-900">
                   {dashboardConfig?.dashboard_name || '我的仪表盘'}
                 </h1>
-                <p className="text-sm text-gray-500">
-                  {user?.real_name || user?.username} - {roleType || user?.role}
-                </p>
               </div>
               
               {/* Enhanced Connection Status */}

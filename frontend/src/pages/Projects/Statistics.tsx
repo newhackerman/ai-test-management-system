@@ -26,7 +26,6 @@ export const Statistics: React.FC<StatisticsPageProps> = ({ className }) => {
             <BarChart3 className="h-6 w-6" />
             项目统计
           </h1>
-          <p className="text-sm text-muted-foreground">项目 #{projectId} 的进度、绩效和对标分析。</p>
         </div>
         <Button type="button" variant="outline" onClick={() => navigate(-1)}>
           <ArrowLeft className="mr-2 h-4 w-4" />

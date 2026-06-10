@@ -436,7 +436,6 @@ export default function ConfigManagement() {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <Title level={2} className="!m-0 !text-2xl">配置管理</Title>
-            <Text type="secondary" className="text-sm">系统配置参数的统一管理</Text>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <Button

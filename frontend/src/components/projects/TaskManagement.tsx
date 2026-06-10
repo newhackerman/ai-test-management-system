@@ -40,7 +40,6 @@ export function TaskManagement({ projectId = 0, className = '' }: TaskManagement
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-2xl font-bold">任务管理</h1>
-          <p className="text-sm text-muted-foreground">管理项目任务、进度和执行状态。</p>
         </div>
         <div className="flex gap-2">
           <Button type="button" variant="outline">

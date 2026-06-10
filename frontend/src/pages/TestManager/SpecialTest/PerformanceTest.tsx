@@ -139,7 +139,6 @@ const PerformanceTest: React.FC = () => {
           </Link>
           <div>
             <h1 className="text-2xl font-bold">性能测试</h1>
-            <p className="text-gray-600">创建性能测试配置并执行目标地址探测</p>
           </div>
         </div>
         <Button variant="outline" onClick={loadData} disabled={loading}>

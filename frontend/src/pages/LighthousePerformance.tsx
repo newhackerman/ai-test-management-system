@@ -16,7 +16,6 @@ export default function LighthousePerformance() {
     <div className="space-y-6 p-6">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Lighthouse 性能</h1>
-        <p className="text-sm text-muted-foreground">性能检测入口已恢复，可继续接入 Lighthouse 报告数据。</p>
       </div>
       <div className="grid gap-4 md:grid-cols-4">
         {metrics.map((metric) => (

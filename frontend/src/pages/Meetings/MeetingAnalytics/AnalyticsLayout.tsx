@@ -8,14 +8,12 @@ import { Loader2, AlertCircle } from 'lucide-react'
 interface AnalyticsLayoutProps {
   children: React.ReactNode
   title?: string
-  description?: string
   actions?: React.ReactNode
 }
 
 const AnalyticsLayout: React.FC<AnalyticsLayoutProps> = ({
   children,
   title,
-  description,
   actions
 }) => {
   const { id: meetingId } = useParams<{ id: string }>()
@@ -53,15 +51,12 @@ const AnalyticsLayout: React.FC<AnalyticsLayoutProps> = ({
       {/* 涓诲唴瀹瑰尯鍩?*/}
       <div className="max-w-7xl mx-auto px-6 py-8">
         {/* 椤甸潰澶撮儴 */}
-        {(title || description || actions) && (
+        {(title || actions) && (
           <div className="mb-8">
             <div className="flex items-center justify-between">
               <div>
                 {title && (
                   <h1 className="text-3xl font-bold text-gray-900">{title}</h1>
-                )}
-                {description && (
-                  <p className="mt-2 text-gray-600">{description}</p>
                 )}
               </div>
               {actions && (

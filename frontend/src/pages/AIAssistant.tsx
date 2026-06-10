@@ -757,7 +757,6 @@ const AIAssistant: React.FC = () => {
             <Bot className="h-7 w-7 text-blue-600" />
             AI 助手
           </h1>
-          <p className="mt-1 text-sm text-gray-600">真实连接模型，辅助需求分析、测试设计、缺陷定位和项目风险判断。</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {statusInfo && !statusInfo.configured && (
@@ -840,9 +839,6 @@ const AIAssistant: React.FC = () => {
                   <MessageSquare className="h-5 w-5 text-emerald-600" />
                   {activeSession?.title || 'AI 对话'}
                 </CardTitle>
-                <p className="mt-1 text-xs text-gray-500 dark:text-slate-400">
-                  支持多轮上下文、附件解析和业务导出
-                </p>
               </div>
               <div className="flex items-center gap-2">
                 <DropdownMenu>
@@ -894,9 +890,6 @@ const AIAssistant: React.FC = () => {
                   <div className="max-w-lg text-center">
                     <Sparkles className="mx-auto h-10 w-10 text-amber-500" />
                     <h2 className="mt-3 text-lg font-semibold text-gray-900 dark:text-slate-100">选择模板或直接输入问题</h2>
-                    <p className="mt-2 text-sm text-gray-600 dark:text-slate-400">
-                      这里不会展示模拟回复；发送后将通过后端调用已配置的真实 OpenAI 兼容模型。
-                    </p>
                   </div>
                 </div>
               )}

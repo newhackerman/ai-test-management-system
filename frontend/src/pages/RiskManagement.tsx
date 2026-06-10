@@ -440,7 +440,6 @@ function RiskManagement() {
             <ShieldAlert className="h-6 w-6" />
             风险管理
           </h1>
-          <p className="text-sm text-muted-foreground">统一维护项目风险、负责人、应对计划、状态流转和风险矩阵。</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" onClick={() => loadRisks(page)} disabled={loading}>
@@ -743,7 +742,6 @@ function RiskFormDialog({ title, form, setForm, projects, users, modalError, onC
         <div className="flex items-center justify-between border-b px-6 py-4">
           <div>
             <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
-            <p className="mt-1 text-sm text-gray-500">填写风险来源、概率影响、负责人、应对计划和目标解决日期。</p>
           </div>
           <Button variant="ghost" size="icon" onClick={onClose}><X className="h-4 w-4" /></Button>
         </div>

@@ -6,7 +6,7 @@ interface RecordingPlayerProps {
 }
 
 export const RecordingPlayer: React.FC<RecordingPlayerProps> = () => (
-  <MeetingPlaceholder title="录制播放" description="录制播放器入口已恢复。" />
+  <MeetingPlaceholder title="录制播放" />
 );
 
 export default RecordingPlayer;

@@ -228,9 +228,6 @@ const DevOpsDashboard: React.FC = () => {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold mb-2">运维仪表板</h1>
-            <p className="text-green-100">
-              欢迎回来，{user?.real_name || user?.username} | 运维人员
-            </p>
           </div>
           <div className="text-right">
             <div className="text-3xl font-bold">{systemMetrics.systemHealth}%</div>
