@@ -320,7 +320,7 @@ const getErrorText = (error: any) => {
 }
 
 const AssistantMarkdown = ({ content }: { content: string }) => (
-  <div className="text-sm leading-6 text-gray-900">
+  <div className="text-sm leading-6 text-gray-900 dark:text-slate-100">
     <ReactMarkdown
       remarkPlugins={[remarkGfm]}
       components={{
@@ -328,20 +328,20 @@ const AssistantMarkdown = ({ content }: { content: string }) => (
         ul: ({ children }) => <ul className="mb-3 list-disc space-y-1 pl-5">{children}</ul>,
         ol: ({ children }) => <ol className="mb-3 list-decimal space-y-1 pl-5">{children}</ol>,
         li: ({ children }) => <li className="break-words">{children}</li>,
-        strong: ({ children }) => <strong className="font-semibold text-gray-950">{children}</strong>,
+        strong: ({ children }) => <strong className="font-semibold text-gray-950 dark:text-white">{children}</strong>,
         code: ({ children }) => (
-          <code className="rounded bg-gray-100 px-1.5 py-0.5 font-mono text-[12px] text-gray-900">{children}</code>
+          <code className="rounded bg-gray-100 px-1.5 py-0.5 font-mono text-[12px] text-gray-900 dark:bg-slate-800 dark:text-slate-100">{children}</code>
         ),
         pre: ({ children }) => (
           <pre className="mb-3 overflow-x-auto rounded-md bg-gray-950 p-3 text-xs text-gray-50">{children}</pre>
         ),
         table: ({ children }) => (
-          <div className="mb-3 overflow-x-auto rounded-md border border-gray-200">
+          <div className="mb-3 overflow-x-auto rounded-md border border-gray-200 dark:border-slate-700">
             <table className="min-w-full border-collapse text-xs">{children}</table>
           </div>
         ),
-        th: ({ children }) => <th className="border-b border-r bg-gray-50 px-3 py-2 text-left font-semibold">{children}</th>,
-        td: ({ children }) => <td className="border-b border-r px-3 py-2 align-top">{children}</td>,
+        th: ({ children }) => <th className="border-b border-r bg-gray-50 px-3 py-2 text-left font-semibold dark:border-slate-700 dark:bg-slate-800">{children}</th>,
+        td: ({ children }) => <td className="border-b border-r px-3 py-2 align-top dark:border-slate-700">{children}</td>,
       }}
     >
       {content}
@@ -763,9 +763,6 @@ const AIAssistant: React.FC = () => {
           {statusInfo && !statusInfo.configured && (
             <Badge variant="destructive" className="rounded-md">服务未就绪</Badge>
           )}
-          <Badge variant="outline" className="rounded-md">
-            {statusInfo?.model || '模型未知'}
-          </Badge>
           {statusInfo?.simulated && <Badge variant="destructive" className="rounded-md">发现模拟响应</Badge>}
           <Button variant="outline" size="sm" onClick={loadStatus} disabled={statusLoading}>
             {statusLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
@@ -844,7 +841,7 @@ const AIAssistant: React.FC = () => {
                   {activeSession?.title || 'AI 对话'}
                 </CardTitle>
                 <p className="mt-1 text-xs text-gray-500 dark:text-slate-400">
-                  {statusInfo?.message || '正在读取 AI 服务状态'}
+                  支持多轮上下文、附件解析和业务导出
                 </p>
               </div>
               <div className="flex items-center gap-2">
@@ -922,7 +919,7 @@ const AIAssistant: React.FC = () => {
                     <div
                       className={`max-w-[86%] rounded-md border px-4 py-3 shadow-sm ${
                         message.role === 'user'
-                          ? 'border-sky-600 bg-sky-600 text-white dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100'
+                          ? 'border-blue-200 bg-blue-50 text-slate-900 dark:border-blue-500/30 dark:bg-blue-950/30 dark:text-slate-100'
                           : message.isError
                             ? 'border-red-200 bg-red-50 text-red-900 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-100'
                             : 'border-gray-200 bg-white text-gray-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100'
@@ -934,7 +931,7 @@ const AIAssistant: React.FC = () => {
                         <div className="whitespace-pre-wrap break-words text-sm leading-6">{message.content}</div>
                       )}
                       <div className={`mt-3 flex flex-wrap items-center gap-2 text-xs ${
-                        message.role === 'user' ? 'text-sky-100 dark:text-slate-400' : 'text-gray-500 dark:text-slate-400'
+                        message.role === 'user' ? 'text-slate-500 dark:text-slate-400' : 'text-gray-500 dark:text-slate-400'
                       }`}>
                         <span>{formatTime(message.createdAt)}</span>
                         {message.model && <span>{message.provider}/{message.model}</span>}
@@ -943,7 +940,7 @@ const AIAssistant: React.FC = () => {
                         <button
                           className={`inline-flex items-center gap-1 ${
                             message.role === 'user'
-                              ? 'hover:text-white dark:hover:text-slate-100'
+                              ? 'hover:text-red-600 dark:hover:text-red-300'
                               : 'hover:text-red-600 dark:hover:text-red-300'
                           }`}
                           onClick={() => requestDeleteMessageRound(message)}
@@ -970,7 +967,7 @@ const AIAssistant: React.FC = () => {
                       </div>
                     </div>
                     {message.role === 'user' && (
-                      <div className="mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-sky-100 text-sky-700 dark:bg-slate-800 dark:text-slate-200">
+                      <div className="mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-blue-100 text-blue-700 dark:bg-blue-950/50 dark:text-blue-200">
                         <User className="h-4 w-4" />
                       </div>
                     )}
@@ -1026,8 +1023,8 @@ const AIAssistant: React.FC = () => {
                   })}
                 </div>
               )}
-              <div className="flex gap-3">
-                <div className="min-w-0 flex-1">
+              <div>
+                <div className="relative">
                   <Textarea
                     value={input}
                     onChange={(event) => setInput(event.target.value)}
@@ -1039,9 +1036,18 @@ const AIAssistant: React.FC = () => {
                     }}
                     placeholder="输入问题，例如：请结合附件生成登录功能测试点，覆盖边界值和异常路径"
                     rows={3}
-                    className="min-h-[92px] resize-none"
+                    className="min-h-[92px] resize-none pr-24"
                   />
-                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <Button
+                    onClick={() => (loading ? stopGeneration() : sendMessage())}
+                    disabled={(!loading && attachmentLoading) || (!loading && !input.trim() && !attachedFiles.length)}
+                    className={`absolute bottom-2 right-2 h-8 px-3 shadow-sm ${loading ? 'bg-red-600 hover:bg-red-700' : 'bg-blue-600 hover:bg-blue-700'}`}
+                  >
+                    {loading ? <Square className="mr-1.5 h-3.5 w-3.5" /> : <Send className="mr-1.5 h-3.5 w-3.5" />}
+                    {loading ? '停止' : '发送'}
+                  </Button>
+                </div>
+                <div className="mt-2 flex flex-wrap items-center gap-2">
                     <input
                       ref={attachmentInputRef}
                       type="file"
@@ -1063,16 +1069,7 @@ const AIAssistant: React.FC = () => {
                     <span className="text-xs text-gray-500">
                       支持图片、PDF、Word、Excel、HTML、CSV、文本；可解析正文的附件会自动加入本次 AI 上下文。
                     </span>
-                  </div>
                 </div>
-                <Button
-                  onClick={() => (loading ? stopGeneration() : sendMessage())}
-                  disabled={(!loading && attachmentLoading) || (!loading && !input.trim() && !attachedFiles.length)}
-                  className={`h-[92px] w-24 shrink-0 ${loading ? 'bg-red-600 hover:bg-red-700' : ''}`}
-                >
-                  {loading ? <Square className="mr-2 h-4 w-4" /> : <Send className="mr-2 h-4 w-4" />}
-                  {loading ? '停止' : '发送'}
-                </Button>
               </div>
             </div>
           </CardContent>

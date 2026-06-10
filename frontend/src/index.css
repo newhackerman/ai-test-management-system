@@ -61,6 +61,195 @@
   }
 }
 
+@layer components {
+  .ant-btn {
+    box-shadow: none;
+  }
+
+  .ant-btn-primary {
+    background: #2563eb;
+  }
+
+  .ant-btn-primary:not(:disabled):not(.ant-btn-disabled):hover {
+    background: #1d4ed8;
+  }
+
+  .ant-card {
+    border-color: #e2e8f0;
+    box-shadow: none;
+  }
+
+  .ant-card-head {
+    min-height: 44px;
+    border-bottom-color: #e2e8f0;
+  }
+
+  .ant-card-head-title {
+    font-size: 15px;
+    font-weight: 600;
+  }
+
+  .ant-card-body {
+    padding: 16px;
+  }
+
+  .ant-table-wrapper .ant-table {
+    color: #0f172a;
+    border-radius: 6px;
+  }
+
+  .ant-table-wrapper .ant-table-thead > tr > th {
+    background: #f8fafc;
+    color: #475569;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 9px 12px;
+  }
+
+  .ant-table-wrapper .ant-table-tbody > tr > td {
+    padding: 9px 12px;
+  }
+
+  .ant-table-wrapper .ant-table-tbody > tr:hover > td {
+    background: #f8fafc;
+  }
+
+  .ant-modal-content,
+  .ant-drawer-content {
+    border-radius: 8px;
+  }
+
+  .ant-form-item {
+    margin-bottom: 14px;
+  }
+
+  .ant-select-selector,
+  .ant-input,
+  .ant-input-number,
+  .ant-picker {
+    border-radius: 6px;
+  }
+
+  .dark .ant-card,
+  .dark .ant-modal-content,
+  .dark .ant-drawer-content,
+  .dark .ant-popover-inner,
+  .dark .ant-dropdown-menu {
+    border-color: #1e293b;
+    background: #020617;
+    color: #e2e8f0;
+  }
+
+  .dark .ant-card-head,
+  .dark .ant-modal-header,
+  .dark .ant-drawer-header {
+    border-bottom-color: #1e293b;
+    background: #020617;
+    color: #e2e8f0;
+  }
+
+  .dark .ant-card-head-title,
+  .dark .ant-modal-title,
+  .dark .ant-drawer-title,
+  .dark .ant-form-item-label > label,
+  .dark .ant-typography,
+  .dark .ant-statistic-title {
+    color: #e2e8f0;
+  }
+
+  .dark .ant-statistic-content,
+  .dark .ant-table-wrapper .ant-table,
+  .dark .ant-table-wrapper .ant-table-container,
+  .dark .ant-table-wrapper .ant-table-content,
+  .dark .ant-table-wrapper .ant-table-cell,
+  .dark .ant-empty-description {
+    background: #020617;
+    color: #e2e8f0;
+  }
+
+  .dark .ant-table-wrapper .ant-table-thead > tr > th {
+    border-bottom-color: #1e293b;
+    background: #0f172a;
+    color: #cbd5e1;
+  }
+
+  .dark .ant-table-wrapper .ant-table-tbody > tr > td {
+    border-bottom-color: #1e293b;
+  }
+
+  .dark .ant-table-wrapper .ant-table-tbody > tr:hover > td {
+    background: #0f172a;
+  }
+
+  .dark .ant-input,
+  .dark .ant-input-affix-wrapper,
+  .dark .ant-input-number,
+  .dark .ant-picker,
+  .dark .ant-select-selector {
+    border-color: #334155 !important;
+    background: #020617 !important;
+    color: #e2e8f0 !important;
+  }
+
+  .dark .ant-input::placeholder,
+  .dark .ant-select-selection-placeholder,
+  .dark .ant-select-selection-item,
+  .dark .ant-select-arrow,
+  .dark .ant-picker-suffix,
+  .dark .ant-input-affix-wrapper input {
+    color: #94a3b8 !important;
+    background: transparent !important;
+  }
+
+  .dark .ant-select-dropdown {
+    border: 1px solid #1e293b;
+    background: #020617;
+  }
+
+  .dark .ant-select-item {
+    color: #e2e8f0;
+  }
+
+  .dark .ant-select-item-option-active:not(.ant-select-item-option-disabled) {
+    background: #0f172a;
+  }
+
+  .dark .ant-select-item-option-selected:not(.ant-select-item-option-disabled) {
+    background: #1e3a8a;
+    color: #dbeafe;
+  }
+
+  .dark .ant-btn-default {
+    border-color: #334155;
+    background: #020617;
+    color: #e2e8f0;
+  }
+
+  .dark .ant-btn-default:not(:disabled):not(.ant-btn-disabled):hover {
+    border-color: #60a5fa;
+    background: #0f172a;
+    color: #bfdbfe;
+  }
+
+  .dark .ant-btn-text,
+  .dark .ant-btn-link,
+  .dark .ant-table-wrapper .ant-table a {
+    color: #93c5fd;
+  }
+
+  .dark .ant-btn-text:not(:disabled):not(.ant-btn-disabled):hover,
+  .dark .ant-btn-link:not(:disabled):not(.ant-btn-disabled):hover {
+    background: #1e293b;
+    color: #bfdbfe;
+  }
+
+  .dark .ant-btn-text:disabled,
+  .dark .ant-btn-link:disabled,
+  .dark .ant-btn-disabled {
+    color: #475569 !important;
+  }
+}
+
 @layer base {
   :root {
     /* 主色调 - 蓝色系 */
