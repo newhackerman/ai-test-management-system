@@ -76,18 +76,6 @@ export const UserTable: React.FC<UserTableProps> = ({
   const allSelected = users.length > 0 && currentPageSelectedCount === users.length
   const someSelected = currentPageSelectedCount > 0 && currentPageSelectedCount < users.length
 
-  if (loading) {
-    return (
-      <div className="flex justify-center py-10">
-        <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-blue-600" />
-      </div>
-    )
-  }
-
-  if (users.length === 0) {
-    return <div className="py-10 text-center text-gray-500">暂无用户数据</div>
-  }
-
   return (
     <div className="overflow-x-auto">
       <table className="w-full">
@@ -106,7 +94,21 @@ export const UserTable: React.FC<UserTableProps> = ({
           </tr>
         </thead>
         <tbody>
-          {users.map((user) => {
+          {loading && (
+            <tr>
+              <td colSpan={8} className="h-32 text-center">
+                <div className="inline-flex h-8 w-8 animate-spin rounded-full border-b-2 border-blue-600" />
+              </td>
+            </tr>
+          )}
+          {!loading && users.length === 0 && (
+            <tr>
+              <td colSpan={8} className="h-32 text-center text-sm text-gray-500">
+                暂无用户数据
+              </td>
+            </tr>
+          )}
+          {!loading && users.map((user) => {
             const locked = user.status === 'locked'
             return (
               <tr key={user.id} className="border-b hover:bg-gray-50">

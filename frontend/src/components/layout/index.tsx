@@ -55,7 +55,7 @@ const navGroups = [
   {
     title: '报告与恢复',
     items: [
-      { label: 'Allure 报告', path: '/allure-reports', icon: FileSpreadsheet, module: 'reports' },
+      { label: 'Allure', path: '/allure-reports', icon: FileSpreadsheet, module: 'reports' },
       { label: '报告管理', path: '/reports', icon: FileSpreadsheet, module: 'reports' },
       { label: '自动恢复', path: '/auto-recovery', icon: PlayCircle, module: 'testing' },
       { label: '数据统计', path: '/statistics', icon: BarChart3, module: 'reports' },
@@ -252,7 +252,7 @@ const AppLayout: React.FC = () => {
     <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
       <aside
         className={`fixed inset-y-0 left-0 z-40 w-64 transform border-r border-slate-200 bg-white text-slate-700 shadow-sm transition-[width,transform] dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200 lg:translate-x-0 ${
-          sidebarCollapsed ? 'lg:w-16' : 'lg:w-36'
+          sidebarCollapsed ? 'lg:w-16' : 'lg:w-28'
         } ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
@@ -268,7 +268,7 @@ const AppLayout: React.FC = () => {
         </button>
         <div className={`flex h-14 items-center justify-between border-b border-slate-200 px-3 dark:border-slate-800 ${sidebarCollapsed ? 'lg:justify-center lg:px-2' : ''}`}>
           <Link to="/" className={`truncate text-sm font-semibold text-slate-900 dark:text-slate-100 ${sidebarCollapsed ? 'lg:hidden' : ''}`}>
-            AI 测试管理系统
+            AI 测试
           </Link>
           <Link
             to="/"
@@ -298,7 +298,7 @@ const AppLayout: React.FC = () => {
                       onClick={() => setSidebarOpen(false)}
                       title={sidebarCollapsed ? item.label : undefined}
                       className={({ isActive }) =>
-                        `flex items-center rounded-md px-2.5 py-1.5 text-sm transition-colors ${
+                        `flex items-center rounded-md px-2 py-1.5 text-xs transition-colors ${
                           sidebarCollapsed ? 'lg:justify-center lg:px-0 lg:py-2.5' : ''
                         } ${
                           isActive
@@ -307,7 +307,7 @@ const AppLayout: React.FC = () => {
                         }`
                       }
                     >
-                      <Icon className={`mr-3 h-4 w-4 shrink-0 ${sidebarCollapsed ? 'lg:mr-0' : ''}`} />
+                      <Icon className={`mr-2 h-4 w-4 shrink-0 ${sidebarCollapsed ? 'lg:mr-0' : ''}`} />
                       <span className={`truncate ${sidebarCollapsed ? 'lg:hidden' : ''}`}>{item.label}</span>
                     </NavLink>
                   )
@@ -320,7 +320,7 @@ const AppLayout: React.FC = () => {
 
       {sidebarOpen && <div className="fixed inset-0 z-30 bg-black/40 lg:hidden" onClick={() => setSidebarOpen(false)} />}
 
-      <div className={`transition-[padding] ${sidebarCollapsed ? 'lg:pl-16' : 'lg:pl-36'}`}>
+      <div className={`transition-[padding] ${sidebarCollapsed ? 'lg:pl-16' : 'lg:pl-28'}`}>
         <header className="sticky top-0 z-20 flex h-14 items-center justify-between border-b border-slate-200 bg-white/95 px-4 shadow-sm backdrop-blur dark:border-slate-800 dark:bg-slate-950/95">
           <div className="flex min-w-0 items-center gap-3">
             <button className="rounded-md p-2 hover:bg-gray-100 dark:hover:bg-slate-800 lg:hidden" onClick={() => setSidebarOpen(true)} aria-label="打开菜单">

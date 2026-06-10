@@ -186,6 +186,168 @@ const formatTime = (value?: string | null) => {
   })
 }
 
+const emptyDashboardSummary: DashboardSummary = {
+  generated_at: '',
+  user: {},
+  users: {
+    total: 0,
+    active: 0,
+    locked: 0,
+    today_logins: 0,
+    roles: 0,
+  },
+  projects: {
+    total: 0,
+    active: 0,
+    completed: 0,
+    overdue: 0,
+    high_risk: 0,
+    avg_progress: 0,
+    status_distribution: [],
+  },
+  requirements: {
+    total: 0,
+    active: 0,
+    completed: 0,
+    overdue: 0,
+    completion_rate: 0,
+    status_distribution: [],
+  },
+  tasks: {
+    total: 0,
+    open: 0,
+    completed: 0,
+    overdue: 0,
+    completion_rate: 0,
+    status_distribution: [],
+  },
+  testing: {
+    plans_total: 0,
+    plans_active: 0,
+    cases_total: 0,
+    cases_active: 0,
+    executions_total: 0,
+    executions_today: 0,
+    passed_executions: 0,
+    pass_rate: 0,
+    case_status_distribution: [],
+    execution_status_distribution: [],
+  },
+  defects: {
+    total: 0,
+    open: 0,
+    high_priority_open: 0,
+    resolved: 0,
+    resolution_rate: 0,
+    status_distribution: [],
+  },
+  meetings: {
+    total: 0,
+    today: 0,
+    upcoming: 0,
+    running: 0,
+    status_distribution: [],
+  },
+  reports: {
+    total: 0,
+    completed: 0,
+    failed: 0,
+  },
+  recent_activity: [],
+  data_sources: [],
+}
+
+const asNumber = (value: unknown) => (Number.isFinite(Number(value)) ? Number(value) : 0)
+
+const normalizeDistribution = (items: unknown): DistributionItem[] =>
+  Array.isArray(items)
+    ? items.map((item: any) => ({ name: String(item?.name || ''), count: asNumber(item?.count) })).filter((item) => item.name)
+    : []
+
+const normalizeDashboardSummary = (payload: any): DashboardSummary => {
+  const source = payload && !Array.isArray(payload) ? payload : {}
+
+  return {
+    ...emptyDashboardSummary,
+    generated_at: source.generated_at || '',
+    user: source.user && typeof source.user === 'object' ? source.user : {},
+    access: source.access && typeof source.access === 'object'
+      ? {
+          is_superuser: Boolean(source.access.is_superuser),
+          permissions: Array.isArray(source.access.permissions) ? source.access.permissions : [],
+          roles: Array.isArray(source.access.roles) ? source.access.roles : [],
+          modules: source.access.modules && typeof source.access.modules === 'object' ? source.access.modules : {},
+        }
+      : undefined,
+    users: {
+      total: asNumber(source.users?.total),
+      active: asNumber(source.users?.active),
+      locked: asNumber(source.users?.locked),
+      today_logins: asNumber(source.users?.today_logins),
+      roles: asNumber(source.users?.roles),
+    },
+    projects: {
+      total: asNumber(source.projects?.total),
+      active: asNumber(source.projects?.active),
+      completed: asNumber(source.projects?.completed),
+      overdue: asNumber(source.projects?.overdue),
+      high_risk: asNumber(source.projects?.high_risk),
+      avg_progress: asNumber(source.projects?.avg_progress),
+      status_distribution: normalizeDistribution(source.projects?.status_distribution),
+    },
+    requirements: {
+      total: asNumber(source.requirements?.total),
+      active: asNumber(source.requirements?.active),
+      completed: asNumber(source.requirements?.completed),
+      overdue: asNumber(source.requirements?.overdue),
+      completion_rate: asNumber(source.requirements?.completion_rate),
+      status_distribution: normalizeDistribution(source.requirements?.status_distribution),
+    },
+    tasks: {
+      total: asNumber(source.tasks?.total),
+      open: asNumber(source.tasks?.open),
+      completed: asNumber(source.tasks?.completed),
+      overdue: asNumber(source.tasks?.overdue),
+      completion_rate: asNumber(source.tasks?.completion_rate),
+      status_distribution: normalizeDistribution(source.tasks?.status_distribution),
+    },
+    testing: {
+      plans_total: asNumber(source.testing?.plans_total),
+      plans_active: asNumber(source.testing?.plans_active),
+      cases_total: asNumber(source.testing?.cases_total),
+      cases_active: asNumber(source.testing?.cases_active),
+      executions_total: asNumber(source.testing?.executions_total),
+      executions_today: asNumber(source.testing?.executions_today),
+      passed_executions: asNumber(source.testing?.passed_executions),
+      pass_rate: asNumber(source.testing?.pass_rate),
+      case_status_distribution: normalizeDistribution(source.testing?.case_status_distribution),
+      execution_status_distribution: normalizeDistribution(source.testing?.execution_status_distribution),
+    },
+    defects: {
+      total: asNumber(source.defects?.total),
+      open: asNumber(source.defects?.open),
+      high_priority_open: asNumber(source.defects?.high_priority_open),
+      resolved: asNumber(source.defects?.resolved),
+      resolution_rate: asNumber(source.defects?.resolution_rate),
+      status_distribution: normalizeDistribution(source.defects?.status_distribution),
+    },
+    meetings: {
+      total: asNumber(source.meetings?.total),
+      today: asNumber(source.meetings?.today),
+      upcoming: asNumber(source.meetings?.upcoming),
+      running: asNumber(source.meetings?.running),
+      status_distribution: normalizeDistribution(source.meetings?.status_distribution),
+    },
+    reports: {
+      total: asNumber(source.reports?.total),
+      completed: asNumber(source.reports?.completed),
+      failed: asNumber(source.reports?.failed),
+    },
+    recent_activity: Array.isArray(source.recent_activity) ? source.recent_activity : [],
+    data_sources: Array.isArray(source.data_sources) ? source.data_sources : [],
+  }
+}
+
 const Dashboard: React.FC = () => {
   const [summary, setSummary] = useState<DashboardSummary | null>(null)
   const [loading, setLoading] = useState(true)
@@ -198,7 +360,7 @@ const Dashboard: React.FC = () => {
     try {
       const response = await apiClient.get('/dashboard/summary')
       const payload = response.data?.data || response.data
-      setSummary(payload)
+      setSummary(normalizeDashboardSummary(payload))
     } catch (err: any) {
       setError(err?.response?.data?.detail || err?.message || '仪表盘数据加载失败')
     } finally {
