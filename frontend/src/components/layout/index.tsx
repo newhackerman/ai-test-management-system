@@ -252,7 +252,7 @@ const AppLayout: React.FC = () => {
     <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
       <aside
         className={`fixed inset-y-0 left-0 z-40 w-64 transform border-r border-slate-200 bg-white text-slate-700 shadow-sm transition-[width,transform] dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200 lg:translate-x-0 ${
-          sidebarCollapsed ? 'lg:w-16' : 'lg:w-28'
+          sidebarCollapsed ? 'lg:w-16' : 'lg:w-32'
         } ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
@@ -298,7 +298,7 @@ const AppLayout: React.FC = () => {
                       onClick={() => setSidebarOpen(false)}
                       title={sidebarCollapsed ? item.label : undefined}
                       className={({ isActive }) =>
-                        `flex items-center rounded-md px-2 py-1.5 text-xs transition-colors ${
+                        `flex items-center rounded-md px-2 py-1.5 text-sm transition-colors ${
                           sidebarCollapsed ? 'lg:justify-center lg:px-0 lg:py-2.5' : ''
                         } ${
                           isActive
@@ -320,7 +320,7 @@ const AppLayout: React.FC = () => {
 
       {sidebarOpen && <div className="fixed inset-0 z-30 bg-black/40 lg:hidden" onClick={() => setSidebarOpen(false)} />}
 
-      <div className={`transition-[padding] ${sidebarCollapsed ? 'lg:pl-16' : 'lg:pl-28'}`}>
+      <div className={`transition-[padding] ${sidebarCollapsed ? 'lg:pl-16' : 'lg:pl-32'}`}>
         <header className="sticky top-0 z-20 flex h-14 items-center justify-between border-b border-slate-200 bg-white/95 px-4 shadow-sm backdrop-blur dark:border-slate-800 dark:bg-slate-950/95">
           <div className="flex min-w-0 items-center gap-3">
             <button className="rounded-md p-2 hover:bg-gray-100 dark:hover:bg-slate-800 lg:hidden" onClick={() => setSidebarOpen(true)} aria-label="打开菜单">
