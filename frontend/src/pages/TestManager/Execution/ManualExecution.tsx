@@ -1,6 +1,6 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, Camera, CheckCircle, Clock, Image, Play, Search, Video, XCircle } from 'lucide-react'
+import { ArrowLeft, Camera, CheckCircle, Clock, Image, Play, Search, Trash2, Video, XCircle } from 'lucide-react'
 import { Badge } from '../../../components/ui/Badge'
 import { Button } from '../../../components/ui/Button'
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/Card'
@@ -9,7 +9,7 @@ import { Input } from '../../../components/ui/Input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/Select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../components/ui/Table'
 import { Textarea } from '../../../components/ui/Textarea'
-import { useCompleteExecution, useStartManualExecution, useUploadScreenshot, useUploadVideo } from '../../../hooks/testmanager/useExecution'
+import { useCompleteExecution, useDeleteScreenshot, useDeleteVideo, useStartManualExecution, useUploadScreenshot, useUploadVideo } from '../../../hooks/testmanager/useExecution'
 import { useTestCase, useTestCases } from '../../../hooks/testmanager/useTestCase'
 import { useToast } from '../../../hooks/useToast'
 import { ExecutionStatus, Priority, TestCaseStatus } from '../../../types/testmanager'
@@ -45,6 +45,14 @@ const formatFileSize = (size?: number) => {
   return `${(size / 1024 / 1024).toFixed(1)}MB`
 }
 
+const getClipboardImageFiles = (items?: DataTransferItemList | null) => {
+  if (!items) return []
+  return Array.from(items)
+    .filter((item) => item.kind === 'file' && item.type.startsWith('image/'))
+    .map((item) => item.getAsFile())
+    .filter(Boolean) as File[]
+}
+
 const ManualExecution: React.FC = () => {
   const { testCaseId } = useParams<{ testCaseId?: string }>()
   const navigate = useNavigate()
@@ -72,6 +80,8 @@ const ManualExecution: React.FC = () => {
   const completeExecution = useCompleteExecution()
   const uploadScreenshot = useUploadScreenshot()
   const uploadVideo = useUploadVideo()
+  const deleteScreenshot = useDeleteScreenshot()
+  const deleteVideo = useDeleteVideo()
   const { toast } = useToast()
 
   const executableCases = useMemo(() => {
@@ -183,26 +193,45 @@ const ManualExecution: React.FC = () => {
     setShowScreenshotDialog(false)
   }
 
-  const handlePasteImages = async (event: React.ClipboardEvent) => {
-    if (!currentExecution) return
-    const imageFiles = Array.from(event.clipboardData.items)
-      .filter((item) => item.kind === 'file' && item.type.startsWith('image/'))
-      .map((item) => item.getAsFile())
-      .filter(Boolean) as File[]
+  const uploadScreenshotFiles = useCallback(async (files: File[]) => {
+    if (!currentExecution?.id) return
+    if (!files.length) return
 
-    if (!imageFiles.length) return
-
-    event.preventDefault()
     setIsPastingImage(true)
     try {
-      for (const file of imageFiles) {
+      for (const file of files) {
         const metadata = await uploadScreenshot.mutateAsync({ id: currentExecution.id, file })
         setUploadedScreenshots((prev) => [...prev, metadata])
       }
     } finally {
       setIsPastingImage(false)
     }
+  }, [currentExecution?.id, uploadScreenshot.mutateAsync])
+
+  const handlePasteImages = async (event: React.ClipboardEvent) => {
+    if (event.defaultPrevented) return
+    const imageFiles = getClipboardImageFiles(event.clipboardData.items)
+    if (!imageFiles.length) return
+
+    event.preventDefault()
+    await uploadScreenshotFiles(imageFiles)
   }
+
+  useEffect(() => {
+    if (!currentExecution?.id) return undefined
+
+    const handleDocumentPaste = (event: ClipboardEvent) => {
+      if (event.defaultPrevented) return
+      const imageFiles = getClipboardImageFiles(event.clipboardData?.items)
+      if (!imageFiles.length) return
+
+      event.preventDefault()
+      void uploadScreenshotFiles(imageFiles)
+    }
+
+    document.addEventListener('paste', handleDocumentPaste)
+    return () => document.removeEventListener('paste', handleDocumentPaste)
+  }, [currentExecution?.id, uploadScreenshotFiles])
 
   const handleVideoUpload = async (files: FileList | File[]) => {
     if (!currentExecution) return
@@ -218,6 +247,26 @@ const ManualExecution: React.FC = () => {
       const metadata = await uploadVideo.mutateAsync({ id: currentExecution.id, file })
       setUploadedVideos((prev) => [...prev, metadata])
     }
+  }
+
+  const handleDeleteScreenshot = async (index: number) => {
+    if (!currentExecution?.id) return
+    await deleteScreenshot.mutateAsync({ id: currentExecution.id, index })
+    setUploadedScreenshots((prev) => prev.filter((_, itemIndex) => itemIndex !== index))
+    setCurrentExecution((prev: any) => prev ? {
+      ...prev,
+      screenshots: (prev.screenshots || []).filter((_: any, itemIndex: number) => itemIndex !== index),
+    } : prev)
+  }
+
+  const handleDeleteVideo = async (index: number) => {
+    if (!currentExecution?.id) return
+    await deleteVideo.mutateAsync({ id: currentExecution.id, index })
+    setUploadedVideos((prev) => prev.filter((_, itemIndex) => itemIndex !== index))
+    setCurrentExecution((prev: any) => prev ? {
+      ...prev,
+      videos: (prev.videos || []).filter((_: any, itemIndex: number) => itemIndex !== index),
+    } : prev)
   }
 
   const stepStatusBadge = (status?: ExecutionStatus) => {
@@ -462,21 +511,41 @@ const ManualExecution: React.FC = () => {
                   <label className="mb-2 block text-sm font-medium">整体实际结果</label>
                   <Textarea rows={3} value={actualResult} onChange={(event) => setActualResult(event.target.value)} placeholder="概述本次执行观察到的结果" />
                 </div>
-                <div className="rounded-md border border-dashed p-3">
+                <div
+                  className="rounded-md border border-dashed p-3 outline-none transition-colors focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-ring"
+                  tabIndex={0}
+                  role="region"
+                  aria-label="截图证据粘贴区域"
+                  onClick={(event) => event.currentTarget.focus()}
+                  onPaste={handlePasteImages}
+                >
                   <div className="mb-2 flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2 text-sm font-medium">
                       <Image className="h-4 w-4" />
                       <span>截图证据</span>
                       <Badge variant="secondary">{uploadedScreenshots.length}</Badge>
                     </div>
-                    <span className="text-xs text-muted-foreground">{isPastingImage ? '图片上传中...' : '可在结果区域粘贴图片'}</span>
+                    <span className="text-xs text-muted-foreground">{isPastingImage ? '图片上传中...' : '点击这里后 Ctrl+V 粘贴图片'}</span>
                   </div>
                   {uploadedScreenshots.length > 0 ? (
                     <div className="space-y-1">
                       {uploadedScreenshots.map((item, index) => (
-                        <div key={`${item.file_path || item.filename}-${index}`} className="flex items-center justify-between rounded bg-muted/40 px-2 py-1 text-xs">
+                        <div key={`${item.file_path || item.filename}-${index}`} className="flex items-center justify-between gap-2 rounded bg-muted/40 px-2 py-1 text-xs">
                           <span className="truncate">{item.filename || `截图 ${index + 1}`}</span>
-                          <span className="ml-2 text-muted-foreground">{formatFileSize(item.file_size)}</span>
+                          <div className="flex shrink-0 items-center gap-2">
+                            <span className="text-muted-foreground">{formatFileSize(item.file_size)}</span>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6"
+                              title="删除截图"
+                              disabled={deleteScreenshot.isPending}
+                              onClick={() => handleDeleteScreenshot(index)}
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -519,9 +588,22 @@ const ManualExecution: React.FC = () => {
                   {uploadedVideos.length > 0 ? (
                     <div className="space-y-1">
                       {uploadedVideos.map((item, index) => (
-                        <div key={`${item.file_path || item.filename}-${index}`} className="flex items-center justify-between rounded bg-muted/40 px-2 py-1 text-xs">
+                        <div key={`${item.file_path || item.filename}-${index}`} className="flex items-center justify-between gap-2 rounded bg-muted/40 px-2 py-1 text-xs">
                           <span className="truncate">{item.filename || `录像 ${index + 1}`}</span>
-                          <span className="ml-2 text-muted-foreground">{formatFileSize(item.file_size)}</span>
+                          <div className="flex shrink-0 items-center gap-2">
+                            <span className="text-muted-foreground">{formatFileSize(item.file_size)}</span>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6"
+                              title="删除录像"
+                              disabled={deleteVideo.isPending}
+                              onClick={() => handleDeleteVideo(index)}
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
                         </div>
                       ))}
                     </div>

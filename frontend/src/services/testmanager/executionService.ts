@@ -178,6 +178,16 @@ export class ExecutionService {
     return unwrapData<any>(response.data)
   }
 
+  async deleteScreenshot(id: number, index: number): Promise<any> {
+    const response = await apiClient.delete(`${this.baseUrl}/${id}/screenshots/${index}`)
+    return unwrapData<any>(response.data)
+  }
+
+  async deleteVideo(id: number, index: number): Promise<any> {
+    const response = await apiClient.delete(`${this.baseUrl}/${id}/videos/${index}`)
+    return unwrapData<any>(response.data)
+  }
+
   async getExecutionStatistics(filters?: ExecutionFilters): Promise<any> {
     const params = normalizeParams(filters)
 

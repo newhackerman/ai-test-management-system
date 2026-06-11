@@ -190,6 +190,38 @@ export const useUploadVideo = () => {
   })
 }
 
+export const useDeleteScreenshot = () => {
+  const queryClient = useQueryClient()
+  const { toast } = useToast()
+
+  return useMutation({
+    mutationFn: ({ id, index }: { id: number; index: number }) => executionService.deleteScreenshot(id, index),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['execution', variables.id] })
+      toast({ title: '成功', description: '截图已删除', variant: 'success' })
+    },
+    onError: (error: any) => {
+      toast({ title: '错误', description: getErrorMessage(error, '截图删除失败'), variant: 'destructive' })
+    },
+  })
+}
+
+export const useDeleteVideo = () => {
+  const queryClient = useQueryClient()
+  const { toast } = useToast()
+
+  return useMutation({
+    mutationFn: ({ id, index }: { id: number; index: number }) => executionService.deleteVideo(id, index),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['execution', variables.id] })
+      toast({ title: '成功', description: '录像已删除', variant: 'success' })
+    },
+    onError: (error: any) => {
+      toast({ title: '错误', description: getErrorMessage(error, '录像删除失败'), variant: 'destructive' })
+    },
+  })
+}
+
 export const useExecutionManagement = () => {
   const [selectedExecutions, setSelectedExecutions] = useState<number[]>([])
   const [filters, setFilters] = useState<ExecutionFilters>({})

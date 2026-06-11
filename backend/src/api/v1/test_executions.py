@@ -45,6 +45,42 @@ MAX_VIDEO_UPLOAD_SIZE = 100 * 1024 * 1024
 UPLOAD_CHUNK_SIZE = 1024 * 1024
 
 
+def _delete_uploaded_execution_file(file_path_value: Optional[str], base_dir: str) -> None:
+    if not file_path_value:
+        return
+
+    base_path = (FilePath.cwd() / base_dir).resolve()
+    file_path = FilePath(file_path_value)
+    if not file_path.is_absolute():
+        file_path = FilePath.cwd() / file_path
+
+    try:
+        resolved_file_path = file_path.resolve()
+        resolved_file_path.relative_to(base_path)
+    except (OSError, ValueError):
+        logger.warning("跳过删除非执行附件目录文件: %s", file_path_value)
+        return
+
+    resolved_file_path.unlink(missing_ok=True)
+
+
+def _remove_execution_attachment(
+    execution: TestExecution,
+    attachment_type: str,
+    attachment_index: int,
+    base_dir: str,
+) -> Dict[str, Any]:
+    attachments = list(getattr(execution, attachment_type) or [])
+    if attachment_index < 0 or attachment_index >= len(attachments):
+        raise HTTPException(status_code=404, detail="附件不存在")
+
+    metadata = attachments.pop(attachment_index)
+    _delete_uploaded_execution_file(metadata.get("file_path"), base_dir)
+    setattr(execution, attachment_type, attachments)
+    execution.updated_at = datetime.utcnow()
+    return metadata
+
+
 def _is_missing_table_error(error: Exception) -> bool:
     text = str(error).lower()
     return "doesn't exist" in text or "no such table" in text
@@ -737,6 +773,64 @@ async def upload_execution_video(
     except Exception as e:
         db.rollback()
         logger.error(f"上传执行录像失败: {str(e)}")
+        raise HTTPException(status_code=500, detail="内部服务器错误")
+
+
+@router.delete("/{execution_id}/screenshots/{attachment_index}", response_model=BaseResponse[Dict[str, Any]])
+async def delete_execution_screenshot(
+    execution_id: int = Path(..., description="执行记录ID"),
+    attachment_index: int = Path(..., ge=0, description="截图序号"),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Delete a screenshot attachment from a manual execution record."""
+    try:
+        execution = db.query(TestExecution).filter(TestExecution.id == execution_id).first()
+        if not execution:
+            raise HTTPException(status_code=404, detail="测试执行记录不存在")
+
+        metadata = _remove_execution_attachment(
+            execution,
+            "screenshots",
+            attachment_index,
+            "uploads/test_executions/screenshots",
+        )
+        db.commit()
+        return BaseResponse(success=True, message="截图已删除", data=metadata)
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        logger.error(f"删除执行截图失败: {str(e)}")
+        raise HTTPException(status_code=500, detail="内部服务器错误")
+
+
+@router.delete("/{execution_id}/videos/{attachment_index}", response_model=BaseResponse[Dict[str, Any]])
+async def delete_execution_video(
+    execution_id: int = Path(..., description="执行记录ID"),
+    attachment_index: int = Path(..., ge=0, description="录像序号"),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Delete a video attachment from a manual execution record."""
+    try:
+        execution = db.query(TestExecution).filter(TestExecution.id == execution_id).first()
+        if not execution:
+            raise HTTPException(status_code=404, detail="测试执行记录不存在")
+
+        metadata = _remove_execution_attachment(
+            execution,
+            "videos",
+            attachment_index,
+            "uploads/test_executions/videos",
+        )
+        db.commit()
+        return BaseResponse(success=True, message="录像已删除", data=metadata)
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        logger.error(f"删除执行录像失败: {str(e)}")
         raise HTTPException(status_code=500, detail="内部服务器错误")
 
 
