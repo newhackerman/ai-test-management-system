@@ -64,7 +64,7 @@ class TestExecutionService:
         # 3. 检查是否已有进行中的执行
         existing_execution = await self._get_active_execution(request.test_case_id)
         if existing_execution:
-            raise ValidationError("该测试用例已有进行中的执行")
+            return await self._build_execution_response(existing_execution)
         
         # 4. 生成执行编码
         execution_code = await self._generate_execution_code(test_case.case_code)
