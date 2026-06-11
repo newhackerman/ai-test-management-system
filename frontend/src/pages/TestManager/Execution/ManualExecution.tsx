@@ -1,10 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, Camera, CheckCircle, Clock, Image, Play, Search, Trash2, Video, XCircle } from 'lucide-react'
+import { ArrowLeft, CheckCircle, Clock, Image, Play, Search, Trash2, Video, XCircle } from 'lucide-react'
 import { Badge } from '../../../components/ui/Badge'
 import { Button } from '../../../components/ui/Button'
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/Card'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../../../components/ui/Dialog'
 import { Input } from '../../../components/ui/Input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/Select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../components/ui/Table'
@@ -108,7 +107,6 @@ const ManualExecution: React.FC = () => {
   const [failureReason, setFailureReason] = useState('')
   const [executionNotes, setExecutionNotes] = useState('')
   const [search, setSearch] = useState('')
-  const [showScreenshotDialog, setShowScreenshotDialog] = useState(false)
   const [uploadedScreenshots, setUploadedScreenshots] = useState<any[]>([])
   const [uploadedVideos, setUploadedVideos] = useState<any[]>([])
   const [isPastingImage, setIsPastingImage] = useState(false)
@@ -227,13 +225,6 @@ const ManualExecution: React.FC = () => {
       },
     })
     navigate(`/test-manager/executions/${completed.id}`)
-  }
-
-  const handleScreenshotUpload = async (file: File) => {
-    if (!currentExecution) return
-    const metadata = await uploadScreenshot.mutateAsync({ id: currentExecution.id, file })
-    setUploadedScreenshots((prev) => [...prev, metadata])
-    setShowScreenshotDialog(false)
   }
 
   const uploadScreenshotFiles = useCallback(async (files: File[]) => {
@@ -446,32 +437,10 @@ const ManualExecution: React.FC = () => {
               {startExecution.isPending ? '启动中...' : '开始执行'}
             </Button>
           ) : (
-            <>
-              <Dialog open={showScreenshotDialog} onOpenChange={setShowScreenshotDialog}>
-                <DialogTrigger asChild>
-                  <Button variant="outline">
-                    <Camera className="mr-2 h-4 w-4" />
-                    截图
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader><DialogTitle>上传截图</DialogTitle></DialogHeader>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={(event) => {
-                      const file = event.target.files?.[0]
-                      if (file) handleScreenshotUpload(file)
-                    }}
-                    className="block w-full text-sm text-muted-foreground"
-                  />
-                </DialogContent>
-              </Dialog>
-              <Button onClick={handleCompleteExecution} disabled={completeExecution.isPending}>
-                <CheckCircle className="mr-2 h-4 w-4" />
-                {completeExecution.isPending ? '保存中...' : '完成并保存'}
-              </Button>
-            </>
+            <Button onClick={handleCompleteExecution} disabled={completeExecution.isPending}>
+              <CheckCircle className="mr-2 h-4 w-4" />
+              {completeExecution.isPending ? '保存中...' : '完成并保存'}
+            </Button>
           )}
         </div>
       </div>

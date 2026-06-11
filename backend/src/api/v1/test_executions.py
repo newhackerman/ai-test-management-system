@@ -319,7 +319,11 @@ async def start_manual_execution(
             TestExecution.execution_status == ModelExecutionStatus.IN_PROGRESS
         ).first()
         if active_execution:
-            raise HTTPException(status_code=422, detail="该测试用例已有进行中的执行")
+            return BaseResponse(
+                success=True,
+                message="已恢复该测试用例进行中的执行",
+                data=_build_execution_response(active_execution)
+            )
 
         execution = TestExecution(
             execution_code=_generate_execution_code(db, test_case.case_code),
