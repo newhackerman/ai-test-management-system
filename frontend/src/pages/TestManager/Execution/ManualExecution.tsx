@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, Camera, CheckCircle, Clock, Image, Play, Search, Trash2, Video, XCircle } from 'lucide-react'
 import { Badge } from '../../../components/ui/Badge'
@@ -45,12 +45,54 @@ const formatFileSize = (size?: number) => {
   return `${(size / 1024 / 1024).toFixed(1)}MB`
 }
 
-const getClipboardImageFiles = (items?: DataTransferItemList | null) => {
-  if (!items) return []
-  return Array.from(items)
-    .filter((item) => item.kind === 'file' && item.type.startsWith('image/'))
-    .map((item) => item.getAsFile())
-    .filter(Boolean) as File[]
+const imageMimeByExtension: Record<string, string> = {
+  png: 'image/png',
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  gif: 'image/gif',
+  webp: 'image/webp',
+  bmp: 'image/bmp',
+}
+
+const videoMimeByExtension: Record<string, string> = {
+  mp4: 'video/mp4',
+  webm: 'video/webm',
+  mov: 'video/quicktime',
+  avi: 'video/x-msvideo',
+  mkv: 'video/x-matroska',
+}
+
+const getFileExtension = (file: File) => file.name.split('.').pop()?.toLowerCase() || ''
+const guessEvidenceMimeType = (file: File) => file.type || imageMimeByExtension[getFileExtension(file)] || videoMimeByExtension[getFileExtension(file)] || ''
+const isImageEvidenceFile = (file: File) => guessEvidenceMimeType(file).startsWith('image/')
+const isVideoEvidenceFile = (file: File) => guessEvidenceMimeType(file).startsWith('video/')
+
+const normalizeEvidenceFile = (file: File, fallbackName: string) => {
+  const mimeType = guessEvidenceMimeType(file)
+  if (file.type && file.name) return file
+  const extension = getFileExtension(file) || (mimeType.startsWith('image/') ? 'png' : mimeType.startsWith('video/') ? 'webm' : 'dat')
+  const filename = file.name || `${fallbackName}.${extension}`
+  return new File([file], filename, { type: mimeType || file.type || 'application/octet-stream' })
+}
+
+const getClipboardFiles = (clipboardData?: DataTransfer | null) => {
+  if (!clipboardData) return []
+
+  const files: File[] = []
+  Array.from(clipboardData.items || []).forEach((item) => {
+    if (item.kind !== 'file') return
+    const file = item.getAsFile()
+    if (file) files.push(file)
+  })
+  Array.from(clipboardData.files || []).forEach((file) => files.push(file))
+
+  const seen = new Set<string>()
+  return files.filter((file) => {
+    const key = `${file.name}-${file.size}-${file.type}-${file.lastModified}`
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
 }
 
 const ManualExecution: React.FC = () => {
@@ -70,6 +112,7 @@ const ManualExecution: React.FC = () => {
   const [uploadedScreenshots, setUploadedScreenshots] = useState<any[]>([])
   const [uploadedVideos, setUploadedVideos] = useState<any[]>([])
   const [isPastingImage, setIsPastingImage] = useState(false)
+  const pasteTargetRef = useRef<HTMLDivElement>(null)
 
   const { data: testCasesData, isLoading: isCaseListLoading } = useTestCases({
     page: 1,
@@ -208,33 +251,8 @@ const ManualExecution: React.FC = () => {
     }
   }, [currentExecution?.id, uploadScreenshot.mutateAsync])
 
-  const handlePasteImages = async (event: React.ClipboardEvent) => {
-    if (event.defaultPrevented) return
-    const imageFiles = getClipboardImageFiles(event.clipboardData.items)
-    if (!imageFiles.length) return
-
-    event.preventDefault()
-    await uploadScreenshotFiles(imageFiles)
-  }
-
-  useEffect(() => {
-    if (!currentExecution?.id) return undefined
-
-    const handleDocumentPaste = (event: ClipboardEvent) => {
-      if (event.defaultPrevented) return
-      const imageFiles = getClipboardImageFiles(event.clipboardData?.items)
-      if (!imageFiles.length) return
-
-      event.preventDefault()
-      void uploadScreenshotFiles(imageFiles)
-    }
-
-    document.addEventListener('paste', handleDocumentPaste)
-    return () => document.removeEventListener('paste', handleDocumentPaste)
-  }, [currentExecution?.id, uploadScreenshotFiles])
-
-  const handleVideoUpload = async (files: FileList | File[]) => {
-    if (!currentExecution) return
+  const uploadVideoFiles = useCallback(async (files: File[]) => {
+    if (!currentExecution?.id) return
     const videoFiles = Array.from(files)
     if (!videoFiles.length) return
 
@@ -247,7 +265,61 @@ const ManualExecution: React.FC = () => {
       const metadata = await uploadVideo.mutateAsync({ id: currentExecution.id, file })
       setUploadedVideos((prev) => [...prev, metadata])
     }
+  }, [currentExecution?.id, toast, uploadVideo.mutateAsync])
+
+  const handleVideoUpload = async (files: FileList | File[]) => {
+    await uploadVideoFiles(Array.from(files))
   }
+
+  const handlePasteEvidenceFiles = useCallback(async (files: File[]) => {
+    if (!files.length) return false
+
+    const imageFiles = files
+      .filter(isImageEvidenceFile)
+      .map((file, index) => normalizeEvidenceFile(file, `clipboard-screenshot-${Date.now()}-${index}`))
+    const videoFiles = files
+      .filter(isVideoEvidenceFile)
+      .map((file, index) => normalizeEvidenceFile(file, `clipboard-video-${Date.now()}-${index}`))
+    const unsupportedCount = files.length - imageFiles.length - videoFiles.length
+
+    if (!imageFiles.length && !videoFiles.length) {
+      if (unsupportedCount > 0) {
+        toast({ title: '提示', description: '仅支持粘贴图片或视频文件作为执行证据', variant: 'destructive' })
+      }
+      return unsupportedCount > 0
+    }
+
+    if (imageFiles.length) await uploadScreenshotFiles(imageFiles)
+    if (videoFiles.length) await uploadVideoFiles(videoFiles)
+    if (unsupportedCount > 0) {
+      toast({ title: '提示', description: '已忽略不支持的文件，仅上传图片和视频证据', variant: 'destructive' })
+    }
+    return true
+  }, [toast, uploadScreenshotFiles, uploadVideoFiles])
+
+  const handlePasteEvidence = async (event: React.ClipboardEvent) => {
+    if (event.defaultPrevented) return
+    const files = getClipboardFiles(event.clipboardData)
+    if (!files.length) return
+    event.preventDefault()
+    await handlePasteEvidenceFiles(files)
+  }
+
+  useEffect(() => {
+    if (!currentExecution?.id) return undefined
+
+    const handleDocumentPaste = (event: ClipboardEvent) => {
+      if (event.defaultPrevented) return
+      const files = getClipboardFiles(event.clipboardData)
+      if (!files.length) return
+
+      event.preventDefault()
+      void handlePasteEvidenceFiles(files)
+    }
+
+    document.addEventListener('paste', handleDocumentPaste)
+    return () => document.removeEventListener('paste', handleDocumentPaste)
+  }, [currentExecution?.id, handlePasteEvidenceFiles])
 
   const handleDeleteScreenshot = async (index: number) => {
     if (!currentExecution?.id) return
@@ -505,27 +577,36 @@ const ManualExecution: React.FC = () => {
                 className="space-y-4"
                 data-testid="manual-execution-result"
                 tabIndex={0}
-                onPaste={handlePasteImages}
+                onPaste={handlePasteEvidence}
               >
                 <div>
                   <label className="mb-2 block text-sm font-medium">整体实际结果</label>
                   <Textarea rows={3} value={actualResult} onChange={(event) => setActualResult(event.target.value)} placeholder="概述本次执行观察到的结果" />
                 </div>
-                <div
-                  className="rounded-md border border-dashed p-3 outline-none transition-colors focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-ring"
-                  tabIndex={0}
-                  role="region"
-                  aria-label="截图证据粘贴区域"
-                  onClick={(event) => event.currentTarget.focus()}
-                  onPaste={handlePasteImages}
-                >
+                <div className="rounded-md border border-dashed p-3">
                   <div className="mb-2 flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2 text-sm font-medium">
                       <Image className="h-4 w-4" />
                       <span>截图证据</span>
                       <Badge variant="secondary">{uploadedScreenshots.length}</Badge>
                     </div>
-                    <span className="text-xs text-muted-foreground">{isPastingImage ? '图片上传中...' : '点击这里后 Ctrl+V 粘贴图片'}</span>
+                    <span className="text-xs text-muted-foreground">{isPastingImage ? '证据上传中...' : '支持截图、图片文件、录像文件'}</span>
+                  </div>
+                  <div
+                    ref={pasteTargetRef}
+                    className="mb-2 flex min-h-[72px] cursor-text items-center rounded border bg-background px-3 py-2 text-xs text-muted-foreground outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-ring"
+                    contentEditable
+                    suppressContentEditableWarning
+                    role="textbox"
+                    aria-label="截图证据粘贴区域"
+                    tabIndex={0}
+                    onPaste={handlePasteEvidence}
+                    onInput={(event) => {
+                      event.currentTarget.textContent = ''
+                    }}
+                    onClick={() => pasteTargetRef.current?.focus()}
+                  >
+                    直接在这里 Ctrl+V 粘贴截图，也可以粘贴从文件管理器复制的图片或录像文件。
                   </div>
                   {uploadedScreenshots.length > 0 ? (
                     <div className="space-y-1">
