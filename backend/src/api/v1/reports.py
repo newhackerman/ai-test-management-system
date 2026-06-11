@@ -12,6 +12,7 @@ import uuid
 from datetime import datetime
 from typing import Optional, List, Dict, Any
 from pathlib import Path
+from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Path as PathParam, Body, UploadFile, File, Form, BackgroundTasks
 from fastapi.responses import FileResponse, StreamingResponse
@@ -78,6 +79,12 @@ def _save_report_metadata(report_id: str, metadata: Dict[str, Any]) -> None:
     metadata_path = _metadata_file(report_id)
     metadata_path.parent.mkdir(exist_ok=True)
     metadata_path.write_text(json.dumps(metadata, ensure_ascii=False, indent=2, default=str), encoding="utf-8")
+
+
+def _content_disposition(disposition: str, filename: str) -> str:
+    safe_fallback = "".join(ch if ch.isascii() and ch not in {'"', "\\", ";"} else "_" for ch in filename) or "report"
+    encoded = quote(filename, safe="")
+    return f"{disposition}; filename=\"{safe_fallback}\"; filename*=UTF-8''{encoded}"
 
 
 def _find_generated_report_files(report_id: str, format_filter: Optional[str] = None) -> List[Path]:
@@ -804,6 +811,8 @@ async def get_imported_report(
             data=response_data
         )
         
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"鑾峰彇瀵煎叆鎶ュ憡澶辫触: {e}")
         raise HTTPException(status_code=500, detail="鑾峰彇鎶ュ憡璇︽儏澶辫触")
@@ -866,6 +875,8 @@ async def get_imported_report_test_results(
             page_size=page_size
         )
         
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"鑾峰彇娴嬭瘯缁撴灉澶辫触: {e}")
         raise HTTPException(status_code=500, detail="鑾峰彇娴嬭瘯缁撴灉澶辫触")
@@ -899,12 +910,12 @@ async def download_report(
             'csv': 'text/csv'
         }
         
-        media_type = mime_types.get(format, 'application/octet-stream')
+        media_type = mime_types.get(format.lower(), 'application/octet-stream')
         
         return FileResponse(
             path=str(file_path),
-            filename=file_path.name,
-            media_type=media_type
+            media_type=media_type,
+            headers={"Content-Disposition": _content_disposition("attachment", file_path.name)},
         )
         
     except HTTPException:
@@ -937,9 +948,8 @@ async def view_report(
         }
         return FileResponse(
             path=str(file_path),
-            filename=file_path.name,
             media_type=mime_types.get(format.lower(), "application/octet-stream"),
-            headers={"Content-Disposition": f'inline; filename="{file_path.name}"'},
+            headers={"Content-Disposition": _content_disposition("inline", file_path.name)},
         )
     except HTTPException:
         raise
@@ -1108,6 +1118,8 @@ async def delete_imported_report(
             data=True
         )
         
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"鍒犻櫎瀵煎叆鎶ュ憡澶辫触: {e}")
         raise HTTPException(status_code=500, detail="鍒犻櫎鎶ュ憡澶辫触")

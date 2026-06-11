@@ -17,6 +17,8 @@ from sqlalchemy.orm import Session
 from pydantic import BaseModel, Field
 import logging
 import io
+from pathlib import Path as FilePath
+from urllib.parse import quote
 
 from ...core.database import get_db
 from ...core.exceptions import ValidationError, PermissionError, NotFoundError, BusinessLogicError
@@ -34,6 +36,12 @@ security = HTTPBearer()
 
 
 # 辅助函数
+def _content_disposition(disposition: str, filename: str) -> str:
+    safe_fallback = "".join(ch if ch.isascii() and ch not in {'"', "\\", ";"} else "_" for ch in filename) or "report"
+    encoded = quote(filename, safe="")
+    return f"{disposition}; filename=\"{safe_fallback}\"; filename*=UTF-8''{encoded}"
+
+
 async def get_test_execution_by_id(db: Session, execution_id: int):
     """获取测试执行记录"""
     from ...models.test_case import TestExecution
@@ -419,6 +427,8 @@ async def get_report(
             data=response_data
         )
         
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"获取测试报告失败: {str(e)}")
         raise HTTPException(status_code=500, detail="内部服务器错误")
@@ -444,13 +454,30 @@ async def download_report(
         if not report:
             raise HTTPException(status_code=404, detail="测试报告不存在")
         
+        requested_format = format.lower().lstrip(".")
+        available_formats = {str(item).lower().lstrip(".") for item in (report.export_formats or [])}
+        if requested_format == "excel":
+            requested_format = "xlsx"
+        if "excel" in available_formats:
+            available_formats.add("xlsx")
+        if "xlsx" in available_formats:
+            available_formats.add("excel")
+        lookup_formats = [format, format.upper(), format.lower(), requested_format, requested_format.upper()]
+        if requested_format == "xlsx":
+            lookup_formats.extend(["excel", "EXCEL"])
+        elif requested_format == "excel":
+            lookup_formats.extend(["xlsx", "XLSX"])
+
         # 检查格式是否可用
-        if format.upper() not in report.export_formats:
+        if requested_format not in available_formats:
             raise HTTPException(status_code=400, detail="不支持的文件格式")
         
         # 获取文件路径
-        file_path = report.file_paths.get(format.upper())
+        file_paths = report.file_paths or {}
+        file_path = next((file_paths.get(item) for item in lookup_formats if file_paths.get(item)), None)
         if not file_path:
+            raise HTTPException(status_code=404, detail="报告文件不存在")
+        if not FilePath(file_path).is_file():
             raise HTTPException(status_code=404, detail="报告文件不存在")
         
         # 增加下载次数
@@ -459,10 +486,12 @@ async def download_report(
         # 返回文件
         return FileResponse(
             path=file_path,
-            filename=f"{report.name}.{format.lower()}",
-            media_type='application/octet-stream'
+            media_type='application/octet-stream',
+            headers={"Content-Disposition": _content_disposition("attachment", f"{report.name}.{requested_format}")},
         )
         
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"下载测试报告失败: {str(e)}")
         raise HTTPException(status_code=500, detail="内部服务器错误")
@@ -548,6 +577,8 @@ async def list_reports(
             page_size=page_size
         )
         
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"获取测试报告列表失败: {str(e)}")
         raise HTTPException(status_code=500, detail="内部服务器错误")
@@ -580,6 +611,8 @@ async def delete_report(
         raise HTTPException(status_code=403, detail=str(e))
     except NotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"删除测试报告失败: {str(e)}")
         raise HTTPException(status_code=500, detail="内部服务器错误")
