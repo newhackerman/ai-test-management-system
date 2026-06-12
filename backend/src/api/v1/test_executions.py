@@ -10,6 +10,10 @@
 
 from datetime import datetime, date
 import json
+import subprocess
+import sys
+import tempfile
+import time
 import uuid
 from pathlib import Path as FilePath
 from typing import Optional, List, Dict, Any
@@ -20,14 +24,14 @@ from sqlalchemy.orm import Session
 from pydantic import BaseModel, Field
 import logging
 
-from ...core.database import get_db
+from ...core.database import get_db, SessionLocal
 from ...core.exceptions import ValidationError, PermissionError, NotFoundError, BusinessLogicError
 from ...services.test_execution_service import TestExecutionService
 from ...services.test_environment_service import TestEnvironmentService
 from ...services.execution_monitoring_service import ExecutionMonitoringService
 from ...services.auth_dependencies import get_current_user
 from ...models.user import User
-from ...models.test_case import TestCase, TestExecution, ExecutionStatus as ModelExecutionStatus
+from ...models.test_case import AutomationScript, TestCase, TestExecution, ExecutionStatus as ModelExecutionStatus
 from ...schemas.test_execution import (
     ExecutionType, ExecutionStatus, TestEnvironmentStatus,
     StartManualExecutionRequest, CompleteManualExecutionRequest,
@@ -125,6 +129,156 @@ def _generate_execution_code(db: Session, test_case_id: int) -> str:
 
 def _generate_automation_execution_code(batch_id: str, test_case_id: int) -> str:
     return f"AUTO-{batch_id}-{test_case_id}"
+
+
+def _json_list(value: Any) -> List[Dict[str, Any]]:
+    return list(value) if isinstance(value, list) else []
+
+
+def _append_execution_log(execution: TestExecution, level: str, message: str) -> None:
+    logs = _json_list(execution.logs)
+    logs.append({
+        "time": datetime.utcnow().isoformat(),
+        "level": level,
+        "message": message,
+    })
+    execution.logs = logs
+
+
+def _find_automation_script(db: Session, test_case_id: int, framework: str) -> Optional[AutomationScript]:
+    normalized_framework = (framework or "").strip().upper()
+    query = db.query(AutomationScript).filter(
+        AutomationScript.test_case_id == test_case_id,
+        AutomationScript.is_active == True,
+    )
+    if normalized_framework:
+        query = query.filter(AutomationScript.framework == normalized_framework)
+    return query.order_by(AutomationScript.updated_at.desc(), AutomationScript.id.desc()).first()
+
+
+def _run_automation_script(script: AutomationScript, timeout: int) -> Dict[str, Any]:
+    language = _normalize_enum_value(script.language).upper()
+    framework = _normalize_enum_value(script.framework).upper()
+    if language not in {"PYTHON", ""}:
+        raise RuntimeError(f"暂不支持执行 {language} 自动化脚本，请使用 Python 脚本")
+
+    suffix = ".py"
+    with tempfile.NamedTemporaryFile("w", suffix=suffix, encoding="utf-8", delete=False) as script_file:
+        script_file.write(script.script_content or "")
+        script_path = script_file.name
+
+    try:
+        content = script.script_content or ""
+        if framework in {"PLAYWRIGHT", "PYTEST"} and ("pytest" in content or "def test_" in content):
+            command = [sys.executable, "-m", "pytest", script_path, "-q"]
+        else:
+            command = [sys.executable, script_path]
+
+        started = time.perf_counter()
+        completed = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            timeout=max(1, timeout),
+            cwd=FilePath.cwd(),
+            encoding="utf-8",
+            errors="replace",
+        )
+        duration = int(time.perf_counter() - started)
+        return {
+            "status": "PASSED" if completed.returncode == 0 else "FAILED",
+            "stdout": completed.stdout or "",
+            "stderr": completed.stderr or "",
+            "return_code": completed.returncode,
+            "duration": duration,
+            "command": " ".join(command),
+        }
+    finally:
+        try:
+            FilePath(script_path).unlink(missing_ok=True)
+        except OSError:
+            logger.warning("清理自动化临时脚本失败: %s", script_path)
+
+
+def _execute_automation_batch(batch_id: str) -> None:
+    db = SessionLocal()
+    try:
+        executions = db.query(TestExecution).filter(
+            TestExecution.execution_code.like(f"AUTO-{batch_id}-%")
+        ).order_by(TestExecution.created_at.asc()).all()
+        if not executions:
+            return
+
+        for execution in executions:
+            if execution.execution_status != ModelExecutionStatus.IN_PROGRESS:
+                continue
+
+            started_at = execution.started_at or datetime.utcnow()
+            completed_at = datetime.utcnow()
+            try:
+                config = json.loads(execution.execution_notes or "{}")
+            except Exception:
+                config = {}
+            timeout = int(config.get("timeout") or 300)
+            framework = config.get("framework") or execution.os_info or "playwright"
+
+            try:
+                _append_execution_log(execution, "INFO", "开始执行自动化脚本")
+                script = _find_automation_script(db, execution.test_case_id, framework)
+                if not script:
+                    raise RuntimeError("该测试用例未配置可执行的自动化脚本，请先在测试用例中生成或维护自动化脚本")
+
+                result = _run_automation_script(script, timeout)
+                completed_at = datetime.utcnow()
+                execution.execution_status = (
+                    ModelExecutionStatus.PASSED
+                    if result["status"] == "PASSED"
+                    else ModelExecutionStatus.FAILED
+                )
+                execution.actual_result = (result.get("stdout") or "")[:60000] or "脚本执行完成"
+                failure_text = "\n".join(
+                    part for part in [result.get("stderr"), f"退出码: {result.get('return_code')}"] if part
+                )
+                execution.failure_reason = failure_text[:60000] if result["status"] == "FAILED" else None
+                execution.duration = max(0, result.get("duration") or int((completed_at - started_at).total_seconds()))
+                _append_execution_log(
+                    execution,
+                    "INFO" if result["status"] == "PASSED" else "ERROR",
+                    f"自动化脚本执行{ '通过' if result['status'] == 'PASSED' else '失败' }",
+                )
+                output_summary = (result.get("stdout") or result.get("stderr") or "").strip()
+                if output_summary:
+                    _append_execution_log(execution, "INFO", output_summary[:1000])
+
+                script.last_execution_date = completed_at
+                script.last_execution_status = execution.execution_status
+                script.execution_count = (script.execution_count or 0) + 1
+                if execution.execution_status == ModelExecutionStatus.PASSED:
+                    script.success_count = (script.success_count or 0) + 1
+            except Exception as error:
+                completed_at = datetime.utcnow()
+                execution.execution_status = ModelExecutionStatus.FAILED
+                execution.actual_result = None
+                execution.failure_reason = str(error)[:60000]
+                execution.duration = max(0, int((completed_at - started_at).total_seconds()))
+                _append_execution_log(execution, "ERROR", str(error))
+
+            execution.completed_at = completed_at
+            execution.updated_at = completed_at
+            _sync_test_case_execution_state(
+                execution.test_case,
+                execution.execution_status,
+                occurred_at=completed_at,
+                count_completed=True,
+                duration=execution.duration,
+            )
+            db.commit()
+            db.refresh(execution)
+    except Exception as error:
+        db.rollback()
+        logger.exception("执行自动化批次失败 %s: %s", batch_id, error)
+    finally:
+        db.close()
 
 
 def _sync_test_case_execution_state(
@@ -240,11 +394,15 @@ def _build_automation_response(
             "actual_result": execution.actual_result,
             "failure_reason": execution.failure_reason,
         })
-        logs.append({
-            "time": execution.updated_at.isoformat() if execution.updated_at else datetime.utcnow().isoformat(),
-            "level": "INFO",
-            "message": f"{execution.execution_code} {status}",
-        })
+        persisted_logs = _json_list(execution.logs)
+        if persisted_logs:
+            logs.extend(persisted_logs)
+        else:
+            logs.append({
+                "time": execution.updated_at.isoformat() if execution.updated_at else datetime.utcnow().isoformat(),
+                "level": "INFO",
+                "message": f"{execution.execution_code} {status}",
+            })
 
     progress = round((completed_cases / total_cases * 100), 1) if total_cases else 0.0
     started_values = [execution.started_at for execution in executions if execution.started_at]
@@ -562,6 +720,7 @@ async def start_automation_execution_real(
                 started_at=now,
                 updated_at=now,
             )
+            _append_execution_log(execution, "INFO", "自动化执行已提交后台任务")
             db.add(execution)
             executions.append(execution)
             _sync_test_case_execution_state(case, ModelExecutionStatus.IN_PROGRESS, occurred_at=now)
@@ -569,6 +728,8 @@ async def start_automation_execution_real(
         db.commit()
         for execution in executions:
             db.refresh(execution)
+
+        background_tasks.add_task(_execute_automation_batch, batch_id)
 
         response_data = _build_automation_response(
             batch_id=batch_id,

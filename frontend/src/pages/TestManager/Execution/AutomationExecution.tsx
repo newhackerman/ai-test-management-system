@@ -350,12 +350,20 @@ const AutomationExecution: React.FC = () => {
                 {results.length ? (
                   <div className="space-y-3">
                     {results.map((result) => (
-                      <div key={result.execution_id || result.test_case_id} className="flex items-center justify-between rounded border p-3">
-                        <div>
-                          <p className="font-medium">{result.case_title || result.case_code}</p>
-                          <p className="text-xs text-muted-foreground">{result.execution_code}</p>
+                      <div key={result.execution_id || result.test_case_id} className="rounded border p-3">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="truncate font-medium">{result.case_title || result.case_code}</p>
+                            <p className="text-xs text-muted-foreground">{result.case_code || result.execution_code}</p>
+                          </div>
+                          {statusBadge(result.status)}
                         </div>
-                        {statusBadge(result.status)}
+                        {result.failure_reason && (
+                          <p className="mt-2 line-clamp-3 whitespace-pre-wrap text-sm text-red-600">{result.failure_reason}</p>
+                        )}
+                        {!result.failure_reason && result.actual_result && (
+                          <p className="mt-2 line-clamp-3 whitespace-pre-wrap text-sm text-muted-foreground">{result.actual_result}</p>
+                        )}
                       </div>
                     ))}
                   </div>
