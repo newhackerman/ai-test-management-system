@@ -116,11 +116,15 @@ def _build_execution_response(execution):
     )
 
 
-def _generate_execution_code(db: Session, case_code: str) -> str:
+def _generate_execution_code(db: Session, test_case_id: int) -> str:
     today = datetime.now().strftime("%Y%m%d%H%M")
-    prefix = f"EX-{case_code}-{today}"
+    prefix = f"EX-{test_case_id}-{today}"
     count = db.query(TestExecution).filter(TestExecution.execution_code.like(f"{prefix}-%")).count()
     return f"{prefix}-{count + 1:03d}"
+
+
+def _generate_automation_execution_code(batch_id: str, test_case_id: int) -> str:
+    return f"AUTO-{batch_id}-{test_case_id}"
 
 
 def _sync_test_case_execution_state(
@@ -326,7 +330,7 @@ async def start_manual_execution(
             )
 
         execution = TestExecution(
-            execution_code=_generate_execution_code(db, test_case.case_code),
+            execution_code=_generate_execution_code(db, test_case.id),
             test_case_id=test_case.id,
             test_plan_id=test_case.test_plan_id,
             execution_type=ExecutionType.MANUAL.value,
@@ -545,7 +549,7 @@ async def start_automation_execution_real(
         executions = []
         for case in test_cases:
             execution = TestExecution(
-                execution_code=f"AUTO-{batch_id}-{case.case_code}",
+                execution_code=_generate_automation_execution_code(batch_id, case.id),
                 test_case_id=case.id,
                 test_plan_id=case.test_plan_id,
                 execution_type=ExecutionType.AUTOMATED.value,
