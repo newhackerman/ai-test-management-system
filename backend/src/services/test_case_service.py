@@ -671,7 +671,7 @@ class TestCaseService:
         
         # 负责人验证
         if case_data.get('assignee_id'):
-            assignee = await self.user_service.get_user_by_id(case_data['assignee_id'])
+            assignee = self.db.query(User).filter(User.id == case_data['assignee_id']).first()
             if not assignee:
                 raise ValidationError("指定的负责人不存在")
     
