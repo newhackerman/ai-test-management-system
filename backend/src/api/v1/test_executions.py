@@ -10,11 +10,15 @@
 
 from datetime import datetime, date
 import json
+import os
+import shutil
 import subprocess
 import sys
 import tempfile
 import time
 import uuid
+from urllib import request as url_request
+from urllib.error import HTTPError, URLError
 from pathlib import Path as FilePath
 from typing import Optional, List, Dict, Any
 from fastapi import APIRouter, Depends, HTTPException, Query, Path, Body, BackgroundTasks, UploadFile, File
@@ -151,53 +155,290 @@ def _find_automation_script(db: Session, test_case_id: int, framework: str) -> O
         AutomationScript.test_case_id == test_case_id,
         AutomationScript.is_active == True,
     )
-    if normalized_framework:
+    if normalized_framework and normalized_framework != "AUTO":
         query = query.filter(AutomationScript.framework == normalized_framework)
     return query.order_by(AutomationScript.updated_at.desc(), AutomationScript.id.desc()).first()
+
+
+def _run_command(command: List[str], timeout: int, cwd: Optional[str] = None) -> Dict[str, Any]:
+    started = time.perf_counter()
+    completed = subprocess.run(
+        command,
+        capture_output=True,
+        text=True,
+        timeout=max(1, timeout),
+        cwd=cwd or FilePath.cwd(),
+        encoding="utf-8",
+        errors="replace",
+    )
+    duration = int(time.perf_counter() - started)
+    return {
+        "status": "PASSED" if completed.returncode == 0 else "FAILED",
+        "stdout": completed.stdout or "",
+        "stderr": completed.stderr or "",
+        "return_code": completed.returncode,
+        "duration": duration,
+        "command": " ".join(command),
+    }
 
 
 def _run_automation_script(script: AutomationScript, timeout: int) -> Dict[str, Any]:
     language = _normalize_enum_value(script.language).upper()
     framework = _normalize_enum_value(script.framework).upper()
+    content = script.script_content or ""
+    if language in {"JAVASCRIPT"} or framework in {"JEST", "CYPRESS"}:
+        return _run_script_content(content, "js", timeout, framework=framework)
     if language not in {"PYTHON", ""}:
-        raise RuntimeError(f"暂不支持执行 {language} 自动化脚本，请使用 Python 脚本")
+        raise RuntimeError(f"暂不支持执行 {language} 自动化脚本，请使用 Python 或 JavaScript 脚本")
 
-    suffix = ".py"
-    with tempfile.NamedTemporaryFile("w", suffix=suffix, encoding="utf-8", delete=False) as script_file:
-        script_file.write(script.script_content or "")
-        script_path = script_file.name
+    return _run_script_content(content, "python", timeout, framework=framework)
 
-    try:
-        content = script.script_content or ""
-        if framework in {"PLAYWRIGHT", "PYTEST"} and ("pytest" in content or "def test_" in content):
-            command = [sys.executable, "-m", "pytest", script_path, "-q"]
-        else:
-            command = [sys.executable, script_path]
 
-        started = time.perf_counter()
-        completed = subprocess.run(
-            command,
-            capture_output=True,
-            text=True,
-            timeout=max(1, timeout),
-            cwd=FilePath.cwd(),
-            encoding="utf-8",
-            errors="replace",
-        )
-        duration = int(time.perf_counter() - started)
-        return {
-            "status": "PASSED" if completed.returncode == 0 else "FAILED",
-            "stdout": completed.stdout or "",
-            "stderr": completed.stderr or "",
-            "return_code": completed.returncode,
-            "duration": duration,
-            "command": " ".join(command),
-        }
-    finally:
+def _normalize_script_format(value: Any) -> str:
+    normalized = str(value or "").strip().lower().replace("-", "_").replace(" ", "_")
+    aliases = {
+        "javascript": "js",
+        "typescript": "js",
+        "ts": "js",
+        "jmx": "jmeter",
+        "owaspzip": "owasp_zap",
+        "awaspzip": "owasp_zap",
+        "awasp_zap": "owasp_zap",
+        "zap": "owasp_zap",
+        "burp": "burpsuite",
+        "burp_suite": "burpsuite",
+    }
+    return aliases.get(normalized, normalized)
+
+
+def _get_imported_script(test_case: Optional[TestCase]) -> Optional[Dict[str, Any]]:
+    if not test_case or not isinstance(test_case.test_data, dict):
+        return None
+    script_info = test_case.test_data.get("imported_script")
+    if not isinstance(script_info, dict):
+        return None
+    content = script_info.get("content")
+    if not isinstance(content, str) or not content.strip():
+        return None
+    script_info = dict(script_info)
+    script_info["format"] = _normalize_script_format(script_info.get("format"))
+    return script_info
+
+
+def _infer_imported_script_format(script_info: Dict[str, Any]) -> str:
+    explicit_format = _normalize_script_format(script_info.get("format"))
+    if explicit_format:
+        return explicit_format
+
+    content = str(script_info.get("content") or "").strip()
+    lower = content.lower()
+    if lower.startswith("curl ") or "\ncurl " in lower:
+        return "curl"
+    if "<jmetertestplan" in lower or "<jmeter" in lower:
+        return "jmeter"
+    if '"log"' in lower and '"entries"' in lower and '"request"' in lower:
+        return "har"
+    if "playwright" in lower:
+        return "playwright"
+    if "selenium" in lower or "webdriver" in lower:
+        return "selenium"
+    if lower.startswith(("const ", "let ", "var ", "function ", "import ")) or "require(" in lower:
+        return "js"
+    if lower.startswith(("def ", "import ", "from ")) or "\ndef " in lower:
+        return "python"
+    return "python"
+
+
+def _run_script_content(content: str, script_format: str, timeout: int, framework: Optional[str] = None) -> Dict[str, Any]:
+    normalized = _normalize_script_format(script_format)
+    if normalized in {"playwright", "selenium", "python", "py", "pytest"}:
+        if normalized in {"playwright", "selenium"} and _looks_like_javascript(content):
+            return _run_javascript_content(content, timeout)
+        suffix = ".py"
+        with tempfile.NamedTemporaryFile("w", suffix=suffix, encoding="utf-8", delete=False) as script_file:
+            script_file.write(content or "")
+            script_path = script_file.name
         try:
+            if normalized == "pytest" or "pytest" in content or "def test_" in content:
+                command = [sys.executable, "-m", "pytest", script_path, "-q"]
+            else:
+                command = [sys.executable, script_path]
+            return _run_command(command, timeout)
+        finally:
             FilePath(script_path).unlink(missing_ok=True)
-        except OSError:
-            logger.warning("清理自动化临时脚本失败: %s", script_path)
+
+    if normalized in {"js", "jest", "cypress"}:
+        return _run_javascript_content(content, timeout)
+
+    raise RuntimeError(f"暂不支持执行 {script_format} 脚本")
+
+
+def _looks_like_javascript(content: str) -> bool:
+    lower = (content or "").lower()
+    return any(
+        marker in lower
+        for marker in ["require(", "module.exports", "const ", "let ", "var ", "@playwright/test", "import {"]
+    )
+
+
+def _run_javascript_content(content: str, timeout: int) -> Dict[str, Any]:
+    suffix = ".js"
+    with tempfile.NamedTemporaryFile("w", suffix=suffix, encoding="utf-8", delete=False) as script_file:
+        script_file.write(content or "")
+        script_path = script_file.name
+    try:
+        command = ["node", script_path]
+        return _run_command(command, timeout)
+    finally:
+        FilePath(script_path).unlink(missing_ok=True)
+
+
+def _run_jmeter_script(content: str, timeout: int, execution_code: str) -> Dict[str, Any]:
+    jmeter_executable = _resolve_jmeter_executable()
+    with tempfile.TemporaryDirectory(prefix=f"jmeter-{execution_code}-") as work_dir:
+        work_path = FilePath(work_dir)
+        jmx_path = work_path / "test-plan.jmx"
+        jtl_path = work_path / "results.jtl"
+        log_path = work_path / "jmeter.log"
+        jmx_path.write_text(content or "", encoding="utf-8")
+        command = _wrap_windows_batch_command([
+            jmeter_executable,
+            "-n",
+            "-t",
+            str(jmx_path),
+            "-l",
+            str(jtl_path),
+            "-j",
+            str(log_path),
+        ])
+        result = _run_command(command, timeout, cwd=str(work_path))
+        jtl_summary = ""
+        if jtl_path.exists():
+            jtl_summary = jtl_path.read_text(encoding="utf-8", errors="replace")[:4000]
+        log_summary = ""
+        if log_path.exists():
+            log_summary = log_path.read_text(encoding="utf-8", errors="replace")[:4000]
+        result["stdout"] = "\n".join(part for part in [result.get("stdout"), jtl_summary] if part)
+        result["stderr"] = "\n".join(part for part in [result.get("stderr"), log_summary] if part)
+        return result
+
+
+def _resolve_jmeter_executable() -> str:
+    configured = os.environ.get("JMETER_BIN") or os.environ.get("JMETER_EXECUTABLE")
+    path_candidates = [configured]
+    if os.name == "nt":
+        path_candidates.extend([
+            shutil.which("jmeter.bat"),
+            shutil.which("jmeter.cmd"),
+            r"C:\apache-jmeter\bin\jmeter.bat",
+            r"E:\test\apache-jmeter-5.6.3\bin\jmeter.bat",
+            shutil.which("jmeter"),
+        ])
+    else:
+        path_candidates.append(shutil.which("jmeter"))
+
+    candidates = []
+    for candidate in path_candidates:
+        if candidate and candidate not in candidates:
+            candidates.append(candidate)
+    for candidate in candidates:
+        if candidate and FilePath(candidate).exists():
+            return candidate
+    raise RuntimeError("未找到 JMeter 可执行文件，请安装 JMeter 或配置 JMETER_BIN/JMETER_EXECUTABLE")
+
+
+def _wrap_windows_batch_command(command: List[str]) -> List[str]:
+    executable = command[0].lower()
+    if os.name == "nt" and (executable.endswith(".bat") or executable.endswith(".cmd")):
+        return ["cmd", "/c", *command]
+    return command
+
+
+def _run_har_script(content: str, timeout: int) -> Dict[str, Any]:
+    started = time.perf_counter()
+    try:
+        har_data = json.loads(content or "{}")
+    except json.JSONDecodeError as exc:
+        raise RuntimeError(f"HAR 文件 JSON 解析失败: {exc}") from exc
+
+    entries = har_data.get("log", {}).get("entries", [])
+    if not isinstance(entries, list) or not entries:
+        raise RuntimeError("HAR 文件没有可执行的请求条目")
+
+    max_entries = min(len(entries), 50)
+    outputs = []
+    failures = []
+    for index, entry in enumerate(entries[:max_entries], start=1):
+        request_data = entry.get("request") or {}
+        url = request_data.get("url")
+        method = (request_data.get("method") or "GET").upper()
+        if not url:
+            continue
+        headers = {
+            item.get("name"): item.get("value", "")
+            for item in request_data.get("headers", [])
+            if item.get("name") and item.get("name").lower() not in {"host", "content-length"}
+        }
+        post_data = request_data.get("postData") or {}
+        body = post_data.get("text")
+        data = body.encode("utf-8") if isinstance(body, str) and method not in {"GET", "HEAD"} else None
+        req = url_request.Request(url=url, data=data, headers=headers, method=method)
+        try:
+            with url_request.urlopen(req, timeout=max(1, min(timeout, 60))) as response:
+                response_body = response.read(1024)
+                outputs.append(f"{index}. {method} {url} -> {response.status}, {len(response_body)} bytes sampled")
+        except HTTPError as exc:
+            outputs.append(f"{index}. {method} {url} -> HTTP {exc.code}")
+            if exc.code >= 400:
+                failures.append(f"{method} {url} HTTP {exc.code}")
+        except URLError as exc:
+            failures.append(f"{method} {url} {exc.reason}")
+        except Exception as exc:
+            failures.append(f"{method} {url} {exc}")
+
+    duration = int(time.perf_counter() - started)
+    return {
+        "status": "FAILED" if failures else "PASSED",
+        "stdout": "\n".join(outputs),
+        "stderr": "\n".join(failures),
+        "return_code": 1 if failures else 0,
+        "duration": duration,
+        "command": f"HAR replay ({max_entries} entries)",
+    }
+
+
+def _run_imported_script(test_case: TestCase, timeout: int, requested_framework: str, execution_code: str) -> Dict[str, Any]:
+    script_info = _get_imported_script(test_case)
+    if not script_info:
+        raise RuntimeError("该测试用例没有导入脚本内容，也没有维护自动化脚本")
+
+    script_format = _infer_imported_script_format(script_info)
+    content = script_info.get("content") or ""
+    if script_format == "jmeter":
+        return _run_jmeter_script(content, timeout, execution_code)
+    if script_format == "har":
+        return _run_har_script(content, timeout)
+    if script_format == "curl":
+        return _run_script_content(_curl_to_python(content), "python", timeout)
+    if script_format in {"python", "py", "pytest", "playwright", "selenium", "js", "jest", "cypress"}:
+        return _run_script_content(content, script_format, timeout, framework=requested_framework)
+    raise RuntimeError(f"暂不支持执行导入脚本格式: {script_format}")
+
+
+def _curl_to_python(curl_content: str) -> str:
+    escaped = json.dumps(curl_content or "")
+    return f"""
+import subprocess
+import sys
+
+command = {escaped}
+completed = subprocess.run(command, shell=True, text=True, capture_output=True)
+if completed.stdout:
+    print(completed.stdout)
+if completed.stderr:
+    print(completed.stderr, file=sys.stderr)
+sys.exit(completed.returncode)
+"""
 
 
 def _execute_automation_batch(batch_id: str) -> None:
@@ -225,10 +466,25 @@ def _execute_automation_batch(batch_id: str) -> None:
             try:
                 _append_execution_log(execution, "INFO", "开始执行自动化脚本")
                 script = _find_automation_script(db, execution.test_case_id, framework)
-                if not script:
-                    raise RuntimeError("该测试用例未配置可执行的自动化脚本，请先在测试用例中生成或维护自动化脚本")
-
-                result = _run_automation_script(script, timeout)
+                if script:
+                    _append_execution_log(execution, "INFO", f"使用平台自动化脚本: {script.script_name}")
+                    result = _run_automation_script(script, timeout)
+                    script.last_execution_date = datetime.utcnow()
+                    script.last_execution_status = (
+                        ModelExecutionStatus.PASSED
+                        if result["status"] == "PASSED"
+                        else ModelExecutionStatus.FAILED
+                    )
+                    script.execution_count = (script.execution_count or 0) + 1
+                    if result["status"] == "PASSED":
+                        script.success_count = (script.success_count or 0) + 1
+                else:
+                    imported_script = _get_imported_script(execution.test_case)
+                    if not imported_script:
+                        raise RuntimeError("该测试用例未配置可执行的自动化脚本，也没有导入可执行脚本文件")
+                    script_format = _infer_imported_script_format(imported_script)
+                    _append_execution_log(execution, "INFO", f"使用导入脚本执行，格式: {script_format}")
+                    result = _run_imported_script(execution.test_case, timeout, framework, execution.execution_code)
                 completed_at = datetime.utcnow()
                 execution.execution_status = (
                     ModelExecutionStatus.PASSED
@@ -249,12 +505,6 @@ def _execute_automation_batch(batch_id: str) -> None:
                 output_summary = (result.get("stdout") or result.get("stderr") or "").strip()
                 if output_summary:
                     _append_execution_log(execution, "INFO", output_summary[:1000])
-
-                script.last_execution_date = completed_at
-                script.last_execution_status = execution.execution_status
-                script.execution_count = (script.execution_count or 0) + 1
-                if execution.execution_status == ModelExecutionStatus.PASSED:
-                    script.success_count = (script.success_count or 0) + 1
             except Exception as error:
                 completed_at = datetime.utcnow()
                 execution.execution_status = ModelExecutionStatus.FAILED

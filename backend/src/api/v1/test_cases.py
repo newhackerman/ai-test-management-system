@@ -69,7 +69,7 @@ IMPORT_CATEGORY_CONFIG = {
         "case_type": TestCaseType.INTEGRATION,
         "automation_level": "SEMI_AUTO",
         "tags": ["interface"],
-        "script_formats": {"curl", "python", "javascript", "js", "jmeter"},
+        "script_formats": {"curl", "python", "javascript", "js", "jmeter", "har"},
     },
     "automation": {
         "case_type": TestCaseType.FUNCTIONAL,
@@ -234,7 +234,7 @@ def _infer_script_format(script_content: str = "", filename: str = "") -> Option
         ".py": "python",
         ".js": "js",
         ".ts": "js",
-        ".har": "curl",
+        ".har": "har",
     }
     for suffix, script_format in extension_map.items():
         if lower_name.endswith(suffix):

@@ -63,7 +63,7 @@ const AutomationExecution: React.FC = () => {
   const [search, setSearch] = useState('')
   const [automationFilter, setAutomationFilter] = useState('all')
   const [executionConfig, setExecutionConfig] = useState({
-    framework: 'playwright',
+    framework: 'auto',
     browser: 'chrome',
     environment: 'test',
     parallel: 1,
@@ -173,13 +173,17 @@ const AutomationExecution: React.FC = () => {
         <CardContent className="space-y-4">
           <div className="grid gap-4 md:grid-cols-5">
             <div>
-              <label className="mb-2 block text-sm font-medium">框架</label>
+              <label className="mb-2 block text-sm font-medium">执行方式</label>
               <Select value={executionConfig.framework} onValueChange={(value) => setExecutionConfig((prev) => ({ ...prev, framework: value }))}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="auto">自动识别导入脚本</SelectItem>
                   <SelectItem value="playwright">Playwright</SelectItem>
                   <SelectItem value="selenium">Selenium</SelectItem>
-                  <SelectItem value="cypress">Cypress</SelectItem>
+                  <SelectItem value="pytest">Pytest / Python</SelectItem>
+                  <SelectItem value="jest">Node.js / JavaScript</SelectItem>
+                  <SelectItem value="jmeter">JMeter</SelectItem>
+                  <SelectItem value="har">HAR 回放</SelectItem>
                 </SelectContent>
               </Select>
             </div>
