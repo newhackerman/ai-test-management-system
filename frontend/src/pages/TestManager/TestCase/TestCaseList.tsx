@@ -79,13 +79,13 @@ const IMPORT_SCRIPT_FORMAT_OPTIONS: Record<string, Array<{ value: string; label:
   ],
   security: [
     { value: 'python', label: 'Python' },
-    { value: 'owasp_zap', label: 'OWASP ZAP' },
+    { value: 'owasp_zap', label: 'OWASP ZAP / awaspzip' },
     { value: 'burpsuite', label: 'BurpSuite' },
     { value: 'sqlmap', label: 'sqlmap' },
   ],
 }
 
-const IMPORT_FILE_ACCEPT = '.xlsx,.xls,.csv,.txt,.json,.har,.jmx,.py,.js,.ts,.sh'
+const IMPORT_FILE_ACCEPT = '.xlsx,.xls,.csv,.txt,.json,.har,.jmx,.py,.js,.ts,.sh,.yaml,.yml'
 
 const TestCaseList: React.FC = () => {
   const [searchParams] = useSearchParams()

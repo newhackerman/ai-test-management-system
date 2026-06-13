@@ -153,6 +153,9 @@ def _normalize_script_format(value: Optional[str]) -> Optional[str]:
     aliases = {
         "javascript": "js",
         "jmx": "jmeter",
+        "owaspzip": "owasp_zap",
+        "awaspzip": "owasp_zap",
+        "awasp_zap": "owasp_zap",
         "owaspzap": "owasp_zap",
         "owasp_zap": "owasp_zap",
         "zap": "owasp_zap",
@@ -168,6 +171,53 @@ def _clean_import_cell(value: Any) -> str:
     if isinstance(value, (datetime,)):
         return value.isoformat()
     return str(value).strip()
+
+
+def _decode_import_text(content: bytes) -> str:
+    for encoding in ("utf-8-sig", "utf-8", "gb18030"):
+        try:
+            return content.decode(encoding)
+        except UnicodeDecodeError:
+            continue
+    return content.decode("utf-8-sig", errors="replace")
+
+
+def _infer_script_format(script_content: str = "", filename: str = "") -> Optional[str]:
+    lower_name = (filename or "").lower()
+    lower_content = (script_content or "").strip().lower()
+    if lower_content.startswith("curl ") or "\ncurl " in lower_content:
+        return "curl"
+    if "<jmetertestplan" in lower_content or "<jmeter" in lower_content:
+        return "jmeter"
+    if "playwright" in lower_content or "@playwright/test" in lower_content:
+        return "playwright"
+    if "selenium" in lower_content or "webdriver" in lower_content:
+        return "selenium"
+    if "sqlmap" in lower_content:
+        return "sqlmap"
+    if "burpsuite" in lower_content or "burp suite" in lower_content:
+        return "burpsuite"
+    if "owasp zap" in lower_content or "owasp_zap" in lower_content or "zapv2" in lower_content:
+        return "owasp_zap"
+
+    extension_map = {
+        ".jmx": "jmeter",
+        ".py": "python",
+        ".js": "js",
+        ".ts": "js",
+        ".har": "curl",
+    }
+    for suffix, script_format in extension_map.items():
+        if lower_name.endswith(suffix):
+            return script_format
+
+    if not lower_content:
+        return None
+    if lower_content.startswith(("def ", "import ", "from ")) or "\ndef " in lower_content:
+        return "python"
+    if lower_content.startswith(("const ", "let ", "var ", "function ")) or "module.exports" in lower_content:
+        return "js"
+    return None
 
 
 def _normalize_import_header(value: Any) -> str:
@@ -279,21 +329,16 @@ def _read_import_rows(filename: str, content: bytes) -> List[Dict[str, Any]]:
         return frame.fillna("").to_dict(orient="records")
 
     if lower_name.endswith(".csv"):
-        text = None
-        for encoding in ("utf-8-sig", "utf-8", "gb18030"):
-            try:
-                text = content.decode(encoding)
-                break
-            except UnicodeDecodeError:
-                continue
-        if text is None:
-            text = content.decode("utf-8-sig", errors="replace")
+        text = _decode_import_text(content)
         return list(csv.DictReader(io.StringIO(text)))
 
-    script_text = content.decode("utf-8-sig", errors="replace")
+    script_text = _decode_import_text(content)
+    inferred_format = _infer_script_format(script_text, filename)
+    base_name = (filename or "imported-script").rsplit(".", 1)[0].replace("_", " ").replace("-", " ").strip()
     return [{
-        "case_title": filename or "Imported script test case",
+        "case_title": base_name or filename or "Imported script test case",
         "case_description": f"Imported from script file {filename}",
+        "script_format": inferred_format,
         "script_content": script_text,
     }]
 
@@ -305,10 +350,19 @@ def _build_import_case_data(
     test_plan_id: Optional[int],
 ) -> Dict[str, Any]:
     config = IMPORT_CATEGORY_CONFIG[category]
-    row_script_format = _normalize_script_format(_get_import_value(row, "script_format")) or script_format
     title = _get_import_value(row, "case_title") or _get_import_value(row, "script_name") or "Imported test case"
     expected_result = _get_import_value(row, "expected_result")
     script_content = _get_import_value(row, "script_content")
+    row_script_format = (
+        _normalize_script_format(_get_import_value(row, "script_format"))
+        or script_format
+        or _infer_script_format(script_content, title)
+    )
+    allowed_formats = config.get("script_formats")
+    if row_script_format and allowed_formats and row_script_format not in allowed_formats:
+        raise BusinessLogicError(
+            f"Script format '{row_script_format}' is not supported by {category} imports"
+        )
     test_data_text = _get_import_value(row, "test_data")
     test_data: Dict[str, Any] = {}
     if test_data_text:
