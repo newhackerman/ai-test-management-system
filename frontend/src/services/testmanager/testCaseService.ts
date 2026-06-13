@@ -101,11 +101,21 @@ export class TestCaseService {
     return response.data
   }
 
-  async importTestCases(file: File, testPlanId?: number): Promise<any> {
+  async importTestCases(file: File, options?: {
+    testPlanId?: number
+    importCategory?: string
+    scriptFormat?: string
+  }): Promise<any> {
     const formData = new FormData()
     formData.append('file', file)
-    if (testPlanId) {
-      formData.append('test_plan_id', String(testPlanId))
+    if (options?.testPlanId) {
+      formData.append('test_plan_id', String(options.testPlanId))
+    }
+    if (options?.importCategory) {
+      formData.append('import_category', options.importCategory)
+    }
+    if (options?.scriptFormat) {
+      formData.append('script_format', options.scriptFormat)
     }
 
     const response = await apiClient.post(this.path('import'), formData, {
@@ -113,7 +123,7 @@ export class TestCaseService {
         'Content-Type': 'multipart/form-data'
       }
     })
-    return response.data
+    return unwrapData<any>(response.data)
   }
 }
 

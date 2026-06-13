@@ -53,12 +53,48 @@ const priorityVariant = {
   [Priority.LOW]: 'secondary',
 } as const
 
+const IMPORT_CATEGORY_OPTIONS = [
+  { value: 'functional', label: '功能用例', description: '适合常规手工功能测试用例表格导入' },
+  { value: 'interface', label: '接口用例', description: '支持 curl、Python、JS、JMeter 脚本随用例导入' },
+  { value: 'automation', label: '自动化用例', description: '支持 Playwright、Selenium、Python 脚本并生成自动化脚本记录' },
+  { value: 'performance', label: '性能用例', description: '支持 Python、JMeter 性能脚本随用例导入' },
+  { value: 'security', label: '安全用例', description: '支持 Python、OWASP ZAP、BurpSuite、sqlmap 脚本随用例导入' },
+] as const
+
+const IMPORT_SCRIPT_FORMAT_OPTIONS: Record<string, Array<{ value: string; label: string }>> = {
+  interface: [
+    { value: 'curl', label: 'curl' },
+    { value: 'python', label: 'Python' },
+    { value: 'js', label: 'JavaScript' },
+    { value: 'jmeter', label: 'JMeter' },
+  ],
+  automation: [
+    { value: 'playwright', label: 'Playwright' },
+    { value: 'selenium', label: 'Selenium' },
+    { value: 'python', label: 'Python / Pytest' },
+  ],
+  performance: [
+    { value: 'python', label: 'Python' },
+    { value: 'jmeter', label: 'JMeter' },
+  ],
+  security: [
+    { value: 'python', label: 'Python' },
+    { value: 'owasp_zap', label: 'OWASP ZAP' },
+    { value: 'burpsuite', label: 'BurpSuite' },
+    { value: 'sqlmap', label: 'sqlmap' },
+  ],
+}
+
+const IMPORT_FILE_ACCEPT = '.xlsx,.xls,.csv,.txt,.json,.har,.jmx,.py,.js,.ts,.sh'
+
 const TestCaseList: React.FC = () => {
   const [searchParams] = useSearchParams()
   const [showImportDialog, setShowImportDialog] = useState(false)
   const [showGenerateDialog, setShowGenerateDialog] = useState(false)
   const [importFile, setImportFile] = useState<File | null>(null)
   const [importPlanId, setImportPlanId] = useState('')
+  const [importCategory, setImportCategory] = useState('functional')
+  const [importScriptFormat, setImportScriptFormat] = useState('')
   const [requirements, setRequirements] = useState<Requirement[]>([])
   const [testPlans, setTestPlans] = useState<TestPlan[]>([])
   const [users, setUsers] = useState<User[]>([])
@@ -95,6 +131,8 @@ const TestCaseList: React.FC = () => {
   const currentPage = Number(testCasesData?.page || filters.page || 1)
   const pageSize = Number(testCasesData?.size || filters.size || 20)
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize))
+  const importCategoryMeta = IMPORT_CATEGORY_OPTIONS.find((item) => item.value === importCategory) || IMPORT_CATEGORY_OPTIONS[0]
+  const importScriptOptions = IMPORT_SCRIPT_FORMAT_OPTIONS[importCategory] || []
 
   const requirementMap = useMemo(() => new Map(requirements.map((item) => [Number(item.id), item])), [requirements])
   const planMap = useMemo(() => new Map(testPlans.map((item) => [Number(item.id), item])), [testPlans])
@@ -213,11 +251,18 @@ const TestCaseList: React.FC = () => {
   const handleImport = () => {
     if (!importFile) return
     importTestCases.mutate(
-      { file: importFile, testPlanId: Number(importPlanId || 0) || undefined },
+      {
+        file: importFile,
+        testPlanId: Number(importPlanId || 0) || undefined,
+        importCategory,
+        scriptFormat: importScriptFormat || undefined,
+      },
       {
         onSuccess: () => {
           setImportFile(null)
           setImportPlanId('')
+          setImportCategory('functional')
+          setImportScriptFormat('')
           setShowImportDialog(false)
         },
       },
@@ -273,7 +318,7 @@ const TestCaseList: React.FC = () => {
         <div className="flex flex-wrap gap-2">
           <Dialog open={showImportDialog} onOpenChange={setShowImportDialog}>
             <DialogTrigger asChild>
-              <Button variant="outline">
+              <Button variant="outline" data-testid="test-case-import-open">
                 <Upload className="mr-2 h-4 w-4" />
                 导入用例
               </Button>
@@ -296,17 +341,51 @@ const TestCaseList: React.FC = () => {
                     </SelectContent>
                   </Select>
                 </Field>
+                <Field label="导入类型">
+                  <Select
+                    value={importCategory}
+                    onValueChange={(value) => {
+                      setImportCategory(value)
+                      setImportScriptFormat('')
+                    }}
+                  >
+                    <SelectTrigger data-testid="test-case-import-category"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {IMPORT_CATEGORY_OPTIONS.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">{importCategoryMeta.description}</p>
+                </Field>
+                {importScriptOptions.length > 0 && (
+                  <Field label="脚本格式">
+                    <Select value={importScriptFormat || 'auto'} onValueChange={(value) => setImportScriptFormat(value === 'auto' ? '' : value)}>
+                      <SelectTrigger data-testid="test-case-import-script-format"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="auto">按文件列自动识别</SelectItem>
+                        {importScriptOptions.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </Field>
+                )}
                 <Field label="文件">
                   <input
                     type="file"
-                    accept=".xlsx,.xls,.csv"
+                    data-testid="test-case-import-file"
+                    accept={IMPORT_FILE_ACCEPT}
                     onChange={(event) => setImportFile(event.target.files?.[0] || null)}
                     className="block w-full text-sm text-gray-600 file:mr-4 file:rounded-md file:border-0 file:bg-blue-50 file:px-4 file:py-2 file:text-sm file:font-medium file:text-blue-700 hover:file:bg-blue-100"
                   />
+                  <p className="text-xs text-muted-foreground">
+                    表格支持标题、描述、模块、步骤、预期结果、优先级、脚本类型、脚本内容等列；也可以直接上传 .py、.js、.jmx、.har、.txt 等脚本文件生成用例。
+                  </p>
                 </Field>
                 <div className="flex justify-end gap-2">
                   <Button variant="outline" onClick={() => setShowImportDialog(false)}>取消</Button>
-                  <Button onClick={handleImport} disabled={!importFile || importTestCases.isPending}>
+                  <Button data-testid="test-case-import-submit" onClick={handleImport} disabled={!importFile || importTestCases.isPending}>
                     {importTestCases.isPending ? '导入中...' : '导入'}
                   </Button>
                 </div>

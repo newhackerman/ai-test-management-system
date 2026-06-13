@@ -204,8 +204,13 @@ export const useImportTestCases = () => {
   const { toast } = useToast()
 
   return useMutation({
-    mutationFn: ({ file, testPlanId }: { file: File; testPlanId?: number }) =>
-      testCaseService.importTestCases(file, testPlanId),
+    mutationFn: ({ file, testPlanId, importCategory, scriptFormat }: {
+      file: File
+      testPlanId?: number
+      importCategory?: string
+      scriptFormat?: string
+    }) =>
+      testCaseService.importTestCases(file, { testPlanId, importCategory, scriptFormat }),
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['testCases'] })
       queryClient.invalidateQueries({ queryKey: ['testPlans'] })

@@ -10,10 +10,13 @@
 
 from datetime import datetime
 from typing import Optional, List, Dict, Any
-from fastapi import APIRouter, Depends, HTTPException, Query, Path, Body, UploadFile, File, Response
+from fastapi import APIRouter, Depends, HTTPException, Query, Path, Body, UploadFile, File, Form, Response
 from fastapi.security import HTTPBearer
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, Field
+import csv
+import io
+import json
 import logging
 
 from ...core.database import get_db
@@ -29,7 +32,7 @@ from ...services.automation_script_generator import (
 )
 from ...services.auth_dependencies import get_current_user
 from ...models.user import User
-from ...models.test_case import TestCase, TestCaseType, TestCasePriority, TestCaseStatus
+from ...models.test_case import TestCase, TestCaseType, TestCasePriority, TestCaseStatus, AutomationScript
 from ...models.requirement import (
     Complexity as RequirementComplexity,
     Priority as RequirementPriority,
@@ -54,6 +57,335 @@ def _enum_value(value):
 
 def _normalize_automation_value(value: Optional[str]) -> str:
     return str(value or "").strip().replace("-", "_").upper()
+
+
+IMPORT_CATEGORY_CONFIG = {
+    "functional": {
+        "case_type": TestCaseType.FUNCTIONAL,
+        "automation_level": "MANUAL",
+        "tags": ["functional"],
+    },
+    "interface": {
+        "case_type": TestCaseType.INTEGRATION,
+        "automation_level": "SEMI_AUTO",
+        "tags": ["interface"],
+        "script_formats": {"curl", "python", "javascript", "js", "jmeter"},
+    },
+    "automation": {
+        "case_type": TestCaseType.FUNCTIONAL,
+        "automation_level": "FULL_AUTO",
+        "tags": ["automation"],
+        "script_formats": {"playwright", "selenium", "python"},
+    },
+    "performance": {
+        "case_type": TestCaseType.PERFORMANCE,
+        "automation_level": "SEMI_AUTO",
+        "tags": ["performance"],
+        "script_formats": {"python", "jmeter"},
+    },
+    "security": {
+        "case_type": TestCaseType.SECURITY,
+        "automation_level": "SEMI_AUTO",
+        "tags": ["security"],
+        "script_formats": {"python", "owasp_zap", "burpsuite", "sqlmap"},
+    },
+}
+
+
+COLUMN_ALIASES = {
+    "case_title": {"case_title", "title", "name", "用例标题", "标题", "名称"},
+    "case_description": {"case_description", "description", "desc", "用例描述", "描述"},
+    "module": {"module", "模块", "功能模块"},
+    "preconditions": {"preconditions", "precondition", "前置条件", "前提条件"},
+    "test_steps": {"test_steps", "steps", "step", "测试步骤", "操作步骤", "步骤"},
+    "expected_result": {"expected_result", "expected", "expect", "预期结果", "期望结果"},
+    "test_data": {"test_data", "data", "测试数据", "数据"},
+    "priority": {"priority", "优先级"},
+    "requirement_id": {"requirement_id", "需求ID", "需求id", "关联需求"},
+    "script_name": {"script_name", "脚本名称", "脚本名"},
+    "script_content": {
+        "script",
+        "script_content",
+        "script body",
+        "脚本",
+        "脚本内容",
+        "curl",
+        "python",
+        "js",
+        "javascript",
+        "jmeter",
+        "playwright",
+        "selenium",
+        "zap",
+        "owasp_zap",
+        "burpsuite",
+        "sqlmap",
+    },
+    "script_format": {"script_format", "script_type", "脚本类型", "脚本格式"},
+}
+
+
+def _normalize_import_category(value: Optional[str]) -> str:
+    normalized = str(value or "functional").strip().lower().replace("-", "_")
+    aliases = {
+        "功能": "functional",
+        "功能用例": "functional",
+        "接口": "interface",
+        "接口测试": "interface",
+        "接口用例": "interface",
+        "自动化": "automation",
+        "自动化用例": "automation",
+        "性能": "performance",
+        "性能用例": "performance",
+        "安全": "security",
+        "安全用例": "security",
+    }
+    normalized = aliases.get(normalized, normalized)
+    if normalized not in IMPORT_CATEGORY_CONFIG:
+        raise BusinessLogicError("Unsupported import category")
+    return normalized
+
+
+def _normalize_script_format(value: Optional[str]) -> Optional[str]:
+    if not value:
+        return None
+    normalized = str(value).strip().lower().replace("-", "_").replace(" ", "_")
+    aliases = {
+        "javascript": "js",
+        "jmx": "jmeter",
+        "owaspzap": "owasp_zap",
+        "owasp_zap": "owasp_zap",
+        "zap": "owasp_zap",
+        "burp": "burpsuite",
+        "burp_suite": "burpsuite",
+    }
+    return aliases.get(normalized, normalized)
+
+
+def _clean_import_cell(value: Any) -> str:
+    if value is None:
+        return ""
+    if isinstance(value, (datetime,)):
+        return value.isoformat()
+    return str(value).strip()
+
+
+def _normalize_import_header(value: Any) -> str:
+    return _clean_import_cell(value).strip().lower().replace(" ", "_")
+
+
+def _get_import_value(row: Dict[str, Any], field: str) -> str:
+    aliases = {_normalize_import_header(item) for item in COLUMN_ALIASES.get(field, {field})}
+    for key, value in row.items():
+        if _normalize_import_header(key) in aliases:
+            return _clean_import_cell(value)
+    return ""
+
+
+def _parse_import_priority(value: str) -> str:
+    normalized = str(value or "").strip().upper()
+    mapping = {
+        "紧急": "CRITICAL",
+        "急": "CRITICAL",
+        "最高": "CRITICAL",
+        "CRITICAL": "CRITICAL",
+        "高": "HIGH",
+        "HIGH": "HIGH",
+        "中": "MEDIUM",
+        "MEDIUM": "MEDIUM",
+        "低": "LOW",
+        "LOW": "LOW",
+    }
+    return mapping.get(normalized, "MEDIUM")
+
+
+def _parse_import_steps(raw_steps: str, expected_result: str) -> List[Dict[str, Any]]:
+    text = _clean_import_cell(raw_steps)
+    if not text:
+        return [{
+            "step_number": 1,
+            "action": "Review imported script or requirement description",
+            "expected_result": expected_result or "Result matches the expected behavior",
+        }]
+
+    try:
+        parsed = json.loads(text)
+        if isinstance(parsed, list):
+            steps = []
+            for index, item in enumerate(parsed, start=1):
+                if isinstance(item, dict):
+                    steps.append({
+                        "step_number": int(item.get("step_number") or item.get("number") or index),
+                        "action": _clean_import_cell(item.get("action") or item.get("step") or item.get("description")),
+                        "expected_result": _clean_import_cell(item.get("expected_result") or item.get("expected") or expected_result),
+                    })
+                else:
+                    steps.append({
+                        "step_number": index,
+                        "action": _clean_import_cell(item),
+                        "expected_result": expected_result,
+                    })
+            return [step for step in steps if step["action"]]
+    except Exception:
+        pass
+
+    raw_lines = []
+    for line in text.replace("\r", "\n").replace("；", "\n").replace(";", "\n").split("\n"):
+        cleaned = line.strip().lstrip("-* ").strip()
+        if cleaned:
+            raw_lines.append(cleaned)
+
+    steps = []
+    for index, line in enumerate(raw_lines, start=1):
+        action = line
+        expected = expected_result
+        for sep in ("=>", "->", "预期:", "预期：", "期望:", "期望："):
+            if sep in line:
+                action, expected = line.split(sep, 1)
+                break
+        steps.append({
+            "step_number": index,
+            "action": action.strip(),
+            "expected_result": expected.strip() or expected_result,
+        })
+    return steps or [{
+        "step_number": 1,
+        "action": text,
+        "expected_result": expected_result,
+    }]
+
+
+def _read_import_rows(filename: str, content: bytes) -> List[Dict[str, Any]]:
+    lower_name = (filename or "").lower()
+    if lower_name.endswith((".xlsx", ".xlsm", ".xltx", ".xltm")):
+        from openpyxl import load_workbook
+
+        workbook = load_workbook(io.BytesIO(content), read_only=True, data_only=True)
+        sheet = workbook.active
+        rows = list(sheet.iter_rows(values_only=True))
+        if not rows:
+            return []
+        headers = [_clean_import_cell(cell) or f"column_{index}" for index, cell in enumerate(rows[0], start=1)]
+        return [
+            {headers[index]: row[index] if index < len(row) else None for index in range(len(headers))}
+            for row in rows[1:]
+            if any(_clean_import_cell(cell) for cell in row)
+        ]
+
+    if lower_name.endswith(".xls"):
+        import pandas as pd
+
+        frame = pd.read_excel(io.BytesIO(content))
+        return frame.fillna("").to_dict(orient="records")
+
+    if lower_name.endswith(".csv"):
+        text = None
+        for encoding in ("utf-8-sig", "utf-8", "gb18030"):
+            try:
+                text = content.decode(encoding)
+                break
+            except UnicodeDecodeError:
+                continue
+        if text is None:
+            text = content.decode("utf-8-sig", errors="replace")
+        return list(csv.DictReader(io.StringIO(text)))
+
+    script_text = content.decode("utf-8-sig", errors="replace")
+    return [{
+        "case_title": filename or "Imported script test case",
+        "case_description": f"Imported from script file {filename}",
+        "script_content": script_text,
+    }]
+
+
+def _build_import_case_data(
+    row: Dict[str, Any],
+    category: str,
+    script_format: Optional[str],
+    test_plan_id: Optional[int],
+) -> Dict[str, Any]:
+    config = IMPORT_CATEGORY_CONFIG[category]
+    row_script_format = _normalize_script_format(_get_import_value(row, "script_format")) or script_format
+    title = _get_import_value(row, "case_title") or _get_import_value(row, "script_name") or "Imported test case"
+    expected_result = _get_import_value(row, "expected_result")
+    script_content = _get_import_value(row, "script_content")
+    test_data_text = _get_import_value(row, "test_data")
+    test_data: Dict[str, Any] = {}
+    if test_data_text:
+        try:
+            parsed_data = json.loads(test_data_text)
+            test_data["imported_data"] = parsed_data
+        except Exception:
+            test_data["imported_data"] = test_data_text
+    if script_content:
+        test_data["imported_script"] = {
+            "category": category,
+            "format": row_script_format,
+            "content": script_content,
+        }
+
+    tags = list(config.get("tags", []))
+    if row_script_format:
+        tags.append(row_script_format)
+
+    return {
+        "test_plan_id": test_plan_id,
+        "requirement_id": int(_get_import_value(row, "requirement_id") or 0) or None,
+        "case_title": title[:200],
+        "case_description": _get_import_value(row, "case_description") or f"Imported {category} test case",
+        "case_type": config["case_type"].value,
+        "module": _get_import_value(row, "module") or None,
+        "priority": _parse_import_priority(_get_import_value(row, "priority")),
+        "complexity": "MEDIUM",
+        "automation_level": config["automation_level"],
+        "preconditions": _get_import_value(row, "preconditions") or None,
+        "test_steps": _parse_import_steps(_get_import_value(row, "test_steps"), expected_result),
+        "expected_result": expected_result or "Result matches the imported test objective",
+        "test_data": test_data or None,
+        "tags": tags,
+    }
+
+
+def _automation_script_payload(
+    test_case: TestCase,
+    case_data: Dict[str, Any],
+    category: str,
+    script_format: Optional[str],
+) -> Optional[Dict[str, Any]]:
+    if category != "automation":
+        return None
+    script_info = (case_data.get("test_data") or {}).get("imported_script") or {}
+    script_content = script_info.get("content")
+    if not script_content:
+        return None
+
+    normalized_format = _normalize_script_format(script_info.get("format") or script_format) or "python"
+    framework = "PYTEST"
+    language = "PYTHON"
+    browser = None
+    if normalized_format == "playwright":
+        framework = "PLAYWRIGHT"
+        browser = "chromium"
+    elif normalized_format == "selenium":
+        framework = "SELENIUM"
+        browser = "chrome"
+    elif normalized_format in {"js", "javascript"}:
+        framework = "JEST"
+        language = "JAVASCRIPT"
+
+    return {
+        "script_name": f"{test_case.case_code}-{normalized_format}",
+        "framework": framework,
+        "language": language,
+        "script_content": script_content,
+        "browser": browser,
+        "environment_config": {
+            "source": "test_case_import",
+            "import_format": normalized_format,
+        },
+        "dependencies": [],
+        "created_by": test_case.creator_id,
+    }
 
 
 def _build_automation_config(request: "GenerateAutomationScriptRequest") -> AutomationConfig:
@@ -541,6 +873,89 @@ async def export_test_cases(
         media_type="text/csv; charset=utf-8",
         headers={"Content-Disposition": f"attachment; filename=test-cases.{format if format in {'csv', 'txt'} else 'csv'}"}
     )
+
+
+@router.post("/import", response_model=BaseResponse[Dict[str, Any]])
+async def import_test_cases(
+    file: UploadFile = File(...),
+    test_plan_id: Optional[int] = Form(None),
+    import_category: str = Form("functional"),
+    script_format: Optional[str] = Form(None),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Import test cases from CSV/Excel/script files with category-specific script metadata."""
+    try:
+        category = _normalize_import_category(import_category)
+        normalized_script_format = _normalize_script_format(script_format)
+        allowed_formats = IMPORT_CATEGORY_CONFIG[category].get("script_formats")
+        if normalized_script_format and allowed_formats and normalized_script_format not in allowed_formats:
+            raise BusinessLogicError("Script format is not supported by the selected import category")
+
+        content = await file.read()
+        if not content:
+            raise BusinessLogicError("Uploaded file is empty")
+
+        rows = _read_import_rows(file.filename or "", content)
+        if not rows:
+            raise BusinessLogicError("No importable rows found in uploaded file")
+
+        service = TestCaseService(db)
+        success_count = 0
+        failed_count = 0
+        script_count = 0
+        errors: List[Dict[str, Any]] = []
+
+        for index, row in enumerate(rows, start=2):
+            try:
+                case_data = _build_import_case_data(row, category, normalized_script_format, test_plan_id)
+                test_case = await service.create_test_case(case_data, current_user.id)
+                script_payload = _automation_script_payload(test_case, case_data, category, normalized_script_format)
+                if script_payload:
+                    automation_script = AutomationScript(
+                        test_case_id=test_case.id,
+                        script_name=script_payload["script_name"],
+                        framework=script_payload["framework"],
+                        language=script_payload["language"],
+                        script_content=script_payload["script_content"],
+                        browser=script_payload.get("browser"),
+                        environment_config=script_payload.get("environment_config", {}),
+                        dependencies=script_payload.get("dependencies", []),
+                        created_by=current_user.id,
+                    )
+                    db.add(automation_script)
+                    db.commit()
+                    script_count += 1
+                success_count += 1
+            except Exception as row_error:
+                db.rollback()
+                failed_count += 1
+                errors.append({
+                    "row": index,
+                    "message": str(row_error),
+                })
+                logger.warning(f"Import test case row {index} failed: {row_error}")
+
+        if success_count == 0 and errors:
+            raise BusinessLogicError(f"Import failed: {errors[0]['message']}")
+
+        return BaseResponse(
+            success=True,
+            message="Test case import completed",
+            data={
+                "success_count": success_count,
+                "failed_count": failed_count,
+                "script_count": script_count,
+                "errors": errors[:20],
+                "category": category,
+                "script_format": normalized_script_format,
+            },
+        )
+    except BusinessLogicError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+    except Exception as e:
+        logger.error(f"Import test cases failed: {str(e)}")
+        raise HTTPException(status_code=500, detail="Import test cases failed")
 
 
 @router.post("/generate", response_model=BaseResponse[List[TestCaseResponse]])
