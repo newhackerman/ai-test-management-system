@@ -125,6 +125,22 @@ COLUMN_ALIASES = {
 }
 
 
+COLUMN_ALIASES.update({
+    "case_title": COLUMN_ALIASES["case_title"] | {"\u7528\u4f8b\u6807\u9898", "\u6807\u9898", "\u540d\u79f0"},
+    "case_description": COLUMN_ALIASES["case_description"] | {"\u7528\u4f8b\u63cf\u8ff0", "\u63cf\u8ff0"},
+    "module": COLUMN_ALIASES["module"] | {"\u6a21\u5757", "\u529f\u80fd\u6a21\u5757"},
+    "preconditions": COLUMN_ALIASES["preconditions"] | {"\u524d\u7f6e\u6761\u4ef6", "\u524d\u63d0\u6761\u4ef6"},
+    "test_steps": COLUMN_ALIASES["test_steps"] | {"\u6d4b\u8bd5\u6b65\u9aa4", "\u64cd\u4f5c\u6b65\u9aa4", "\u6b65\u9aa4"},
+    "expected_result": COLUMN_ALIASES["expected_result"] | {"\u9884\u671f\u7ed3\u679c", "\u671f\u671b\u7ed3\u679c"},
+    "test_data": COLUMN_ALIASES["test_data"] | {"\u6d4b\u8bd5\u6570\u636e", "\u6570\u636e"},
+    "priority": COLUMN_ALIASES["priority"] | {"\u4f18\u5148\u7ea7"},
+    "requirement_id": COLUMN_ALIASES["requirement_id"] | {"\u9700\u6c42ID", "\u9700\u6c42id", "\u5173\u8054\u9700\u6c42"},
+    "script_name": COLUMN_ALIASES["script_name"] | {"\u811a\u672c\u540d\u79f0", "\u811a\u672c\u540d"},
+    "script_content": COLUMN_ALIASES["script_content"] | {"\u811a\u672c", "\u811a\u672c\u5185\u5bb9"},
+    "script_format": COLUMN_ALIASES["script_format"] | {"\u811a\u672c\u7c7b\u578b", "\u811a\u672c\u683c\u5f0f"},
+})
+
+
 def _normalize_import_category(value: Optional[str]) -> str:
     normalized = str(value or "functional").strip().lower().replace("-", "_")
     aliases = {
@@ -140,6 +156,19 @@ def _normalize_import_category(value: Optional[str]) -> str:
         "安全": "security",
         "安全用例": "security",
     }
+    aliases.update({
+        "\u529f\u80fd": "functional",
+        "\u529f\u80fd\u7528\u4f8b": "functional",
+        "\u63a5\u53e3": "interface",
+        "\u63a5\u53e3\u6d4b\u8bd5": "interface",
+        "\u63a5\u53e3\u7528\u4f8b": "interface",
+        "\u81ea\u52a8\u5316": "automation",
+        "\u81ea\u52a8\u5316\u7528\u4f8b": "automation",
+        "\u6027\u80fd": "performance",
+        "\u6027\u80fd\u7528\u4f8b": "performance",
+        "\u5b89\u5168": "security",
+        "\u5b89\u5168\u7528\u4f8b": "security",
+    })
     normalized = aliases.get(normalized, normalized)
     if normalized not in IMPORT_CATEGORY_CONFIG:
         raise BusinessLogicError("Unsupported import category")
@@ -246,6 +275,14 @@ def _parse_import_priority(value: str) -> str:
         "低": "LOW",
         "LOW": "LOW",
     }
+    mapping.update({
+        "\u7d27\u6025": "CRITICAL",
+        "\u6025": "CRITICAL",
+        "\u6700\u9ad8": "CRITICAL",
+        "\u9ad8": "HIGH",
+        "\u4e2d": "MEDIUM",
+        "\u4f4e": "LOW",
+    })
     return mapping.get(normalized, "MEDIUM")
 
 
@@ -279,6 +316,13 @@ def _parse_import_steps(raw_steps: str, expected_result: str) -> List[Dict[str, 
     except Exception:
         pass
 
+    text = (
+        text
+        .replace("\u9884\u671f\uff1a", "=>")
+        .replace("\u9884\u671f:", "=>")
+        .replace("\u671f\u671b\uff1a", "=>")
+        .replace("\u671f\u671b:", "=>")
+    )
     raw_lines = []
     for line in text.replace("\r", "\n").replace("；", "\n").replace(";", "\n").split("\n"):
         cleaned = line.strip().lstrip("-* ").strip()
