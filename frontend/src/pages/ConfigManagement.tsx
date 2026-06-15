@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Card, Button, Table, Space, Input, Select, Modal, Form, Switch, Tag, Tabs, message, Drawer, Typography, Row, Col, Statistic, notification } from 'antd'
+import { Card, Button, Table, Space, Input, Select, Modal, Form, Switch, Tag, Tabs, message, Drawer, Row, Col, Statistic, notification } from 'antd'
 import { 
   PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, 
   SyncOutlined, SettingOutlined, EyeOutlined, CopyOutlined,
@@ -15,8 +15,6 @@ const { Search } = Input
 const { Option } = Select
 const { TextArea } = Input
 const { TabPane } = Tabs
-const { Title, Text } = Typography
-
 // 配置类型映射 - 支持15种类型
 const CONFIG_TYPE_MAP = {
   STRING: { label: '字符串', color: 'blue' },
@@ -433,10 +431,7 @@ export default function ConfigManagement() {
   return (
     <div className="space-y-4">
       <div>
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <Title level={2} className="!m-0 !text-2xl">配置管理</Title>
-          </div>
+        <div className="flex flex-wrap justify-end gap-3">
           <div className="flex flex-wrap items-center gap-2">
             <Button
               icon={<ImportOutlined />}

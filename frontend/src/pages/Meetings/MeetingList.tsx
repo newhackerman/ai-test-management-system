@@ -151,11 +151,8 @@ export default function MeetingList() {
   }
 
   return (
-    <div className="space-y-6 p-6">
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-gray-900">会议管理</h1>
-        </div>
+    <div className="space-y-4">
+      <div className="flex flex-wrap justify-end gap-3">
         <div className="flex gap-2">
           <Button type="button" variant="outline" onClick={loadMeetings} disabled={loading}>
             <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />

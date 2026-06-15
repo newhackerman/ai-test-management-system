@@ -36,11 +36,8 @@ export function TaskManagement({ projectId = 0, className = '' }: TaskManagement
   const activeCount = tasks.filter((task) => task.status === 'IN_PROGRESS').length
 
   return (
-    <div className={`space-y-6 ${className}`}>
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">任务管理</h1>
-        </div>
+    <div className={`space-y-4 ${className}`}>
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-end">
         <div className="flex gap-2">
           <Button type="button" variant="outline">
             <Download className="mr-2 h-4 w-4" />

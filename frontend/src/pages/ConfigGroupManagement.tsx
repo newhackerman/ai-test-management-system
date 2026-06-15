@@ -182,10 +182,7 @@ export default function ConfigGroupManagement() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="m-0 text-2xl font-bold text-foreground">配置分组</h1>
-        </div>
+      <div className="flex flex-wrap justify-end gap-3">
         <Button
           type="primary"
           icon={<PlusOutlined />}

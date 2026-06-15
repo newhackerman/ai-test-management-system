@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Request, UploadFi
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional
+from urllib.parse import urlparse
 import logging
 import os
 import uuid
@@ -15,6 +16,11 @@ from ..schemas.user import UserCreate, UserResponse
 from ..models.user import User
 from ..utils.ip import IPUtils
 from ..utils.jwt import jwt_service
+from ..utils.auth_rate_limit import (
+    check_forgot_password_rate_limit,
+    check_reset_password_rate_limit,
+    increment_reset_password_failure,
+)
 from ..utils.error_responses import unauthorized_error, internal_server_error, bad_request_error
 
 logger = logging.getLogger(__name__)
@@ -30,6 +36,77 @@ ALLOWED_AVATAR_TYPES = {
     "image/webp": ".webp",
     "image/gif": ".gif",
 }
+
+
+def _build_allowed_frontend_origins() -> set:
+    """
+    构建允许作为重置链接前端的来源白名单（scheme://host[:port]）。
+
+    来源优先级：
+      1) FRONTEND_URL / FRONTEND_BASE_URL 环境变量
+      2) settings.BACKEND_CORS_ORIGINS（CORS 已允许的来源）
+      3) settings.FRONTEND_URL / settings.BASE_URL
+      4) 开发兜底 http://127.0.0.1:5173
+    """
+    from ..core.config import get_settings
+    settings = get_settings()
+    allowed = set()
+
+    def _add(raw):
+        if not raw:
+            return
+        if isinstance(raw, (list, tuple)):
+            for item in raw:
+                _add(item)
+            return
+        try:
+            parsed = urlparse(str(raw))
+            if parsed.scheme in ("http", "https") and parsed.netloc:
+                allowed.add(f"{parsed.scheme}://{parsed.netloc}")
+        except Exception:
+            pass
+
+    _add(os.getenv("FRONTEND_URL"))
+    _add(os.getenv("FRONTEND_BASE_URL"))
+    _add(getattr(settings, "BACKEND_CORS_ORIGINS", None))
+    _add(getattr(settings, "FRONTEND_URL", None))
+    _add(getattr(settings, "BASE_URL", None))
+    # 开发兜底，确保本地始终可用
+    allowed.add("http://127.0.0.1:5173")
+    allowed.add("http://localhost:5173")
+    return allowed
+
+
+def _get_frontend_base_url(request: Request) -> str:
+    """
+    生成前端重置密码链接的 base_url。
+
+    安全：仅当请求头 origin/referer 命中预配置的白名单时才采用，
+    否则一律回退到配置默认值。这样可以防止攻击者通过伪造
+    Origin: https://evil.com 头，把指向钓鱼站点的重置链接投递到受害者邮箱，
+    进而窃取重置令牌。
+
+    匹配严格基于 scheme://host[:port]，避免 evil.com.attacker.com 这类绕过。
+    """
+    allowed = _build_allowed_frontend_origins()
+
+    for header_name in ("origin", "referer"):
+        header_value = request.headers.get(header_name)
+        if not header_value:
+            continue
+        try:
+            parsed = urlparse(header_value)
+            origin = f"{parsed.scheme}://{parsed.netloc}"
+            if origin in allowed:
+                return origin.rstrip("/")
+        except Exception:
+            continue
+
+    return (
+        os.getenv("FRONTEND_URL")
+        or os.getenv("FRONTEND_BASE_URL")
+        or "http://127.0.0.1:5173"
+    ).rstrip("/")
 
 async def get_auth_service(session: AsyncSession = Depends(get_async_session)) -> AuthService:
     """获取认证服务实例"""
@@ -394,9 +471,20 @@ async def forgot_password(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="缺少邮箱参数"
         )
-    
+
+    # 速率限制：防邮件轰炸与用户枚举侧信道（超限抛 429）
+    await check_forgot_password_rate_limit(http_request, email)
+
+    client_ip = IPUtils.get_client_ip(http_request)
+    user_agent = http_request.headers.get("user-agent", "")
+
     try:
-        result = await auth_service.forgot_password(email)
+        result = await auth_service.forgot_password(
+            email,
+            _get_frontend_base_url(http_request),
+            ip_address=client_ip,
+            user_agent=user_agent,
+        )
         
         if not result["success"]:
             raise HTTPException(
@@ -418,6 +506,7 @@ async def forgot_password(
 @router.post("/reset-password")
 async def reset_password(
     request: dict,
+    http_request: Request,
     auth_service: AuthService = Depends(get_auth_service)
 ):
     """重置密码"""
@@ -429,11 +518,24 @@ async def reset_password(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="缺少必需参数"
         )
-    
+
+    # 速率限制：防对 token 接口暴力/扫描（超限抛 429）
+    await check_reset_password_rate_limit(http_request)
+
+    client_ip = IPUtils.get_client_ip(http_request)
+    user_agent = http_request.headers.get("user-agent", "")
+
     try:
-        result = await auth_service.reset_password(token, new_password)
+        result = await auth_service.reset_password(
+            token,
+            new_password,
+            ip_address=client_ip,
+            user_agent=user_agent,
+        )
         
         if not result["success"]:
+            # 计入失败窗口（防枚举/试 token）
+            await increment_reset_password_failure(http_request)
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=result["message"]

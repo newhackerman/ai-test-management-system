@@ -98,10 +98,7 @@ const TestPlanList: React.FC = () => {
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold">测试计划管理</h1>
-        </div>
+      <div className="flex justify-end">
         <Link to="/test-manager/test-plans/create">
           <Button>
             <Plus className="w-4 h-4 mr-2" />

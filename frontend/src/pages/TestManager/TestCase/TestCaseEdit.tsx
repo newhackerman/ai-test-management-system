@@ -157,7 +157,7 @@ const TestCaseEdit: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="flex items-center gap-4">
         <Link to={`/test-manager/test-cases/${caseId}`}>
           <Button variant="ghost" size="sm">
@@ -165,13 +165,10 @@ const TestCaseEdit: React.FC = () => {
             返回详情
           </Button>
         </Link>
-        <div>
-          <h1 className="text-2xl font-bold">编辑测试用例</h1>
-          <p className="text-gray-600">{testCase.case_code}</p>
-        </div>
+        <span className="text-sm text-muted-foreground">{testCase.case_code}</span>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit} className="space-y-4">
         {submitError && (
           <Card className="border-red-200 bg-red-50">
             <CardContent className="p-4 text-sm text-red-700">{submitError}</CardContent>

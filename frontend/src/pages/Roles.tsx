@@ -588,10 +588,7 @@ const Roles: React.FC = () => {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">角色管理</h1>
-        </div>
+      <div className="flex flex-wrap justify-end gap-3">
         <Space wrap size={8}>
           <Button icon={<ReloadOutlined />} onClick={refresh}>
             刷新

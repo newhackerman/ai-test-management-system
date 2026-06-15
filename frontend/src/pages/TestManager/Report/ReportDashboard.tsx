@@ -183,10 +183,7 @@ const ReportDashboard: React.FC = () => {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">测试报告</h1>
-        </div>
+      <div className="flex flex-wrap justify-end gap-3">
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" onClick={loadReports} disabled={loading}>
             <RefreshCw className="mr-2 h-4 w-4" />

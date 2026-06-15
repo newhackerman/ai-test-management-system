@@ -208,32 +208,25 @@ const AllureReports: React.FC = () => {
   ]
 
   return (
-    <div className="space-y-6">
-      <Card
-        title={
-          <Space>
-            <FileTextOutlined />
-            <span>Allure 测试报告</span>
-          </Space>
-        }
-        extra={
-          <Space>
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={() => {
-                form.setFieldsValue({ test_executions: [initialExecution] })
-                setGenerateModalVisible(true)
-              }}
-            >
-              生成报告
-            </Button>
-            <Button icon={<ReloadOutlined />} onClick={loadReports} loading={loading}>
-              刷新
-            </Button>
-          </Space>
-        }
-      >
+    <div className="space-y-3">
+      <div className="flex justify-end">
+        <Space>
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={() => {
+              form.setFieldsValue({ test_executions: [initialExecution] })
+              setGenerateModalVisible(true)
+            }}
+          >
+            生成报告
+          </Button>
+          <Button icon={<ReloadOutlined />} onClick={loadReports} loading={loading}>
+            刷新
+          </Button>
+        </Space>
+      </div>
+      <Card>
         <Table
           columns={columns}
           dataSource={reports}

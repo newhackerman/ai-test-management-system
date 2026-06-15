@@ -31,6 +31,7 @@ class EmailConfig:
     use_ssl: bool = False
     from_email: Optional[str] = None
     from_name: Optional[str] = None
+    timeout: int = 10
 
 class EmailService:
     """邮件服务"""
@@ -211,9 +212,9 @@ class EmailService:
         try:
             # 创建SMTP连接
             if self.config.use_ssl:
-                server = smtplib.SMTP_SSL(self.config.smtp_server, self.config.smtp_port)
+                server = smtplib.SMTP_SSL(self.config.smtp_server, self.config.smtp_port, timeout=self.config.timeout)
             else:
-                server = smtplib.SMTP(self.config.smtp_server, self.config.smtp_port)
+                server = smtplib.SMTP(self.config.smtp_server, self.config.smtp_port, timeout=self.config.timeout)
                 if self.config.use_tls:
                     server.starttls()
             
@@ -328,9 +329,9 @@ class EmailService:
         """测试邮件服务连接"""
         try:
             if self.config.use_ssl:
-                server = smtplib.SMTP_SSL(self.config.smtp_server, self.config.smtp_port)
+                server = smtplib.SMTP_SSL(self.config.smtp_server, self.config.smtp_port, timeout=self.config.timeout)
             else:
-                server = smtplib.SMTP(self.config.smtp_server, self.config.smtp_port)
+                server = smtplib.SMTP(self.config.smtp_server, self.config.smtp_port, timeout=self.config.timeout)
                 if self.config.use_tls:
                     server.starttls()
             

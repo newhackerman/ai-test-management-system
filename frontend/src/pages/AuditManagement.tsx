@@ -389,10 +389,6 @@ export default function AuditManagement() {
 
   return (
     <div className="space-y-4">
-      <div>
-        <Title level={2} className="!m-0 !text-2xl">审计日志</Title>
-      </div>
-
       {/* 统计信息 */}
       {statistics && (
         <div className="grid grid-cols-2 gap-2 rounded-lg border bg-card p-3 md:grid-cols-4">

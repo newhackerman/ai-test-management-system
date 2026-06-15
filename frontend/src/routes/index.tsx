@@ -64,6 +64,8 @@ const NotFound = () => (
 
 const Layout = React.lazy(() => import('@/components/layout'))
 const Login = React.lazy(() => import('@/pages/Login'))
+const ForgotPassword = React.lazy(() => import('@/pages/auth/ForgotPassword'))
+const ResetPassword = React.lazy(() => import('@/pages/auth/ResetPassword'))
 const Dashboard = React.lazy(() => import('@/pages/Dashboard'))
 const Users = React.lazy(() => import('@/pages/Users'))
 const Roles = React.lazy(() => import('@/pages/Roles'))
@@ -128,6 +130,14 @@ export const routes: RouteObject[] = [
   {
     path: '/auth/login',
     element: <Navigate to="/login" replace />,
+  },
+  {
+    path: '/auth/forgot-password',
+    element: withSuspense(ForgotPassword),
+  },
+  {
+    path: '/auth/reset-password',
+    element: withSuspense(ResetPassword),
   },
   {
     path: '/',

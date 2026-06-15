@@ -154,7 +154,7 @@ const TestPlanEdit: React.FC = () => {
   const saving = updateTestPlan.isPending
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
           <Link to="/test-manager/test-plans">
@@ -163,21 +163,19 @@ const TestPlanEdit: React.FC = () => {
               返回列表
             </Button>
           </Link>
-          <div>
-            <h1 className="text-2xl font-bold">编辑测试计划</h1>
-          </div>
+          <span className="text-sm text-muted-foreground">{testPlan.plan_code || `#${planId}`}</span>
         </div>
       </div>
 
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
           {referenceError && (
             <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
               {referenceError}
             </div>
           )}
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-            <div className="space-y-6 lg:col-span-2">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+            <div className="space-y-4 lg:col-span-2">
               <Card>
                 <CardHeader>
                   <CardTitle>基本信息</CardTitle>
@@ -275,7 +273,7 @@ const TestPlanEdit: React.FC = () => {
               </Card>
             </div>
 
-            <div className="space-y-6">
+            <div className="space-y-4">
               <Card>
                 <CardHeader>
                   <CardTitle>关联信息</CardTitle>

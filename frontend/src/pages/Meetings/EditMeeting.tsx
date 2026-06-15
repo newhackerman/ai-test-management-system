@@ -46,14 +46,12 @@ export default function EditMeeting() {
   }
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-4">
       <div className="flex items-center gap-3">
         <Button type="button" variant="outline" size="icon" onClick={() => navigate(`/meetings/${meetingId}`)}>
           <ArrowLeft className="h-4 w-4" />
         </Button>
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-gray-900">编辑会议</h1>
-        </div>
+        {meeting?.title && <span className="text-sm text-muted-foreground">{meeting.title}</span>}
       </div>
 
       <MeetingForm

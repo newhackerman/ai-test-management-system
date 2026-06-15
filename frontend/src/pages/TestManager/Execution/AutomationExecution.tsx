@@ -137,7 +137,7 @@ const AutomationExecution: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div className="flex items-center gap-3">
           <Button asChild variant="ghost" size="sm">
@@ -146,9 +146,6 @@ const AutomationExecution: React.FC = () => {
               返回执行管理
             </Link>
           </Button>
-          <div>
-            <h1 className="text-2xl font-bold">自动化执行</h1>
-          </div>
         </div>
         {!isRunning ? (
           <Button onClick={startExecution} disabled={selectedCases.length === 0 || startAutomation.isPending}>
@@ -260,7 +257,7 @@ const AutomationExecution: React.FC = () => {
         </Card>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid gap-4 lg:grid-cols-3">
         <div className="lg:col-span-2">
           <Card>
             <CardHeader className="gap-4 md:flex-row md:items-center md:justify-between">

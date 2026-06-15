@@ -396,11 +396,8 @@ const AutoRecoveryPage: React.FC = () => {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold text-foreground">自动恢复</h1>
-            <Badge status={monitoringStatus?.is_monitoring ? 'processing' : 'default'} text={monitoringStatus?.is_monitoring ? '监控中' : '未启动'} />
-          </div>
+        <div className="flex items-center gap-2">
+          <Badge status={monitoringStatus?.is_monitoring ? 'processing' : 'default'} text={monitoringStatus?.is_monitoring ? '监控中' : '未启动'} />
         </div>
         <Space wrap size={8}>
           <Button icon={<BarChartOutlined />} onClick={refreshRecoveryStatistics} loading={loading}>

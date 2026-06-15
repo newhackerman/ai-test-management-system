@@ -441,10 +441,7 @@ const ReportGenerate: React.FC = () => {
               返回报告列表
             </Button>
           </Link>
-          <div>
-            <h1 className="text-2xl font-bold">生成测试报告</h1>
-            {selectedPlanId && <p className="text-sm text-muted-foreground">当前关联测试计划 #{selectedPlanId}</p>}
-          </div>
+          {selectedPlanId && <span className="text-sm text-muted-foreground">当前关联测试计划 #{selectedPlanId}</span>}
         </div>
       </div>
 

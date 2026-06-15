@@ -81,12 +81,18 @@ const pageTitles: Record<string, string> = {
   '/requirements': '需求管理',
   '/risks': '风险管理',
   '/ai-assistant': 'AI 助手',
-  '/test-manager': '测试管理',
+  '/test-manager': '测试概览',
   '/test-manager/test-plans': '测试计划',
+  '/test-manager/test-plans/create': '创建测试计划',
   '/test-manager/test-cases': '测试用例',
+  '/test-manager/test-cases/create': '创建测试用例',
   '/test-manager/executions': '执行管理',
+  '/test-manager/executions/manual': '手工执行',
+  '/test-manager/executions/automation': '自动化执行',
   '/test-manager/defects': '缺陷管理',
+  '/test-manager/defects/analytics': '缺陷分析',
   '/test-manager/reports': '测试报告',
+  '/test-manager/reports/generate': '生成测试报告',
   '/test-manager/performance': '性能测试',
   '/test-manager/security': '安全测试',
   '/allure-reports': 'Allure 报告',
@@ -99,8 +105,36 @@ const pageTitles: Record<string, string> = {
   '/config': '配置项',
   '/config/groups': '配置分组',
   '/config/audits': '审计日志',
+  '/meetings': '会议管理',
+  '/meetings/create': '新建会议',
   '/profile': '个人资料',
 }
+
+const dynamicPageTitleRules: Array<[RegExp, string]> = [
+  [/^\/projects\/\d+$/, '项目详情'],
+  [/^\/meetings\/create$/, '新建会议'],
+  [/^\/meetings\/[^/]+\/edit$/, '编辑会议'],
+  [/^\/meetings\/room\/[^/]+$/, '会议室'],
+  [/^\/meetings\/join\/[^/]+$/, '加入会议'],
+  [/^\/meetings\/recordings\/[^/]+\/player$/, '录制播放'],
+  [/^\/meetings\/recordings\/[^/]+$/, '录制详情'],
+  [/^\/meetings\/recordings$/, '会议录制'],
+  [/^\/meetings\/analytics\/comparison$/, '会议对比'],
+  [/^\/meetings\/[^/]+\/analytics\/participation$/, '参与度分析'],
+  [/^\/meetings\/[^/]+\/analytics\/summary$/, '会议摘要'],
+  [/^\/meetings\/[^/]+\/analytics\/minutes$/, '会议纪要'],
+  [/^\/meetings\/[^/]+\/analytics\/actions$/, '行动项'],
+  [/^\/meetings\/[^/]+\/analytics\/reports$/, '会议报告'],
+  [/^\/meetings\/[^/]+\/analytics$/, '会议分析'],
+  [/^\/meetings\/[^/]+\/recordings$/, '会议录制'],
+  [/^\/meetings\/[^/]+$/, '会议详情'],
+  [/^\/test-manager\/test-plans\/\d+\/edit$/, '编辑测试计划'],
+  [/^\/test-manager\/test-plans\/\d+$/, '测试计划详情'],
+  [/^\/test-manager\/test-cases\/\d+\/edit$/, '编辑测试用例'],
+  [/^\/test-manager\/test-cases\/\d+$/, '测试用例详情'],
+  [/^\/test-manager\/executions\/manual\/\d+$/, '手工执行'],
+  [/^\/test-manager\/executions\/[^/]+$/, '执行详情'],
+]
 
 const defaultCollapsedSidebarPaths = ['/ai-assistant', '/test-manager/test-cases/create']
 
@@ -128,6 +162,8 @@ const AppLayout: React.FC = () => {
   const currentTitle = useMemo(() => {
     const exact = pageTitles[location.pathname]
     if (exact) return exact
+    const dynamicMatch = dynamicPageTitleRules.find(([pattern]) => pattern.test(location.pathname))
+    if (dynamicMatch) return dynamicMatch[1]
     const match = Object.keys(pageTitles)
       .filter((path) => path !== '/' && location.pathname.startsWith(path))
       .sort((a, b) => b.length - a.length)[0]
@@ -252,7 +288,7 @@ const AppLayout: React.FC = () => {
     <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
       <aside
         className={`fixed inset-y-0 left-0 z-40 w-64 transform border-r border-slate-200 bg-white text-slate-700 shadow-sm transition-[width,transform] dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200 lg:translate-x-0 ${
-          sidebarCollapsed ? 'lg:w-16' : 'lg:w-32'
+          sidebarCollapsed ? 'lg:w-16' : 'lg:w-48'
         } ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
@@ -320,7 +356,7 @@ const AppLayout: React.FC = () => {
 
       {sidebarOpen && <div className="fixed inset-0 z-30 bg-black/40 lg:hidden" onClick={() => setSidebarOpen(false)} />}
 
-      <div className={`transition-[padding] ${sidebarCollapsed ? 'lg:pl-16' : 'lg:pl-32'}`}>
+      <div className={`transition-[padding] ${sidebarCollapsed ? 'lg:pl-16' : 'lg:pl-48'}`}>
         <header className="sticky top-0 z-20 flex h-14 items-center justify-between border-b border-slate-200 bg-white/95 px-4 shadow-sm backdrop-blur dark:border-slate-800 dark:bg-slate-950/95">
           <div className="flex min-w-0 items-center gap-3">
             <button className="rounded-md p-2 hover:bg-gray-100 dark:hover:bg-slate-800 lg:hidden" onClick={() => setSidebarOpen(true)} aria-label="打开菜单">

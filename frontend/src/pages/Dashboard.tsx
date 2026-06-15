@@ -448,13 +448,10 @@ const Dashboard: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">仪表盘</h1>
-          {summary?.generated_at && (
-            <p className="mt-1 text-sm text-gray-500">更新时间：{formatTime(summary.generated_at)}</p>
-          )}
-        </div>
+      <div className="flex flex-wrap items-center justify-end gap-3">
+        {summary?.generated_at && (
+          <p className="text-sm text-gray-500">更新时间：{formatTime(summary.generated_at)}</p>
+        )}
         <Button type="button" variant="outline" onClick={loadSummary} disabled={loading} className="w-fit">
           <RefreshCw className={cn('mr-2 h-4 w-4', loading && 'animate-spin')} />
           刷新

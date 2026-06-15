@@ -325,7 +325,7 @@ const TestPlanCreate: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
           <Link to="/test-manager/test-plans">
@@ -334,14 +334,11 @@ const TestPlanCreate: React.FC = () => {
               返回列表
             </Button>
           </Link>
-          <div>
-            <h1 className="text-2xl font-bold">创建测试计划</h1>
-          </div>
         </div>
       </div>
 
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
           {aiDraft && (
             <Card className="border-blue-200 bg-blue-50">
               <CardContent className="p-4 text-sm text-blue-800">
@@ -354,8 +351,8 @@ const TestPlanCreate: React.FC = () => {
               {referenceError}
             </div>
           )}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2 space-y-6">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+            <div className="space-y-4 lg:col-span-2">
               <Card>
                 <CardHeader>
                   <CardTitle>基本信息</CardTitle>
@@ -452,7 +449,7 @@ const TestPlanCreate: React.FC = () => {
               </Card>
             </div>
 
-            <div className="space-y-6">
+            <div className="space-y-4">
               <Card>
                 <CardHeader>
                   <CardTitle>关联信息</CardTitle>

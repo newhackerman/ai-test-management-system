@@ -751,13 +751,7 @@ const AIAssistant: React.FC = () => {
 
   return (
     <div className="flex h-[calc(100vh-112px)] min-h-[680px] flex-col gap-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="flex items-center gap-2 text-2xl font-semibold text-gray-950">
-            <Bot className="h-7 w-7 text-blue-600" />
-            AI 助手
-          </h1>
-        </div>
+      <div className="flex flex-wrap justify-end gap-3">
         <div className="flex flex-wrap items-center gap-2">
           {statusInfo && !statusInfo.configured && (
             <Badge variant="destructive" className="rounded-md">服务未就绪</Badge>

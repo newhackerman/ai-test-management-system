@@ -231,10 +231,7 @@ const Statistics: React.FC = () => {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">数据统计</h1>
-        </div>
+      <div className="flex flex-wrap justify-end gap-3">
         <div className="flex flex-wrap items-center gap-2">
           <select 
             value={timeRange}

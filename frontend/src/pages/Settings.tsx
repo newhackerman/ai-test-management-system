@@ -149,10 +149,7 @@ const Settings: React.FC = () => {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">系统设置</h1>
-        </div>
+      <div className="flex flex-wrap justify-end gap-3">
         <div className="flex items-center space-x-2">
           <button onClick={handleReset} disabled={actionDisabled} className="h-9 rounded-md border bg-background px-3 text-sm hover:bg-accent disabled:opacity-50">
             {isResetting ? '重置中...' : '重置'}

@@ -344,7 +344,7 @@ const ManualExecution: React.FC = () => {
 
   if (!caseId) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-4">
         <div className="flex items-center gap-3">
           <Button asChild variant="ghost" size="sm">
             <Link to="/test-manager/executions">
@@ -352,9 +352,6 @@ const ManualExecution: React.FC = () => {
               返回执行管理
             </Link>
           </Button>
-          <div>
-            <h1 className="text-2xl font-bold">选择手工执行用例</h1>
-          </div>
         </div>
 
         <Card>
@@ -416,7 +413,7 @@ const ManualExecution: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div className="flex items-center gap-3">
           <Button asChild variant="ghost" size="sm">
@@ -426,7 +423,6 @@ const ManualExecution: React.FC = () => {
             </Link>
           </Button>
           <div>
-            <h1 className="text-2xl font-bold">手工执行</h1>
             <p className="text-sm text-muted-foreground">{testCase.case_code} · {testCase.case_title}</p>
           </div>
         </div>
@@ -469,8 +465,8 @@ const ManualExecution: React.FC = () => {
         </Card>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        <div className="space-y-6 lg:col-span-2">
+      <div className="grid gap-4 lg:grid-cols-3">
+        <div className="space-y-4 lg:col-span-2">
           <Card>
             <CardHeader className="gap-2 md:flex-row md:items-center md:justify-between">
               <CardTitle className="text-lg">执行步骤</CardTitle>
@@ -529,7 +525,7 @@ const ManualExecution: React.FC = () => {
           </Card>
         </div>
 
-        <div className="space-y-6">
+        <div className="space-y-4">
           <Card>
             <CardHeader><CardTitle className="text-lg">用例信息</CardTitle></CardHeader>
             <CardContent className="space-y-4 text-sm">

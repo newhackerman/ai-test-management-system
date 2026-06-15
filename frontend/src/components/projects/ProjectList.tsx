@@ -213,12 +213,9 @@ const ProjectList: React.FC<ProjectListProps> = ({
   )
 
   return (
-    <div className={`space-y-6 ${className}`}>
+    <div className={`space-y-4 ${className}`}>
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">项目管理</h1>
-        </div>
+      <div className="flex items-center justify-end">
         <div className="flex items-center space-x-2">
           <Button variant="outline" onClick={onRefresh} disabled={loading}>
             <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />

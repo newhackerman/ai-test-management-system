@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Navigate, useLocation } from 'react-router-dom'
+import { Link, Navigate, useLocation } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
@@ -110,7 +110,12 @@ const Login: React.FC = () => {
               />
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium">密码</label>
+              <div className="mb-1 flex items-center justify-between gap-3">
+                <label className="block text-sm font-medium">密码</label>
+                <Link to="/auth/forgot-password" className="text-sm text-blue-600 hover:text-blue-700 hover:underline">
+                  忘记密码？
+                </Link>
+              </div>
               <Input
                 type="password"
                 value={formData.password}

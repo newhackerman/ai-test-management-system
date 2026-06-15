@@ -151,7 +151,7 @@ const TestCaseCreate: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="flex items-center gap-4">
         <Link to="/test-manager/test-cases">
           <Button variant="ghost" size="sm">
@@ -159,12 +159,9 @@ const TestCaseCreate: React.FC = () => {
             返回列表
           </Button>
         </Link>
-        <div>
-          <h1 className="text-2xl font-bold">创建测试用例</h1>
-        </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit} className="space-y-4">
         {aiDraft && (
           <Card className="border-blue-200 bg-blue-50">
             <CardContent className="p-4 text-sm text-blue-800">

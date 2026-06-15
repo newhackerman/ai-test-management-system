@@ -279,10 +279,7 @@ const Profile: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">个人资料</h1>
-        </div>
+      <div className="flex flex-wrap justify-end gap-3">
         <button onClick={handleSave} disabled={isSaving} className="rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 disabled:opacity-50">
           {isSaving ? '保存中...' : '保存更改'}
         </button>

@@ -48,10 +48,13 @@ export const forgotPassword = async (email: string): Promise<ApiResponse<void>> 
 // 重置密码
 export const resetPassword = async (data: {
   token: string;
-  password: string;
+  new_password: string;
   confirmPassword: string;
 }): Promise<ApiResponse<void>> => {
-  const response = await apiClient.post('/api/v1/auth/reset-password', data);
+  const response = await apiClient.post('/api/v1/auth/reset-password', {
+    token: data.token,
+    new_password: data.new_password,
+  });
   return response;
 };
 

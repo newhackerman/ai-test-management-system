@@ -161,10 +161,7 @@ const TestManager: React.FC = () => {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">测试概览</h1>
-        </div>
+      <div className="flex flex-wrap justify-end gap-3">
         <div className="flex flex-wrap gap-2">
           <Button asChild variant="outline">
             <Link to="/test-manager/test-cases/create">

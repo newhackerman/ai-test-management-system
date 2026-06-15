@@ -434,13 +434,7 @@ function RiskManagement() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <div>
-          <h1 className="flex items-center gap-2 text-2xl font-bold text-foreground">
-            <ShieldAlert className="h-6 w-6" />
-            风险管理
-          </h1>
-        </div>
+      <div className="flex flex-wrap justify-end gap-3">
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" onClick={() => loadRisks(page)} disabled={loading}>
             <RefreshCw className="mr-2 h-4 w-4" />
