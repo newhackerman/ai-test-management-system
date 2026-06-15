@@ -1,8 +1,10 @@
 import React, { useState } from 'react'
 import { Link, Navigate, useLocation } from 'react-router-dom'
+import { AlertCircle, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
+import { Label } from '@/components/ui/Label'
 import { useAuth } from '@/stores/auth'
 
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000').replace(/\/$/, '')
@@ -92,46 +94,114 @@ const Login: React.FC = () => {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle className="text-center">登录</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="mb-1 block text-sm font-medium">用户名</label>
-              <Input
-                value={formData.username}
-                onChange={(event) => setFormData((prev) => ({ ...prev, username: event.target.value }))}
-                placeholder="请输入用户名"
-                autoComplete="username"
-                required
-              />
+    <div className="flex min-h-screen">
+      {/* 左側品牌面板 — 桌面端可见 */}
+      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-primary/90 via-primary to-primary-800 items-center justify-center relative overflow-hidden">
+        <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '24px 24px' }} />
+        <div className="relative z-10 text-center px-8">
+          <div className="inline-flex h-20 w-20 items-center justify-center rounded-2xl bg-white/20 backdrop-blur mb-6 shadow-lg">
+            <span className="text-3xl font-bold text-white">AI</span>
+          </div>
+          <h1 className="text-4xl font-bold text-white tracking-tight">AI 测试管理系统</h1>
+          <p className="mt-4 text-lg text-white/80 max-w-md mx-auto">
+            智能化测试管理平台，覆盖测试计划、用例管理、缺陷跟踪与报告分析全流程
+          </p>
+          <div className="mt-10 flex items-center justify-center gap-8 text-white/60 text-sm">
+            <div className="flex items-center gap-2">
+              <div className="h-2 w-2 rounded-full bg-emerald-400" />
+              <span>自动化测试</span>
             </div>
-            <div>
-              <div className="mb-1 flex items-center justify-between gap-3">
-                <label className="block text-sm font-medium">密码</label>
-                <Link to="/auth/forgot-password" className="text-sm text-blue-600 hover:text-blue-700 hover:underline">
-                  忘记密码？
-                </Link>
-              </div>
-              <Input
-                type="password"
-                value={formData.password}
-                onChange={(event) => setFormData((prev) => ({ ...prev, password: event.target.value }))}
-                placeholder="请输入密码"
-                autoComplete="current-password"
-                required
-              />
+            <div className="flex items-center gap-2">
+              <div className="h-2 w-2 rounded-full bg-amber-400" />
+              <span>性能监控</span>
             </div>
-            {error && <div className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-600">{error}</div>}
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? '登录中...' : '登录'}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+            <div className="flex items-center gap-2">
+              <div className="h-2 w-2 rounded-full bg-sky-400" />
+              <span>AI 辅助</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 右側登錄表單 */}
+      <div className="flex w-full lg:w-1/2 items-center justify-center bg-background px-4 sm:px-8">
+        <div className="w-full max-w-sm">
+          {/* 移動端 logo */}
+          <div className="mb-8 text-center lg:hidden">
+            <div className="inline-flex h-14 w-14 items-center justify-center rounded-xl bg-primary mb-3">
+              <span className="text-2xl font-bold text-primary-foreground">AI</span>
+            </div>
+            <h1 className="text-2xl font-bold text-foreground">AI 测试管理</h1>
+          </div>
+
+          <Card className="border-0 shadow-none sm:border sm:shadow-sm">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-center text-xl">欢迎回来</CardTitle>
+              <CardDescription className="text-center">请输入您的账号信息登录系统</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div>
+                  <Label htmlFor="username" className="mb-1.5">用户名</Label>
+                  <Input
+                    id="username"
+                    value={formData.username}
+                    onChange={(event) => setFormData((prev) => ({ ...prev, username: event.target.value }))}
+                    placeholder="请输入用户名"
+                    autoComplete="username"
+                    required
+                    className="h-11"
+                  />
+                </div>
+                <div>
+                  <div className="mb-1.5 flex items-center justify-between">
+                    <Label htmlFor="password">密码</Label>
+                    <Link to="/auth/forgot-password" className="text-xs text-primary hover:text-primary/80 hover:underline transition-colors">
+                      忘记密码？
+                    </Link>
+                  </div>
+                  <Input
+                    id="password"
+                    type="password"
+                    value={formData.password}
+                    onChange={(event) => setFormData((prev) => ({ ...prev, password: event.target.value }))}
+                    placeholder="请输入密码"
+                    autoComplete="current-password"
+                    required
+                    className="h-11"
+                  />
+                </div>
+
+                {error && (
+                  <div className="flex items-start gap-2 rounded-md bg-destructive/10 px-3 py-2.5 text-sm text-destructive border border-destructive/20">
+                    <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
+                    <span>{error}</span>
+                  </div>
+                )}
+
+                <Button
+                  type="submit"
+                  className="h-11 w-full text-base"
+                  disabled={loading}
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      登录中...
+                    </>
+                  ) : (
+                    '登录'
+                  )}
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+
+          <p className="mt-6 text-center text-xs text-muted-foreground">
+            © 2026 AI Test Management System
+          </p>
+        </div>
+      </div>
     </div>
   )
 }
