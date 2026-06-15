@@ -1,4 +1,4 @@
-// @ts-nocheck
+﻿// @ts-nocheck
 import React, { useEffect, useMemo, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { AlertCircle, ArrowLeft, Download, Eye, FileText, Settings } from 'lucide-react'
@@ -618,7 +618,7 @@ const Field = ({ label, children }: { label: string; children: React.ReactNode }
 
 const Info = ({ label, value }: { label: string; value: React.ReactNode }) => (
   <div className="flex justify-between">
-    <span className="text-gray-500">{label}</span>
+    <span className="text-gray-500 dark:text-gray-400">{label}</span>
     <span className="font-medium">{value}</span>
   </div>
 )

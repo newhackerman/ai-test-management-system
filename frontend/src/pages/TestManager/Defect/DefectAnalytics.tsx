@@ -1,4 +1,4 @@
-import React from 'react'
+﻿import React from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { AlertTriangle, BarChart3, Calendar, PieChart, TrendingUp } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/Card'
@@ -207,24 +207,24 @@ const DefectAnalytics: React.FC = () => {
           </CardHeader>
           <CardContent className="px-4 pb-4">
             {trendData.length === 0 ? (
-              <div className="flex h-56 items-center justify-center text-gray-500">当前时间范围内暂无趋势数据</div>
+              <div className="flex h-56 items-center justify-center text-gray-500 dark:text-gray-400">当前时间范围内暂无趋势数据</div>
             ) : (
               <div className="h-56 space-y-2.5 overflow-y-auto pr-2">
                 {trendData.map((item: any) => (
                   <div key={item.date} className="grid grid-cols-[56px_1fr_72px] items-center gap-3 text-sm">
-                    <span className="text-gray-500">{formatDate(item.date)}</span>
+                    <span className="text-gray-500 dark:text-gray-400">{formatDate(item.date)}</span>
                     <div className="space-y-1">
-                      <div className="h-2 rounded bg-gray-100">
+                      <div className="h-2 rounded bg-gray-100 dark:bg-gray-800">
                         <div className="h-2 rounded bg-blue-500" style={{ width: `${percent(item.new_defects || 0, maxDaily)}%` }} />
                       </div>
-                      <div className="h-2 rounded bg-gray-100">
+                      <div className="h-2 rounded bg-gray-100 dark:bg-gray-800">
                         <div className="h-2 rounded bg-green-500" style={{ width: `${percent(item.resolved_defects || 0, maxDaily)}%` }} />
                       </div>
                     </div>
-                    <span className="text-right text-gray-600">新{item.new_defects || 0} / 解{item.resolved_defects || 0}</span>
+                    <span className="text-right text-gray-600 dark:text-gray-400">新{item.new_defects || 0} / 解{item.resolved_defects || 0}</span>
                   </div>
                 ))}
-                <div className="flex gap-4 pt-2 text-xs text-gray-500">
+                <div className="flex gap-4 pt-2 text-xs text-gray-500 dark:text-gray-400">
                   <span><span className="mr-1 inline-block h-2 w-4 rounded bg-blue-500" />新增</span>
                   <span><span className="mr-1 inline-block h-2 w-4 rounded bg-green-500" />解决</span>
                 </div>
@@ -273,15 +273,15 @@ const DefectAnalytics: React.FC = () => {
               <div className="grid grid-cols-3 gap-4 pt-2 text-center">
                 <div>
                   <p className="text-lg font-bold text-blue-600">{openDefects}</p>
-                  <p className="text-sm text-gray-600">未完成</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">未完成</p>
                 </div>
                 <div>
                   <p className="text-lg font-bold text-green-600">{stats.resolved_defects}</p>
-                  <p className="text-sm text-gray-600">已完成</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">已完成</p>
                 </div>
                 <div>
                   <p className="text-lg font-bold text-orange-600">{stats.reopen_rate || 0}%</p>
-                  <p className="text-sm text-gray-600">重开率</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">重开率</p>
                 </div>
               </div>
             </div>
@@ -301,7 +301,7 @@ const DefectAnalytics: React.FC = () => {
                     <Link key={item.key} to={`/test-manager/defects?${listQueryPrefix}status=${item.key}`}>
                       <Badge variant="outline">{item.label} {item.value}</Badge>
                     </Link>
-                  )) : <span className="text-sm text-gray-500">暂无状态数据</span>}
+                  )) : <span className="text-sm text-gray-500 dark:text-gray-400">暂无状态数据</span>}
                 </div>
               </div>
               <div>
@@ -311,7 +311,7 @@ const DefectAnalytics: React.FC = () => {
                     <Link key={item.key} to={`/test-manager/defects?${listQueryPrefix}defect_type=${item.key}`}>
                       <Badge variant="secondary">{item.label} {item.value}</Badge>
                     </Link>
-                  )) : <span className="text-sm text-gray-500">暂无类型数据</span>}
+                  )) : <span className="text-sm text-gray-500 dark:text-gray-400">暂无类型数据</span>}
                 </div>
               </div>
             </div>
@@ -336,7 +336,7 @@ const DefectAnalytics: React.FC = () => {
               </div>
             )}
             {total === 0 && (
-              <div className="rounded-md bg-gray-50 px-3 py-2 text-sm text-gray-600">
+              <div className="rounded-md bg-gray-50 px-3 py-2 text-sm text-gray-600 dark:text-gray-400 dark:bg-gray-800/50">
                 暂无缺陷数据，创建缺陷后这里会展示真实统计。
               </div>
             )}

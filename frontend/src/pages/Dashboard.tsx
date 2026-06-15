@@ -450,7 +450,7 @@ const Dashboard: React.FC = () => {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-end gap-3">
         {summary?.generated_at && (
-          <p className="text-sm text-gray-500">更新时间：{formatTime(summary.generated_at)}</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400">更新时间：{formatTime(summary.generated_at)}</p>
         )}
         <Button type="button" variant="outline" onClick={loadSummary} disabled={loading} className="w-fit">
           <RefreshCw className={cn('mr-2 h-4 w-4', loading && 'animate-spin')} />
@@ -473,14 +473,14 @@ const Dashboard: React.FC = () => {
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 2xl:grid-cols-4">
         {keyMetrics.map((metric) => (
           <Link key={metric.title} to={metric.link} className="block">
-            <Card className="h-full transition-colors hover:bg-gray-50">
+            <Card className="h-full transition-colors hover:bg-gray-50 dark:bg-gray-800/50 dark:hover:bg-gray-800">
               <CardContent className="flex h-full items-start justify-between gap-4 p-5">
                 <div className="min-w-0">
-                  <p className="text-sm font-medium text-gray-600">{metric.title}</p>
-                  <p className="mt-2 text-3xl font-bold text-gray-900">
+                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">{metric.title}</p>
+                  <p className="mt-2 text-3xl font-bold text-gray-900 dark:text-gray-100">
                     {loading ? '...' : typeof metric.value === 'number' ? formatNumber(metric.value) : metric.value || '0'}
                   </p>
-                  <p className="mt-2 text-sm text-gray-500">{metric.helper}</p>
+                  <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">{metric.helper}</p>
                 </div>
                 <div className={cn('rounded-lg p-3', metric.tone)}>
                   <metric.icon className="h-6 w-6" />
@@ -527,7 +527,7 @@ const Dashboard: React.FC = () => {
             )}
             {canView('meetings') && (
             <div className="rounded-lg border p-4">
-              <div className="mb-3 flex items-center gap-2 text-sm font-medium text-gray-700">
+              <div className="mb-3 flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
                 <CalendarDays className="h-4 w-4" />
                 会议
               </div>
@@ -540,7 +540,7 @@ const Dashboard: React.FC = () => {
             )}
             {canView('reports') && (
             <div className="rounded-lg border p-4">
-              <div className="mb-3 flex items-center gap-2 text-sm font-medium text-gray-700">
+              <div className="mb-3 flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
                 <FileText className="h-4 w-4" />
                 测试报告
               </div>
@@ -609,7 +609,7 @@ const Dashboard: React.FC = () => {
             {loading ? (
               <div className="space-y-3">
                 {Array.from({ length: 5 }).map((_, index) => (
-                  <div key={index} className="h-12 animate-pulse rounded bg-gray-100" />
+                  <div key={index} className="h-12 animate-pulse rounded bg-gray-100 dark:bg-gray-800" />
                 ))}
               </div>
             ) : summary?.recent_activity?.length ? (
@@ -618,14 +618,14 @@ const Dashboard: React.FC = () => {
                   <Link
                     key={`${item.type}-${item.title}-${index}`}
                     to={item.link || '/'}
-                    className="flex items-center justify-between gap-4 py-3 hover:bg-gray-50"
+                    className="flex items-center justify-between gap-4 py-3 hover:bg-gray-50 dark:bg-gray-800/50 dark:hover:bg-gray-800"
                   >
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
                         <Badge variant="secondary">{typeLabels[item.type]}</Badge>
-                        <p className="truncate text-sm font-medium text-gray-900">{item.title || '未命名记录'}</p>
+                        <p className="truncate text-sm font-medium text-gray-900 dark:text-gray-100">{item.title || '未命名记录'}</p>
                       </div>
-                      <p className="mt-1 text-xs text-gray-500">{formatTime(item.occurred_at)}</p>
+                      <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{formatTime(item.occurred_at)}</p>
                     </div>
                     <StatusBadge value={item.status} />
                   </Link>
@@ -645,14 +645,14 @@ const Dashboard: React.FC = () => {
             {loading ? (
               <div className="space-y-2">
                 {Array.from({ length: 6 }).map((_, index) => (
-                  <div key={index} className="h-8 animate-pulse rounded bg-gray-100" />
+                  <div key={index} className="h-8 animate-pulse rounded bg-gray-100 dark:bg-gray-800" />
                 ))}
               </div>
             ) : summary?.data_sources?.length ? (
               <div className="space-y-2">
                 {summary.data_sources.map((source) => (
                   <div key={source.table} className="flex items-center justify-between gap-3 rounded border px-3 py-2 text-sm">
-                    <span className="font-mono text-xs text-gray-700">{source.table}</span>
+                    <span className="font-mono text-xs text-gray-700 dark:text-gray-300">{source.table}</span>
                     <Badge variant={source.available ? 'secondary' : 'outline'} className={source.available ? 'text-emerald-700' : 'text-gray-500'}>
                       {source.available ? '已读取' : '无数据表'}
                     </Badge>
@@ -682,7 +682,7 @@ const CompactMetric = ({
   emphasis?: boolean
 }) => (
   <div>
-    <p className="text-xs text-gray-500">{label}</p>
+    <p className="text-xs text-gray-500 dark:text-gray-400">{label}</p>
     <p className={cn('mt-1 text-xl font-semibold', emphasis ? 'text-red-700' : 'text-gray-900')}>{loading ? '...' : formatNumber(value)}</p>
   </div>
 )
@@ -690,8 +690,8 @@ const CompactMetric = ({
 const ProgressBlock = ({ label, value }: { label: string; value?: number }) => (
   <div className="space-y-2">
     <div className="flex items-center justify-between text-sm">
-      <span className="font-medium text-gray-700">{label}</span>
-      <span className="text-gray-600">{formatPercent(value)}</span>
+      <span className="font-medium text-gray-700 dark:text-gray-300">{label}</span>
+      <span className="text-gray-600 dark:text-gray-400">{formatPercent(value)}</span>
     </div>
     <Progress value={clampPercent(value)} className="h-3" />
   </div>
@@ -709,8 +709,8 @@ const DistributionList = ({ items, total, emptyText }: { items: DistributionItem
         return (
           <div key={item.name} className="space-y-1">
             <div className="flex items-center justify-between text-sm">
-              <span className="text-gray-700">{statusLabels[item.name] || item.name}</span>
-              <span className="text-gray-500">
+              <span className="text-gray-700 dark:text-gray-300">{statusLabels[item.name] || item.name}</span>
+              <span className="text-gray-500 dark:text-gray-400">
                 {formatNumber(item.count)} / {formatPercent(percent)}
               </span>
             </div>
@@ -742,7 +742,7 @@ const StatusBadge = ({ value }: { value?: string | null }) => {
 }
 
 const EmptyState = ({ icon: Icon, text }: { icon: React.ElementType; text: string }) => (
-  <div className="flex items-center justify-center gap-2 rounded-lg border border-dashed p-5 text-sm text-gray-500">
+  <div className="flex items-center justify-center gap-2 rounded-lg border border-dashed p-5 text-sm text-gray-500 dark:text-gray-400">
     <Icon className="h-4 w-4" />
     {text}
   </div>

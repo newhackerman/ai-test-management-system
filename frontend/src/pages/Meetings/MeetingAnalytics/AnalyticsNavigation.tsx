@@ -1,4 +1,4 @@
-import React from 'react'
+﻿import React from 'react'
 import { Link, useLocation, useParams } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 import { 
@@ -70,7 +70,7 @@ const AnalyticsNavigation: React.FC<AnalyticsNavigationProps> = ({ className }) 
           {/* 返回会议详情 */}
           <Link
             to={`/meetings/${meetingId}`}
-            className="flex items-center space-x-2 text-gray-600 hover:text-gray-900 py-4"
+            className="flex items-center space-x-2 text-gray-600 hover:text-gray-900 py-4 dark:text-gray-100"
           >
             <TrendingUp className="h-5 w-5" />
             <span className="font-medium">返回会议</span>
@@ -97,7 +97,7 @@ const AnalyticsNavigation: React.FC<AnalyticsNavigationProps> = ({ className }) 
                 <Icon className="h-5 w-5" />
                 <div className="flex flex-col">
                   <span className="font-medium">{item.label}</span>
-                  <span className="text-xs text-gray-500">{item.description}</span>
+                  <span className="text-xs text-gray-500 dark:text-gray-400">{item.description}</span>
                 </div>
               </Link>
             )

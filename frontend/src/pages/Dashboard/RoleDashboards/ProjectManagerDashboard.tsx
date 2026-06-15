@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -201,7 +201,7 @@ const ProjectManagerDashboard: React.FC = () => {
               <AlertTriangle className="h-12 w-12 mx-auto" />
             </div>
             <h3 className="text-lg font-semibold mb-2">加载失败</h3>
-            <p className="text-gray-600 mb-4">{error}</p>
+            <p className="text-gray-600 mb-4 dark:text-gray-400">{error}</p>
             <Button onClick={() => window.location.reload()}>
               重新加载
             </Button>
@@ -212,7 +212,7 @@ const ProjectManagerDashboard: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6 p-6 bg-gray-50 min-h-screen">
+    <div className="space-y-6 p-6 bg-gray-50 min-h-screen dark:bg-gray-800/50">
       {/* Header */}
       <div className="bg-gradient-to-r from-emerald-600 to-teal-600 rounded-lg p-6 text-white">
         <div className="flex items-center justify-between">
@@ -232,7 +232,7 @@ const ProjectManagerDashboard: React.FC = () => {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">项目总数</p>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">项目总数</p>
                 <p className="text-2xl font-bold text-emerald-600">
                   {projectMetrics.totalProjects}
                 </p>
@@ -251,7 +251,7 @@ const ProjectManagerDashboard: React.FC = () => {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">团队成员</p>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">团队成员</p>
                 <p className="text-2xl font-bold text-blue-600">
                   {projectMetrics.teamMembers}
                 </p>
@@ -270,7 +270,7 @@ const ProjectManagerDashboard: React.FC = () => {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">预算使用率</p>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">预算使用率</p>
                 <p className="text-2xl font-bold text-orange-600">
                   {projectMetrics.budgetUtilization}%
                 </p>
@@ -289,7 +289,7 @@ const ProjectManagerDashboard: React.FC = () => {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">整体进度</p>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">整体进度</p>
                 <p className="text-2xl font-bold text-purple-600">
                   {projectMetrics.overallProgress}%
                 </p>
@@ -321,7 +321,7 @@ const ProjectManagerDashboard: React.FC = () => {
                 <div key={index} className="space-y-2">
                   <div className="flex justify-between text-sm">
                     <span className="font-medium">{project.name}</span>
-                    <span className="text-gray-500">健康度: {project.health}%</span>
+                    <span className="text-gray-500 dark:text-gray-400">健康度: {project.health}%</span>
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-2">
                     <div 
@@ -332,7 +332,7 @@ const ProjectManagerDashboard: React.FC = () => {
                       style={{ width: `${project.health}%` }}
                     ></div>
                   </div>
-                  <div className="flex justify-between text-xs text-gray-500">
+                  <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400">
                     <span>进度: {project.progress}%</span>
                     <span className={
                       project.health >= 80 ? 'text-green-600' :
@@ -406,19 +406,19 @@ const ProjectManagerDashboard: React.FC = () => {
                   </div>
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
-                      <span className="text-gray-500">进度: </span>
+                      <span className="text-gray-500 dark:text-gray-400">进度: </span>
                       <span>{project.progress}%</span>
                     </div>
                     <div>
-                      <span className="text-gray-500">团队: </span>
+                      <span className="text-gray-500 dark:text-gray-400">团队: </span>
                       <span>{project.team}人</span>
                     </div>
                     <div>
-                      <span className="text-gray-500">预算: </span>
+                      <span className="text-gray-500 dark:text-gray-400">预算: </span>
                       <span>{((project.budget.used / project.budget.planned) * 100).toFixed(1)}%</span>
                     </div>
                     <div>
-                      <span className="text-gray-500">截止: </span>
+                      <span className="text-gray-500 dark:text-gray-400">截止: </span>
                       <span>{project.deadline}</span>
                     </div>
                   </div>
@@ -447,12 +447,12 @@ const ProjectManagerDashboard: React.FC = () => {
                     }`}></div>
                     <div>
                       <p className="font-medium text-sm">{member.name}</p>
-                      <p className="text-xs text-gray-500">{member.role}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">{member.role}</p>
                     </div>
                   </div>
                   <div className="text-right">
                     <p className="text-sm font-medium">工作负载: {member.workload}%</p>
-                    <p className="text-xs text-gray-500">项目: {member.projects}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">项目: {member.projects}</p>
                   </div>
                 </div>
               ))}
@@ -503,7 +503,7 @@ const ProjectManagerDashboard: React.FC = () => {
                   </div>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">项目: {risk.project}</span>
+                  <span className="text-gray-600 dark:text-gray-400">项目: {risk.project}</span>
                   <Badge 
                     variant={
                       risk.status === 'open' ? 'destructive' :

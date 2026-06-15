@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -144,7 +144,7 @@ const DesignerDashboard: React.FC = () => {
               <AlertTriangle className="h-12 w-12 mx-auto" />
             </div>
             <h3 className="text-lg font-semibold mb-2">加载失败</h3>
-            <p className="text-gray-600 mb-4">{error}</p>
+            <p className="text-gray-600 mb-4 dark:text-gray-400">{error}</p>
             <Button onClick={() => window.location.reload()}>
               重新加载
             </Button>
@@ -155,7 +155,7 @@ const DesignerDashboard: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6 p-6 bg-gray-50 min-h-screen">
+    <div className="space-y-6 p-6 bg-gray-50 min-h-screen dark:bg-gray-800/50">
       {/* Header */}
       <div className="bg-gradient-to-r from-purple-600 to-pink-600 rounded-lg p-6 text-white">
         <div className="flex items-center justify-between">
@@ -175,7 +175,7 @@ const DesignerDashboard: React.FC = () => {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">设计质量</p>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">设计质量</p>
                 <p className="text-2xl font-bold text-purple-600">
                   {designMetrics.designQualityScore}
                 </p>
@@ -194,7 +194,7 @@ const DesignerDashboard: React.FC = () => {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">用户反馈</p>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">用户反馈</p>
                 <p className="text-2xl font-bold text-green-600">
                   {designMetrics.userFeedbackScore}
                 </p>
@@ -213,7 +213,7 @@ const DesignerDashboard: React.FC = () => {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">设计系统使用率</p>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">设计系统使用率</p>
                 <p className="text-2xl font-bold text-blue-600">
                   {designMetrics.designSystemUsage}%
                 </p>
@@ -232,7 +232,7 @@ const DesignerDashboard: React.FC = () => {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">无障碍评分</p>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">无障碍评分</p>
                 <p className="text-2xl font-bold text-orange-600">
                   {designMetrics.accessibilityScore}
                 </p>
@@ -332,7 +332,7 @@ const DesignerDashboard: React.FC = () => {
                       style={{ width: `${project.progress}%` }}
                     ></div>
                   </div>
-                  <div className="flex justify-between text-sm text-gray-500">
+                  <div className="flex justify-between text-sm text-gray-500 dark:text-gray-400">
                     <span>{project.progress}% 完成</span>
                     <span>截止：{project.deadline}</span>
                   </div>
@@ -366,7 +366,7 @@ const DesignerDashboard: React.FC = () => {
                          task.type === 'prototype' ? '原型' :
                          task.type === 'documentation' ? '文档' : '响应式'}
                       </Badge>
-                      <span className="text-xs text-gray-500">{task.deadline}</span>
+                      <span className="text-xs text-gray-500 dark:text-gray-400">{task.deadline}</span>
                     </div>
                   </div>
                 </div>
@@ -402,7 +402,7 @@ const DesignerDashboard: React.FC = () => {
                        review.status === 'pending' ? '待评审' : '需修改'}
                     </Badge>
                   </div>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
                     评审人：{review.reviewer}
                   </p>
                   <Badge 

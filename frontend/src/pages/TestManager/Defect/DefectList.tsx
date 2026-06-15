@@ -1,4 +1,4 @@
-// @ts-nocheck
+﻿// @ts-nocheck
 import React, { useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { AlertTriangle, Calendar, Download, Eye, MessageSquare, MoreHorizontal, Paperclip, Pencil, Plus, Search, Trash2, User, UserCheck } from 'lucide-react'
@@ -678,7 +678,7 @@ const DefectList: React.FC = () => {
                       >
                         {defect.title}
                       </button>
-                      <div className="text-sm text-gray-500">{defect.defect_code}</div>
+                      <div className="text-sm text-gray-500 dark:text-gray-400">{defect.defect_code}</div>
                       {defect.found_in_version && (
                         <div className="text-xs text-gray-400">发现版本：{defect.found_in_version}</div>
                       )}
@@ -771,7 +771,7 @@ const DefectList: React.FC = () => {
           </div>
 
           {defects.length === 0 && (
-            <div className="text-center py-8 text-gray-500">暂无缺陷数据</div>
+            <div className="text-center py-8 text-gray-500 dark:text-gray-400">暂无缺陷数据</div>
           )}
         </CardContent>
       </Card>
@@ -961,45 +961,45 @@ const DefectList: React.FC = () => {
                 <DialogTitle>{detailDefect.title}</DialogTitle>
               </DialogHeader>
               <div className="grid grid-cols-2 gap-3 text-sm">
-                <div><span className="text-gray-500">编号：</span>{detailDefect.defect_code}</div>
-                <div><span className="text-gray-500">状态：</span>{labelOf(statusOptions, detailDefect.status)}</div>
-                <div><span className="text-gray-500">类型：</span>{labelOf(defectTypeOptions, detailDefect.defect_type)}</div>
-                <div><span className="text-gray-500">严重程度：</span>{labelOf(severityOptions, detailDefect.severity)}</div>
-                <div><span className="text-gray-500">优先级：</span>{labelOf(priorityOptions, detailDefect.priority)}</div>
-                <div><span className="text-gray-500">负责人：</span>{detailDefect.assignee_id ? (userNameById[Number(detailDefect.assignee_id)] || `用户 #${detailDefect.assignee_id}`) : '未分配'}</div>
+                <div><span className="text-gray-500 dark:text-gray-400">编号：</span>{detailDefect.defect_code}</div>
+                <div><span className="text-gray-500 dark:text-gray-400">状态：</span>{labelOf(statusOptions, detailDefect.status)}</div>
+                <div><span className="text-gray-500 dark:text-gray-400">类型：</span>{labelOf(defectTypeOptions, detailDefect.defect_type)}</div>
+                <div><span className="text-gray-500 dark:text-gray-400">严重程度：</span>{labelOf(severityOptions, detailDefect.severity)}</div>
+                <div><span className="text-gray-500 dark:text-gray-400">优先级：</span>{labelOf(priorityOptions, detailDefect.priority)}</div>
+                <div><span className="text-gray-500 dark:text-gray-400">负责人：</span>{detailDefect.assignee_id ? (userNameById[Number(detailDefect.assignee_id)] || `用户 #${detailDefect.assignee_id}`) : '未分配'}</div>
               </div>
               <div>
                 <div className="mb-1 text-sm font-medium">关联对象</div>
-                <div className="grid grid-cols-1 gap-2 rounded-md bg-gray-50 p-3 text-sm md:grid-cols-2">
+                <div className="grid grid-cols-1 gap-2 rounded-md bg-gray-50 p-3 text-sm md:grid-cols-2 dark:bg-gray-800/50">
                   {getRelatedPlanId(detailDefect) ? (
                     <Link to={`/test-manager/test-plans/${getRelatedPlanId(detailDefect)}`} className="text-blue-600 hover:text-blue-800">
                       计划：{getPlanLabel(getRelatedPlanId(detailDefect))}
                     </Link>
-                  ) : <span className="text-gray-500">计划：未关联</span>}
+                  ) : <span className="text-gray-500 dark:text-gray-400">计划：未关联</span>}
                   {detailDefect.test_case_id ? (
                     <Link to={`/test-manager/test-cases/${detailDefect.test_case_id}`} className="text-blue-600 hover:text-blue-800">
                       用例：{getCaseLabel(detailDefect.test_case_id)}
                     </Link>
-                  ) : <span className="text-gray-500">用例：未关联</span>}
+                  ) : <span className="text-gray-500 dark:text-gray-400">用例：未关联</span>}
                   {detailDefect.test_execution_id ? (
                     <Link to={`/test-manager/executions/${detailDefect.test_execution_id}`} className="text-blue-600 hover:text-blue-800">
                       执行：{getExecutionLabel(detailDefect.test_execution_id)}
                     </Link>
-                  ) : <span className="text-gray-500">执行：未关联</span>}
+                  ) : <span className="text-gray-500 dark:text-gray-400">执行：未关联</span>}
                   {detailDefect.requirement_id ? (
                     <Link to={`/requirements?search=${encodeURIComponent(getRequirementLabel(detailDefect.requirement_id))}`} className="text-blue-600 hover:text-blue-800">
                       需求：{getRequirementLabel(detailDefect.requirement_id)}
                     </Link>
-                  ) : <span className="text-gray-500">需求：未关联</span>}
+                  ) : <span className="text-gray-500 dark:text-gray-400">需求：未关联</span>}
                 </div>
               </div>
               <div>
                 <div className="mb-1 text-sm font-medium">缺陷描述</div>
-                <div className="rounded-md bg-gray-50 p-3 text-sm whitespace-pre-wrap">{detailDefect.description || '-'}</div>
+                <div className="rounded-md bg-gray-50 p-3 text-sm whitespace-pre-wrap dark:bg-gray-800/50">{detailDefect.description || '-'}</div>
               </div>
               <div>
                 <div className="mb-1 text-sm font-medium">复现步骤</div>
-                <div className="rounded-md bg-gray-50 p-3 text-sm whitespace-pre-wrap">{detailDefect.steps_to_reproduce || '-'}</div>
+                <div className="rounded-md bg-gray-50 p-3 text-sm whitespace-pre-wrap dark:bg-gray-800/50">{detailDefect.steps_to_reproduce || '-'}</div>
               </div>
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div className="space-y-3 rounded-md border p-3">
@@ -1014,10 +1014,10 @@ const DefectList: React.FC = () => {
                       </Button>
                     ))}
                     {(statusTransitions[detailDefect.status] || []).length === 0 && (
-                      <span className="text-sm text-gray-500">当前状态暂无后续流转</span>
+                      <span className="text-sm text-gray-500 dark:text-gray-400">当前状态暂无后续流转</span>
                     )}
                   </div>
-                  <div className="grid grid-cols-2 gap-2 text-xs text-gray-500">
+                  <div className="grid grid-cols-2 gap-2 text-xs text-gray-500 dark:text-gray-400">
                     <span>报告：{formatDate(detailDefect.reported_at)}</span>
                     <span>解决：{detailDefect.resolved_at ? formatDate(detailDefect.resolved_at) : '-'}</span>
                     <span>验证：{detailDefect.verified_at ? formatDate(detailDefect.verified_at) : '-'}</span>
@@ -1038,12 +1038,12 @@ const DefectList: React.FC = () => {
                   </div>
                   <div className="max-h-32 space-y-2 overflow-y-auto">
                     {(detailDefect.attachments || []).length ? detailDefect.attachments.map((file, index) => (
-                      <div key={`${file.file_path || file.filename}-${index}`} className="flex items-center justify-between rounded bg-gray-50 px-2 py-1 text-xs">
+                      <div key={`${file.file_path || file.filename}-${index}`} className="flex items-center justify-between rounded bg-gray-50 px-2 py-1 text-xs dark:bg-gray-800/50">
                         <span className="truncate">{file.filename || `附件 ${index + 1}`}</span>
-                        <span className="ml-2 text-gray-500">{formatFileSize(file.file_size)}</span>
+                        <span className="ml-2 text-gray-500 dark:text-gray-400">{formatFileSize(file.file_size)}</span>
                       </div>
                     )) : (
-                      <div className="text-sm text-gray-500">暂无附件</div>
+                      <div className="text-sm text-gray-500 dark:text-gray-400">暂无附件</div>
                     )}
                   </div>
                 </div>
@@ -1056,11 +1056,11 @@ const DefectList: React.FC = () => {
                 </div>
                 <div className="max-h-40 space-y-2 overflow-y-auto">
                   {detailComments.isLoading ? (
-                    <div className="text-sm text-gray-500">评论加载中...</div>
+                    <div className="text-sm text-gray-500 dark:text-gray-400">评论加载中...</div>
                   ) : (detailComments.data?.data || []).length ? (
                     (detailComments.data?.data || []).map((comment) => (
-                      <div key={comment.id} className="rounded bg-gray-50 p-2 text-sm">
-                        <div className="mb-1 flex items-center justify-between text-xs text-gray-500">
+                      <div key={comment.id} className="rounded bg-gray-50 p-2 text-sm dark:bg-gray-800/50">
+                        <div className="mb-1 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
                           <span>{userNameById[Number(comment.user_id)] || `用户 #${comment.user_id}`}</span>
                           <span>{formatDate(comment.created_at)}</span>
                         </div>
@@ -1068,7 +1068,7 @@ const DefectList: React.FC = () => {
                       </div>
                     ))
                   ) : (
-                    <div className="text-sm text-gray-500">暂无评论</div>
+                    <div className="text-sm text-gray-500 dark:text-gray-400">暂无评论</div>
                   )}
                 </div>
                 <div className="flex gap-2">
@@ -1098,7 +1098,7 @@ const DefectList: React.FC = () => {
             <DialogTitle>分配缺陷负责人</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
-            <div className="text-sm text-gray-600">{assignDefectRow?.title}</div>
+            <div className="text-sm text-gray-600 dark:text-gray-400">{assignDefectRow?.title}</div>
             <select
               value={assignUserId}
               onChange={(event) => setAssignUserId(event.target.value)}
@@ -1124,9 +1124,9 @@ const DefectList: React.FC = () => {
           </DialogHeader>
           {statusDialog && (
             <div className="space-y-4">
-              <div className="rounded-md bg-gray-50 p-3 text-sm">
+              <div className="rounded-md bg-gray-50 p-3 text-sm dark:bg-gray-800/50">
                 <div className="font-medium">{statusDialog.defect.title}</div>
-                <div className="mt-1 text-gray-600">
+                <div className="mt-1 text-gray-600 dark:text-gray-400">
                   {labelOf(statusOptions, statusDialog.defect.status)} → {labelOf(statusOptions, statusDialog.status)}
                 </div>
               </div>

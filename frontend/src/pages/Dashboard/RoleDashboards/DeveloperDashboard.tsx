@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -200,7 +200,7 @@ const DeveloperDashboard: React.FC = () => {
               <AlertTriangle className="h-12 w-12 mx-auto" />
             </div>
             <h3 className="text-lg font-semibold mb-2">加载失败</h3>
-            <p className="text-gray-600 mb-4">{error}</p>
+            <p className="text-gray-600 mb-4 dark:text-gray-400">{error}</p>
             <Button onClick={() => window.location.reload()}>
               重新加载
             </Button>
@@ -211,7 +211,7 @@ const DeveloperDashboard: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6 p-6 bg-gray-50 min-h-screen">
+    <div className="space-y-6 p-6 bg-gray-50 min-h-screen dark:bg-gray-800/50">
       {/* Header */}
       <div className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-lg p-6 text-white">
         <div className="flex items-center justify-between">
@@ -231,7 +231,7 @@ const DeveloperDashboard: React.FC = () => {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">任务完成率</p>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">任务完成率</p>
                 <p className="text-2xl font-bold text-green-600">
                   {((developerMetrics.completedTasks / developerMetrics.totalTasks) * 100).toFixed(1)}%
                 </p>
@@ -250,7 +250,7 @@ const DeveloperDashboard: React.FC = () => {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">代码质量</p>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">代码质量</p>
                 <p className="text-2xl font-bold text-blue-600">
                   {developerMetrics.codeQuality}
                 </p>
@@ -269,7 +269,7 @@ const DeveloperDashboard: React.FC = () => {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">测试覆盖率</p>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">测试覆盖率</p>
                 <p className="text-2xl font-bold text-purple-600">
                   {developerMetrics.testCoverage}%
                 </p>
@@ -288,7 +288,7 @@ const DeveloperDashboard: React.FC = () => {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">评审评分</p>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">评审评分</p>
                 <p className="text-2xl font-bold text-orange-600">
                   {developerMetrics.reviewScore}/5
                 </p>
@@ -343,7 +343,7 @@ const DeveloperDashboard: React.FC = () => {
                 <div key={index} className="space-y-2">
                   <div className="flex justify-between text-sm">
                     <span className="font-medium">{metric.metric}</span>
-                    <span className="text-gray-500">{metric.current}/{metric.target}</span>
+                    <span className="text-gray-500 dark:text-gray-400">{metric.current}/{metric.target}</span>
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-2">
                     <div 
@@ -353,7 +353,7 @@ const DeveloperDashboard: React.FC = () => {
                       style={{ width: `${Math.min((metric.current / metric.target) * 100, 100)}%` }}
                     ></div>
                   </div>
-                  <div className="text-xs text-gray-500">
+                  <div className="text-xs text-gray-500 dark:text-gray-400">
                     目标: {metric.target} | 
                     状态: {metric.current <= metric.target ? 
                       <span className="text-green-600">达标</span> : 
@@ -404,7 +404,7 @@ const DeveloperDashboard: React.FC = () => {
                          task.type === 'refactor' ? '重构' : '测试'}
                       </Badge>
                     </div>
-                    <div className="flex justify-between text-xs text-gray-500 mt-1">
+                    <div className="flex justify-between text-xs text-gray-500 mt-1 dark:text-gray-400">
                       <span>预估: {task.estimatedHours}h {task.actualHours && `| 实际: ${task.actualHours}h`}</span>
                       <span>截止: {task.deadline}</span>
                     </div>
@@ -440,7 +440,7 @@ const DeveloperDashboard: React.FC = () => {
                        review.status === 'pending' ? '待评审' : '需修改'}
                     </Badge>
                   </div>
-                  <div className="flex justify-between text-xs text-gray-500 mb-2">
+                  <div className="flex justify-between text-xs text-gray-500 mb-2 dark:text-gray-400">
                     <span>作者: {review.author}</span>
                     <span>变更: {review.linesChanged} 行</span>
                   </div>
@@ -451,7 +451,7 @@ const DeveloperDashboard: React.FC = () => {
                     >
                       {review.priority === 'high' ? '高优先级' : review.priority === 'medium' ? '中优先级' : '低优先级'}
                     </Badge>
-                    <span className="text-xs text-gray-500">{review.createdAt}</span>
+                    <span className="text-xs text-gray-500 dark:text-gray-400">{review.createdAt}</span>
                   </div>
                 </div>
               ))}
@@ -490,11 +490,11 @@ const DeveloperDashboard: React.FC = () => {
                     >
                       {debt.severity === 'high' ? '高' : debt.severity === 'medium' ? '中' : '低'}
                     </Badge>
-                    <span className="text-xs text-gray-500">预估: {debt.estimatedEffort}</span>
+                    <span className="text-xs text-gray-500 dark:text-gray-400">预估: {debt.estimatedEffort}</span>
                   </div>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">文件: {debt.file}</span>
+                  <span className="text-gray-600 dark:text-gray-400">文件: {debt.file}</span>
                   <Badge variant="outline" className="text-xs">
                     {debt.type === 'complexity' ? '复杂度' :
                      debt.type === 'duplication' ? '重复代码' :

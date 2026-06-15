@@ -1,4 +1,4 @@
-// @ts-nocheck
+﻿// @ts-nocheck
 import React, { useEffect, useMemo, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { ArrowLeft, Plus, Save, Trash2 } from 'lucide-react'
@@ -242,7 +242,7 @@ const TestCaseCreate: React.FC = () => {
           <CardContent className="space-y-4">
             {steps.map((step, index) => (
               <div key={index} className="grid gap-3 rounded-md border p-4 md:grid-cols-[80px_1fr_1fr_1fr_auto]">
-                <div className="text-sm font-medium text-gray-600">步骤 {index + 1}</div>
+                <div className="text-sm font-medium text-gray-600 dark:text-gray-400">步骤 {index + 1}</div>
                 <Textarea rows={2} value={step.action} onChange={(event) => updateStep(index, 'action', event.target.value)} placeholder="操作步骤" required />
                 <Textarea rows={2} value={step.expected_result} onChange={(event) => updateStep(index, 'expected_result', event.target.value)} placeholder="该步骤预期结果" required />
                 <Textarea rows={2} value={String(step.test_data || '')} onChange={(event) => updateStep(index, 'test_data', event.target.value)} placeholder="测试数据" />

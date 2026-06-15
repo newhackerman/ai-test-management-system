@@ -1,4 +1,4 @@
-// @ts-nocheck
+﻿// @ts-nocheck
 import React, { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowLeft, Play, RefreshCw, Settings, TrendingUp, Zap } from 'lucide-react'
@@ -250,7 +250,7 @@ const PerformanceTest: React.FC = () => {
                 ))}
               </TableBody>
             </Table>
-            {!loading && tests.length === 0 && <div className="py-8 text-center text-gray-500">暂无性能测试</div>}
+            {!loading && tests.length === 0 && <div className="py-8 text-center text-gray-500 dark:text-gray-400">暂无性能测试</div>}
           </CardContent>
         </Card>
       </div>
@@ -268,7 +268,7 @@ const Field = ({ label, children }: { label: string; children: React.ReactNode }
 const Metric = ({ label, value }: { label: string; value: React.ReactNode }) => (
   <div>
     <p className="text-lg font-bold text-blue-600">{value}</p>
-    <p className="text-sm text-gray-600">{label}</p>
+    <p className="text-sm text-gray-600 dark:text-gray-400">{label}</p>
   </div>
 )
 

@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+﻿import React, { useMemo, useState } from 'react';
 import {
   AlertTriangle,
   BarChart3,
@@ -115,7 +115,7 @@ export default function RequirementTraceability() {
     <div className="space-y-6">
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">需求追溯管理</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">需求追溯管理</h1>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={handleRefresh} disabled={refreshing}>
@@ -197,7 +197,7 @@ export default function RequirementTraceability() {
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[760px] border-collapse text-sm">
                   <thead>
-                    <tr className="border-b bg-gray-50 text-left">
+                    <tr className="border-b bg-gray-50 text-left dark:bg-gray-800/50">
                       <th className="p-3">需求编号</th>
                       <th className="p-3">需求名称</th>
                       <th className="p-3">类型</th>
@@ -267,7 +267,7 @@ export default function RequirementTraceability() {
                   当前筛选范围覆盖率为 {statistics.coverage_percentage}%，其中 {statistics.partial_count} 个需求只有部分追溯链路。
                 </AlertDescription>
               </Alert>
-              <div className="h-3 overflow-hidden rounded-full bg-gray-100">
+              <div className="h-3 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800">
                 <div className="h-full bg-green-500" style={{ width: `${statistics.coverage_percentage}%` }} />
               </div>
             </CardContent>
@@ -302,8 +302,8 @@ function StatCard({ label, value, icon }: { label: string; value: React.ReactNod
       <CardContent className="p-4">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm font-medium text-gray-600">{label}</p>
-            <p className="text-2xl font-bold text-gray-900">{value}</p>
+            <p className="text-sm font-medium text-gray-600 dark:text-gray-400">{label}</p>
+            <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{value}</p>
           </div>
           {icon}
         </div>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -213,7 +213,7 @@ const ArchitectDashboard: React.FC = () => {
               <AlertTriangle className="h-12 w-12 mx-auto" />
             </div>
             <h3 className="text-lg font-semibold mb-2">加载失败</h3>
-            <p className="text-gray-600 mb-4">{error}</p>
+            <p className="text-gray-600 mb-4 dark:text-gray-400">{error}</p>
             <Button onClick={() => window.location.reload()}>
               重新加载
             </Button>
@@ -224,7 +224,7 @@ const ArchitectDashboard: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6 p-6 bg-gray-50 min-h-screen">
+    <div className="space-y-6 p-6 bg-gray-50 min-h-screen dark:bg-gray-800/50">
       {/* Header */}
       <div className="bg-gradient-to-r from-indigo-600 to-blue-600 rounded-lg p-6 text-white">
         <div className="flex items-center justify-between">
@@ -244,7 +244,7 @@ const ArchitectDashboard: React.FC = () => {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">性能评分</p>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">性能评分</p>
                 <p className="text-2xl font-bold text-green-600">
                   {architectureMetrics.performanceScore}
                 </p>
@@ -263,7 +263,7 @@ const ArchitectDashboard: React.FC = () => {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">安全评分</p>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">安全评分</p>
                 <p className="text-2xl font-bold text-blue-600">
                   {architectureMetrics.securityScore}
                 </p>
@@ -282,7 +282,7 @@ const ArchitectDashboard: React.FC = () => {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">可扩展性</p>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">可扩展性</p>
                 <p className="text-2xl font-bold text-purple-600">
                   {architectureMetrics.scalabilityIndex}
                 </p>
@@ -301,7 +301,7 @@ const ArchitectDashboard: React.FC = () => {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">技术债务</p>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">技术债务</p>
                 <p className="text-2xl font-bold text-orange-600">
                   {architectureMetrics.technicalDebt}%
                 </p>
@@ -395,19 +395,19 @@ const ArchitectDashboard: React.FC = () => {
                   </div>
                   <div className="grid grid-cols-3 gap-4 text-sm">
                     <div>
-                      <span className="text-gray-500">CPU: </span>
+                      <span className="text-gray-500 dark:text-gray-400">CPU: </span>
                       <span className={component.cpu > 80 ? 'text-red-600' : component.cpu > 60 ? 'text-yellow-600' : 'text-green-600'}>
                         {component.cpu}%
                       </span>
                     </div>
                     <div>
-                      <span className="text-gray-500">内存: </span>
+                      <span className="text-gray-500 dark:text-gray-400">内存: </span>
                       <span className={component.memory > 80 ? 'text-red-600' : component.memory > 60 ? 'text-yellow-600' : 'text-green-600'}>
                         {component.memory}%
                       </span>
                     </div>
                     <div>
-                      <span className="text-gray-500">实例: </span>
+                      <span className="text-gray-500 dark:text-gray-400">实例: </span>
                       <span>{component.instances}</span>
                     </div>
                   </div>
@@ -441,7 +441,7 @@ const ArchitectDashboard: React.FC = () => {
                          task.type === 'reliability' ? '可靠性' :
                          task.type === 'security' ? '安全' : '基础设施'}
                       </Badge>
-                      <span className="text-xs text-gray-500">{task.deadline}</span>
+                      <span className="text-xs text-gray-500 dark:text-gray-400">{task.deadline}</span>
                     </div>
                   </div>
                 </div>
@@ -477,7 +477,7 @@ const ArchitectDashboard: React.FC = () => {
                        review.status === 'pending' ? '待评审' : '需修改'}
                     </Badge>
                   </div>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
                     评审人：{review.reviewer}
                   </p>
                   <Badge 

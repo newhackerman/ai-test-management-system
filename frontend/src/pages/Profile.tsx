@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
+﻿import React, { useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
 import { apiClient } from '@/services/api/client'
 import { useAuthStore } from '@/stores/auth'
@@ -312,7 +312,7 @@ const Profile: React.FC = () => {
                     {profile.avatar ? (
                       <img src={resolveAssetUrl(profile.avatar)} alt="头像" className="h-full w-full object-cover" />
                     ) : (
-                      <span className="text-2xl text-gray-500">{profile.username.charAt(0).toUpperCase()}</span>
+                      <span className="text-2xl text-gray-500 dark:text-gray-400">{profile.username.charAt(0).toUpperCase()}</span>
                     )}
                   </div>
                   <label className="absolute bottom-0 right-0 cursor-pointer rounded-full bg-blue-600 px-2 py-1 text-xs text-white hover:bg-blue-700">
@@ -323,13 +323,13 @@ const Profile: React.FC = () => {
                 <div>
                   <h4 className="text-lg font-medium text-gray-900 dark:text-white">{profile.realName || profile.username}</h4>
                   <p className="text-gray-600 dark:text-gray-400">@{profile.username}</p>
-                  <p className="mt-1 text-sm text-gray-500">头像上传后立即保存，其它信息点击“保存更改”后生效。</p>
+                  <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">头像上传后立即保存，其它信息点击“保存更改”后生效。</p>
                 </div>
               </div>
 
               <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                 <Field label="用户名">
-                  <input value={profile.username} disabled className="w-full rounded-md border border-gray-300 bg-gray-50 px-3 py-2 text-gray-500" />
+                  <input value={profile.username} disabled className="w-full rounded-md border border-gray-300 bg-gray-50 px-3 py-2 text-gray-500 dark:text-gray-400 dark:bg-gray-800/50 dark:border-gray-600" />
                 </Field>
                 <Field label="邮箱地址">
                   <input type="email" value={profile.email} onChange={(e) => setProfile({ ...profile, email: e.target.value })} className={inputClass} />

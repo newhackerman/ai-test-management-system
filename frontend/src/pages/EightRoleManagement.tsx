@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+﻿import React, { useEffect, useMemo, useState } from 'react';
 import {
   Button,
   Card,
@@ -206,8 +206,8 @@ const EightRoleManagement: React.FC = () => {
         <div className="flex items-center space-x-3">
           <div className="text-2xl">{getRoleIcon(record.code)}</div>
           <div>
-            <div className="font-medium text-gray-900">{record.name}</div>
-            <div className="text-sm text-gray-500 font-mono">{record.code}</div>
+            <div className="font-medium text-gray-900 dark:text-gray-100">{record.name}</div>
+            <div className="text-sm text-gray-500 font-mono dark:text-gray-400">{record.code}</div>
           </div>
         </div>
       ),

@@ -1,4 +1,4 @@
-// @ts-nocheck
+﻿// @ts-nocheck
 import { useEffect, useMemo, useState } from 'react'
 import {
   AlertCircle,
@@ -732,10 +732,10 @@ function RiskFormDialog({ title, form, setForm, projects, users, modalError, onC
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="max-h-[92vh] w-full max-w-5xl overflow-hidden rounded-lg bg-white shadow-xl">
+      <div className="max-h-[92vh] w-full max-w-5xl overflow-hidden rounded-lg bg-white shadow-xl dark:bg-gray-800">
         <div className="flex items-center justify-between border-b px-6 py-4">
           <div>
-            <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{title}</h2>
           </div>
           <Button variant="ghost" size="icon" onClick={onClose}><X className="h-4 w-4" /></Button>
         </div>
@@ -798,10 +798,10 @@ function RiskFormDialog({ title, form, setForm, projects, users, modalError, onC
             <Field label="目标解决日期">
               <Input type="date" value={form.target_resolution_date} onChange={(event) => update('target_resolution_date', event.target.value)} />
             </Field>
-            <div className="rounded-md border bg-gray-50 p-3 text-sm md:col-span-2">
-              <span className="text-gray-500">当前评分：</span>
-              <span className="font-semibold text-gray-900">{computedScore}</span>
-              <span className="ml-2 text-gray-500">评分由发生概率 × 影响评分得出。</span>
+            <div className="rounded-md border bg-gray-50 p-3 text-sm md:col-span-2 dark:bg-gray-800/50">
+              <span className="text-gray-500 dark:text-gray-400">当前评分：</span>
+              <span className="font-semibold text-gray-900 dark:text-gray-100">{computedScore}</span>
+              <span className="ml-2 text-gray-500 dark:text-gray-400">评分由发生概率 × 影响评分得出。</span>
             </div>
             <Field label="风险描述" required className="md:col-span-2">
               <Textarea rows={4} value={form.description} onChange={(event) => update('description', event.target.value)} placeholder="说明风险背景、触发条件、影响范围和当前迹象" />
@@ -829,15 +829,15 @@ function RiskFormDialog({ title, form, setForm, projects, users, modalError, onC
 function RiskDetailDialog({ risk, projectName, ownerName, onClose, onEdit, onStatus }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="max-h-[92vh] w-full max-w-4xl overflow-hidden rounded-lg bg-white shadow-xl">
+      <div className="max-h-[92vh] w-full max-w-4xl overflow-hidden rounded-lg bg-white shadow-xl dark:bg-gray-800">
         <div className="flex items-start justify-between border-b px-6 py-4">
           <div>
             <div className="flex flex-wrap items-center gap-2">
-              <h2 className="text-lg font-semibold text-gray-900">{risk.risk_name}</h2>
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{risk.risk_name}</h2>
               <RiskLevelBadge level={risk.risk_level} />
               <RiskStatusBadge status={risk.status} />
             </div>
-            <p className="mt-1 text-sm text-gray-500">风险 #{risk.id} · 识别日期 {formatDate(risk.identified_date)}</p>
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">风险 #{risk.id} · 识别日期 {formatDate(risk.identified_date)}</p>
           </div>
           <Button variant="ghost" size="icon" onClick={onClose}><X className="h-4 w-4" /></Button>
         </div>
@@ -849,12 +849,12 @@ function RiskDetailDialog({ risk, projectName, ownerName, onClose, onEdit, onSta
           </div>
           <div className="mt-6 grid gap-6 lg:grid-cols-2">
             <section>
-              <h3 className="mb-2 text-sm font-semibold text-gray-900">风险描述</h3>
-              <div className="min-h-[120px] whitespace-pre-wrap rounded-md border bg-gray-50 p-4 text-sm text-gray-700">{risk.description || '暂无描述'}</div>
+              <h3 className="mb-2 text-sm font-semibold text-gray-900 dark:text-gray-100">风险描述</h3>
+              <div className="min-h-[120px] whitespace-pre-wrap rounded-md border bg-gray-50 p-4 text-sm text-gray-700 dark:text-gray-300 dark:bg-gray-800/50">{risk.description || '暂无描述'}</div>
             </section>
             <section>
-              <h3 className="mb-2 text-sm font-semibold text-gray-900">应对计划</h3>
-              <div className="min-h-[120px] whitespace-pre-wrap rounded-md border bg-gray-50 p-4 text-sm text-gray-700">{risk.mitigation_plan || '暂无应对计划'}</div>
+              <h3 className="mb-2 text-sm font-semibold text-gray-900 dark:text-gray-100">应对计划</h3>
+              <div className="min-h-[120px] whitespace-pre-wrap rounded-md border bg-gray-50 p-4 text-sm text-gray-700 dark:text-gray-300 dark:bg-gray-800/50">{risk.mitigation_plan || '暂无应对计划'}</div>
             </section>
           </div>
           <div className="mt-6 grid gap-3 text-sm md:grid-cols-2 lg:grid-cols-4">
@@ -868,8 +868,8 @@ function RiskDetailDialog({ risk, projectName, ownerName, onClose, onEdit, onSta
             <Info label="更新时间" value={formatDateTime(risk.updated_at)} />
           </div>
           <section className="mt-6">
-            <h3 className="mb-2 text-sm font-semibold text-gray-900">应急预案</h3>
-            <div className="min-h-[80px] whitespace-pre-wrap rounded-md border bg-gray-50 p-4 text-sm text-gray-700">{risk.contingency_plan || '暂无应急预案'}</div>
+            <h3 className="mb-2 text-sm font-semibold text-gray-900 dark:text-gray-100">应急预案</h3>
+            <div className="min-h-[80px] whitespace-pre-wrap rounded-md border bg-gray-50 p-4 text-sm text-gray-700 dark:text-gray-300 dark:bg-gray-800/50">{risk.contingency_plan || '暂无应急预案'}</div>
           </section>
         </div>
         <div className="flex justify-end gap-2 border-t px-6 py-4">
@@ -889,11 +889,11 @@ function StatusDialog({ risk, form, setForm, onClose, onSubmit, saving }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="w-full max-w-lg rounded-lg bg-white shadow-xl">
+      <div className="w-full max-w-lg rounded-lg bg-white shadow-xl dark:bg-gray-800">
         <div className="flex items-center justify-between border-b px-6 py-4">
           <div>
-            <h2 className="text-lg font-semibold text-gray-900">变更风险状态</h2>
-            <p className="mt-1 text-sm text-gray-500">{risk.risk_name} · 当前：{getRiskStatusText(risk.status)}</p>
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">变更风险状态</h2>
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{risk.risk_name} · 当前：{getRiskStatusText(risk.status)}</p>
           </div>
           <Button variant="ghost" size="icon" onClick={onClose}><X className="h-4 w-4" /></Button>
         </div>
@@ -927,11 +927,11 @@ function StatusDialog({ risk, form, setForm, onClose, onSubmit, saving }) {
 function ConfirmDialog({ title, message, onClose, onConfirm, saving }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="w-full max-w-md rounded-lg bg-white shadow-xl">
+      <div className="w-full max-w-md rounded-lg bg-white shadow-xl dark:bg-gray-800">
         <div className="border-b px-6 py-4">
-          <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{title}</h2>
         </div>
-        <div className="px-6 py-5 text-sm text-gray-700">{message}</div>
+        <div className="px-6 py-5 text-sm text-gray-700 dark:text-gray-300">{message}</div>
         <div className="flex justify-end gap-2 border-t px-6 py-4">
           <Button variant="outline" onClick={onClose} disabled={saving}>取消</Button>
           <Button variant="destructive" onClick={onConfirm} disabled={saving}>{saving ? '删除中...' : '确认删除'}</Button>
@@ -957,7 +957,7 @@ function SelectField({ value, onChange, children, disabled = false }) {
 function Field({ label, required, className = '', children }) {
   return (
     <label className={`space-y-2 text-sm ${className}`}>
-      <span className="font-medium text-gray-700">
+      <span className="font-medium text-gray-700 dark:text-gray-300">
         {label}
         {required && <span className="ml-1 text-red-500">*</span>}
       </span>
@@ -968,7 +968,7 @@ function Field({ label, required, className = '', children }) {
 
 function Info({ label, value }) {
   return (
-    <div className="rounded-md border bg-white p-3">
+    <div className="rounded-md border bg-white p-3 dark:bg-gray-800">
       <div className="text-xs text-muted-foreground">{label}</div>
       <div className="mt-1 font-medium text-foreground">{value}</div>
     </div>
@@ -977,11 +977,11 @@ function Info({ label, value }) {
 
 function InfoCard({ icon, label, value }) {
   return (
-    <div className="flex gap-3 rounded-md border bg-gray-50 p-4">
+    <div className="flex gap-3 rounded-md border bg-gray-50 p-4 dark:bg-gray-800/50">
       <div className="mt-0.5 text-red-600">{icon}</div>
       <div>
-        <div className="text-xs text-gray-500">{label}</div>
-        <div className="mt-1 text-sm font-medium text-gray-900">{value}</div>
+        <div className="text-xs text-gray-500 dark:text-gray-400">{label}</div>
+        <div className="mt-1 text-sm font-medium text-gray-900 dark:text-gray-100">{value}</div>
       </div>
     </div>
   )

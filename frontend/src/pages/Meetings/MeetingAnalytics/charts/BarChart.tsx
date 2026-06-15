@@ -1,4 +1,4 @@
-import React from 'react'
+﻿import React from 'react'
 import { 
   BarChart as RechartsBarChart, 
   Bar, 
@@ -36,7 +36,7 @@ const BarChart: React.FC<BarChartProps> = ({
   return (
     <div className={className}>
       {title && (
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">{title}</h3>
+        <h3 className="text-lg font-semibold text-gray-900 mb-4 dark:text-gray-100">{title}</h3>
       )}
       <ResponsiveContainer width="100%" height={height}>
         <RechartsBarChart data={data}>

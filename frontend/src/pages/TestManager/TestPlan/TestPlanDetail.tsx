@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react'
+﻿import React, { useMemo, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useParams, Link } from 'react-router-dom'
 import { ArrowLeft, Edit, Play, Pause, CheckCircle, Download, Users, Calendar, Target, Link2, Unlink, Search, Clock, Bug, FileText } from 'lucide-react'
@@ -296,7 +296,7 @@ const TestPlanDetail: React.FC = () => {
           </Link>
           <div>
             <h1 className="text-2xl font-bold">{testPlan.plan_name}</h1>
-            <p className="text-gray-600">{testPlan.plan_code}</p>
+            <p className="text-gray-600 dark:text-gray-400">{testPlan.plan_code}</p>
           </div>
           {getStatusBadge(testPlan.status)}
         </div>
@@ -358,7 +358,7 @@ const TestPlanDetail: React.FC = () => {
             <div className="flex items-center space-x-2">
               <Target className="w-5 h-5 text-blue-500" />
               <div>
-                <p className="text-sm font-medium text-gray-600">总用例数</p>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">总用例数</p>
                 <p className="text-2xl font-bold">{stats.total_cases}</p>
               </div>
             </div>
@@ -370,7 +370,7 @@ const TestPlanDetail: React.FC = () => {
             <div className="flex items-center space-x-2">
               <CheckCircle className="w-5 h-5 text-green-500" />
               <div>
-                <p className="text-sm font-medium text-gray-600">已执行</p>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">已执行</p>
                 <p className="text-2xl font-bold">{stats.executed_cases}</p>
               </div>
             </div>
@@ -382,7 +382,7 @@ const TestPlanDetail: React.FC = () => {
             <div className="flex items-center space-x-2">
               <div className="w-5 h-5 bg-green-500 rounded-full" />
               <div>
-                <p className="text-sm font-medium text-gray-600">通过</p>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">通过</p>
                 <p className="text-2xl font-bold text-green-600">{stats.passed_cases}</p>
               </div>
             </div>
@@ -394,7 +394,7 @@ const TestPlanDetail: React.FC = () => {
             <div className="flex items-center space-x-2">
               <div className="w-5 h-5 bg-red-500 rounded-full" />
               <div>
-                <p className="text-sm font-medium text-gray-600">失败</p>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">失败</p>
                 <p className="text-2xl font-bold text-red-600">{stats.failed_cases}</p>
               </div>
             </div>
@@ -445,19 +445,19 @@ const TestPlanDetail: React.FC = () => {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <label className="text-sm font-medium text-gray-600">测试类型</label>
+                  <label className="text-sm font-medium text-gray-600 dark:text-gray-400">测试类型</label>
                   <p>{getTypeLabel(testPlan.test_type)}</p>
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-600">描述</label>
+                  <label className="text-sm font-medium text-gray-600 dark:text-gray-400">描述</label>
                   <p>{testPlan.description || '暂无描述'}</p>
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-600">测试范围</label>
+                  <label className="text-sm font-medium text-gray-600 dark:text-gray-400">测试范围</label>
                   <p>{testPlan.test_scope || '暂无定义'}</p>
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-600">测试策略</label>
+                  <label className="text-sm font-medium text-gray-600 dark:text-gray-400">测试策略</label>
                   <p>{testPlan.test_strategy || '暂无定义'}</p>
                 </div>
               </CardContent>
@@ -469,30 +469,30 @@ const TestPlanDetail: React.FC = () => {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center space-x-2">
-                  <Calendar className="w-4 h-4 text-gray-500" />
+                  <Calendar className="w-4 h-4 text-gray-500 dark:text-gray-400" />
                   <div>
-                    <label className="text-sm font-medium text-gray-600">计划开始时间</label>
+                    <label className="text-sm font-medium text-gray-600 dark:text-gray-400">计划开始时间</label>
                     <p>{testPlan.planned_start_date ? formatDate(testPlan.planned_start_date) : '未设置'}</p>
                   </div>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <Calendar className="w-4 h-4 text-gray-500" />
+                  <Calendar className="w-4 h-4 text-gray-500 dark:text-gray-400" />
                   <div>
-                    <label className="text-sm font-medium text-gray-600">计划结束时间</label>
+                    <label className="text-sm font-medium text-gray-600 dark:text-gray-400">计划结束时间</label>
                     <p>{testPlan.planned_end_date ? formatDate(testPlan.planned_end_date) : '未设置'}</p>
                   </div>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <Calendar className="w-4 h-4 text-gray-500" />
+                  <Calendar className="w-4 h-4 text-gray-500 dark:text-gray-400" />
                   <div>
-                    <label className="text-sm font-medium text-gray-600">实际开始时间</label>
+                    <label className="text-sm font-medium text-gray-600 dark:text-gray-400">实际开始时间</label>
                     <p>{testPlan.actual_start_date ? formatDate(testPlan.actual_start_date) : '未开始'}</p>
                   </div>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <Calendar className="w-4 h-4 text-gray-500" />
+                  <Calendar className="w-4 h-4 text-gray-500 dark:text-gray-400" />
                   <div>
-                    <label className="text-sm font-medium text-gray-600">实际结束时间</label>
+                    <label className="text-sm font-medium text-gray-600 dark:text-gray-400">实际结束时间</label>
                     <p>{testPlan.actual_end_date ? formatDate(testPlan.actual_end_date) : '未完成'}</p>
                   </div>
                 </div>
@@ -508,9 +508,9 @@ const TestPlanDetail: React.FC = () => {
             </CardHeader>
             <CardContent>
               {linkedCasesLoading ? (
-                <div className="py-8 text-center text-gray-500">正在加载已关联测试用例...</div>
+                <div className="py-8 text-center text-gray-500 dark:text-gray-400">正在加载已关联测试用例...</div>
               ) : linkedCases.length === 0 ? (
-                <div className="py-8 text-center text-gray-500">当前测试计划还没有关联测试用例</div>
+                <div className="py-8 text-center text-gray-500 dark:text-gray-400">当前测试计划还没有关联测试用例</div>
               ) : (
                 <Table>
                   <TableHeader>
@@ -534,7 +534,7 @@ const TestPlanDetail: React.FC = () => {
                             <Link to={`/test-manager/test-cases/${testCase.id}`} className="font-medium text-blue-600 hover:text-blue-800">
                               {testCase.case_title}
                             </Link>
-                            <div className="text-xs text-gray-500">{testCase.case_code}</div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400">{testCase.case_code}</div>
                           </TableCell>
                           <TableCell>{getPriorityBadge(testCase.priority)}</TableCell>
                           <TableCell>{getCaseStatusBadge(testCase.status)}</TableCell>
@@ -603,9 +603,9 @@ const TestPlanDetail: React.FC = () => {
               </div>
 
               {candidateCasesLoading ? (
-                <div className="py-8 text-center text-gray-500">正在加载可关联测试用例...</div>
+                <div className="py-8 text-center text-gray-500 dark:text-gray-400">正在加载可关联测试用例...</div>
               ) : candidateCases.length === 0 ? (
-                <div className="py-8 text-center text-gray-500">没有可关联的测试用例</div>
+                <div className="py-8 text-center text-gray-500 dark:text-gray-400">没有可关联的测试用例</div>
               ) : (
                 <Table>
                   <TableHeader>
@@ -636,7 +636,7 @@ const TestPlanDetail: React.FC = () => {
                           <Link to={`/test-manager/test-cases/${testCase.id}`} className="font-medium text-blue-600 hover:text-blue-800">
                             {testCase.case_title}
                           </Link>
-                          <div className="text-xs text-gray-500">{testCase.case_code}</div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400">{testCase.case_code}</div>
                         </TableCell>
                         <TableCell>{testCase.test_plan_id ? `测试计划 #${testCase.test_plan_id}` : '未关联'}</TableCell>
                         <TableCell>{getPriorityBadge(testCase.priority)}</TableCell>
@@ -676,9 +676,9 @@ const TestPlanDetail: React.FC = () => {
             </CardHeader>
             <CardContent>
               {executionsLoading ? (
-                <div className="text-center py-8 text-gray-500">正在加载执行记录...</div>
+                <div className="text-center py-8 text-gray-500 dark:text-gray-400">正在加载执行记录...</div>
               ) : executions.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">当前测试计划暂无执行记录</div>
+                <div className="text-center py-8 text-gray-500 dark:text-gray-400">当前测试计划暂无执行记录</div>
               ) : (
                 <Table>
                   <TableHeader>
@@ -732,9 +732,9 @@ const TestPlanDetail: React.FC = () => {
             </CardHeader>
             <CardContent>
               {defectsLoading ? (
-                <div className="text-center py-8 text-gray-500">正在加载缺陷...</div>
+                <div className="text-center py-8 text-gray-500 dark:text-gray-400">正在加载缺陷...</div>
               ) : defects.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">当前测试计划暂无关联缺陷</div>
+                <div className="text-center py-8 text-gray-500 dark:text-gray-400">当前测试计划暂无关联缺陷</div>
               ) : (
                 <Table>
                   <TableHeader>
@@ -753,7 +753,7 @@ const TestPlanDetail: React.FC = () => {
                       <TableRow key={defect.id}>
                         <TableCell>
                           <div className="font-medium">{defect.title}</div>
-                          <div className="text-xs text-gray-500">{defect.defect_code}</div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400">{defect.defect_code}</div>
                         </TableCell>
                         <TableCell>
                           {defect.test_case_id ? (
@@ -796,9 +796,9 @@ const TestPlanDetail: React.FC = () => {
             </CardHeader>
             <CardContent>
               {reportsLoading ? (
-                <div className="text-center py-8 text-gray-500">正在加载测试报告...</div>
+                <div className="text-center py-8 text-gray-500 dark:text-gray-400">正在加载测试报告...</div>
               ) : reports.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">当前测试计划暂无测试报告</div>
+                <div className="text-center py-8 text-gray-500 dark:text-gray-400">当前测试计划暂无测试报告</div>
               ) : (
                 <Table>
                   <TableHeader>

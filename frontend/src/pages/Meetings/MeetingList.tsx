@@ -1,4 +1,4 @@
-// @ts-nocheck
+﻿// @ts-nocheck
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { CalendarDays, Clock, Edit, Eye, Loader2, Play, Plus, RefreshCw, Search, Square, Trash2, Users } from 'lucide-react'
@@ -211,11 +211,11 @@ export default function MeetingList() {
             const busy = operatingId === meeting.id
             const agendaPreview = getAgendaPreview(meeting)
             return (
-              <div key={meeting.id} className="rounded-lg border bg-white p-4 shadow-sm">
+              <div key={meeting.id} className="rounded-lg border bg-white p-4 shadow-sm dark:bg-gray-800">
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                   <div className="min-w-0 flex-1 space-y-3">
                     <div className="flex flex-wrap items-center gap-2">
-                      <h2 className="truncate text-base font-semibold text-gray-900">{meeting.title}</h2>
+                      <h2 className="truncate text-base font-semibold text-gray-900 dark:text-gray-100">{meeting.title}</h2>
                       <Badge variant="outline" className={statusBadgeClass[meeting.status] || ''}>{meetingStatusLabels[meeting.status] || meeting.status}</Badge>
                       <Badge variant="outline">{meetingTypeLabels[meeting.meeting_type] || meeting.meeting_type}</Badge>
                     </div>
@@ -224,8 +224,8 @@ export default function MeetingList() {
                       <span className="flex items-center gap-2"><Users className="h-4 w-4" />{meeting.participant_count ?? 0}/{meeting.max_participants ?? '-'}</span>
                       <span className="flex items-center gap-2"><CalendarDays className="h-4 w-4" />会议号 {meeting.meeting_code}</span>
                     </div>
-                    {meeting.description && <p className="line-clamp-2 text-sm text-gray-600">{meeting.description}</p>}
-                    {agendaPreview && <p className="text-sm text-gray-600">议程：{agendaPreview}</p>}
+                    {meeting.description && <p className="line-clamp-2 text-sm text-gray-600 dark:text-gray-400">{meeting.description}</p>}
+                    {agendaPreview && <p className="text-sm text-gray-600 dark:text-gray-400">议程：{agendaPreview}</p>}
                   </div>
                   <div className="flex flex-wrap gap-2 lg:justify-end">
                     <Button type="button" variant="outline" size="sm" onClick={() => navigate(`/meetings/${meeting.id}`)}>

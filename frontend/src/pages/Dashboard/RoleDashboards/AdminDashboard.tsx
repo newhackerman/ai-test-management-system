@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -197,7 +197,7 @@ const AdminDashboard: React.FC = () => {
               <AlertTriangle className="h-12 w-12 mx-auto" />
             </div>
             <h3 className="text-lg font-semibold mb-2">加载失败</h3>
-            <p className="text-gray-600 mb-4">{error}</p>
+            <p className="text-gray-600 mb-4 dark:text-gray-400">{error}</p>
             <Button onClick={() => window.location.reload()}>
               重新加载
             </Button>
@@ -208,7 +208,7 @@ const AdminDashboard: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6 p-6 bg-gray-50 min-h-screen">
+    <div className="space-y-6 p-6 bg-gray-50 min-h-screen dark:bg-gray-800/50">
       {/* Header */}
       <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg p-6 text-white">
         <div className="flex items-center justify-between">
@@ -228,7 +228,7 @@ const AdminDashboard: React.FC = () => {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">总用户数</p>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">总用户数</p>
                 <p className="text-2xl font-bold text-blue-600">
                   {systemOverview.totalUsers.toLocaleString()}
                 </p>
@@ -247,7 +247,7 @@ const AdminDashboard: React.FC = () => {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">项目总数</p>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">项目总数</p>
                 <p className="text-2xl font-bold text-green-600">
                   {systemOverview.totalProjects}
                 </p>
@@ -266,7 +266,7 @@ const AdminDashboard: React.FC = () => {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">API调用量</p>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">API调用量</p>
                 <p className="text-2xl font-bold text-purple-600">
                   {(systemOverview.apiCalls / 1000).toFixed(1)}K
                 </p>
@@ -285,7 +285,7 @@ const AdminDashboard: React.FC = () => {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">系统可用性</p>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">系统可用性</p>
                 <p className="text-2xl font-bold text-orange-600">
                   {systemOverview.uptime}%
                 </p>
@@ -373,7 +373,7 @@ const AdminDashboard: React.FC = () => {
                     }`}></div>
                     <div>
                       <p className="font-medium text-sm">{module.name}</p>
-                      <p className="text-xs text-gray-500">
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
                         可用性: {module.uptime}% | 用户: {module.users}
                       </p>
                     </div>
@@ -389,7 +389,7 @@ const AdminDashboard: React.FC = () => {
                       {module.status === 'healthy' ? '正常' :
                        module.status === 'warning' ? '警告' : '严重'}
                     </Badge>
-                    <p className="text-xs text-gray-500 mt-1">{module.lastCheck}</p>
+                    <p className="text-xs text-gray-500 mt-1 dark:text-gray-400">{module.lastCheck}</p>
                   </div>
                 </div>
               ))}
@@ -416,8 +416,8 @@ const AdminDashboard: React.FC = () => {
                   <div className="flex-1">
                     <p className="font-medium text-sm">{activity.username} - {activity.action}</p>
                     <div className="flex items-center space-x-2 mt-1">
-                      <span className="text-xs text-gray-500">IP: {activity.ip}</span>
-                      <span className="text-xs text-gray-500">{activity.timestamp}</span>
+                      <span className="text-xs text-gray-500 dark:text-gray-400">IP: {activity.ip}</span>
+                      <span className="text-xs text-gray-500 dark:text-gray-400">{activity.timestamp}</span>
                     </div>
                   </div>
                   <Badge 
@@ -467,10 +467,10 @@ const AdminDashboard: React.FC = () => {
                     >
                       {alert.severity === 'high' ? '高' : alert.severity === 'medium' ? '中' : '低'}
                     </Badge>
-                    <span className="text-xs text-gray-500">{alert.timestamp}</span>
+                    <span className="text-xs text-gray-500 dark:text-gray-400">{alert.timestamp}</span>
                   </div>
                 </div>
-                <p className="text-sm text-gray-600 mt-1">
+                <p className="text-sm text-gray-600 mt-1 dark:text-gray-400">
                   类型: {
                     alert.type === 'security' ? '安全' :
                     alert.type === 'performance' ? '性能' :

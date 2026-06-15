@@ -1,4 +1,4 @@
-import React from 'react'
+﻿import React from 'react'
 import { cn } from '@/lib/utils'
 
 interface HeatMapData {
@@ -63,11 +63,11 @@ const HeatMap: React.FC<HeatMapProps> = ({
   return (
     <div className={className}>
       {title && (
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">{title}</h3>
+        <h3 className="text-lg font-semibold text-gray-900 mb-4 dark:text-gray-100">{title}</h3>
       )}
       
       <div className="overflow-auto">
-        <svg width={width} height={height} className="border border-gray-200">
+        <svg width={width} height={height} className="border border-gray-200 dark:border-gray-700">
           {/* Y轴标签 */}
           {yValues.map((y, yIndex) => (
             <text
@@ -126,7 +126,7 @@ const HeatMap: React.FC<HeatMapProps> = ({
                       y={50 + yIndex * (cellSize + 2) + cellSize / 2}
                       textAnchor="middle"
                       dominantBaseline="middle"
-                      className="text-xs fill-gray-800 pointer-events-none"
+                      className="text-xs fill-gray-800 pointer-events-none dark:fill-gray-200"
                     >
                       {cellData.label || value}
                     </text>
@@ -139,7 +139,7 @@ const HeatMap: React.FC<HeatMapProps> = ({
         
         {/* 颜色图例 */}
         <div className="mt-4 flex items-center space-x-2">
-          <span className="text-sm text-gray-600">低</span>
+          <span className="text-sm text-gray-600 dark:text-gray-400">低</span>
           <div className="flex">
             {colorScale.map((color, index) => (
               <div
@@ -149,8 +149,8 @@ const HeatMap: React.FC<HeatMapProps> = ({
               />
             ))}
           </div>
-          <span className="text-sm text-gray-600">高</span>
-          <span className="text-sm text-gray-500 ml-4">
+          <span className="text-sm text-gray-600 dark:text-gray-400">高</span>
+          <span className="text-sm text-gray-500 ml-4 dark:text-gray-400">
             范围: {minValue.toFixed(1)} - {maxValue.toFixed(1)}
           </span>
         </div>

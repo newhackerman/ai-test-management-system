@@ -1,4 +1,4 @@
-// @ts-nocheck
+﻿// @ts-nocheck
 import { useEffect, useMemo, useState } from 'react'
 import { AlertCircle, CalendarDays, CheckCircle2, Settings2, Users } from 'lucide-react'
 
@@ -212,7 +212,7 @@ export default function MeetingForm({
 
       <Card>
         <CardContent className="space-y-4 p-5">
-          <div className="flex items-center gap-2 font-semibold text-gray-900">
+          <div className="flex items-center gap-2 font-semibold text-gray-900 dark:text-gray-100">
             <CheckCircle2 className="h-4 w-4 text-blue-600" />
             基本信息
           </div>
@@ -244,7 +244,7 @@ export default function MeetingForm({
 
       <Card>
         <CardContent className="space-y-4 p-5">
-          <div className="flex items-center gap-2 font-semibold text-gray-900">
+          <div className="flex items-center gap-2 font-semibold text-gray-900 dark:text-gray-100">
             <CalendarDays className="h-4 w-4 text-blue-600" />
             时间与议程
           </div>
@@ -272,17 +272,17 @@ export default function MeetingForm({
       {allowParticipants && (
         <Card>
           <CardContent className="space-y-4 p-5">
-            <div className="flex items-center gap-2 font-semibold text-gray-900">
+            <div className="flex items-center gap-2 font-semibold text-gray-900 dark:text-gray-100">
               <Users className="h-4 w-4 text-blue-600" />
               参会人员
             </div>
             <div className="grid max-h-56 grid-cols-1 gap-2 overflow-y-auto rounded-md border p-3 md:grid-cols-3">
               {users.length ? users.map((user) => (
-                <label key={user.id} className="flex items-center gap-2 rounded px-2 py-1 text-sm text-gray-700 hover:bg-gray-50">
+                <label key={user.id} className="flex items-center gap-2 rounded px-2 py-1 text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:bg-gray-800/50 dark:hover:bg-gray-800">
                   <input type="checkbox" checked={selectedUsers.has(user.id)} onChange={() => toggleParticipant(user.id)} />
                   <span className="truncate">{user.real_name || user.nickname || user.username}</span>
                 </label>
-              )) : <span className="text-sm text-gray-500">暂无可选用户</span>}
+              )) : <span className="text-sm text-gray-500 dark:text-gray-400">暂无可选用户</span>}
             </div>
           </CardContent>
         </Card>
@@ -290,7 +290,7 @@ export default function MeetingForm({
 
       <Card>
         <CardContent className="space-y-4 p-5">
-          <div className="flex items-center gap-2 font-semibold text-gray-900">
+          <div className="flex items-center gap-2 font-semibold text-gray-900 dark:text-gray-100">
             <Settings2 className="h-4 w-4 text-blue-600" />
             会议设置
           </div>

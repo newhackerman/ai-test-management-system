@@ -1,4 +1,4 @@
-import { Activity, AlertTriangle, CheckCircle, Clock, Cpu, Database, Eye, HardDrive, Search, TrendingUp, Wifi, XCircle, Zap } from 'lucide-react'
+﻿import { Activity, AlertTriangle, CheckCircle, Clock, Cpu, Database, Eye, HardDrive, Search, TrendingUp, Wifi, XCircle, Zap } from 'lucide-react'
 
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
@@ -52,7 +52,7 @@ export default function Monitoring() {
       case 'error':
         return <XCircle className="h-4 w-4 text-red-500" />
       default:
-        return <Clock className="h-4 w-4 text-gray-500" />
+        return <Clock className="h-4 w-4 text-gray-500 dark:text-gray-400" />
     }
   }
 
@@ -238,7 +238,7 @@ export default function Monitoring() {
           <CardTitle>性能趋势</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex h-64 items-center justify-center rounded-lg border-2 border-dashed border-gray-300">
+          <div className="flex h-64 items-center justify-center rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600">
             <div className="text-center">
               <TrendingUp className="mx-auto mb-2 h-12 w-12 text-gray-400" />
               <p className="text-muted-foreground">暂无性能趋势数据</p>

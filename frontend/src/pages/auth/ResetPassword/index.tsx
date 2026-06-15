@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react'
+﻿import React, { useMemo, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { ArrowLeft, CheckCircle2, KeyRound, Loader2, Lock } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
@@ -95,7 +95,7 @@ const ResetPasswordPage: React.FC = () => {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
+    <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4 dark:bg-gray-800/50">
       <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle className="text-center">重置密码</CardTitle>
@@ -107,7 +107,7 @@ const ResetPasswordPage: React.FC = () => {
               <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-amber-50 text-amber-600">
                 <KeyRound className="h-6 w-6" />
               </div>
-              <p className="text-sm leading-6 text-gray-600">当前重置链接无效，请重新申请密码重置邮件。</p>
+              <p className="text-sm leading-6 text-gray-600 dark:text-gray-400">当前重置链接无效，请重新申请密码重置邮件。</p>
               <Button asChild className="w-full">
                 <Link to="/auth/forgot-password">重新申请重置邮件</Link>
               </Button>
@@ -117,7 +117,7 @@ const ResetPasswordPage: React.FC = () => {
               <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
                 <CheckCircle2 className="h-6 w-6" />
               </div>
-              <p className="text-sm leading-6 text-gray-600">密码已重置成功，正在返回登录页。</p>
+              <p className="text-sm leading-6 text-gray-600 dark:text-gray-400">密码已重置成功，正在返回登录页。</p>
               <Button asChild className="w-full">
                 <Link to="/login">立即登录</Link>
               </Button>
@@ -139,11 +139,11 @@ const ResetPasswordPage: React.FC = () => {
                   />
                 </div>
               </div>
-              <div className="space-y-2 rounded-md bg-gray-50 p-3">
+              <div className="space-y-2 rounded-md bg-gray-50 p-3 dark:bg-gray-800/50">
                 <div className="h-1.5 overflow-hidden rounded-full bg-gray-200">
                   <div className="h-full bg-blue-600 transition-all" style={{ width: `${progress}%` }} />
                 </div>
-                <div className="grid grid-cols-1 gap-1 text-xs text-gray-600">
+                <div className="grid grid-cols-1 gap-1 text-xs text-gray-600 dark:text-gray-400">
                   {passwordChecks.map((item) => {
                     const passed = item.test(password)
                     return (

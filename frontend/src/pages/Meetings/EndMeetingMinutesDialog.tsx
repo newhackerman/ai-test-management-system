@@ -1,4 +1,4 @@
-// @ts-nocheck
+﻿// @ts-nocheck
 import { useEffect, useState } from 'react'
 import { AlertCircle, X } from 'lucide-react'
 
@@ -87,13 +87,13 @@ export default function EndMeetingMinutesDialog({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-lg bg-white shadow-xl">
+      <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-lg bg-white shadow-xl dark:bg-gray-800">
         <div className="flex items-center justify-between border-b px-5 py-4">
           <div>
-            <h2 className="text-lg font-semibold text-gray-900">填写会议纪要并结束会议</h2>
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">填写会议纪要并结束会议</h2>
             <p className="text-sm text-muted-foreground">{meeting.title}</p>
           </div>
-          <button type="button" className="rounded p-1 text-gray-500 hover:bg-gray-100" onClick={onCancel} disabled={submitting}>
+          <button type="button" className="rounded p-1 text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:bg-gray-800" onClick={onCancel} disabled={submitting}>
             <X className="h-5 w-5" />
           </button>
         </div>

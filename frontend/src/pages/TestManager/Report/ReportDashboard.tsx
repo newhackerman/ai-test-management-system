@@ -1,4 +1,4 @@
-// @ts-nocheck
+﻿// @ts-nocheck
 import React, { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { BarChart3, Download, Eye, FileText, Plus, RefreshCw, Search, Trash2 } from 'lucide-react'
@@ -295,12 +295,12 @@ const ReportDashboard: React.FC = () => {
                   <TableRow key={`${report.type}-${report.id}-${report.format}`}>
                     <TableCell>
                       <div className="font-medium">{report.name}</div>
-                      <div className="text-xs text-gray-500">{report.id}</div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400">{report.id}</div>
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline">{reportTypeLabel(report.summary?.business_report_type || report.summary?.report_type)}</Badge>
                       {report.summary?.test_plan_id && (
-                        <div className="mt-1 text-xs text-gray-500">计划 #{report.summary.test_plan_id}</div>
+                        <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">计划 #{report.summary.test_plan_id}</div>
                       )}
                     </TableCell>
                     <TableCell>
@@ -349,7 +349,7 @@ const ReportDashboard: React.FC = () => {
           </div>
 
           {!loading && reports.length === 0 && (
-            <div className="py-8 text-center text-gray-500">暂无报告数据</div>
+            <div className="py-8 text-center text-gray-500 dark:text-gray-400">暂无报告数据</div>
           )}
         </CardContent>
       </Card>
@@ -364,7 +364,7 @@ const ReportDashboard: React.FC = () => {
               {String(previewReport.format || '').toLowerCase() === 'html' ? (
                 <iframe
                   title="报告预览"
-                  className="h-[70vh] w-full rounded-md border bg-white"
+                  className="h-[70vh] w-full rounded-md border bg-white dark:bg-gray-800"
                   srcDoc={previewReport.preview_content}
                 />
               ) : (

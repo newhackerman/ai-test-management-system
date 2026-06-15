@@ -1,4 +1,4 @@
-// @ts-nocheck
+﻿// @ts-nocheck
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, CalendarDays, Clock, Edit, Loader2, Play, Square, Trash2, Users } from 'lucide-react'
@@ -123,7 +123,7 @@ export default function MeetingDetail() {
           </Button>
           <div>
             <div className="mb-2 flex flex-wrap items-center gap-2">
-              <h1 className="text-2xl font-semibold tracking-tight text-gray-900">{meeting.title}</h1>
+              <h1 className="text-2xl font-semibold tracking-tight text-gray-900 dark:text-gray-100">{meeting.title}</h1>
               <Badge variant="outline" className={statusBadgeClass[meeting.status] || ''}>{meetingStatusLabels[meeting.status] || meeting.status}</Badge>
               <Badge variant="outline">{meetingTypeLabels[meeting.meeting_type] || meeting.meeting_type}</Badge>
             </div>
@@ -162,7 +162,7 @@ export default function MeetingDetail() {
           <Card>
             <CardHeader><CardTitle className="text-lg">会议说明</CardTitle></CardHeader>
             <CardContent>
-              <p className="whitespace-pre-wrap text-sm leading-6 text-gray-700">{meeting.description || '暂无说明'}</p>
+              <p className="whitespace-pre-wrap text-sm leading-6 text-gray-700 dark:text-gray-300">{meeting.description || '暂无说明'}</p>
             </CardContent>
           </Card>
 
@@ -175,7 +175,7 @@ export default function MeetingDetail() {
                     <li key={`${item.title}-${index}`} className="flex gap-3 rounded-md border p-3">
                       <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-50 text-xs font-semibold text-blue-700">{index + 1}</span>
                       <div className="min-w-0">
-                        <div className="font-medium text-gray-900">{item.title || item.description}</div>
+                        <div className="font-medium text-gray-900 dark:text-gray-100">{item.title || item.description}</div>
                         <div className="text-sm text-muted-foreground">预计 {item.duration_minutes || 15} 分钟{item.presenter ? `，主讲：${item.presenter}` : ''}</div>
                       </div>
                     </li>
@@ -196,22 +196,22 @@ export default function MeetingDetail() {
                 <Clock className="mt-0.5 h-4 w-4 text-muted-foreground" />
                 <div>
                   <div className="text-muted-foreground">计划时间</div>
-                  <div className="font-medium text-gray-900">{formatDateTime(meeting.scheduled_start_time)}</div>
-                  <div className="font-medium text-gray-900">{formatDateTime(meeting.scheduled_end_time)}</div>
+                  <div className="font-medium text-gray-900 dark:text-gray-100">{formatDateTime(meeting.scheduled_start_time)}</div>
+                  <div className="font-medium text-gray-900 dark:text-gray-100">{formatDateTime(meeting.scheduled_end_time)}</div>
                 </div>
               </div>
               <div className="flex items-start gap-3">
                 <Users className="mt-0.5 h-4 w-4 text-muted-foreground" />
                 <div>
                   <div className="text-muted-foreground">参会人数</div>
-                  <div className="font-medium text-gray-900">{meeting.participant_count ?? 0}/{meeting.max_participants ?? '-'}</div>
+                  <div className="font-medium text-gray-900 dark:text-gray-100">{meeting.participant_count ?? 0}/{meeting.max_participants ?? '-'}</div>
                 </div>
               </div>
               <div className="flex items-start gap-3">
                 <CalendarDays className="mt-0.5 h-4 w-4 text-muted-foreground" />
                 <div>
                   <div className="text-muted-foreground">关联项目</div>
-                  <div className="font-medium text-gray-900">{meeting.project_id ? `项目 #${meeting.project_id}` : '未关联项目'}</div>
+                  <div className="font-medium text-gray-900 dark:text-gray-100">{meeting.project_id ? `项目 #${meeting.project_id}` : '未关联项目'}</div>
                 </div>
               </div>
             </CardContent>
@@ -223,7 +223,7 @@ export default function MeetingDetail() {
               {Object.entries(settingLabel).map(([key, label]) => (
                 <div key={key} className="rounded-md border px-3 py-2">
                   <div className="text-muted-foreground">{label}</div>
-                  <div className="font-medium text-gray-900">{settings[key] ? '已开启' : '已关闭'}</div>
+                  <div className="font-medium text-gray-900 dark:text-gray-100">{settings[key] ? '已开启' : '已关闭'}</div>
                 </div>
               ))}
             </CardContent>

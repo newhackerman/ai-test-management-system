@@ -1,4 +1,4 @@
-import React from 'react'
+﻿import React from 'react'
 import { Link } from 'react-router-dom'
 import { Plus, Search, Download, Copy, Trash2, Play, Pause, CheckCircle } from 'lucide-react'
 import { Button } from '../../../components/ui/Button'
@@ -167,7 +167,7 @@ const TestPlanList: React.FC = () => {
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-600">
+              <span className="text-sm text-gray-600 dark:text-gray-400">
                 已选择 {selectedPlans.length} 个测试计划
               </span>
               <div className="flex gap-2">
@@ -228,7 +228,7 @@ const TestPlanList: React.FC = () => {
                         >
                           {plan.plan_name}
                         </Link>
-                        <div className="text-sm text-gray-500">{plan.plan_code}</div>
+                        <div className="text-sm text-gray-500 dark:text-gray-400">{plan.plan_code}</div>
                       </div>
                     </TableCell>
                     <TableCell>{getTypeLabel(plan.test_type)}</TableCell>
@@ -240,7 +240,7 @@ const TestPlanList: React.FC = () => {
                           <span>{executionRate.toFixed(1)}%</span>
                         </div>
                         <Progress value={executionRate} className="h-2" />
-                        <div className="flex justify-between text-xs text-gray-500">
+                        <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400">
                           <span>通过率: {passRate.toFixed(1)}%</span>
                           <span>{plan.executed_cases}/{plan.total_cases}</span>
                         </div>
@@ -314,7 +314,7 @@ const TestPlanList: React.FC = () => {
           </Table>
           
           {testPlans.length === 0 && (
-            <div className="text-center py-8 text-gray-500">
+            <div className="text-center py-8 text-gray-500 dark:text-gray-400">
               暂无测试计划数据
             </div>
           )}

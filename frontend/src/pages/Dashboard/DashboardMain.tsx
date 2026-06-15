@@ -169,7 +169,7 @@ const DashboardMainContent: React.FC<DashboardMainProps> = ({ roleType }) => {
               <Settings className="h-12 w-12 mx-auto" />
             </div>
             <h3 className="text-lg font-semibold mb-2">鍔犺浇澶辫触</h3>
-            <p className="text-gray-600 mb-4">{error}</p>
+            <p className="text-gray-600 mb-4 dark:text-gray-400">{error}</p>
             <Button onClick={() => window.location.reload()}>
               閲嶆柊鍔犺浇
             </Button>
@@ -242,13 +242,13 @@ const DashboardMainContent: React.FC<DashboardMainProps> = ({ roleType }) => {
       enableHeartbeat={true}
       heartbeatInterval={30000}
     >
-      <div className="dashboard-main min-h-screen bg-gray-50">
+      <div className="dashboard-main min-h-screen bg-gray-50 dark:bg-gray-800/50">
         {/* Dashboard Header */}
-        <div className="bg-white border-b border-gray-200 px-6 py-4">
+        <div className="bg-white border-b border-gray-200 px-6 py-4 dark:bg-gray-800 dark:border-gray-700">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                   {dashboardConfig?.dashboard_name || '我的仪表盘'}
                 </h1>
               </div>
@@ -260,7 +260,7 @@ const DashboardMainContent: React.FC<DashboardMainProps> = ({ roleType }) => {
                     <div className="w-full h-full rounded-full animate-ping bg-current opacity-75"></div>
                   )}
                 </div>
-                <span className="text-sm text-gray-600 flex items-center space-x-1">
+                <span className="text-sm text-gray-600 flex items-center space-x-1 dark:text-gray-400">
                   {isConnected ? <Wifi className="h-4 w-4" /> : <WifiOff className="h-4 w-4" />}
                   <span>{getConnectionStatusText()}</span>
                   {isConnected && connectionMetrics.uptime > 0 && (

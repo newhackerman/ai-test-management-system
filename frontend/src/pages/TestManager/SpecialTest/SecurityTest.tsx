@@ -1,4 +1,4 @@
-// @ts-nocheck
+﻿// @ts-nocheck
 import React, { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { AlertTriangle, ArrowLeft, CheckCircle, RefreshCw, Scan, Settings, Shield } from 'lucide-react'
@@ -327,7 +327,7 @@ const SecurityTest: React.FC = () => {
                         <TableRow key={vulnerability.vulnerability_id}>
                           <TableCell>
                             <div className="font-medium">{vulnerability.title}</div>
-                            <div className="mt-1 max-w-[360px] text-xs text-gray-500">{vulnerability.recommendation}</div>
+                            <div className="mt-1 max-w-[360px] text-xs text-gray-500 dark:text-gray-400">{vulnerability.recommendation}</div>
                           </TableCell>
                           <TableCell><Badge variant="outline">{vulnerabilityTypeLabel(vulnerability.vulnerability_type)}</Badge></TableCell>
                           <TableCell>{severityBadge(vulnerability.severity)}</TableCell>
@@ -337,7 +337,7 @@ const SecurityTest: React.FC = () => {
                       ))}
                     </TableBody>
                   </Table>
-                  {vulnerabilities.length === 0 && <div className="py-8 text-center text-gray-500">暂无扫描漏洞结果</div>}
+                  {vulnerabilities.length === 0 && <div className="py-8 text-center text-gray-500 dark:text-gray-400">暂无扫描漏洞结果</div>}
                 </CardContent>
               </Card>
             </TabsContent>
@@ -374,7 +374,7 @@ const SecurityTest: React.FC = () => {
                       ))}
                     </TableBody>
                   </Table>
-                  {!loading && tests.length === 0 && <div className="py-8 text-center text-gray-500">暂无安全扫描</div>}
+                  {!loading && tests.length === 0 && <div className="py-8 text-center text-gray-500 dark:text-gray-400">暂无安全扫描</div>}
                 </CardContent>
               </Card>
             </TabsContent>
@@ -409,9 +409,9 @@ const SecurityTest: React.FC = () => {
             </CardHeader>
             <CardContent className="space-y-3">
               {recommendations.map((recommendation: string, index: number) => (
-                <div key={`${recommendation}-${index}`} className="flex items-start space-x-3 rounded-md border bg-gray-50 p-3">
+                <div key={`${recommendation}-${index}`} className="flex items-start space-x-3 rounded-md border bg-gray-50 p-3 dark:bg-gray-800/50">
                   {summary.total > 0 ? <AlertTriangle className="mt-0.5 h-5 w-5 text-orange-500" /> : <CheckCircle className="mt-0.5 h-5 w-5 text-green-500" />}
-                  <p className="text-sm text-gray-700">{recommendation}</p>
+                  <p className="text-sm text-gray-700 dark:text-gray-300">{recommendation}</p>
                 </div>
               ))}
             </CardContent>
@@ -434,7 +434,7 @@ const Metric = ({ label, value, tone = 'blue' }: { label: string; value: React.R
   return (
     <div>
       <p className={`text-lg font-bold ${color}`}>{value}</p>
-      <p className="text-sm text-gray-600">{label}</p>
+      <p className="text-sm text-gray-600 dark:text-gray-400">{label}</p>
     </div>
   )
 }

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -143,7 +143,7 @@ const RequirementManagerDashboard: React.FC = () => {
               <AlertTriangle className="h-12 w-12 mx-auto" />
             </div>
             <h3 className="text-lg font-semibold mb-2">加载失败</h3>
-            <p className="text-gray-600 mb-4">{error}</p>
+            <p className="text-gray-600 mb-4 dark:text-gray-400">{error}</p>
             <Button onClick={() => window.location.reload()}>
               重新加载
             </Button>
@@ -154,7 +154,7 @@ const RequirementManagerDashboard: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6 p-6 bg-gray-50 min-h-screen">
+    <div className="space-y-6 p-6 bg-gray-50 min-h-screen dark:bg-gray-800/50">
       {/* Header */}
       <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg p-6 text-white">
         <div className="flex items-center justify-between">
@@ -174,7 +174,7 @@ const RequirementManagerDashboard: React.FC = () => {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">完成率</p>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">完成率</p>
                 <p className="text-2xl font-bold text-green-600">
                   {requirementMetrics.completionRate}%
                 </p>
@@ -193,7 +193,7 @@ const RequirementManagerDashboard: React.FC = () => {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">质量评分</p>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">质量评分</p>
                 <p className="text-2xl font-bold text-blue-600">
                   {requirementMetrics.qualityScore}
                 </p>
@@ -212,7 +212,7 @@ const RequirementManagerDashboard: React.FC = () => {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">追溯覆盖率</p>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">追溯覆盖率</p>
                 <p className="text-2xl font-bold text-purple-600">
                   {requirementMetrics.traceabilityCoverage}%
                 </p>
@@ -231,7 +231,7 @@ const RequirementManagerDashboard: React.FC = () => {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">干系人参与度</p>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">干系人参与度</p>
                 <p className="text-2xl font-bold text-orange-600">
                   {requirementMetrics.stakeholderEngagement}%
                 </p>
@@ -315,7 +315,7 @@ const RequirementManagerDashboard: React.FC = () => {
                   <div className="w-2 h-2 bg-blue-500 rounded-full mt-2"></div>
                   <div className="flex-1">
                     <p className="text-sm font-medium">{activity.title}</p>
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
                       {activity.user} · {activity.time}
                     </p>
                   </div>
@@ -346,10 +346,10 @@ const RequirementManagerDashboard: React.FC = () => {
                       {review.priority === 'high' ? '高' : '中'}
                     </Badge>
                   </div>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
                     评审人：{review.reviewer}
                   </p>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
                     截止：{review.deadline}
                   </p>
                 </div>

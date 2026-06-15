@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+﻿import React, { useState, useEffect } from 'react'
 import { Card, Button, Table, Space, Modal, Form, Input, Switch, ColorPicker, Select, message, Tag } from 'antd'
 import { PlusOutlined, EditOutlined, DeleteOutlined, FolderOutlined } from '@ant-design/icons'
 import { ConfigService, ConfigGroup } from '@/services/config-service'
@@ -61,7 +61,7 @@ export default function ConfigGroupManagement() {
       dataIndex: 'group_code',
       key: 'group_code',
       render: (text: string) => (
-        <code className="bg-gray-100 px-2 py-1 rounded text-sm">{text}</code>
+        <code className="bg-gray-100 px-2 py-1 rounded text-sm dark:bg-gray-800">{text}</code>
       )
     },
     {

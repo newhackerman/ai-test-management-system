@@ -1,4 +1,4 @@
-// @ts-nocheck
+﻿// @ts-nocheck
 import React, { useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { Bot, Copy, Download, Play, Plus, Search, Trash2, Upload, Wand2 } from 'lucide-react'
@@ -374,7 +374,7 @@ const TestCaseList: React.FC = () => {
                     data-testid="test-case-import-file"
                     accept={IMPORT_FILE_ACCEPT}
                     onChange={(event) => setImportFile(event.target.files?.[0] || null)}
-                    className="block w-full text-sm text-gray-600 file:mr-4 file:rounded-md file:border-0 file:bg-blue-50 file:px-4 file:py-2 file:text-sm file:font-medium file:text-blue-700 hover:file:bg-blue-100"
+                    className="block w-full text-sm text-gray-600 file:mr-4 file:rounded-md file:border-0 file:bg-blue-50 file:px-4 file:py-2 file:text-sm file:font-medium file:text-blue-700 hover:file:bg-blue-100 dark:text-gray-400"
                   />
                   <p className="text-xs text-muted-foreground">
                     表格支持标题、描述、模块、步骤、预期结果、优先级、脚本类型、脚本内容等列；也可以直接上传 .py、.js、.jmx、.har、.txt 等脚本文件生成用例。
@@ -518,7 +518,7 @@ const TestCaseList: React.FC = () => {
       {selectedCases.length > 0 && (
         <Card>
           <CardContent className="flex flex-col gap-3 pt-6 md:flex-row md:items-center md:justify-between">
-            <span className="text-sm text-gray-600">已选择 {selectedCases.length} 个测试用例</span>
+            <span className="text-sm text-gray-600 dark:text-gray-400">已选择 {selectedCases.length} 个测试用例</span>
             <div className="flex flex-wrap gap-2">
               <Button variant="outline" size="sm" onClick={handleClearSelection}>取消选择</Button>
               <Button variant="outline" size="sm" onClick={handleExportSelected}>
@@ -587,7 +587,7 @@ const TestCaseList: React.FC = () => {
                     >
                       {testCase.case_title}
                     </Link>
-                    <div className="truncate text-sm text-gray-500" title={testCase.case_code}>{testCase.case_code}</div>
+                    <div className="truncate text-sm text-gray-500 dark:text-gray-400" title={testCase.case_code}>{testCase.case_code}</div>
                     {testCase.module && <div className="truncate text-xs text-gray-400" title={testCase.module}>{testCase.module}</div>}
                   </TableCell>
                   <TableCell className="px-3"><Badge variant="outline">{TEST_CASE_TYPE_LABELS[testCase.case_type] || testCase.case_type}</Badge></TableCell>
@@ -642,11 +642,11 @@ const TestCaseList: React.FC = () => {
           </Table>
 
           {testCases.length === 0 && (
-            <div className="py-10 text-center text-gray-500">暂无测试用例数据</div>
+            <div className="py-10 text-center text-gray-500 dark:text-gray-400">暂无测试用例数据</div>
           )}
 
           <div className="mt-4 flex flex-col gap-3 border-t pt-4 md:flex-row md:items-center md:justify-between">
-            <div className="flex items-center gap-2 text-sm text-gray-600">
+            <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
               <span>每页</span>
               <Select value={String(pageSize)} onValueChange={(value) => handleChangePageSize(Number(value))}>
                 <SelectTrigger className="h-8 w-20"><SelectValue /></SelectTrigger>

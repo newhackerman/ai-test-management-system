@@ -1,4 +1,4 @@
-// @ts-nocheck
+﻿// @ts-nocheck
 import { useEffect, useMemo, useState } from 'react'
 import {
   AlertTriangle,
@@ -726,10 +726,10 @@ function RequirementFormDialog({ title, form, setForm, projects, users, onClose,
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="max-h-[92vh] w-full max-w-5xl overflow-hidden rounded-lg bg-white shadow-xl">
+      <div className="max-h-[92vh] w-full max-w-5xl overflow-hidden rounded-lg bg-white shadow-xl dark:bg-gray-800">
         <div className="flex items-center justify-between border-b px-6 py-4">
           <div>
-            <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{title}</h2>
           </div>
           <Button variant="ghost" size="icon" onClick={onClose}><X className="h-4 w-4" /></Button>
         </div>
@@ -817,15 +817,15 @@ function RequirementFormDialog({ title, form, setForm, projects, users, onClose,
 function RequirementDetailDialog({ requirement, projects, users, onClose, onEdit, onStatus }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="max-h-[92vh] w-full max-w-4xl overflow-hidden rounded-lg bg-white shadow-xl">
+      <div className="max-h-[92vh] w-full max-w-4xl overflow-hidden rounded-lg bg-white shadow-xl dark:bg-gray-800">
         <div className="flex items-start justify-between border-b px-6 py-4">
           <div>
             <div className="flex flex-wrap items-center gap-2">
-              <h2 className="text-lg font-semibold text-gray-900">{requirement.title}</h2>
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{requirement.title}</h2>
               <StatusBadge status={requirement.status} />
               <PriorityBadge priority={requirement.priority} />
             </div>
-            <p className="mt-1 text-sm text-gray-500">{requirement.requirement_code} · 版本 {requirement.version}</p>
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{requirement.requirement_code} · 版本 {requirement.version}</p>
           </div>
           <Button variant="ghost" size="icon" onClick={onClose}><X className="h-4 w-4" /></Button>
         </div>
@@ -837,14 +837,14 @@ function RequirementDetailDialog({ requirement, projects, users, onClose, onEdit
           </div>
           <div className="mt-6 grid gap-6 lg:grid-cols-2">
             <section>
-              <h3 className="mb-2 text-sm font-semibold text-gray-900">需求描述</h3>
-              <div className="min-h-[120px] whitespace-pre-wrap rounded-md border bg-gray-50 p-4 text-sm text-gray-700">
+              <h3 className="mb-2 text-sm font-semibold text-gray-900 dark:text-gray-100">需求描述</h3>
+              <div className="min-h-[120px] whitespace-pre-wrap rounded-md border bg-gray-50 p-4 text-sm text-gray-700 dark:text-gray-300 dark:bg-gray-800/50">
                 {requirement.description || '暂无描述'}
               </div>
             </section>
             <section>
-              <h3 className="mb-2 text-sm font-semibold text-gray-900">验收标准</h3>
-              <div className="min-h-[120px] whitespace-pre-wrap rounded-md border bg-gray-50 p-4 text-sm text-gray-700">
+              <h3 className="mb-2 text-sm font-semibold text-gray-900 dark:text-gray-100">验收标准</h3>
+              <div className="min-h-[120px] whitespace-pre-wrap rounded-md border bg-gray-50 p-4 text-sm text-gray-700 dark:text-gray-300 dark:bg-gray-800/50">
                 {requirement.acceptance_criteria || '暂无验收标准'}
               </div>
             </section>
@@ -888,11 +888,11 @@ function StatusDialog({ requirement, form, setForm, onClose, onSubmit, saving })
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="w-full max-w-lg rounded-lg bg-white shadow-xl">
+      <div className="w-full max-w-lg rounded-lg bg-white shadow-xl dark:bg-gray-800">
         <div className="flex items-center justify-between border-b px-6 py-4">
           <div>
-            <h2 className="text-lg font-semibold text-gray-900">变更需求状态</h2>
-            <p className="mt-1 text-sm text-gray-500">{requirement.requirement_code} · 当前：{optionLabel(statuses, requirement.status)}</p>
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">变更需求状态</h2>
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{requirement.requirement_code} · 当前：{optionLabel(statuses, requirement.status)}</p>
           </div>
           <Button variant="ghost" size="icon" onClick={onClose}><X className="h-4 w-4" /></Button>
         </div>
@@ -932,11 +932,11 @@ function StatusDialog({ requirement, form, setForm, onClose, onSubmit, saving })
 function ConfirmDialog({ title, message, onClose, onConfirm, saving }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="w-full max-w-md rounded-lg bg-white shadow-xl">
+      <div className="w-full max-w-md rounded-lg bg-white shadow-xl dark:bg-gray-800">
         <div className="border-b px-6 py-4">
-          <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{title}</h2>
         </div>
-        <div className="px-6 py-5 text-sm text-gray-700">{message}</div>
+        <div className="px-6 py-5 text-sm text-gray-700 dark:text-gray-300">{message}</div>
         <div className="flex justify-end gap-2 border-t px-6 py-4">
           <Button variant="outline" onClick={onClose} disabled={saving}>取消</Button>
           <Button variant="destructive" onClick={onConfirm} disabled={saving}>{saving ? '删除中...' : '确认删除'}</Button>
@@ -961,7 +961,7 @@ function SelectField({ value, onChange, children }) {
 function Field({ label, required, className = '', children }) {
   return (
     <label className={`space-y-2 text-sm ${className}`}>
-      <span className="font-medium text-gray-700">
+      <span className="font-medium text-gray-700 dark:text-gray-300">
         {label}
         {required && <span className="ml-1 text-red-500">*</span>}
       </span>
@@ -972,7 +972,7 @@ function Field({ label, required, className = '', children }) {
 
 function Info({ label, value }) {
   return (
-    <div className="rounded-md border bg-white p-3">
+    <div className="rounded-md border bg-white p-3 dark:bg-gray-800">
       <div className="text-xs text-muted-foreground">{label}</div>
       <div className="mt-1 font-medium text-foreground">{value}</div>
     </div>
@@ -981,11 +981,11 @@ function Info({ label, value }) {
 
 function InfoCard({ icon, label, value }) {
   return (
-    <div className="flex gap-3 rounded-md border bg-gray-50 p-4">
+    <div className="flex gap-3 rounded-md border bg-gray-50 p-4 dark:bg-gray-800/50">
       <div className="mt-0.5 text-blue-600">{icon}</div>
       <div>
-        <div className="text-xs text-gray-500">{label}</div>
-        <div className="mt-1 text-sm font-medium text-gray-900">{value}</div>
+        <div className="text-xs text-gray-500 dark:text-gray-400">{label}</div>
+        <div className="mt-1 text-sm font-medium text-gray-900 dark:text-gray-100">{value}</div>
       </div>
     </div>
   )

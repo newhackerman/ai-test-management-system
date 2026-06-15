@@ -1,4 +1,4 @@
-// @ts-nocheck
+﻿// @ts-nocheck
 import { FormEvent, useEffect, useMemo, useState } from 'react'
 import { AlertCircle, AlertTriangle, CheckCircle, CheckSquare, Clock, Filter, Plus, RefreshCw, Search, Trash2 } from 'lucide-react'
 import { Badge } from '@/components/ui/Badge'
@@ -453,7 +453,7 @@ function TaskManagement() {
         <DialogContent className="max-h-[80vh] max-w-xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle>分配任务</DialogTitle>
-            <p className="mt-1 text-sm text-gray-600">{assigningTask?.task_name || ''}</p>
+            <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">{assigningTask?.task_name || ''}</p>
           </DialogHeader>
 
           <form onSubmit={submitAssignment} className="space-y-4">
@@ -468,9 +468,9 @@ function TaskManagement() {
               <Label>执行人 *</Label>
               <div className="mt-2 grid max-h-56 grid-cols-1 gap-2 overflow-y-auto rounded-md border p-3 md:grid-cols-2">
                 {users.length === 0 ? (
-                  <div className="text-sm text-gray-500">暂无可分配用户</div>
+                  <div className="text-sm text-gray-500 dark:text-gray-400">暂无可分配用户</div>
                 ) : users.map((user) => (
-                  <label key={user.id} className="flex items-center gap-2 text-sm text-gray-700">
+                  <label key={user.id} className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
                     <input
                       type="checkbox"
                       checked={assigningIds.includes(user.id)}
@@ -494,7 +494,7 @@ function TaskManagement() {
         <DialogContent className="max-h-[92vh] max-w-2xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle>新建任务</DialogTitle>
-            <p className="mt-1 text-sm text-gray-600">填写任务名称、所属项目和初始状态后即可创建。</p>
+            <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">填写任务名称、所属项目和初始状态后即可创建。</p>
           </DialogHeader>
 
           <form onSubmit={createTask} className="space-y-5">
@@ -549,9 +549,9 @@ function TaskManagement() {
                 <Label>执行人</Label>
                 <div className="mt-2 grid max-h-40 grid-cols-1 gap-2 overflow-y-auto rounded-md border p-3 md:grid-cols-2">
                   {users.length === 0 ? (
-                    <div className="text-sm text-gray-500">暂无可分配用户</div>
+                    <div className="text-sm text-gray-500 dark:text-gray-400">暂无可分配用户</div>
                   ) : users.map((user) => (
-                    <label key={user.id} className="flex items-center gap-2 text-sm text-gray-700">
+                    <label key={user.id} className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
                       <input
                         type="checkbox"
                         checked={(form.assignee_ids || []).includes(user.id)}

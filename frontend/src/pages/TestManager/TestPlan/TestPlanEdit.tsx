@@ -1,4 +1,4 @@
-// @ts-nocheck
+﻿// @ts-nocheck
 import React, { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, Save, X } from 'lucide-react'
@@ -132,7 +132,7 @@ const TestPlanEdit: React.FC = () => {
   }
 
   if (isLoading) {
-    return <div className="flex h-64 items-center justify-center text-gray-500">正在加载测试计划...</div>
+    return <div className="flex h-64 items-center justify-center text-gray-500 dark:text-gray-400">正在加载测试计划...</div>
   }
 
   if (error || !testPlan) {
@@ -215,7 +215,7 @@ const TestPlanEdit: React.FC = () => {
                             ))}
                           </SelectContent>
                         </Select>
-                        <p className="text-xs text-gray-500">测试类型由创建时确定，编辑时不修改。</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">测试类型由创建时确定，编辑时不修改。</p>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -299,7 +299,7 @@ const TestPlanEdit: React.FC = () => {
                             ))}
                           </select>
                         </FormControl>
-                        <p className="text-xs text-gray-500">所属项目由创建时确定，编辑时不修改。</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">所属项目由创建时确定，编辑时不修改。</p>
                         <FormMessage />
                       </FormItem>
                     )}

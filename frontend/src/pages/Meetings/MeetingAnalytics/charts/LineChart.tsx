@@ -1,4 +1,4 @@
-import React from 'react'
+﻿import React from 'react'
 import { 
   LineChart as RechartsLineChart, 
   Line, 
@@ -46,7 +46,7 @@ const LineChart: React.FC<LineChartProps> = ({
   return (
     <div className={className}>
       {title && (
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">{title}</h3>
+        <h3 className="text-lg font-semibold text-gray-900 mb-4 dark:text-gray-100">{title}</h3>
       )}
       <ResponsiveContainer width="100%" height={height}>
         <RechartsLineChart data={data}>

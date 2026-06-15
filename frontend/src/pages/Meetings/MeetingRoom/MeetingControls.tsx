@@ -1,4 +1,4 @@
-// @ts-nocheck
+﻿// @ts-nocheck
 import React, { useState } from 'react';
 import {
   AlertTriangle,
@@ -265,7 +265,7 @@ const MeetingControls: React.FC<MeetingControlsProps> = ({ meeting, className })
                   </div>
                   <div>
                     <div className="font-medium">{participant.user?.name || `用户 ${participant.user_id}`}</div>
-                    <div className="text-sm text-gray-500">{roleLabels[participant.participant_role] || participant.participant_role}</div>
+                    <div className="text-sm text-gray-500 dark:text-gray-400">{roleLabels[participant.participant_role] || participant.participant_role}</div>
                   </div>
                 </div>
 
@@ -303,7 +303,7 @@ const MeetingControls: React.FC<MeetingControlsProps> = ({ meeting, className })
             ))}
 
             {safeParticipants.length === 0 && (
-              <div className="rounded-lg border p-8 text-center text-sm text-gray-500">暂无参与者</div>
+              <div className="rounded-lg border p-8 text-center text-sm text-gray-500 dark:text-gray-400">暂无参与者</div>
             )}
           </div>
 
@@ -326,7 +326,7 @@ const MeetingControls: React.FC<MeetingControlsProps> = ({ meeting, className })
             <div className="flex items-center justify-between gap-4">
               <div>
                 <div className="font-medium">等候室</div>
-                <div className="text-sm text-gray-500">新参与者需要主持人批准</div>
+                <div className="text-sm text-gray-500 dark:text-gray-400">新参与者需要主持人批准</div>
               </div>
               <Switch
                 checked={Boolean(meeting?.is_waiting_room_enabled)}
@@ -337,7 +337,7 @@ const MeetingControls: React.FC<MeetingControlsProps> = ({ meeting, className })
             <div className="flex items-center justify-between gap-4">
               <div>
                 <div className="font-medium">会议录制</div>
-                <div className="text-sm text-gray-500">自动录制会议内容</div>
+                <div className="text-sm text-gray-500 dark:text-gray-400">自动录制会议内容</div>
               </div>
               <Switch
                 checked={Boolean(meeting?.is_recording_enabled)}
@@ -348,7 +348,7 @@ const MeetingControls: React.FC<MeetingControlsProps> = ({ meeting, className })
             <div className="flex items-center justify-between gap-4">
               <div>
                 <div className="font-medium">会议锁定</div>
-                <div className="text-sm text-gray-500">阻止新的参与者加入</div>
+                <div className="text-sm text-gray-500 dark:text-gray-400">阻止新的参与者加入</div>
               </div>
               <Switch checked={isLocked} onCheckedChange={handleToggleLock} />
             </div>

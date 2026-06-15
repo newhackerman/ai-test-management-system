@@ -44,7 +44,7 @@ const AnalyticsLayout: React.FC<AnalyticsLayoutProps> = ({
   }
   
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-800/50">
       {/* 瀵艰埅鏍?*/}
       <AnalyticsNavigation />
       
@@ -56,7 +56,7 @@ const AnalyticsLayout: React.FC<AnalyticsLayoutProps> = ({
             <div className="flex items-center justify-between">
               <div>
                 {title && (
-                  <h1 className="text-3xl font-bold text-gray-900">{title}</h1>
+                  <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">{title}</h1>
                 )}
               </div>
               {actions && (
@@ -87,7 +87,7 @@ const AnalyticsLayout: React.FC<AnalyticsLayoutProps> = ({
         {/* 鍔犺浇鐘舵€?*/}
         {isLoading && (
           <div className="flex items-center justify-center py-12">
-            <div className="flex items-center space-x-3 text-gray-600">
+            <div className="flex items-center space-x-3 text-gray-600 dark:text-gray-400">
               <Loader2 className="h-6 w-6 animate-spin" />
               <span>姝ｅ湪鍔犺浇鍒嗘瀽鏁版嵁...</span>
             </div>

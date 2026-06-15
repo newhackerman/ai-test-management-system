@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+﻿import React, { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowLeft, CheckCircle2, Loader2, Mail } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
@@ -75,7 +75,7 @@ const ForgotPasswordPage: React.FC = () => {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
+    <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4 dark:bg-gray-800/50">
       <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle className="text-center">忘记密码</CardTitle>
@@ -90,9 +90,9 @@ const ForgotPasswordPage: React.FC = () => {
                 <CheckCircle2 className="h-6 w-6" />
               </div>
               <div className="space-y-2">
-                <h2 className="text-base font-semibold text-gray-900">请检查邮箱</h2>
-                <p className="text-sm leading-6 text-gray-600">
-                  如果该邮箱已注册，重置链接会发送到 <span className="font-medium text-gray-900">{email}</span>。
+                <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">请检查邮箱</h2>
+                <p className="text-sm leading-6 text-gray-600 dark:text-gray-400">
+                  如果该邮箱已注册，重置链接会发送到 <span className="font-medium text-gray-900 dark:text-gray-100">{email}</span>。
                   链接 30 分钟内有效，也请检查垃圾邮件文件夹。
                 </p>
               </div>

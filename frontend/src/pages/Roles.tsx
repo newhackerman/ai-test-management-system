@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
+﻿import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   Badge,
   Button,
@@ -442,7 +442,7 @@ const Roles: React.FC = () => {
       dataIndex: 'code',
       key: 'code',
       width: 180,
-      render: (code) => <code className="rounded bg-gray-100 px-2 py-1">{code}</code>,
+      render: (code) => <code className="rounded bg-gray-100 px-2 py-1 dark:bg-gray-800">{code}</code>,
     },
     {
       title: '状态',
@@ -613,7 +613,7 @@ const Roles: React.FC = () => {
         <div className="grid grid-cols-2 gap-2 rounded-lg border bg-card p-3 md:grid-cols-5">
           <StatCard value={stats?.total_roles ?? 0} label="总角色数" className="text-blue-600" />
           <StatCard value={stats?.active_roles ?? 0} label="启用角色" className="text-green-600" />
-          <StatCard value={stats?.inactive_roles ?? 0} label="停用角色" className="text-gray-600" />
+          <StatCard value={stats?.inactive_roles ?? 0} label="停用角色" className="text-gray-600 dark:text-gray-400" />
           <StatCard value={stats?.total_permissions ?? 0} label="权限总数" className="text-purple-600" />
           <StatCard value={(stats?.average_users_per_role ?? 0).toFixed(1)} label="平均用户数" className="text-orange-600" />
         </div>

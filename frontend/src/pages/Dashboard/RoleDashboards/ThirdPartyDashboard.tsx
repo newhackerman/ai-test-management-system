@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -218,7 +218,7 @@ const ThirdPartyDashboard: React.FC = () => {
               <AlertTriangle className="h-12 w-12 mx-auto" />
             </div>
             <h3 className="text-lg font-semibold mb-2">加载失败</h3>
-            <p className="text-gray-600 mb-4">{error}</p>
+            <p className="text-gray-600 mb-4 dark:text-gray-400">{error}</p>
             <Button onClick={() => window.location.reload()}>
               重新加载
             </Button>
@@ -229,7 +229,7 @@ const ThirdPartyDashboard: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6 p-6 bg-gray-50 min-h-screen">
+    <div className="space-y-6 p-6 bg-gray-50 min-h-screen dark:bg-gray-800/50">
       {/* Header */}
       <div className="bg-gradient-to-r from-teal-600 to-cyan-600 rounded-lg p-6 text-white">
         <div className="flex items-center justify-between">
@@ -249,7 +249,7 @@ const ThirdPartyDashboard: React.FC = () => {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">SLA合规率</p>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">SLA合规率</p>
                 <p className="text-2xl font-bold text-green-600">
                   {collaborationMetrics.slaCompliance}%
                 </p>
@@ -268,7 +268,7 @@ const ThirdPartyDashboard: React.FC = () => {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">响应时间</p>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">响应时间</p>
                 <p className="text-2xl font-bold text-blue-600">
                   {collaborationMetrics.responseTime}h
                 </p>
@@ -287,7 +287,7 @@ const ThirdPartyDashboard: React.FC = () => {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">满意度评分</p>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">满意度评分</p>
                 <p className="text-2xl font-bold text-purple-600">
                   {collaborationMetrics.satisfactionScore}/5
                 </p>
@@ -306,7 +306,7 @@ const ThirdPartyDashboard: React.FC = () => {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">交付率</p>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">交付率</p>
                 <p className="text-2xl font-bold text-orange-600">
                   {collaborationMetrics.deliveryRate}%
                 </p>
@@ -361,7 +361,7 @@ const ThirdPartyDashboard: React.FC = () => {
                 <div key={index} className="space-y-2">
                   <div className="flex justify-between text-sm">
                     <span className="font-medium">{project.project}</span>
-                    <span className="text-gray-500">{project.completed}/{project.total}</span>
+                    <span className="text-gray-500 dark:text-gray-400">{project.completed}/{project.total}</span>
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-2">
                     <div 
@@ -402,14 +402,14 @@ const ThirdPartyDashboard: React.FC = () => {
                        project.status === 'completed' ? '已完成' : '暂停'}
                     </Badge>
                   </div>
-                  <p className="text-sm text-gray-600 mb-2">角色: {project.role}</p>
+                  <p className="text-sm text-gray-600 mb-2 dark:text-gray-400">角色: {project.role}</p>
                   <div className="w-full bg-gray-200 rounded-full h-2 mb-2">
                     <div 
                       className="bg-teal-600 h-2 rounded-full" 
                       style={{ width: `${project.progress}%` }}
                     ></div>
                   </div>
-                  <div className="flex justify-between text-sm text-gray-500">
+                  <div className="flex justify-between text-sm text-gray-500 dark:text-gray-400">
                     <span>进度: {project.progress}%</span>
                     <span>截止: {project.deadline}</span>
                   </div>
@@ -449,7 +449,7 @@ const ThirdPartyDashboard: React.FC = () => {
                       >
                         {task.priority === 'high' ? '高' : task.priority === 'medium' ? '中' : '低'}
                       </Badge>
-                      <span className="text-xs text-gray-500">截止: {task.deadline}</span>
+                      <span className="text-xs text-gray-500 dark:text-gray-400">截止: {task.deadline}</span>
                     </div>
                     <p className="text-xs text-gray-400 mt-1">分配人: {task.assignedBy}</p>
                   </div>
@@ -491,7 +491,7 @@ const ThirdPartyDashboard: React.FC = () => {
                       {comm.priority === 'high' ? '高' : comm.priority === 'medium' ? '中' : '低'}
                     </Badge>
                   </div>
-                  <div className="flex justify-between text-xs text-gray-500">
+                  <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400">
                     <span>来自: {comm.from}</span>
                     <span>{comm.timestamp}</span>
                   </div>
@@ -539,8 +539,8 @@ const ThirdPartyDashboard: React.FC = () => {
                        request.status === 'pending' ? '待审批' : '已拒绝'}
                     </Badge>
                   </div>
-                  <p className="text-xs text-gray-600 mb-1">申请原因: {request.reason}</p>
-                  <div className="flex justify-between text-xs text-gray-500">
+                  <p className="text-xs text-gray-600 mb-1 dark:text-gray-400">申请原因: {request.reason}</p>
+                  <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400">
                     <span>申请日期: {request.requestDate}</span>
                     {request.approver && <span>审批人: {request.approver}</span>}
                   </div>

@@ -1,4 +1,4 @@
-// @ts-nocheck
+﻿// @ts-nocheck
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import {
   AlertCircle,
@@ -985,11 +985,11 @@ const AIAssistant: React.FC = () => {
                             <span className="truncate text-sm font-medium text-gray-900 dark:text-slate-100">{file.filename}</span>
                             <span className="text-xs text-gray-500 dark:text-slate-400">{formatFileSize(file.fileSize)}</span>
                             {file.extractedText ? (
-                              <Badge variant="outline" className="rounded-md bg-white text-xs">已提取正文</Badge>
+                              <Badge variant="outline" className="rounded-md bg-white text-xs dark:bg-gray-800">已提取正文</Badge>
                             ) : file.imageDataUrl ? (
-                              <Badge variant="outline" className="rounded-md bg-white text-xs">视觉附件</Badge>
+                              <Badge variant="outline" className="rounded-md bg-white text-xs dark:bg-gray-800">视觉附件</Badge>
                             ) : (
-                              <Badge variant="outline" className="rounded-md bg-white text-xs">仅文件信息</Badge>
+                              <Badge variant="outline" className="rounded-md bg-white text-xs dark:bg-gray-800">仅文件信息</Badge>
                             )}
                           </div>
                           <div className="mt-1 line-clamp-2 text-xs text-gray-500 dark:text-slate-400">
@@ -1000,7 +1000,7 @@ const AIAssistant: React.FC = () => {
                         <button
                           type="button"
                           onClick={() => removeAttachment(file.id)}
-                          className="rounded p-1 text-gray-400 hover:bg-white hover:text-red-600 dark:text-slate-500 dark:hover:bg-slate-700 dark:hover:text-red-300"
+                          className="rounded p-1 text-gray-400 hover:bg-white hover:text-red-600 dark:text-slate-500 dark:hover:bg-slate-700 dark:hover:text-red-300 dark:bg-gray-800"
                           title="移除附件"
                         >
                           <X className="h-4 w-4" />
@@ -1053,7 +1053,7 @@ const AIAssistant: React.FC = () => {
                       {attachmentLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Paperclip className="mr-2 h-4 w-4" />}
                       上传附件
                     </Button>
-                    <span className="text-xs text-gray-500">
+                    <span className="text-xs text-gray-500 dark:text-gray-400">
                       支持图片、PDF、Word、Excel、HTML、CSV、文本；可解析正文的附件会自动加入本次 AI 上下文。
                     </span>
                 </div>
@@ -1066,7 +1066,7 @@ const AIAssistant: React.FC = () => {
           <Card className="rounded-md">
             <CardHeader className="p-4">
               <CardTitle className="flex items-center gap-2 text-base">
-                <Settings2 className="h-5 w-5 text-slate-600" />
+                <Settings2 className="h-5 w-5 text-slate-600 dark:text-slate-300" />
                 调用设置
               </CardTitle>
             </CardHeader>
@@ -1093,7 +1093,7 @@ const AIAssistant: React.FC = () => {
                 <div className="mb-2 flex items-center justify-between gap-2">
                   <div className="text-sm font-medium text-gray-700 dark:text-slate-200">业务上下文</div>
                   {businessContext && (
-                    <button type="button" onClick={() => setBusinessContext('')} className="text-xs text-gray-500 hover:text-red-600">
+                    <button type="button" onClick={() => setBusinessContext('')} className="text-xs text-gray-500 hover:text-red-600 dark:text-gray-400">
                       清空
                     </button>
                   )}

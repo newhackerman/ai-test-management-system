@@ -1,4 +1,4 @@
-// @ts-nocheck
+﻿// @ts-nocheck
 import React, { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, Clock, Copy, Edit, FileText, Play, User, Wand2 } from 'lucide-react'
@@ -171,7 +171,7 @@ const TestCaseDetail: React.FC = () => {
           </Link>
           <div>
             <h1 className="text-2xl font-bold">{testCase.case_title}</h1>
-            <p className="text-gray-600">{testCase.case_code}</p>
+            <p className="text-gray-600 dark:text-gray-400">{testCase.case_code}</p>
           </div>
           <Badge variant={statusVariant[testCase.status] || 'secondary'}>{STATUS_LABELS[testCase.status] || testCase.status}</Badge>
         </div>
@@ -203,7 +203,7 @@ const TestCaseDetail: React.FC = () => {
         <MetricCard icon={<FileText className="h-5 w-5 text-blue-500" />} label="测试类型" value={TEST_CASE_TYPE_LABELS[testCase.case_type] || testCase.case_type} />
         <Card>
           <CardContent className="pt-6">
-            <p className="text-sm font-medium text-gray-600">优先级</p>
+            <p className="text-sm font-medium text-gray-600 dark:text-gray-400">优先级</p>
             <div className="mt-2"><Badge variant={priorityVariant[testCase.priority] || 'secondary'}>{PRIORITY_LABELS[testCase.priority] || testCase.priority}</Badge></div>
           </CardContent>
         </Card>
@@ -232,7 +232,7 @@ const TestCaseDetail: React.FC = () => {
                 <Info label="总体预期结果" value={testCase.expected_result || '暂无定义'} />
                 {Array.isArray(testCase.tags) && testCase.tags.length > 0 && (
                   <div>
-                    <label className="text-sm font-medium text-gray-600">标签</label>
+                    <label className="text-sm font-medium text-gray-600 dark:text-gray-400">标签</label>
                     <div className="mt-1 flex flex-wrap gap-1">
                       {testCase.tags.map((tag, index) => <Badge key={`${tag}-${index}`} variant="outline">{tag}</Badge>)}
                     </div>
@@ -244,11 +244,11 @@ const TestCaseDetail: React.FC = () => {
             <Card>
               <CardHeader><CardTitle>管理信息</CardTitle></CardHeader>
               <CardContent className="space-y-4">
-                <IconInfo icon={<User className="h-4 w-4 text-gray-500" />} label="创建人" value={getUserName(testCase.creator_id)} />
-                <IconInfo icon={<User className="h-4 w-4 text-gray-500" />} label="负责人" value={getUserName(testCase.assignee_id)} />
-                <IconInfo icon={<Clock className="h-4 w-4 text-gray-500" />} label="创建时间" value={formatDate(testCase.created_at)} />
-                <IconInfo icon={<Clock className="h-4 w-4 text-gray-500" />} label="更新时间" value={formatDate(testCase.updated_at)} />
-                <IconInfo icon={<FileText className="h-4 w-4 text-gray-500" />} label="版本" value={`v${testCase.version || 1}`} />
+                <IconInfo icon={<User className="h-4 w-4 text-gray-500 dark:text-gray-400" />} label="创建人" value={getUserName(testCase.creator_id)} />
+                <IconInfo icon={<User className="h-4 w-4 text-gray-500 dark:text-gray-400" />} label="负责人" value={getUserName(testCase.assignee_id)} />
+                <IconInfo icon={<Clock className="h-4 w-4 text-gray-500 dark:text-gray-400" />} label="创建时间" value={formatDate(testCase.created_at)} />
+                <IconInfo icon={<Clock className="h-4 w-4 text-gray-500 dark:text-gray-400" />} label="更新时间" value={formatDate(testCase.updated_at)} />
+                <IconInfo icon={<FileText className="h-4 w-4 text-gray-500 dark:text-gray-400" />} label="版本" value={`v${testCase.version || 1}`} />
               </CardContent>
             </Card>
           </div>
@@ -274,7 +274,7 @@ const TestCaseDetail: React.FC = () => {
                         <TableCell className="font-medium">{step.step_number || index + 1}</TableCell>
                         <TableCell className="whitespace-pre-wrap">{step.action}</TableCell>
                         <TableCell className="whitespace-pre-wrap">{step.expected_result}</TableCell>
-                        <TableCell className="whitespace-pre-wrap text-sm text-gray-600">
+                        <TableCell className="whitespace-pre-wrap text-sm text-gray-600 dark:text-gray-400">
                           {typeof step.test_data === 'string' ? step.test_data || '-' : JSON.stringify(step.test_data || '') || '-'}
                         </TableCell>
                       </TableRow>
@@ -282,7 +282,7 @@ const TestCaseDetail: React.FC = () => {
                   </TableBody>
                 </Table>
               ) : (
-                <div className="py-8 text-center text-gray-500">暂无测试步骤</div>
+                <div className="py-8 text-center text-gray-500 dark:text-gray-400">暂无测试步骤</div>
               )}
             </CardContent>
           </Card>
@@ -293,7 +293,7 @@ const TestCaseDetail: React.FC = () => {
             <CardHeader><CardTitle>执行记录</CardTitle></CardHeader>
             <CardContent>
               {executionsLoading ? (
-                <div className="py-8 text-center text-gray-500">执行记录加载中...</div>
+                <div className="py-8 text-center text-gray-500 dark:text-gray-400">执行记录加载中...</div>
               ) : executions.length > 0 ? (
                 <Table>
                   <TableHeader>
@@ -320,7 +320,7 @@ const TestCaseDetail: React.FC = () => {
                   </TableBody>
                 </Table>
               ) : (
-                <div className="py-8 text-center text-gray-500">
+                <div className="py-8 text-center text-gray-500 dark:text-gray-400">
                   暂无执行记录，可点击页面右上角“执行测试”开始一次手工执行。
                 </div>
               )}
@@ -352,7 +352,7 @@ const MetricCard = ({ icon, label, value }: { icon: React.ReactNode; label: stri
       <div className="flex items-center gap-3">
         {icon}
         <div>
-          <p className="text-sm font-medium text-gray-600">{label}</p>
+          <p className="text-sm font-medium text-gray-600 dark:text-gray-400">{label}</p>
           <p className="text-lg font-semibold">{value}</p>
         </div>
       </div>
@@ -362,7 +362,7 @@ const MetricCard = ({ icon, label, value }: { icon: React.ReactNode; label: stri
 
 const Info = ({ label, value }: { label: string; value: React.ReactNode }) => (
   <div>
-    <label className="text-sm font-medium text-gray-600">{label}</label>
+    <label className="text-sm font-medium text-gray-600 dark:text-gray-400">{label}</label>
     <p className="mt-1 whitespace-pre-wrap">{value}</p>
   </div>
 )
