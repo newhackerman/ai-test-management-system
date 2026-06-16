@@ -388,7 +388,7 @@ const Dashboard: React.FC = () => {
         value: summary?.projects.active,
         helper: `总项目 ${formatNumber(summary?.projects.total)}，逾期 ${formatNumber(summary?.projects.overdue)}`,
         icon: Briefcase,
-        tone: 'bg-blue-50 text-blue-700',
+        tone: 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
         link: '/projects',
       },
       {
@@ -397,7 +397,7 @@ const Dashboard: React.FC = () => {
         value: summary?.defects.open,
         helper: `高优先级 ${formatNumber(summary?.defects.high_priority_open)}，总缺陷 ${formatNumber(summary?.defects.total)}`,
         icon: AlertTriangle,
-        tone: 'bg-red-50 text-red-700',
+        tone: 'bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-300',
         link: '/test-manager/defects',
       },
       {
@@ -406,7 +406,7 @@ const Dashboard: React.FC = () => {
         value: summary ? formatPercent(summary.testing.pass_rate) : undefined,
         helper: `执行总数 ${formatNumber(summary?.testing.executions_total)}，今日执行 ${formatNumber(summary?.testing.executions_today)}`,
         icon: ClipboardCheck,
-        tone: 'bg-emerald-50 text-emerald-700',
+        tone: 'bg-emerald-50 text-emerald-700 dark:text-emerald-300 dark:bg-emerald-900/30 dark:text-emerald-300',
         link: '/test-manager/executions',
       },
       {
@@ -415,7 +415,7 @@ const Dashboard: React.FC = () => {
         value: summary?.tasks.open,
         helper: `逾期 ${formatNumber(summary?.tasks.overdue)}，完成率 ${formatPercent(summary?.tasks.completion_rate)}`,
         icon: ListChecks,
-        tone: 'bg-amber-50 text-amber-700',
+        tone: 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300',
         link: '/tasks',
       },
       {
@@ -424,7 +424,7 @@ const Dashboard: React.FC = () => {
         value: summary?.requirements.active,
         helper: `总需求 ${formatNumber(summary?.requirements.total)}，完成率 ${formatPercent(summary?.requirements.completion_rate)}`,
         icon: FileText,
-        tone: 'bg-indigo-50 text-indigo-700',
+        tone: 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300',
         link: '/requirements',
       },
       {
@@ -433,7 +433,7 @@ const Dashboard: React.FC = () => {
         value: summary?.meetings.today,
         helper: `待开始 ${formatNumber(summary?.meetings.upcoming)}，进行中 ${formatNumber(summary?.meetings.running)}`,
         icon: CalendarDays,
-        tone: 'bg-cyan-50 text-cyan-700',
+        tone: 'bg-cyan-50 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-300',
         link: '/meetings?date=today',
       },
     ].filter((metric) => canView(metric.module)),
@@ -459,13 +459,13 @@ const Dashboard: React.FC = () => {
       </div>
 
       {error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div className="rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 px-4 py-3 text-sm text-red-700 dark:text-red-400">
           {error}
         </div>
       )}
 
       {!loading && !hasAnyModule && (
-        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+        <div className="rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 px-4 py-3 text-sm text-amber-800 dark:text-amber-400">
           当前账号没有可展示的业务模块权限，请联系管理员分配角色或权限。
         </div>
       )}
@@ -653,7 +653,7 @@ const Dashboard: React.FC = () => {
                 {summary.data_sources.map((source) => (
                   <div key={source.table} className="flex items-center justify-between gap-3 rounded border px-3 py-2 text-sm">
                     <span className="font-mono text-xs text-gray-700 dark:text-gray-300">{source.table}</span>
-                    <Badge variant={source.available ? 'secondary' : 'outline'} className={source.available ? 'text-emerald-700' : 'text-gray-500'}>
+                    <Badge variant={source.available ? 'secondary' : 'outline'} className={source.available ? 'text-emerald-700 dark:text-emerald-300' : 'text-gray-500'}>
                       {source.available ? '已读取' : '无数据表'}
                     </Badge>
                   </div>
@@ -683,7 +683,7 @@ const CompactMetric = ({
 }) => (
   <div>
     <p className="text-xs text-gray-500 dark:text-gray-400">{label}</p>
-    <p className={cn('mt-1 text-xl font-semibold', emphasis ? 'text-red-700' : 'text-gray-900')}>{loading ? '...' : formatNumber(value)}</p>
+    <p className={cn('mt-1 text-xl font-semibold', emphasis ? 'text-red-700 dark:text-red-400' : 'text-gray-900 dark:text-gray-100')}>{loading ? '...' : formatNumber(value)}</p>
   </div>
 )
 
@@ -734,7 +734,7 @@ const StatusBadge = ({ value }: { value?: string | null }) => {
   return (
     <Badge
       variant={isWarning ? 'destructive' : isDone ? 'secondary' : 'outline'}
-      className={isDone ? 'text-emerald-700' : undefined}
+      className={isDone ? 'text-emerald-700 dark:text-emerald-300' : undefined}
     >
       {statusLabels[value] || value}
     </Badge>
