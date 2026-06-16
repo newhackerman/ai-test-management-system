@@ -1,4 +1,5 @@
 ﻿import React, { useEffect, useMemo, useState } from 'react'
+import { useTheme } from '@/hooks/useTheme'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import {
   AlertTriangle,
@@ -153,7 +154,8 @@ const AppLayout: React.FC = () => {
   const { user, isAuthenticated, logout } = useAuthStore()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
-  const [darkMode, setDarkMode] = useState(() => localStorage.getItem('theme') === 'dark')
+  const { resolvedTheme, toggleTheme } = useTheme()
+  const darkMode = resolvedTheme === 'dark'
   const [notificationOpen, setNotificationOpen] = useState(false)
   const [notifications, setNotifications] = useState<SystemNotification[]>([])
   const [unreadCount, setUnreadCount] = useState(0)
@@ -170,10 +172,7 @@ const AppLayout: React.FC = () => {
     return match ? pageTitles[match] : '工作台'
   }, [location.pathname])
 
-  useEffect(() => {
-    document.documentElement.classList.toggle('dark', darkMode)
-    localStorage.setItem('theme', darkMode ? 'dark' : 'light')
-  }, [darkMode])
+  // theme managed by useTheme hook
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -377,7 +376,7 @@ const AppLayout: React.FC = () => {
 
           <div className="flex items-center gap-2">
             <button
-              onClick={() => setDarkMode((value) => !value)}
+              onClick={toggleTheme}
               className="inline-flex h-9 items-center gap-2 rounded-md border px-3 text-sm hover:bg-gray-50 dark:border-slate-700 dark:hover:bg-slate-800 dark:bg-gray-800/50 dark:hover:bg-gray-800"
               title={darkMode ? '切换到浅色主题' : '切换到深色主题'}
             >
