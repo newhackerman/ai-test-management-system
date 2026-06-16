@@ -1,4 +1,4 @@
-// @ts-nocheck
+﻿// @ts-nocheck
 import { useMemo, useState } from 'react';
 import { AlertCircle, CheckCircle, Clock, Download, Filter, Info, Search, XCircle } from 'lucide-react';
 
@@ -69,9 +69,9 @@ const logs: LogItem[] = [
 ];
 
 const levelMeta = {
-  error: { label: '错误', variant: 'destructive', icon: <XCircle className="h-4 w-4 text-red-500" /> },
+  error: { label: '错误', variant: 'destructive', icon: <XCircle className="h-4 w-4 text-red-500 dark:text-red-400" /> },
   warning: { label: '警告', variant: 'secondary', icon: <AlertCircle className="h-4 w-4 text-yellow-500" /> },
-  info: { label: '信息', variant: 'default', icon: <Info className="h-4 w-4 text-blue-500" /> },
+  info: { label: '信息', variant: 'default', icon: <Info className="h-4 w-4 text-blue-500 dark:text-blue-400" /> },
   success: { label: '成功', variant: 'default', icon: <CheckCircle className="h-4 w-4 text-green-500" /> },
 };
 
@@ -237,9 +237,9 @@ export default function Logs() {
       </Card>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-        <StatCard icon={<XCircle className="h-8 w-8 text-red-500" />} value={stats.error} label="错误日志" />
+        <StatCard icon={<XCircle className="h-8 w-8 text-red-500 dark:text-red-400" />} value={stats.error} label="错误日志" />
         <StatCard icon={<AlertCircle className="h-8 w-8 text-yellow-500" />} value={stats.warning} label="警告日志" />
-        <StatCard icon={<Info className="h-8 w-8 text-blue-500" />} value={stats.info} label="信息日志" />
+        <StatCard icon={<Info className="h-8 w-8 text-blue-500 dark:text-blue-400" />} value={stats.info} label="信息日志" />
         <StatCard icon={<CheckCircle className="h-8 w-8 text-green-500" />} value={stats.success} label="成功日志" />
       </div>
 

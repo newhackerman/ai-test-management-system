@@ -1,4 +1,4 @@
-// @ts-nocheck
+﻿// @ts-nocheck
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   Avatar,
@@ -286,7 +286,7 @@ export const ProjectNotifications: React.FC<ProjectNotificationsProps> = ({ proj
           loading={isLoading}
           renderItem={(notification) => (
             <List.Item
-              className={`${!notification.is_read ? 'bg-blue-50' : ''} transition-colors hover:bg-gray-50`}
+              className={`${!notification.is_read ? 'bg-blue-50' : ''} transition-colors hover:bg-gray-50 dark:bg-gray-800/50`}
               actions={[
                 <Dropdown
                   key="actions"

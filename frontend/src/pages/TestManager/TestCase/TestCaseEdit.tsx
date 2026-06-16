@@ -153,7 +153,7 @@ const TestCaseEdit: React.FC = () => {
   }
 
   if (error || !testCase) {
-    return <div className="text-center text-red-500">测试用例加载失败</div>
+    return <div className="text-center text-red-500 dark:text-red-400">测试用例加载失败</div>
   }
 
   return (
@@ -170,8 +170,8 @@ const TestCaseEdit: React.FC = () => {
 
       <form onSubmit={handleSubmit} className="space-y-4">
         {submitError && (
-          <Card className="border-red-200 bg-red-50">
-            <CardContent className="p-4 text-sm text-red-700">{submitError}</CardContent>
+          <Card className="border-red-200 bg-red-50 dark:bg-red-900/20 dark:border-red-800">
+            <CardContent className="p-4 text-sm text-red-700 dark:text-red-400">{submitError}</CardContent>
           </Card>
         )}
 
@@ -249,7 +249,7 @@ const TestCaseEdit: React.FC = () => {
                 <Textarea rows={2} value={step.expected_result} onChange={(event) => updateStep(index, 'expected_result', event.target.value)} placeholder="该步骤预期结果" required />
                 <Textarea rows={2} value={String(step.test_data || '')} onChange={(event) => updateStep(index, 'test_data', event.target.value)} placeholder="测试数据" />
                 <Button type="button" variant="ghost" size="icon" onClick={() => removeStep(index)} disabled={steps.length <= 1} aria-label="删除步骤">
-                  <Trash2 className="h-4 w-4 text-red-500" />
+                  <Trash2 className="h-4 w-4 text-red-500 dark:text-red-400" />
                 </Button>
               </div>
             ))}

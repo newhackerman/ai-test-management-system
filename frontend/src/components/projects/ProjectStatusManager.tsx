@@ -1,4 +1,4 @@
-import { useState } from 'react'
+﻿import { useState } from 'react'
 import { Activity, AlertTriangle, Archive, CheckCircle, Clock, Pause, Play, X } from 'lucide-react'
 
 import { Button } from '@/components/ui/Button'
@@ -26,7 +26,7 @@ const statusConfig: Record<
     label: '规划中',
     icon: Clock,
     color: 'text-blue-600',
-    bgColor: 'bg-blue-50',
+    bgColor: 'bg-blue-50 dark:bg-blue-900/20',
     description: '项目正在规划阶段，正在制定计划和准备资源。',
   },
   IN_PROGRESS: {
@@ -53,15 +53,15 @@ const statusConfig: Record<
   CANCELLED: {
     label: '已取消',
     icon: X,
-    color: 'text-red-600',
-    bgColor: 'bg-red-50',
+    color: 'text-red-600 dark:text-red-400',
+    bgColor: 'bg-red-50 dark:bg-red-900/20',
     description: '项目已取消，不再继续执行。',
   },
   ARCHIVED: {
     label: '已归档',
     icon: Archive,
-    color: 'text-gray-600',
-    bgColor: 'bg-gray-50',
+    color: 'text-gray-600 dark:text-gray-400',
+    bgColor: 'bg-gray-50 dark:bg-gray-800/50',
     description: '项目已归档，仅保留查看和审计记录。',
   },
 }
@@ -205,7 +205,7 @@ const ProjectStatusManager: React.FC<ProjectStatusManagerProps> = ({ project, on
                   className="mt-1"
                 />
                 {reasonRequired && !reason.trim() && (
-                  <p className="mt-1 text-sm text-red-500">暂停或取消项目时必须填写原因。</p>
+                  <p className="mt-1 text-sm text-red-500 dark:text-red-400">暂停或取消项目时必须填写原因。</p>
                 )}
               </div>
             )}

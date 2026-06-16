@@ -86,7 +86,7 @@ const ForgotPasswordPage: React.FC = () => {
         <CardContent>
           {sent ? (
             <div className="space-y-5 text-center">
-              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20">
                 <CheckCircle2 className="h-6 w-6" />
               </div>
               <div className="space-y-2">
@@ -110,7 +110,7 @@ const ForgotPasswordPage: React.FC = () => {
               <div>
                 <label className="mb-1 block text-sm font-medium">邮箱</label>
                 <div className="relative">
-                  <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                  <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 dark:text-gray-500" />
                   <Input
                     type="email"
                     value={email}
@@ -122,7 +122,7 @@ const ForgotPasswordPage: React.FC = () => {
                   />
                 </div>
               </div>
-              {error && <div className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-600">{error}</div>}
+              {error && <div className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-600 dark:text-red-400 dark:bg-red-900/20">{error}</div>}
               <Button type="submit" className="w-full" disabled={loading}>
                 {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 发送重置邮件

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+﻿import { useState } from 'react'
 import { AlertTriangle, Calendar, CheckCircle, Clock, FileText, MessageSquare, Send, Users, XCircle } from 'lucide-react'
 
 import { Alert, AlertDescription } from '@/components/ui/Alert'
@@ -73,9 +73,9 @@ const getDecisionIcon = (decision: ReviewDecision) => {
     case 'NEEDS_MAJOR_REVISION':
       return <AlertTriangle className="h-5 w-5 text-orange-600" />
     case 'REJECTED':
-      return <XCircle className="h-5 w-5 text-red-600" />
+      return <XCircle className="h-5 w-5 text-red-600 dark:text-red-400" />
     default:
-      return <Clock className="h-5 w-5 text-gray-600" />
+      return <Clock className="h-5 w-5 text-gray-600 dark:text-gray-400" />
   }
 }
 
@@ -84,20 +84,20 @@ const getDecisionColor = (decision: ReviewDecision) => {
     case 'APPROVED':
       return 'bg-green-100 text-green-800 border-green-200'
     case 'APPROVED_WITH_MINOR_CHANGES':
-      return 'bg-blue-100 text-blue-800 border-blue-200'
+      return 'bg-blue-100 text-blue-800 border-blue-200 dark:text-blue-300 dark:bg-blue-900/30'
     case 'NEEDS_MAJOR_REVISION':
       return 'bg-orange-100 text-orange-800 border-orange-200'
     case 'REJECTED':
-      return 'bg-red-100 text-red-800 border-red-200'
+      return 'bg-red-100 text-red-800 border-red-200 dark:text-red-300 dark:bg-red-900/30 dark:border-red-800'
     default:
-      return 'bg-gray-100 text-gray-800 border-gray-200'
+      return 'bg-gray-100 text-gray-800 border-gray-200 dark:text-gray-200 dark:bg-gray-800 dark:border-gray-700'
   }
 }
 
 const getStatusIcon = (status: 'pending' | 'completed' | 'in_progress') => {
   if (status === 'completed') return <CheckCircle className="h-4 w-4 text-green-600" />
-  if (status === 'in_progress') return <Clock className="h-4 w-4 text-blue-600" />
-  return <Clock className="h-4 w-4 text-gray-400" />
+  if (status === 'in_progress') return <Clock className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+  return <Clock className="h-4 w-4 text-gray-400 dark:text-gray-500" />
 }
 
 const formatDate = (value?: string) => {
@@ -255,10 +255,10 @@ export const ReviewDecisionPanel: React.FC<ReviewDecisionPanelProps> = ({
                 review.review_status === 'PENDING'
                   ? 'bg-yellow-100 text-yellow-800 border-yellow-200'
                   : review.review_status === 'IN_PROGRESS'
-                    ? 'bg-blue-100 text-blue-800 border-blue-200'
+                    ? 'bg-blue-100 text-blue-800 border-blue-200 dark:text-blue-300 dark:bg-blue-900/30'
                     : review.review_status === 'COMPLETED'
                       ? 'bg-green-100 text-green-800 border-green-200'
-                      : 'bg-gray-100 text-gray-800 border-gray-200'
+                      : 'bg-gray-100 text-gray-800 border-gray-200 dark:text-gray-200 dark:bg-gray-800 dark:border-gray-700'
               }
             >
               {statusLabels[review.review_status] || review.review_status}

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react'
+﻿import React, { useState, useMemo } from 'react'
 import { 
   Plus, 
   Search, 
@@ -455,7 +455,7 @@ const ProjectList: React.FC<ProjectListProps> = ({
       {/* Error State */}
       {error && (
         <div className="text-center py-12">
-          <div className="text-red-600 mb-4">加载项目时出错</div>
+          <div className="text-red-600 mb-4 dark:text-red-400">加载项目时出错</div>
           <p className="text-muted-foreground mb-4">{error}</p>
           <Button onClick={onRefresh}>
             <RefreshCw className="w-4 h-4 mr-2" />

@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react'
+﻿import React, { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowLeft, FileText, Monitor, Play, Search, Settings, Square } from 'lucide-react'
 import { Badge } from '../../../components/ui/Badge'
@@ -248,10 +248,10 @@ const AutomationExecution: React.FC = () => {
               <Progress value={progressValue} className="h-3" />
             </div>
             <div className="grid grid-cols-4 gap-4 text-center">
-              <div><p className="text-2xl font-semibold text-blue-600">{executionStatus.total_cases}</p><p className="text-sm text-muted-foreground">总数</p></div>
+              <div><p className="text-2xl font-semibold text-blue-600 dark:text-blue-400">{executionStatus.total_cases}</p><p className="text-sm text-muted-foreground">总数</p></div>
               <div><p className="text-2xl font-semibold text-emerald-600">{executionStatus.completed_cases}</p><p className="text-sm text-muted-foreground">已完成</p></div>
               <div><p className="text-2xl font-semibold text-green-600">{executionStatus.passed_cases}</p><p className="text-sm text-muted-foreground">通过</p></div>
-              <div><p className="text-2xl font-semibold text-red-600">{executionStatus.failed_cases}</p><p className="text-sm text-muted-foreground">失败</p></div>
+              <div><p className="text-2xl font-semibold text-red-600 dark:text-red-400">{executionStatus.failed_cases}</p><p className="text-sm text-muted-foreground">失败</p></div>
             </div>
           </CardContent>
         </Card>
@@ -360,7 +360,7 @@ const AutomationExecution: React.FC = () => {
                           {statusBadge(result.status)}
                         </div>
                         {result.failure_reason && (
-                          <p className="mt-2 line-clamp-3 whitespace-pre-wrap text-sm text-red-600">{result.failure_reason}</p>
+                          <p className="mt-2 line-clamp-3 whitespace-pre-wrap text-sm text-red-600 dark:text-red-400">{result.failure_reason}</p>
                         )}
                         {!result.failure_reason && result.actual_result && (
                           <p className="mt-2 line-clamp-3 whitespace-pre-wrap text-sm text-muted-foreground">{result.actual_result}</p>

@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+﻿import React, { useMemo } from 'react';
 import { CheckCircle, AlertCircle, XCircle, Clock } from 'lucide-react';
 
 interface StatusPanelProps {
@@ -40,11 +40,11 @@ const StatusPanel: React.FC<StatusPanelProps> = ({ config, data }) => {
       case 'warning':
         return <AlertCircle className="h-4 w-4 text-yellow-500" />;
       case 'error':
-        return <XCircle className="h-4 w-4 text-red-500" />;
+        return <XCircle className="h-4 w-4 text-red-500 dark:text-red-400" />;
       case 'pending':
-        return <Clock className="h-4 w-4 text-blue-500" />;
+        return <Clock className="h-4 w-4 text-blue-500 dark:text-blue-400" />;
       default:
-        return <AlertCircle className="h-4 w-4 text-gray-400" />;
+        return <AlertCircle className="h-4 w-4 text-gray-400 dark:text-gray-500" />;
     }
   };
 
@@ -55,11 +55,11 @@ const StatusPanel: React.FC<StatusPanelProps> = ({ config, data }) => {
       case 'warning':
         return 'bg-yellow-100 text-yellow-800';
       case 'error':
-        return 'bg-red-100 text-red-800';
+        return 'bg-red-100 text-red-800 dark:text-red-300 dark:bg-red-900/30';
       case 'pending':
-        return 'bg-blue-100 text-blue-800';
+        return 'bg-blue-100 text-blue-800 dark:text-blue-300 dark:bg-blue-900/30';
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-gray-100 text-gray-800 dark:text-gray-200 dark:bg-gray-800';
     }
   };
 
@@ -92,10 +92,10 @@ const StatusPanel: React.FC<StatusPanelProps> = ({ config, data }) => {
   return (
     <div className="h-full flex flex-col">
       {/* Overall Status */}
-      <div className="flex items-center justify-between mb-4 p-3 bg-gray-50 rounded-lg">
+      <div className="flex items-center justify-between mb-4 p-3 bg-gray-50 rounded-lg dark:bg-gray-800/50">
         <div className="flex items-center space-x-2">
           {getStatusIcon(overallHealth.status)}
-          <span className="font-medium text-gray-900">
+          <span className="font-medium text-gray-900 dark:text-gray-100">
             {overallHealth.text}
           </span>
         </div>
@@ -107,15 +107,15 @@ const StatusPanel: React.FC<StatusPanelProps> = ({ config, data }) => {
       {/* Service List */}
       <div className="flex-1 space-y-2 overflow-auto">
         {statusItems.map((item, index) => (
-          <div key={index} className="flex items-center justify-between p-2 border border-gray-200 rounded-lg hover:bg-gray-50">
+          <div key={index} className="flex items-center justify-between p-2 border border-gray-200 rounded-lg hover:bg-gray-50 dark:bg-gray-800/50 dark:hover:bg-gray-800 dark:border-gray-700">
             <div className="flex items-center space-x-3">
               {getStatusIcon(item.status)}
               <div>
-                <div className="text-sm font-medium text-gray-900">
+                <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
                   {item.name}
                 </div>
                 {item.responseTime && (
-                  <div className="text-xs text-gray-500">
+                  <div className="text-xs text-gray-500 dark:text-gray-400">
                     响应时间: {item.responseTime}
                   </div>
                 )}
@@ -127,7 +127,7 @@ const StatusPanel: React.FC<StatusPanelProps> = ({ config, data }) => {
                 {getStatusText(item.status)}
               </span>
               {item.uptime && (
-                <div className="text-xs text-gray-500 mt-1">
+                <div className="text-xs text-gray-500 mt-1 dark:text-gray-400">
                   运行时间: {item.uptime}
                 </div>
               )}
@@ -137,7 +137,7 @@ const StatusPanel: React.FC<StatusPanelProps> = ({ config, data }) => {
       </div>
 
       {/* Last Updated */}
-      <div className="text-xs text-gray-500 text-center mt-3 pt-3 border-t">
+      <div className="text-xs text-gray-500 text-center mt-3 pt-3 border-t dark:text-gray-400">
         最后更新: {new Date().toLocaleTimeString('zh-CN')}
       </div>
     </div>

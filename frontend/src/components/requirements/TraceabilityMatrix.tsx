@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+﻿import React, { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
@@ -156,7 +156,7 @@ export function TraceabilityMatrix({
     const statusConfig = {
       COVERED: { color: 'bg-green-100 text-green-800', icon: CheckCircle, text: '已覆盖' },
       PARTIAL: { color: 'bg-yellow-100 text-yellow-800', icon: AlertTriangle, text: '部分覆盖' },
-      UNCOVERED: { color: 'bg-red-100 text-red-800', icon: XCircle, text: '未覆盖' }
+      UNCOVERED: { color: 'bg-red-100 text-red-800 dark:text-red-300 dark:bg-red-900/30', icon: XCircle, text: '未覆盖' }
     }
 
     const config = statusConfig[status as keyof typeof statusConfig]
@@ -174,7 +174,7 @@ export function TraceabilityMatrix({
     const levelConfig = {
       HIGH: { color: 'bg-green-100 text-green-800', text: '高' },
       MEDIUM: { color: 'bg-yellow-100 text-yellow-800', text: '中' },
-      LOW: { color: 'bg-red-100 text-red-800', text: '低' }
+      LOW: { color: 'bg-red-100 text-red-800 dark:text-red-300 dark:bg-red-900/30', text: '低' }
     }
 
     const config = levelConfig[level as keyof typeof levelConfig]
@@ -255,9 +255,9 @@ export function TraceabilityMatrix({
           <CardContent>
             {traceabilityData.length === 0 ? (
               <div className="text-center py-8">
-                <GitBranch className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">暂无追溯关系</h3>
-                <p className="text-gray-500">当前筛选条件下没有找到追溯关系</p>
+                <GitBranch className="w-12 h-12 text-gray-400 mx-auto mb-4 dark:text-gray-500" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2 dark:text-gray-100">暂无追溯关系</h3>
+                <p className="text-gray-500 dark:text-gray-400">当前筛选条件下没有找到追溯关系</p>
               </div>
             ) : (
               <div className="overflow-x-auto">
@@ -274,16 +274,16 @@ export function TraceabilityMatrix({
                   </thead>
                   <tbody>
                     {traceabilityData.map((item) => (
-                      <tr key={item.id} className="hover:bg-gray-50">
+                      <tr key={item.id} className="hover:bg-gray-50 dark:bg-gray-800/50 dark:hover:bg-gray-800">
                         <td>
                           <div>
-                            <div className="font-medium text-gray-900">
+                            <div className="font-medium text-gray-900 dark:text-gray-100">
                               {item.source_code}
                             </div>
-                            <div className="text-sm text-gray-600">
+                            <div className="text-sm text-gray-600 dark:text-gray-400">
                               {item.source_title}
                             </div>
-                            <div className="text-xs text-gray-500 mt-1">
+                            <div className="text-xs text-gray-500 mt-1 dark:text-gray-400">
                               {getTypeText(item.source_type)}
                             </div>
                           </div>
@@ -293,7 +293,7 @@ export function TraceabilityMatrix({
                             <Tooltip content={`${getRelationshipText(item.relationship)} (${item.trace_type})`}>
                               <div className="flex items-center space-x-1">
                                 {getTraceTypeIcon(item.trace_type)}
-                                <span className="text-xs text-gray-600">
+                                <span className="text-xs text-gray-600 dark:text-gray-400">
                                   {getRelationshipText(item.relationship)}
                                 </span>
                               </div>
@@ -302,19 +302,19 @@ export function TraceabilityMatrix({
                         </td>
                         <td>
                           {item.coverage_status === 'UNCOVERED' ? (
-                            <div className="text-gray-400">
+                            <div className="text-gray-400 dark:text-gray-500">
                               <div className="text-sm">未建立追溯关系</div>
                               <div className="text-xs">需要创建目标项目</div>
                             </div>
                           ) : (
                             <div>
-                              <div className="font-medium text-gray-900">
+                              <div className="font-medium text-gray-900 dark:text-gray-100">
                                 {item.target_code}
                               </div>
-                              <div className="text-sm text-gray-600">
+                              <div className="text-sm text-gray-600 dark:text-gray-400">
                                 {item.target_title}
                               </div>
-                              <div className="text-xs text-gray-500 mt-1">
+                              <div className="text-xs text-gray-500 mt-1 dark:text-gray-400">
                                 {getTypeText(item.target_type)}
                               </div>
                             </div>
@@ -363,7 +363,7 @@ export function TraceabilityMatrix({
                   <option value="TEST_CASE">测试用例</option>
                   <option value="IMPLEMENTATION">实现</option>
                 </select>
-                <span className="text-sm text-gray-500 self-center">→</span>
+                <span className="text-sm text-gray-500 self-center dark:text-gray-400">→</span>
                 <select
                   value={selectedTargetType}
                   onChange={(e) => setSelectedTargetType(e.target.value)}
@@ -382,21 +382,21 @@ export function TraceabilityMatrix({
               <div className="min-w-full">
                 {/* 矩阵表头 */}
                 <div className="grid grid-cols-6 gap-2 mb-4">
-                  <div className="font-medium text-sm text-gray-700">
+                  <div className="font-medium text-sm text-gray-700 dark:text-gray-300">
                     {getTypeText(selectedSourceType)} \ {getTypeText(selectedTargetType)}
                   </div>
-                  <div className="text-center text-sm font-medium text-gray-700">DES-001</div>
-                  <div className="text-center text-sm font-medium text-gray-700">DES-002</div>
-                  <div className="text-center text-sm font-medium text-gray-700">DES-003</div>
-                  <div className="text-center text-sm font-medium text-gray-700">DES-004</div>
-                  <div className="text-center text-sm font-medium text-gray-700">DES-005</div>
+                  <div className="text-center text-sm font-medium text-gray-700 dark:text-gray-300">DES-001</div>
+                  <div className="text-center text-sm font-medium text-gray-700 dark:text-gray-300">DES-002</div>
+                  <div className="text-center text-sm font-medium text-gray-700 dark:text-gray-300">DES-003</div>
+                  <div className="text-center text-sm font-medium text-gray-700 dark:text-gray-300">DES-004</div>
+                  <div className="text-center text-sm font-medium text-gray-700 dark:text-gray-300">DES-005</div>
                 </div>
 
                 {/* 矩阵内容 */}
                 <div className="space-y-2">
                   {['REQ-001', 'REQ-002', 'REQ-003', 'REQ-004'].map((reqCode, rowIndex) => (
                     <div key={reqCode} className="grid grid-cols-6 gap-2 items-center">
-                      <div className="text-sm font-medium text-gray-900">{reqCode}</div>
+                      <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{reqCode}</div>
                       {[0, 1, 2, 3, 4].map((colIndex) => {
                         const hasTrace = (rowIndex + colIndex) % 3 !== 2
                         const coverage = hasTrace ? 
@@ -426,19 +426,19 @@ export function TraceabilityMatrix({
                 <div className="mt-6 flex justify-center space-x-6">
                   <div className="flex items-center space-x-2">
                     <div className="w-4 h-4 rounded-full bg-green-500" />
-                    <span className="text-sm text-gray-600">完全覆盖</span>
+                    <span className="text-sm text-gray-600 dark:text-gray-400">完全覆盖</span>
                   </div>
                   <div className="flex items-center space-x-2">
                     <div className="w-4 h-4 rounded-full bg-yellow-500" />
-                    <span className="text-sm text-gray-600">部分覆盖</span>
+                    <span className="text-sm text-gray-600 dark:text-gray-400">部分覆盖</span>
                   </div>
                   <div className="flex items-center space-x-2">
                     <div className="w-4 h-4 rounded-full bg-red-500" />
-                    <span className="text-sm text-gray-600">未覆盖</span>
+                    <span className="text-sm text-gray-600 dark:text-gray-400">未覆盖</span>
                   </div>
                   <div className="flex items-center space-x-2">
                     <div className="w-4 h-4 rounded-full bg-gray-200" />
-                    <span className="text-sm text-gray-600">无关系</span>
+                    <span className="text-sm text-gray-600 dark:text-gray-400">无关系</span>
                   </div>
                 </div>
               </div>
@@ -451,10 +451,10 @@ export function TraceabilityMatrix({
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
           <CardContent className="p-4 text-center">
-            <div className="text-2xl font-bold text-blue-600">
+            <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
               {traceabilityData.filter(item => item.coverage_status === 'COVERED').length}
             </div>
-            <div className="text-sm text-gray-600">完全覆盖</div>
+            <div className="text-sm text-gray-600 dark:text-gray-400">完全覆盖</div>
           </CardContent>
         </Card>
         <Card>
@@ -462,23 +462,23 @@ export function TraceabilityMatrix({
             <div className="text-2xl font-bold text-yellow-600">
               {traceabilityData.filter(item => item.coverage_status === 'PARTIAL').length}
             </div>
-            <div className="text-sm text-gray-600">部分覆盖</div>
+            <div className="text-sm text-gray-600 dark:text-gray-400">部分覆盖</div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4 text-center">
-            <div className="text-2xl font-bold text-red-600">
+            <div className="text-2xl font-bold text-red-600 dark:text-red-400">
               {traceabilityData.filter(item => item.coverage_status === 'UNCOVERED').length}
             </div>
-            <div className="text-sm text-gray-600">未覆盖</div>
+            <div className="text-sm text-gray-600 dark:text-gray-400">未覆盖</div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4 text-center">
-            <div className="text-2xl font-bold text-gray-600">
+            <div className="text-2xl font-bold text-gray-600 dark:text-gray-400">
               {Math.round((traceabilityData.filter(item => item.coverage_status === 'COVERED').length / traceabilityData.length) * 100) || 0}%
             </div>
-            <div className="text-sm text-gray-600">覆盖率</div>
+            <div className="text-sm text-gray-600 dark:text-gray-400">覆盖率</div>
           </CardContent>
         </Card>
       </div>

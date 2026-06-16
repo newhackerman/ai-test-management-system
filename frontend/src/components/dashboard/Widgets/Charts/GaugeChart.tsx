@@ -1,4 +1,4 @@
-import React, { useMemo, useCallback } from 'react';
+﻿import React, { useMemo, useCallback } from 'react';
 import BaseChart, { BaseChartProps, ChartConfig } from './BaseChart';
 import { getColorScheme, formatNumber, handleChartClick } from './chartUtils';
 
@@ -163,10 +163,10 @@ const GaugeChart: React.FC<GaugeChartProps> = ({ config, data, onDrillDown, ...b
           <div className="text-3xl font-bold" style={{ color: getColor() }}>
             {formatNumber(currentValue, 'default')}{unit}
           </div>
-          <div className="text-sm text-gray-500 mt-1 font-medium">
+          <div className="text-sm text-gray-500 mt-1 font-medium dark:text-gray-400">
             {getStatus()}
           </div>
-          <div className="text-xs text-gray-400 mt-1">
+          <div className="text-xs text-gray-400 mt-1 dark:text-gray-500">
             {clampedPercentage.toFixed(1)}%
           </div>
         </div>
@@ -181,7 +181,7 @@ const GaugeChart: React.FC<GaugeChartProps> = ({ config, data, onDrillDown, ...b
 
         {/* Scale indicators */}
         {showScale && (
-          <div className="flex justify-between w-full max-w-[240px] mt-4 text-xs text-gray-500">
+          <div className="flex justify-between w-full max-w-[240px] mt-4 text-xs text-gray-500 dark:text-gray-400">
             <span>{formatNumber(min)}{unit}</span>
             {thresholds.map((threshold, index) => (
               <span key={index}>{formatNumber(threshold)}{unit}</span>
@@ -198,21 +198,21 @@ const GaugeChart: React.FC<GaugeChartProps> = ({ config, data, onDrillDown, ...b
                 className="w-3 h-3 rounded-full"
                 style={{ backgroundColor: colorScheme[0] }}
               />
-              <span className="text-gray-600 font-medium">危险 (≤{formatNumber(thresholds[0])})</span>
+              <span className="text-gray-600 font-medium dark:text-gray-400">危险 (≤{formatNumber(thresholds[0])})</span>
             </div>
             <div className="flex items-center space-x-2">
               <div 
                 className="w-3 h-3 rounded-full"
                 style={{ backgroundColor: colorScheme[1] }}
               />
-              <span className="text-gray-600 font-medium">警告 (≤{formatNumber(thresholds[1])})</span>
+              <span className="text-gray-600 font-medium dark:text-gray-400">警告 (≤{formatNumber(thresholds[1])})</span>
             </div>
             <div className="flex items-center space-x-2">
               <div 
                 className="w-3 h-3 rounded-full"
                 style={{ backgroundColor: colorScheme[2] }}
               />
-              <span className="text-gray-600 font-medium">正常 (&gt;{formatNumber(thresholds[1])})</span>
+              <span className="text-gray-600 font-medium dark:text-gray-400">正常 (&gt;{formatNumber(thresholds[1])})</span>
             </div>
           </div>
         )}

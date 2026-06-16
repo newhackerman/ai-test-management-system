@@ -100,7 +100,7 @@ export default function EndMeetingMinutesDialog({
 
         <div className="space-y-4 p-5">
           {error && (
-            <div className="flex items-start gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+            <div className="flex items-start gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:text-red-400 dark:bg-red-900/20 dark:border-red-800">
               <AlertCircle className="mt-0.5 h-4 w-4" />
               <span>{error}</span>
             </div>

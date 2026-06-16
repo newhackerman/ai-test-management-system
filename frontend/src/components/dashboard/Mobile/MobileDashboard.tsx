@@ -1,4 +1,4 @@
-// @ts-nocheck
+﻿// @ts-nocheck
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Bell,
@@ -188,7 +188,7 @@ const MobileDashboard: React.FC<MobileDashboardProps> = ({
       <div>
         <div className="mb-4 text-4xl">□</div>
         <h3 className="mb-2 text-lg font-medium">{title}</h3>
-        <p className="mb-4 text-gray-600">{description}</p>
+        <p className="mb-4 text-gray-600 dark:text-gray-400">{description}</p>
         {!searchQuery && onAddWidget && (
           <Button onClick={onAddWidget} className="touch-optimized">
             <Plus className="mr-2 h-4 w-4" />
@@ -202,7 +202,7 @@ const MobileDashboard: React.FC<MobileDashboardProps> = ({
   const renderWidgetActions = (widget: Widget) =>
     showWidgetActions === widget.id && (
       <div className="fixed inset-0 z-50 flex items-end bg-black/50">
-        <div className="safe-area-bottom w-full rounded-t-lg bg-white p-4">
+        <div className="safe-area-bottom w-full rounded-t-lg bg-white p-4 dark:bg-gray-800">
           <div className="mb-4 flex items-center justify-between">
             <h3 className="font-medium">{widget.title}</h3>
             <Button variant="ghost" size="sm" onClick={() => setShowWidgetActions(null)}>
@@ -232,7 +232,7 @@ const MobileDashboard: React.FC<MobileDashboardProps> = ({
       {isLoading ? (
         <div className="mobile-loading">
           <div className="mobile-loading-spinner" />
-          <p className="text-sm text-gray-500">加载中...</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400">加载中...</p>
         </div>
       ) : (
         <WidgetContent widget={widget} realtimeData={realtimeData[widget.type]} />
@@ -262,13 +262,13 @@ const MobileDashboard: React.FC<MobileDashboardProps> = ({
     return (
       <div className="touch-optimized flex flex-1 flex-col" onTouchStart={handleTouchStartPull} onTouchMove={handleTouchMovePull} onTouchEnd={handleTouchEndPull}>
         {pullIndicator}
-        <div className="safe-area-top flex items-center justify-between border-b bg-white p-4">
+        <div className="safe-area-top flex items-center justify-between border-b bg-white p-4 dark:bg-gray-800">
           <Button variant="ghost" size="sm" onClick={prevWidget} disabled={filteredWidgets.length <= 1} className="touch-optimized tap-feedback">
             <ChevronLeft className="h-4 w-4" />
           </Button>
           <div className="min-w-0 flex-1 text-center">
             <h3 className="truncate font-medium">{currentWidget.title}</h3>
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-gray-500 dark:text-gray-400">
               {currentWidgetIndex + 1} / {filteredWidgets.length}
             </p>
           </div>
@@ -341,7 +341,7 @@ const MobileDashboard: React.FC<MobileDashboardProps> = ({
         renderEmpty('列表为空', '没有找到匹配的组件。')
       ) : (
         filteredWidgets.map((widget) => (
-          <div key={widget.id} className="touch-optimized border-b border-gray-200 last:border-b-0">
+          <div key={widget.id} className="touch-optimized border-b border-gray-200 last:border-b-0 dark:border-gray-700">
             <div className="p-4">
               <div className="mb-2 flex items-center justify-between">
                 <h3 className="min-w-0 flex-1 truncate font-medium">{widget.title}</h3>
@@ -359,8 +359,8 @@ const MobileDashboard: React.FC<MobileDashboardProps> = ({
   );
 
   return (
-    <div className="safe-area-all flex h-screen flex-col bg-gray-50">
-      <div className="safe-area-top flex items-center justify-between border-b bg-white px-4 py-3">
+    <div className="safe-area-all flex h-screen flex-col bg-gray-50 dark:bg-gray-800/50">
+      <div className="safe-area-top flex items-center justify-between border-b bg-white px-4 py-3 dark:bg-gray-800">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <h1 className="truncate text-lg font-semibold">仪表盘</h1>
@@ -371,7 +371,7 @@ const MobileDashboard: React.FC<MobileDashboardProps> = ({
               title={connectionText[connectionStatus]}
             />
           </div>
-          <p className="text-xs text-gray-500">
+          <p className="text-xs text-gray-500 dark:text-gray-400">
             {filteredWidgets.length} 个组件 · {orientation === 'landscape' ? '横屏' : '竖屏'}模式
           </p>
         </div>
@@ -383,11 +383,11 @@ const MobileDashboard: React.FC<MobileDashboardProps> = ({
               placeholder="搜索组件..."
               value={searchQuery}
               onChange={(event) => setSearchQuery(event.target.value)}
-              className="w-32 rounded-lg border border-gray-300 px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-32 rounded-lg border border-gray-300 px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-600"
             />
             {searchQuery && (
               <button onClick={() => setSearchQuery('')} className="absolute right-2 top-1/2 -translate-y-1/2">
-                <X className="h-3 w-3 text-gray-400" />
+                <X className="h-3 w-3 text-gray-400 dark:text-gray-500" />
               </button>
             )}
           </div>
@@ -396,7 +396,7 @@ const MobileDashboard: React.FC<MobileDashboardProps> = ({
             {notificationsEnabled ? <Bell className="h-4 w-4" /> : <BellOff className="h-4 w-4" />}
           </Button>
 
-          <div className="flex rounded-lg bg-gray-100 p-1">
+          <div className="flex rounded-lg bg-gray-100 p-1 dark:bg-gray-800">
             <ViewButton active={viewMode === 'swipe'} onClick={() => setViewMode('swipe')} label="滑动视图">
               <ChevronLeft className="h-4 w-4" />
             </ViewButton>
@@ -415,7 +415,7 @@ const MobileDashboard: React.FC<MobileDashboardProps> = ({
       </div>
 
       {showMenu && (
-        <div className="animate-in slide-in-from-top border-b bg-white p-4 duration-200">
+        <div className="animate-in slide-in-from-top border-b bg-white p-4 duration-200 dark:bg-gray-800">
           <div className="grid grid-cols-2 gap-3">
             <MenuButton icon={<Plus className="h-4 w-4" />} label="添加组件" onClick={onAddWidget} close={() => setShowMenu(false)} />
             <MenuButton icon={<Palette className="h-4 w-4" />} label="配色方案" onClick={onShowColorSchemes} close={() => setShowMenu(false)} />

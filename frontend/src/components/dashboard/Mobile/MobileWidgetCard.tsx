@@ -83,7 +83,7 @@ const MobileWidgetCard: React.FC<MobileWidgetCardProps> = ({
     }
     
     if (realtimeData?.error) {
-      return <AlertCircle className="h-3 w-3 text-red-500" />;
+      return <AlertCircle className="h-3 w-3 text-red-500 dark:text-red-400" />;
     }
     
     if (realtimeData?.status === 'success') {
@@ -108,14 +108,14 @@ const MobileWidgetCard: React.FC<MobileWidgetCardProps> = ({
       );
     } else if (direction === 'down') {
       return (
-        <div className="flex items-center text-red-600 text-xs">
+        <div className="flex items-center text-red-600 text-xs dark:text-red-400">
           <TrendingDown className="h-3 w-3 mr-1" />
           <span>-{value}%</span>
         </div>
       );
     } else {
       return (
-        <div className="flex items-center text-gray-600 text-xs">
+        <div className="flex items-center text-gray-600 text-xs dark:text-gray-400">
           <Minus className="h-3 w-3 mr-1" />
           <span>{value}%</span>
         </div>
@@ -186,7 +186,7 @@ const MobileWidgetCard: React.FC<MobileWidgetCardProps> = ({
           {isLoading ? (
             <div className="mobile-loading h-full">
               <div className="mobile-loading-spinner"></div>
-              <p className="text-xs text-gray-500 mt-2">鍔犺浇涓?..</p>
+              <p className="text-xs text-gray-500 mt-2 dark:text-gray-400">鍔犺浇涓?..</p>
             </div>
           ) : (
             <WidgetContent
@@ -198,7 +198,7 @@ const MobileWidgetCard: React.FC<MobileWidgetCardProps> = ({
         
         {/* Last updated indicator */}
         {realtimeData?.lastUpdated && (
-          <div className="absolute bottom-2 right-2 text-xs text-gray-400">
+          <div className="absolute bottom-2 right-2 text-xs text-gray-400 dark:text-gray-500">
             {new Date(realtimeData.lastUpdated).toLocaleTimeString()}
           </div>
         )}
@@ -206,14 +206,14 @@ const MobileWidgetCard: React.FC<MobileWidgetCardProps> = ({
 
       {/* Action Menu */}
       {showActionMenu && (
-        <div className="absolute top-full right-0 mt-1 bg-white rounded-lg shadow-lg border z-50 min-w-32">
+        <div className="absolute top-full right-0 mt-1 bg-white rounded-lg shadow-lg border z-50 min-w-32 dark:bg-gray-800">
           <div className="py-1">
             <button
               onClick={() => {
                 onAction?.('fullscreen', widget.id);
                 setShowActionMenu(false);
               }}
-              className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 flex items-center space-x-2 touch-optimized"
+              className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 flex items-center space-x-2 touch-optimized dark:bg-gray-800/50 dark:hover:bg-gray-800"
             >
               <Maximize2 className="h-3 w-3" />
               <span>鍏ㄥ睆</span>
@@ -224,7 +224,7 @@ const MobileWidgetCard: React.FC<MobileWidgetCardProps> = ({
                 onAction?.('share', widget.id);
                 setShowActionMenu(false);
               }}
-              className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 flex items-center space-x-2 touch-optimized"
+              className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 flex items-center space-x-2 touch-optimized dark:bg-gray-800/50 dark:hover:bg-gray-800"
             >
               <Share className="h-3 w-3" />
               <span>鍒嗕韩</span>
@@ -235,7 +235,7 @@ const MobileWidgetCard: React.FC<MobileWidgetCardProps> = ({
                 onAction?.('export', widget.id);
                 setShowActionMenu(false);
               }}
-              className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 flex items-center space-x-2 touch-optimized"
+              className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 flex items-center space-x-2 touch-optimized dark:bg-gray-800/50 dark:hover:bg-gray-800"
             >
               <Download className="h-3 w-3" />
               <span>瀵煎嚭</span>
@@ -246,7 +246,7 @@ const MobileWidgetCard: React.FC<MobileWidgetCardProps> = ({
                 onAction?.('refresh', widget.id);
                 setShowActionMenu(false);
               }}
-              className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 flex items-center space-x-2 touch-optimized"
+              className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 flex items-center space-x-2 touch-optimized dark:bg-gray-800/50 dark:hover:bg-gray-800"
             >
               <RefreshCw className="h-3 w-3" />
               <span>鍒锋柊</span>

@@ -1,4 +1,4 @@
-// @ts-nocheck
+﻿// @ts-nocheck
 import React, { useRef, useState } from 'react';
 import { AlertCircle, Eye, EyeOff, Lock, User } from 'lucide-react';
 
@@ -106,7 +106,7 @@ export const LoginPage: React.FC = () => {
           <div className="space-y-2">
             <Label htmlFor="username">用户名</Label>
             <div className="relative">
-              <User className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+              <User className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 dark:text-gray-500" />
               <Input
                 id="username"
                 type="text"
@@ -119,13 +119,13 @@ export const LoginPage: React.FC = () => {
                 autoFocus
               />
             </div>
-            {validationErrors.username && <p className="text-sm text-red-500">{validationErrors.username}</p>}
+            {validationErrors.username && <p className="text-sm text-red-500 dark:text-red-400">{validationErrors.username}</p>}
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="password">密码</Label>
             <div className="relative">
-              <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+              <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 dark:text-gray-500" />
               <Input
                 id="password"
                 type={showPassword ? 'text' : 'password'}
@@ -139,14 +139,14 @@ export const LoginPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setShowPassword((value) => !value)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 dark:text-gray-400"
                 disabled={isSubmitting}
                 aria-label={showPassword ? '隐藏密码' : '显示密码'}
               >
                 {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
             </div>
-            {validationErrors.password && <p className="text-sm text-red-500">{validationErrors.password}</p>}
+            {validationErrors.password && <p className="text-sm text-red-500 dark:text-red-400">{validationErrors.password}</p>}
           </div>
 
           <div className="flex items-center space-x-2">
@@ -155,7 +155,7 @@ export const LoginPage: React.FC = () => {
               type="checkbox"
               checked={formData.rememberMe}
               onChange={handleInputChange('rememberMe')}
-              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:border-gray-600 dark:text-blue-400"
               disabled={isSubmitting}
             />
             <Label htmlFor="rememberMe" className="text-sm text-gray-600 dark:text-gray-400">

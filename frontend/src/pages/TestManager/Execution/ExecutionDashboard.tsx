@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react'
+﻿import React, { useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import {
   Activity,
@@ -134,7 +134,7 @@ const ExecutionDashboard: React.FC = () => {
 
       <div className="grid gap-2 rounded-lg border bg-card p-3 md:grid-cols-2 xl:grid-cols-4">
         <div className="flex items-center gap-3 rounded-md border bg-background px-3 py-2">
-            <Activity className="h-5 w-5 text-blue-600" />
+            <Activity className="h-5 w-5 text-blue-600 dark:text-blue-400" />
             <div>
               <p className="text-xs text-muted-foreground">总执行数</p>
               <p className="text-xl font-semibold leading-6">{stats.total_executions}</p>
@@ -155,7 +155,7 @@ const ExecutionDashboard: React.FC = () => {
             </div>
         </div>
         <div className="flex items-center gap-3 rounded-md border bg-background px-3 py-2">
-            <TrendingUp className="h-5 w-5 text-amber-600" />
+            <TrendingUp className="h-5 w-5 text-amber-600 dark:text-amber-400" />
             <div>
               <p className="text-xs text-muted-foreground">通过率</p>
               <p className="text-xl font-semibold leading-6">{stats.pass_rate}%</p>

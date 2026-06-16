@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+﻿import React, { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRealtimeContext } from './RealtimeProvider';
 
@@ -133,7 +133,7 @@ export const DataUpdater: React.FC<DataUpdaterProps> = ({
               className="absolute top-2 right-2 z-10"
             >
               <div className="flex items-center space-x-1 bg-green-500 text-white px-2 py-1 rounded-full text-xs">
-                <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+                <div className="w-2 h-2 bg-white rounded-full animate-pulse dark:bg-gray-800"></div>
                 <span>更新中</span>
               </div>
             </motion.div>
@@ -142,7 +142,7 @@ export const DataUpdater: React.FC<DataUpdaterProps> = ({
 
         {/* 更新统计信息 */}
         {updateCount > 0 && (
-          <div className="absolute bottom-2 left-2 text-xs text-gray-500 bg-white dark:bg-gray-800 px-2 py-1 rounded shadow-sm">
+          <div className="absolute bottom-2 left-2 text-xs text-gray-500 bg-white dark:bg-gray-800 px-2 py-1 rounded shadow-sm dark:text-gray-400">
             <div>更新次数: {updateCount}</div>
             {lastUpdateTime && (
               <div>最后更新: {lastUpdateTime.toLocaleTimeString()}</div>

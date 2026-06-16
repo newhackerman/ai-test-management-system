@@ -78,7 +78,7 @@ export const UserMenu: React.FC = () => {
       <DropdownMenuTrigger asChild>
         <Button 
           variant="ghost" 
-          className="relative h-10 w-auto px-2 hover:bg-gray-100 dark:hover:bg-gray-800"
+          className="relative h-10 w-auto px-2 hover:bg-gray-100 dark:hover:bg-gray-800 dark:bg-gray-800"
           disabled={isLoading}
         >
           <div className="flex items-center space-x-2">
@@ -104,7 +104,7 @@ export const UserMenu: React.FC = () => {
                 </Badge>
               </div>
             </div>
-            <ChevronDown className="h-4 w-4 text-gray-500" />
+            <ChevronDown className="h-4 w-4 text-gray-500 dark:text-gray-400" />
           </div>
         </Button>
       </DropdownMenuTrigger>

@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+﻿import React, { useMemo } from 'react';
 
 interface ProgressBarProps {
   config: {
@@ -82,12 +82,12 @@ const ProgressBar: React.FC<ProgressBarProps> = ({ config, data }) => {
         return (
           <div key={index} className="space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-gray-700">
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
                 {item.label}
               </span>
               <div className="flex items-center space-x-2">
                 {showPercentage && (
-                  <span className="text-sm text-gray-600">
+                  <span className="text-sm text-gray-600 dark:text-gray-400">
                     {percentage.toFixed(1)}%
                   </span>
                 )}
@@ -111,7 +111,7 @@ const ProgressBar: React.FC<ProgressBarProps> = ({ config, data }) => {
             </div>
             
             {item.description && (
-              <div className="text-xs text-gray-500">
+              <div className="text-xs text-gray-500 dark:text-gray-400">
                 {item.description}
               </div>
             )}
@@ -128,7 +128,7 @@ const ProgressBar: React.FC<ProgressBarProps> = ({ config, data }) => {
                 className="w-3 h-3 rounded-full"
                 style={{ backgroundColor: threshold.color }}
               />
-              <span className="text-gray-600">
+              <span className="text-gray-600 dark:text-gray-400">
                 {threshold.label} ({threshold.value}%+)
               </span>
             </div>

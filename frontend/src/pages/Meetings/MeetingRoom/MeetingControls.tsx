@@ -226,18 +226,18 @@ const MeetingControls: React.FC<MeetingControlsProps> = ({ meeting, className })
 
         <DropdownMenu open={showEmergencyControls} onOpenChange={setShowEmergencyControls}>
           <DropdownMenuTrigger asChild>
-            <Button size="sm" variant="outline" className="border-red-600 text-red-600 hover:bg-red-50">
+            <Button size="sm" variant="outline" className="border-red-600 text-red-600 hover:bg-red-50 dark:text-red-400 dark:bg-red-900/20">
               <AlertTriangle className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48">
-            <DropdownMenuLabel className="text-red-600">紧急控制</DropdownMenuLabel>
+            <DropdownMenuLabel className="text-red-600 dark:text-red-400">紧急控制</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={handleEmergencyEnd} className="text-red-600 focus:text-red-600">
+            <DropdownMenuItem onClick={handleEmergencyEnd} className="text-red-600 focus:text-red-600 dark:text-red-400">
               <Square className="mr-2 h-4 w-4" />
               紧急结束会议
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={handleClearRoom} className="text-red-600 focus:text-red-600">
+            <DropdownMenuItem onClick={handleClearRoom} className="text-red-600 focus:text-red-600 dark:text-red-400">
               <UserX className="mr-2 h-4 w-4" />
               清空会议室
             </DropdownMenuItem>
@@ -291,7 +291,7 @@ const MeetingControls: React.FC<MeetingControlsProps> = ({ meeting, className })
                           设为参与者
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem className="text-red-600" onClick={() => handleKickParticipant(participant)}>
+                        <DropdownMenuItem className="text-red-600 dark:text-red-400" onClick={() => handleKickParticipant(participant)}>
                           <UserX className="mr-2 h-4 w-4" />
                           移出会议
                         </DropdownMenuItem>

@@ -134,7 +134,7 @@ const WidgetContent: React.FC<WidgetContentProps> = ({
 
     default:
       return (
-        <div className="flex items-center justify-center h-full text-gray-500">
+        <div className="flex items-center justify-center h-full text-gray-500 dark:text-gray-400">
           <div className="text-center">
             <div className="text-2xl mb-2">馃敡</div>
             <p className="text-sm">鏈煡缁勪欢绫诲瀷: {widget.type}</p>

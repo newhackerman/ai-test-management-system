@@ -256,7 +256,7 @@ const EightRoleManagement: React.FC = () => {
       dataIndex: 'user_count',
       key: 'user_count',
       width: 90,
-      render: (count: number) => <span className="text-blue-600 font-medium">{count || 0}</span>,
+      render: (count: number) => <span className="text-blue-600 font-medium dark:text-blue-400">{count || 0}</span>,
     },
     {
       title: '操作',

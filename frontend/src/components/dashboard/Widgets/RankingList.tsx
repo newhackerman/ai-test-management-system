@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+﻿import React, { useMemo } from 'react';
 import { Badge } from '@/components/ui/Badge';
 import { Trophy, Medal, Award } from 'lucide-react';
 
@@ -34,11 +34,11 @@ const RankingList: React.FC<RankingListProps> = ({ config, data }) => {
       case 0:
         return <Trophy className="h-4 w-4 text-yellow-500" />;
       case 1:
-        return <Medal className="h-4 w-4 text-gray-400" />;
+        return <Medal className="h-4 w-4 text-gray-400 dark:text-gray-500" />;
       case 2:
         return <Award className="h-4 w-4 text-orange-500" />;
       default:
-        return <span className="text-sm font-bold text-gray-500">#{index + 1}</span>;
+        return <span className="text-sm font-bold text-gray-500 dark:text-gray-400">#{index + 1}</span>;
     }
   };
 
@@ -46,7 +46,7 @@ const RankingList: React.FC<RankingListProps> = ({ config, data }) => {
     <div className="h-full">
       <div className="space-y-2">
         {rankings.map((item, index) => (
-          <div key={index} className="flex items-center justify-between p-2 hover:bg-gray-50 rounded">
+          <div key={index} className="flex items-center justify-between p-2 hover:bg-gray-50 rounded dark:bg-gray-800/50 dark:hover:bg-gray-800">
             <div className="flex items-center space-x-3">
               {getRankIcon(index)}
               <span className="text-sm font-medium">{item.name}</span>

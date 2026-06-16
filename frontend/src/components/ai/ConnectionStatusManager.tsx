@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react';
+﻿import React, { useCallback, useMemo, useState } from 'react';
 import { AlertCircle, CheckCircle, Clock, RefreshCw, Wifi, WifiOff, X } from 'lucide-react';
 
 import { Alert, AlertDescription } from '../ui/Alert';
@@ -268,7 +268,7 @@ const getStatusInfo = (connectionStatus: ConnectionStatus, syncStatus: SyncStatu
       icon: <WifiOff className="h-4 w-4" />,
       title: '网络已离线',
       description: '请检查网络连接后重试。',
-      className: 'border-red-200 bg-red-50 text-red-700',
+      className: 'border-red-200 bg-red-50 text-red-700 dark:text-red-400 dark:bg-red-900/20 dark:border-red-800',
     };
   }
 
@@ -278,7 +278,7 @@ const getStatusInfo = (connectionStatus: ConnectionStatus, syncStatus: SyncStatu
       icon: <RefreshCw className="h-4 w-4 animate-spin" />,
       title: connectionStatus === 'connecting' ? '正在连接' : '正在重连',
       description: '实时连接正在建立，请稍候。',
-      className: 'border-blue-200 bg-blue-50 text-blue-700',
+      className: 'border-blue-200 bg-blue-50 text-blue-700 dark:text-blue-300 dark:bg-blue-900/20',
     };
   }
 
@@ -288,7 +288,7 @@ const getStatusInfo = (connectionStatus: ConnectionStatus, syncStatus: SyncStatu
       icon: <WifiOff className="h-4 w-4" />,
       title: '实时连接已断开',
       description: '部分实时功能可能不可用。',
-      className: 'border-red-200 bg-red-50 text-red-700',
+      className: 'border-red-200 bg-red-50 text-red-700 dark:text-red-400 dark:bg-red-900/20 dark:border-red-800',
     };
   }
 
@@ -297,6 +297,6 @@ const getStatusInfo = (connectionStatus: ConnectionStatus, syncStatus: SyncStatu
     icon: syncStatus === 'syncing' ? <RefreshCw className="h-4 w-4 animate-spin" /> : <AlertCircle className="h-4 w-4" />,
     title: syncStatus === 'syncing' ? '正在同步数据' : '数据同步异常',
     description: syncStatus === 'syncing' ? '数据同步中，请稍候。' : '部分数据可能未同步，请刷新或重试。',
-    className: syncStatus === 'syncing' ? 'border-blue-200 bg-blue-50 text-blue-700' : 'border-orange-200 bg-orange-50 text-orange-700',
+    className: syncStatus === 'syncing' ? 'border-blue-200 bg-blue-50 text-blue-700 dark:text-blue-300 dark:bg-blue-900/20' : 'border-orange-200 bg-orange-50 text-orange-700 dark:text-orange-400 dark:bg-orange-900/20',
   };
 };

@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+﻿import React, { useEffect } from 'react';
 import { Activity, AlertCircle, CheckCircle, RefreshCw, Trash2, Wifi, WifiOff } from 'lucide-react';
 
 import { Alert, AlertDescription } from '../ui/Alert';
@@ -150,8 +150,8 @@ const statusInfo = (status: ConnectionStatus, isOnline: boolean) => {
     return {
       label: '离线',
       description: '当前网络离线，实时能力不可用。',
-      icon: <WifiOff className="h-4 w-4 text-red-600" />,
-      className: 'border-red-200 bg-red-50 text-red-700',
+      icon: <WifiOff className="h-4 w-4 text-red-600 dark:text-red-400" />,
+      className: 'border-red-200 bg-red-50 text-red-700 dark:text-red-400 dark:bg-red-900/20 dark:border-red-800',
     };
   }
 
@@ -168,15 +168,15 @@ const statusInfo = (status: ConnectionStatus, isOnline: boolean) => {
       return {
         label: status === 'connecting' ? '连接中' : '重连中',
         description: '正在建立实时连接。',
-        icon: <RefreshCw className="h-4 w-4 animate-spin text-blue-600" />,
-        className: 'border-blue-200 bg-blue-50 text-blue-700',
+        icon: <RefreshCw className="h-4 w-4 animate-spin text-blue-600 dark:text-blue-400" />,
+        className: 'border-blue-200 bg-blue-50 text-blue-700 dark:text-blue-300 dark:bg-blue-900/20',
       };
     default:
       return {
         label: '未连接',
         description: '实时连接未建立，可尝试重新连接。',
         icon: <AlertCircle className="h-4 w-4 text-orange-600" />,
-        className: 'border-orange-200 bg-orange-50 text-orange-700',
+        className: 'border-orange-200 bg-orange-50 text-orange-700 dark:text-orange-400 dark:bg-orange-900/20',
       };
   }
 };

@@ -52,7 +52,7 @@ const coverageLabels = {
 const coverageClassNames = {
   COVERED: 'bg-green-100 text-green-700',
   PARTIAL: 'bg-yellow-100 text-yellow-700',
-  UNCOVERED: 'bg-red-100 text-red-700'
+  UNCOVERED: 'bg-red-100 text-red-700 dark:text-red-400 dark:bg-red-900/30'
 };
 
 export default function RequirementTraceability() {
@@ -144,7 +144,7 @@ export default function RequirementTraceability() {
         <CardContent className="p-4">
           <div className="flex flex-col gap-4 lg:flex-row">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 dark:text-gray-500" />
               <Input
                 placeholder="搜索需求、设计、测试用例或缺陷..."
                 className="pl-10"

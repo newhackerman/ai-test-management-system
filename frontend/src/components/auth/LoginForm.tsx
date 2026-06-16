@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+﻿import React, { useState } from 'react'
 import { Eye, EyeOff, User, Lock } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -37,18 +37,18 @@ export const LoginForm: React.FC<LoginFormProps> = ({
   return (
     <form onSubmit={onSubmit} className="space-y-6">
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md text-sm">
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md text-sm dark:text-red-400 dark:bg-red-900/20 dark:border-red-800">
           {error}
         </div>
       )}
 
       <div>
-        <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-2">
+        <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-300">
           用户名或邮箱
         </label>
         <div className="relative">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <User className="h-5 w-5 text-gray-400" />
+            <User className="h-5 w-5 text-gray-400 dark:text-gray-500" />
           </div>
           <Input
             id="username"
@@ -64,12 +64,12 @@ export const LoginForm: React.FC<LoginFormProps> = ({
       </div>
 
       <div>
-        <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+        <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-300">
           密码
         </label>
         <div className="relative">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <Lock className="h-5 w-5 text-gray-400" />
+            <Lock className="h-5 w-5 text-gray-400 dark:text-gray-500" />
           </div>
           <Input
             id="password"
@@ -88,9 +88,9 @@ export const LoginForm: React.FC<LoginFormProps> = ({
             disabled={isLoading}
           >
             {showPassword ? (
-              <EyeOff className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+              <EyeOff className="h-5 w-5 text-gray-400 hover:text-gray-600 dark:text-gray-400" />
             ) : (
-              <Eye className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+              <Eye className="h-5 w-5 text-gray-400 hover:text-gray-600 dark:text-gray-400" />
             )}
           </button>
         </div>
@@ -104,7 +104,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
             onCheckedChange={(checked) => handleInputChange('rememberMe', checked as boolean)}
             disabled={isLoading}
           />
-          <label htmlFor="rememberMe" className="ml-2 block text-sm text-gray-700">
+          <label htmlFor="rememberMe" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
             记住我
           </label>
         </div>
@@ -112,7 +112,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
         <div className="text-sm">
           <a
             href="#"
-            className="font-medium text-blue-600 hover:text-blue-500"
+            className="font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400"
             onClick={(e) => {
               e.preventDefault()
               // TODO: 实现忘记密码功能
@@ -140,11 +140,11 @@ export const LoginForm: React.FC<LoginFormProps> = ({
       </Button>
 
       <div className="text-center">
-        <p className="text-sm text-gray-600">
+        <p className="text-sm text-gray-600 dark:text-gray-400">
           还没有账号？{' '}
           <a
             href="#"
-            className="font-medium text-blue-600 hover:text-blue-500"
+            className="font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400"
             onClick={(e) => {
               e.preventDefault()
               // TODO: 实现注册功能

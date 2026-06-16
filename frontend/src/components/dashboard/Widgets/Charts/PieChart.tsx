@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useCallback, useState } from 'react';
+﻿import React, { useMemo, useRef, useCallback, useState } from 'react';
 import {
   PieChart as RechartsPieChart,
   Pie,
@@ -169,8 +169,8 @@ const PieChart: React.FC<PieChartProps> = ({ config, data, onDrillDown, ...baseP
               className="w-3 h-3 rounded-full mr-2"
               style={{ backgroundColor: entry.color }}
             />
-            <span className="text-gray-700 font-medium">{entry.value}</span>
-            <span className="text-gray-500 ml-1">
+            <span className="text-gray-700 font-medium dark:text-gray-300">{entry.value}</span>
+            <span className="text-gray-500 ml-1 dark:text-gray-400">
               ({formatNumber(chartData[index]?.[valueKey] || 0)})
             </span>
           </div>
@@ -183,15 +183,15 @@ const PieChart: React.FC<PieChartProps> = ({ config, data, onDrillDown, ...baseP
     if (active && payload && payload.length) {
       const data = payload[0];
       return (
-        <div className="bg-white p-3 border border-gray-200 rounded-lg shadow-lg">
+        <div className="bg-white p-3 border border-gray-200 rounded-lg shadow-lg dark:bg-gray-800 dark:border-gray-700">
           <div className="flex items-center mb-2">
             <div 
               className="w-3 h-3 rounded-full mr-2" 
               style={{ backgroundColor: data.color }}
             />
-            <span className="text-sm font-medium text-gray-900">{data.name}</span>
+            <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{data.name}</span>
           </div>
-          <div className="text-sm text-gray-600">
+          <div className="text-sm text-gray-600 dark:text-gray-400">
             <div>数值: {formatNumber(data.value)}</div>
             <div>占比: {((data.value / total) * 100).toFixed(1)}%</div>
           </div>
@@ -251,8 +251,8 @@ const PieChart: React.FC<PieChartProps> = ({ config, data, onDrillDown, ...baseP
           {donut && showTotal && (
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
               <div className="text-center">
-                <div className="text-2xl font-bold text-gray-900">{formatNumber(total)}</div>
-                <div className="text-sm text-gray-500">总计</div>
+                <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{formatNumber(total)}</div>
+                <div className="text-sm text-gray-500 dark:text-gray-400">总计</div>
               </div>
             </div>
           )}
@@ -260,7 +260,7 @@ const PieChart: React.FC<PieChartProps> = ({ config, data, onDrillDown, ...baseP
         
         {/* Summary */}
         {!donut && showTotal && (
-          <div className="text-center text-sm text-gray-500 mt-2 border-t pt-2">
+          <div className="text-center text-sm text-gray-500 mt-2 border-t pt-2 dark:text-gray-400">
             总计: {formatNumber(total)}
           </div>
         )}

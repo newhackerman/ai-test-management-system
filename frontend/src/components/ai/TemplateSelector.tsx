@@ -1,4 +1,4 @@
-// @ts-nocheck
+﻿// @ts-nocheck
 import { useEffect, useState } from 'react'
 import { Clock, Copy, Eye, MessageSquare, Search, Star, TrendingUp, Wand2, X } from 'lucide-react'
 
@@ -148,7 +148,7 @@ export function TemplateSelector({ onSelectTemplate, onClose, isOpen = true, cla
   if (!isOpen) return null
 
   return (
-    <div className={`rounded-lg border border-gray-200 bg-white shadow-lg ${className}`}>
+    <div className={`rounded-lg border border-gray-200 bg-white shadow-lg ${className} dark:bg-gray-800 dark:border-gray-700`}>
       <div className="flex items-center justify-between border-b p-4">
         <h3 className="text-lg font-semibold">选择提示词模板</h3>
         <Button variant="ghost" size="sm" onClick={onClose}>
@@ -160,14 +160,14 @@ export function TemplateSelector({ onSelectTemplate, onClose, isOpen = true, cla
         <div className="flex flex-1 flex-col border-r">
           <div className="space-y-3 border-b p-4">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 dark:text-gray-500" />
               <Input placeholder="搜索模板..." value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} className="pl-10" />
             </div>
 
             <select
               value={selectedCategory}
               onChange={(event) => setSelectedCategory(event.target.value)}
-              className="h-9 w-full rounded border border-gray-300 px-2 text-sm"
+              className="h-9 w-full rounded border border-gray-300 px-2 text-sm dark:border-gray-600"
             >
               <option value="">所有分类</option>
               {categories.map((category) => (
@@ -187,7 +187,7 @@ export function TemplateSelector({ onSelectTemplate, onClose, isOpen = true, cla
                   type="button"
                   onClick={() => setActiveTab(tab.key)}
                   className={`flex-1 border-b-2 px-3 py-2 text-sm font-medium transition-colors ${
-                    activeTab === tab.key ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'
+                    activeTab === tab.key ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-300'
                   }`}
                 >
                   <div className="flex items-center justify-center gap-1">
@@ -201,12 +201,12 @@ export function TemplateSelector({ onSelectTemplate, onClose, isOpen = true, cla
 
           <div className="flex-1 overflow-y-auto">
             {loading ? (
-              <div className="flex h-full items-center justify-center text-sm text-gray-500">
-                <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-blue-600" />
+              <div className="flex h-full items-center justify-center text-sm text-gray-500 dark:text-gray-400">
+                <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-blue-600 dark:border-gray-600" />
                 加载中...
               </div>
             ) : templates.length === 0 ? (
-              <div className="flex h-full items-center justify-center text-gray-400">
+              <div className="flex h-full items-center justify-center text-gray-400 dark:text-gray-500">
                 <div className="text-center">
                   <MessageSquare className="mx-auto mb-2 h-8 w-8" />
                   <p className="text-sm">暂无模板</p>
@@ -218,7 +218,7 @@ export function TemplateSelector({ onSelectTemplate, onClose, isOpen = true, cla
                   <button
                     key={template.id}
                     type="button"
-                    className="group w-full rounded-lg border border-gray-200 p-3 text-left hover:bg-gray-50"
+                    className="group w-full rounded-lg border border-gray-200 p-3 text-left hover:bg-gray-50 dark:bg-gray-800/50 dark:hover:bg-gray-800 dark:border-gray-700"
                     onClick={() => handleQuickApply(template)}
                   >
                     <div className="flex items-start justify-between gap-2">
@@ -231,11 +231,11 @@ export function TemplateSelector({ onSelectTemplate, onClose, isOpen = true, cla
                             </Badge>
                           )}
                         </div>
-                        <p className="mb-2 line-clamp-2 text-xs text-gray-600">{template.description}</p>
+                        <p className="mb-2 line-clamp-2 text-xs text-gray-600 dark:text-gray-400">{template.description}</p>
                         <div className="flex flex-wrap items-center gap-2">
                           <Badge variant="outline">{categories.find((item) => item.value === template.category)?.label || template.category}</Badge>
                           {(template.variables || []).length > 0 && <Badge variant="secondary">{template.variables.length} 变量</Badge>}
-                          <span className="text-xs text-gray-500">{template.usage_count || 0} 次使用</span>
+                          <span className="text-xs text-gray-500 dark:text-gray-400">{template.usage_count || 0} 次使用</span>
                         </div>
                       </div>
 
@@ -278,7 +278,7 @@ export function TemplateSelector({ onSelectTemplate, onClose, isOpen = true, cla
                   <X className="h-4 w-4" />
                 </Button>
               </div>
-              <p className="text-sm text-gray-600">{previewTemplate.template.description}</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">{previewTemplate.template.description}</p>
             </div>
 
             {(previewTemplate.template.variables || []).length > 0 && (
@@ -287,9 +287,9 @@ export function TemplateSelector({ onSelectTemplate, onClose, isOpen = true, cla
                 <div className="max-h-32 space-y-3 overflow-y-auto">
                   {previewTemplate.template.variables.map((variable) => (
                     <div key={variable.name}>
-                      <label className="mb-1 block text-xs font-medium text-gray-700">
+                      <label className="mb-1 block text-xs font-medium text-gray-700 dark:text-gray-300">
                         {variable.name}
-                        {variable.required && <span className="ml-1 text-red-500">*</span>}
+                        {variable.required && <span className="ml-1 text-red-500 dark:text-red-400">*</span>}
                       </label>
                       <Input
                         value={previewVariables[variable.name] || ''}
@@ -304,7 +304,7 @@ export function TemplateSelector({ onSelectTemplate, onClose, isOpen = true, cla
 
             <div className="flex-1 p-4">
               <h5 className="mb-2 text-sm font-medium">预览效果</h5>
-              <div className="max-h-40 overflow-y-auto whitespace-pre-wrap rounded border bg-gray-50 p-3 text-sm">
+              <div className="max-h-40 overflow-y-auto whitespace-pre-wrap rounded border bg-gray-50 p-3 text-sm dark:bg-gray-800/50">
                 {previewTemplate.renderedContent}
               </div>
             </div>

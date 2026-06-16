@@ -1,4 +1,4 @@
-import React from 'react'
+﻿import React from 'react'
 import { Edit, Key, Lock, MoreHorizontal, Shield, Trash2, Unlock } from 'lucide-react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/Avatar'
 import { Badge } from '@/components/ui/Badge'
@@ -84,13 +84,13 @@ export const UserTable: React.FC<UserTableProps> = ({
             <th className="w-12 px-4 py-3 text-left">
               <Checkbox checked={allSelected} indeterminate={someSelected} onCheckedChange={onSelectAll} aria-label="选择全部用户" />
             </th>
-            <th className="px-4 py-3 text-left font-medium text-gray-900">用户</th>
-            <th className="px-4 py-3 text-left font-medium text-gray-900">邮箱</th>
-            <th className="px-4 py-3 text-left font-medium text-gray-900">角色</th>
-            <th className="px-4 py-3 text-left font-medium text-gray-900">状态</th>
-            <th className="px-4 py-3 text-left font-medium text-gray-900">上次登录</th>
-            <th className="px-4 py-3 text-left font-medium text-gray-900">创建时间</th>
-            <th className="px-4 py-3 text-right font-medium text-gray-900">操作</th>
+            <th className="px-4 py-3 text-left font-medium text-gray-900 dark:text-gray-100">用户</th>
+            <th className="px-4 py-3 text-left font-medium text-gray-900 dark:text-gray-100">邮箱</th>
+            <th className="px-4 py-3 text-left font-medium text-gray-900 dark:text-gray-100">角色</th>
+            <th className="px-4 py-3 text-left font-medium text-gray-900 dark:text-gray-100">状态</th>
+            <th className="px-4 py-3 text-left font-medium text-gray-900 dark:text-gray-100">上次登录</th>
+            <th className="px-4 py-3 text-left font-medium text-gray-900 dark:text-gray-100">创建时间</th>
+            <th className="px-4 py-3 text-right font-medium text-gray-900 dark:text-gray-100">操作</th>
           </tr>
         </thead>
         <tbody>
@@ -103,7 +103,7 @@ export const UserTable: React.FC<UserTableProps> = ({
           )}
           {!loading && users.length === 0 && (
             <tr>
-              <td colSpan={8} className="h-32 text-center text-sm text-gray-500">
+              <td colSpan={8} className="h-32 text-center text-sm text-gray-500 dark:text-gray-400">
                 暂无用户数据
               </td>
             </tr>
@@ -111,7 +111,7 @@ export const UserTable: React.FC<UserTableProps> = ({
           {!loading && users.map((user) => {
             const locked = user.status === 'locked'
             return (
-              <tr key={user.id} className="border-b hover:bg-gray-50">
+              <tr key={user.id} className="border-b hover:bg-gray-50 dark:bg-gray-800/50 dark:hover:bg-gray-800">
                 <td className="px-4 py-3">
                   <Checkbox
                     checked={selectedUsers.some((selected) => selected.id === user.id)}
@@ -126,18 +126,18 @@ export const UserTable: React.FC<UserTableProps> = ({
                       <AvatarFallback>{user.username.slice(0, 1).toUpperCase()}</AvatarFallback>
                     </Avatar>
                     <div>
-                      <div className="font-medium text-gray-900">{user.username}</div>
-                      {user.nickname && user.nickname !== user.username && <div className="text-sm text-gray-500">{user.nickname}</div>}
+                      <div className="font-medium text-gray-900 dark:text-gray-100">{user.username}</div>
+                      {user.nickname && user.nickname !== user.username && <div className="text-sm text-gray-500 dark:text-gray-400">{user.nickname}</div>}
                     </div>
                   </div>
                 </td>
-                <td className="px-4 py-3 text-gray-600">{user.email}</td>
+                <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{user.email}</td>
                 <td className="px-4 py-3">
                   <Badge variant="outline">{roleName(user)}</Badge>
                 </td>
                 <td className="px-4 py-3">{getStatusBadge(user)}</td>
-                <td className="px-4 py-3 text-gray-600">{formatDate(user.last_login_at)}</td>
-                <td className="px-4 py-3 text-gray-600">{formatDate(user.created_at)}</td>
+                <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{formatDate(user.last_login_at)}</td>
+                <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{formatDate(user.created_at)}</td>
                 <td className="px-4 py-3 text-right">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -164,7 +164,7 @@ export const UserTable: React.FC<UserTableProps> = ({
                         {locked ? <Unlock className="mr-2 h-4 w-4" /> : <Lock className="mr-2 h-4 w-4" />}
                         {locked ? '解锁' : '锁定'}
                       </DropdownMenuItem>
-                      <DropdownMenuItem className="text-red-600" onClick={() => onDelete(user)}>
+                      <DropdownMenuItem className="text-red-600 dark:text-red-400" onClick={() => onDelete(user)}>
                         <Trash2 className="mr-2 h-4 w-4" />
                         删除
                       </DropdownMenuItem>

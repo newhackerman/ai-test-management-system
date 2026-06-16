@@ -1,4 +1,4 @@
-import React from 'react'
+﻿import React from 'react'
 
 interface PasswordStrengthIndicatorProps {
   password: string
@@ -55,9 +55,9 @@ export const PasswordStrengthIndicator: React.FC<PasswordStrengthIndicatorProps>
   }
 
   return (
-    <div className={`text-xs bg-gray-50 p-3 rounded-md border ${className}`}>
+    <div className={`text-xs bg-gray-50 p-3 rounded-md border ${className} dark:bg-gray-800/50`}>
       <div className="flex items-center justify-between mb-2">
-        <span className="font-medium text-gray-700">密码要求</span>
+        <span className="font-medium text-gray-700 dark:text-gray-300">密码要求</span>
         <span className={`font-medium ${getStrengthColor()}`}>
           {getStrengthText()}
         </span>

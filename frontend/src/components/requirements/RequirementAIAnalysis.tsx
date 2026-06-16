@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 需求AI分析组件
  * 
  * 提供需求智能分析功能的React组件，包括：
@@ -240,7 +240,7 @@ const RequirementAIAnalysis: React.FC<RequirementAIAnalysisProps> = ({
   const getScoreColor = (score: number) => {
     if (score >= 8) return 'text-green-600';
     if (score >= 6) return 'text-yellow-600';
-    return 'text-red-600';
+    return 'text-red-600 dark:text-red-400';
   };
 
   // 获取复杂度标签颜色
@@ -249,8 +249,8 @@ const RequirementAIAnalysis: React.FC<RequirementAIAnalysisProps> = ({
       case 'simple': return 'bg-green-100 text-green-800';
       case 'medium': return 'bg-yellow-100 text-yellow-800';
       case 'complex': return 'bg-orange-100 text-orange-800';
-      case 'very_complex': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'very_complex': return 'bg-red-100 text-red-800 dark:text-red-300 dark:bg-red-900/30';
+      default: return 'bg-gray-100 text-gray-800 dark:text-gray-200 dark:bg-gray-800';
     }
   };
 
@@ -260,8 +260,8 @@ const RequirementAIAnalysis: React.FC<RequirementAIAnalysisProps> = ({
       case 'low': return 'bg-green-100 text-green-800';
       case 'medium': return 'bg-yellow-100 text-yellow-800';
       case 'high': return 'bg-orange-100 text-orange-800';
-      case 'critical': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'critical': return 'bg-red-100 text-red-800 dark:text-red-300 dark:bg-red-900/30';
+      default: return 'bg-gray-100 text-gray-800 dark:text-gray-200 dark:bg-gray-800';
     }
   };
 
@@ -368,7 +368,7 @@ const RequirementAIAnalysis: React.FC<RequirementAIAnalysisProps> = ({
                       {qualityAnalysis.complexity_estimate}
                     </Badge>
                   </div>
-                  <div className="mt-2 text-sm text-gray-600">
+                  <div className="mt-2 text-sm text-gray-600 dark:text-gray-400">
                     预估工作量: {qualityAnalysis.effort_estimate} 人天 | 
                     置信度: {(qualityAnalysis.confidence_level * 100).toFixed(0)}% |
                     分析耗时: {qualityAnalysis.analysis_time.toFixed(1)}s
@@ -452,8 +452,8 @@ const RequirementAIAnalysis: React.FC<RequirementAIAnalysisProps> = ({
           ) : (
             <Card>
               <CardContent className="text-center py-8">
-                <Brain className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-500">点击"质量分析"按钮开始分析需求质量</p>
+                <Brain className="h-12 w-12 text-gray-400 mx-auto mb-4 dark:text-gray-500" />
+                <p className="text-gray-500 dark:text-gray-400">点击"质量分析"按钮开始分析需求质量</p>
               </CardContent>
             </Card>
           )}
@@ -493,9 +493,9 @@ const RequirementAIAnalysis: React.FC<RequirementAIAnalysisProps> = ({
                         <h4 className="font-medium mb-2">冲突需求:</h4>
                         <ul className="space-y-2">
                           {conflictAnalysis.conflicting_requirements.map((req, index) => (
-                            <li key={index} className="p-3 bg-red-50 rounded-lg">
+                            <li key={index} className="p-3 bg-red-50 rounded-lg dark:bg-red-900/20">
                               <div className="font-medium">{req.title}</div>
-                              <div className="text-sm text-gray-600">{req.conflict_description}</div>
+                              <div className="text-sm text-gray-600 dark:text-gray-400">{req.conflict_description}</div>
                             </li>
                           ))}
                         </ul>
@@ -517,7 +517,7 @@ const RequirementAIAnalysis: React.FC<RequirementAIAnalysisProps> = ({
                     <div className="text-center py-4">
                       <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-2" />
                       <p className="text-green-600 font-medium">未发现冲突</p>
-                      <p className="text-sm text-gray-500">当前需求与已有需求不存在冲突</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">当前需求与已有需求不存在冲突</p>
                     </div>
                   )}
                 </CardContent>
@@ -526,8 +526,8 @@ const RequirementAIAnalysis: React.FC<RequirementAIAnalysisProps> = ({
           ) : (
             <Card>
               <CardContent className="text-center py-8">
-                <AlertTriangle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-500">点击"冲突检测"按钮检测需求冲突</p>
+                <AlertTriangle className="h-12 w-12 text-gray-400 mx-auto mb-4 dark:text-gray-500" />
+                <p className="text-gray-500 dark:text-gray-400">点击"冲突检测"按钮检测需求冲突</p>
               </CardContent>
             </Card>
           )}
@@ -547,33 +547,33 @@ const RequirementAIAnalysis: React.FC<RequirementAIAnalysisProps> = ({
                 <CardContent>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <div className="text-center">
-                      <div className="text-2xl font-bold text-blue-600">
+                      <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
                         {optimizationResult.improvements_count}
                       </div>
-                      <div className="text-sm text-gray-600">改进建议</div>
+                      <div className="text-sm text-gray-600 dark:text-gray-400">改进建议</div>
                     </div>
                     <div className="text-center">
-                      <div className="text-2xl font-bold text-red-600">
+                      <div className="text-2xl font-bold text-red-600 dark:text-red-400">
                         {optimizationResult.conflicts_count}
                       </div>
-                      <div className="text-sm text-gray-600">冲突数量</div>
+                      <div className="text-sm text-gray-600 dark:text-gray-400">冲突数量</div>
                     </div>
                     <div className="text-center">
                       <div className="text-2xl font-bold text-green-600">
                         {optimizationResult.dependencies_count}
                       </div>
-                      <div className="text-sm text-gray-600">依赖关系</div>
+                      <div className="text-sm text-gray-600 dark:text-gray-400">依赖关系</div>
                     </div>
                     <div className="text-center">
                       <div className="text-2xl font-bold text-purple-600">
                         {optimizationResult.best_practices_count}
                       </div>
-                      <div className="text-sm text-gray-600">最佳实践</div>
+                      <div className="text-sm text-gray-600 dark:text-gray-400">最佳实践</div>
                     </div>
                   </div>
                   
                   <div className="mt-4 pt-4 border-t">
-                    <div className="flex justify-between text-sm text-gray-600">
+                    <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400">
                       <span>改进潜力: {(optimizationResult.improvement_potential * 100).toFixed(0)}%</span>
                       <span>置信度: {(optimizationResult.confidence_score * 100).toFixed(0)}%</span>
                       <span>分析耗时: {optimizationResult.analysis_time.toFixed(1)}s</span>
@@ -585,8 +585,8 @@ const RequirementAIAnalysis: React.FC<RequirementAIAnalysisProps> = ({
           ) : (
             <Card>
               <CardContent className="text-center py-8">
-                <TrendingUp className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-500">点击"优化建议"按钮生成优化方案</p>
+                <TrendingUp className="h-12 w-12 text-gray-400 mx-auto mb-4 dark:text-gray-500" />
+                <p className="text-gray-500 dark:text-gray-400">点击"优化建议"按钮生成优化方案</p>
               </CardContent>
             </Card>
           )}
@@ -609,7 +609,7 @@ const RequirementAIAnalysis: React.FC<RequirementAIAnalysisProps> = ({
                       {realTimeAnalysis.score.toFixed(1)}
                     </div>
                     <Progress value={realTimeAnalysis.score * 10} className="flex-1 h-2" />
-                    <span className="text-sm text-gray-500">
+                    <span className="text-sm text-gray-500 dark:text-gray-400">
                       {realTimeAnalysis.processing_time.toFixed(2)}s
                     </span>
                   </div>
@@ -647,8 +647,8 @@ const RequirementAIAnalysis: React.FC<RequirementAIAnalysisProps> = ({
           ) : (
             <Card>
               <CardContent className="text-center py-8">
-                <Clock className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-500">点击上方的快速检查按钮进行实时分析</p>
+                <Clock className="h-12 w-12 text-gray-400 mx-auto mb-4 dark:text-gray-500" />
+                <p className="text-gray-500 dark:text-gray-400">点击上方的快速检查按钮进行实时分析</p>
               </CardContent>
             </Card>
           )}

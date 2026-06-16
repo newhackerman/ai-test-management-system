@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useCallback } from 'react';
+﻿import React, { useMemo, useRef, useCallback } from 'react';
 import {
   AreaChart as RechartsAreaChart,
   Area,
@@ -88,15 +88,15 @@ const AreaChart: React.FC<AreaChartProps> = ({ config, data, onDrillDown, ...bas
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       return (
-        <div className="bg-white p-3 border border-gray-200 rounded-lg shadow-lg">
-          <p className="text-sm font-medium text-gray-900 mb-2">{label}</p>
+        <div className="bg-white p-3 border border-gray-200 rounded-lg shadow-lg dark:bg-gray-800 dark:border-gray-700">
+          <p className="text-sm font-medium text-gray-900 mb-2 dark:text-gray-100">{label}</p>
           {payload.map((entry: any, index: number) => (
             <div key={index} className="flex items-center text-sm">
               <div 
                 className="w-3 h-3 rounded-full mr-2" 
                 style={{ backgroundColor: entry.color }}
               />
-              <span className="text-gray-600 mr-2">{entry.name}:</span>
+              <span className="text-gray-600 mr-2 dark:text-gray-400">{entry.name}:</span>
               <span className="font-medium">{formatTooltipValue(entry.value, entry.name)[0]}</span>
             </div>
           ))}

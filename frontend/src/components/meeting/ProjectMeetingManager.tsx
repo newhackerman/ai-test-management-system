@@ -1,4 +1,4 @@
-// @ts-nocheck
+﻿// @ts-nocheck
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Calendar, CheckCircle2, Clock, Loader2, Plus, RefreshCw, Users } from 'lucide-react';
@@ -163,7 +163,7 @@ export const ProjectMeetingManager: React.FC<ProjectMeetingManagerProps> = ({ pr
       </div>
 
       {error && (
-        <Alert className="border-red-200 bg-red-50 text-red-700">
+        <Alert className="border-red-200 bg-red-50 text-red-700 dark:text-red-400 dark:bg-red-900/20 dark:border-red-800">
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}

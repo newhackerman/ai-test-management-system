@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+﻿import React, { useState, useEffect } from 'react'
 import { 
   ArrowLeft,
   Edit,
@@ -89,7 +89,7 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({
         variant: 'outline' as const, 
         icon: Clock,
         color: 'text-blue-600',
-        bgColor: 'bg-blue-50'
+        bgColor: 'bg-blue-50 dark:bg-blue-900/20'
       },
       IN_PROGRESS: { 
         label: '进行中', 
@@ -116,15 +116,15 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({
         label: '已取消', 
         variant: 'destructive' as const, 
         icon: X,
-        color: 'text-red-600',
-        bgColor: 'bg-red-50'
+        color: 'text-red-600 dark:text-red-400',
+        bgColor: 'bg-red-50 dark:bg-red-900/20'
       },
       ARCHIVED: { 
         label: '已归档', 
         variant: 'secondary' as const, 
         icon: Archive,
-        color: 'text-gray-600',
-        bgColor: 'bg-gray-50'
+        color: 'text-gray-600 dark:text-gray-400',
+        bgColor: 'bg-gray-50 dark:bg-gray-800/50'
       }
     }
     return configs[status]
@@ -144,19 +144,19 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({
   // Project type configuration
   const getTypeConfig = (type: Project['project_type']) => {
     const configs = {
-      BUSINESS_SYSTEM: { label: '业务系统', color: 'bg-blue-100 text-blue-800' },
+      BUSINESS_SYSTEM: { label: '业务系统', color: 'bg-blue-100 text-blue-800 dark:text-blue-300 dark:bg-blue-900/30' },
       MOBILE_APP: { label: '移动应用', color: 'bg-cyan-100 text-cyan-800' },
       API_SERVICE: { label: '接口服务', color: 'bg-orange-100 text-orange-800' },
       DATA_AI: { label: '数据/AI', color: 'bg-purple-100 text-purple-800' },
       INFRASTRUCTURE: { label: '基础设施', color: 'bg-slate-100 text-slate-800' },
       INTERNAL_TOOL: { label: '内部工具', color: 'bg-green-100 text-green-800' },
-      FUNCTIONAL: { label: '业务系统', color: 'bg-blue-100 text-blue-800' },
+      FUNCTIONAL: { label: '业务系统', color: 'bg-blue-100 text-blue-800 dark:text-blue-300 dark:bg-blue-900/30' },
       PERFORMANCE: { label: '基础设施', color: 'bg-slate-100 text-slate-800' },
       SECURITY: { label: '基础设施', color: 'bg-slate-100 text-slate-800' },
       AUTOMATION: { label: '内部工具', color: 'bg-green-100 text-green-800' },
       INTEGRATION: { label: '接口服务', color: 'bg-orange-100 text-orange-800' }
     }
-    return configs[type] || { label: getProjectTypeLabel(type), color: 'bg-gray-100 text-gray-800' }
+    return configs[type] || { label: getProjectTypeLabel(type), color: 'bg-gray-100 text-gray-800 dark:text-gray-200 dark:bg-gray-800' }
   }
 
   // Handle save
@@ -215,9 +215,9 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({
     if (actualProgress > expectedProgress + 10) {
       return { icon: TrendingUp, color: 'text-green-600', label: '进度超前' }
     } else if (actualProgress < expectedProgress - 10) {
-      return { icon: TrendingDown, color: 'text-red-600', label: '进度滞后' }
+      return { icon: TrendingDown, color: 'text-red-600 dark:text-red-400', label: '进度滞后' }
     } else {
-      return { icon: Activity, color: 'text-gray-600', label: '进度正常' }
+      return { icon: Activity, color: 'text-gray-600 dark:text-gray-400', label: '进度正常' }
     }
   }
 
@@ -539,7 +539,7 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-muted-foreground">发现缺陷数</span>
-                    <span className="font-semibold text-red-600">{project.defect_count}</span>
+                    <span className="font-semibold text-red-600 dark:text-red-400">{project.defect_count}</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-muted-foreground">团队成员数</span>
@@ -565,7 +565,7 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-muted-foreground">成本使用率</span>
                       <span className={`font-semibold ${
-                        (project.actual_cost / project.budget) > 0.9 ? 'text-red-600' : 
+                        (project.actual_cost / project.budget) > 0.9 ? 'text-red-600 dark:text-red-400' : 
                         (project.actual_cost / project.budget) > 0.7 ? 'text-yellow-600' : 'text-green-600'
                       }`}>
                         {((project.actual_cost / project.budget) * 100).toFixed(1)}%

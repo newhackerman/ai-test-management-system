@@ -198,7 +198,7 @@ const SecurityTest: React.FC = () => {
         </Button>
       </div>
 
-      {error && <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
+      {error && <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:text-red-400 dark:bg-red-900/20 dark:border-red-800">{error}</div>}
 
       {lastExecution && (
         <Card>
@@ -430,7 +430,7 @@ const Field = ({ label, children }: { label: string; children: React.ReactNode }
 )
 
 const Metric = ({ label, value, tone = 'blue' }: { label: string; value: React.ReactNode; tone?: string }) => {
-  const color = tone === 'red' ? 'text-red-600' : tone === 'orange' ? 'text-orange-600' : 'text-blue-600'
+  const color = tone === 'red' ? 'text-red-600 dark:text-red-400' : tone === 'orange' ? 'text-orange-600' : 'text-blue-600'
   return (
     <div>
       <p className={`text-lg font-bold ${color}`}>{value}</p>

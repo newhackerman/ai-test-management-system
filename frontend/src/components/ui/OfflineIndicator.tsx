@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+﻿import React, { useState } from 'react'
 import { 
   Wifi, 
   WifiOff, 
@@ -129,7 +129,7 @@ export const OfflineIndicator: React.FC<OfflineIndicatorProps> = ({
         {isOnline ? (
           <Wifi className="w-4 h-4 text-green-500" />
         ) : (
-          <WifiOff className="w-4 h-4 text-red-500" />
+          <WifiOff className="w-4 h-4 text-red-500 dark:text-red-400" />
         )}
         
         {hasPendingOperations && (
@@ -139,7 +139,7 @@ export const OfflineIndicator: React.FC<OfflineIndicatorProps> = ({
         )}
         
         {isSyncing && (
-          <RefreshCw className="w-4 h-4 animate-spin text-blue-500" />
+          <RefreshCw className="w-4 h-4 animate-spin text-blue-500 dark:text-blue-400" />
         )}
       </div>
     )
@@ -154,7 +154,7 @@ export const OfflineIndicator: React.FC<OfflineIndicatorProps> = ({
             {isOnline ? (
               <Wifi className="w-5 h-5 text-green-500" />
             ) : (
-              <WifiOff className="w-5 h-5 text-red-500" />
+              <WifiOff className="w-5 h-5 text-red-500 dark:text-red-400" />
             )}
             <span>离线状态</span>
           </CardTitle>
@@ -167,7 +167,7 @@ export const OfflineIndicator: React.FC<OfflineIndicatorProps> = ({
                 {isOnline ? (
                   <span className="text-green-600">在线</span>
                 ) : (
-                  <span className="text-red-600">离线</span>
+                  <span className="text-red-600 dark:text-red-400">离线</span>
                 )}
               </div>
             </div>
@@ -190,9 +190,9 @@ export const OfflineIndicator: React.FC<OfflineIndicatorProps> = ({
               <span className="text-muted-foreground">同步状态</span>
               <div className="font-medium">
                 {isSyncing ? (
-                  <span className="text-blue-600">同步中</span>
+                  <span className="text-blue-600 dark:text-blue-400">同步中</span>
                 ) : (
-                  <span className="text-gray-600">空闲</span>
+                  <span className="text-gray-600 dark:text-gray-400">空闲</span>
                 )}
               </div>
             </div>
@@ -264,7 +264,7 @@ export const OfflineIndicator: React.FC<OfflineIndicatorProps> = ({
           {isOnline ? (
             <Wifi className="w-4 h-4 text-green-500" />
           ) : (
-            <WifiOff className="w-4 h-4 text-red-500" />
+            <WifiOff className="w-4 h-4 text-red-500 dark:text-red-400" />
           )}
           
           {hasPendingOperations && (
@@ -277,7 +277,7 @@ export const OfflineIndicator: React.FC<OfflineIndicatorProps> = ({
           )}
           
           {isSyncing && (
-            <RefreshCw className="absolute -bottom-1 -right-1 w-3 h-3 animate-spin text-blue-500" />
+            <RefreshCw className="absolute -bottom-1 -right-1 w-3 h-3 animate-spin text-blue-500 dark:text-blue-400" />
           )}
         </Button>
       </DropdownMenuTrigger>
@@ -292,8 +292,8 @@ export const OfflineIndicator: React.FC<OfflineIndicatorProps> = ({
               </>
             ) : (
               <>
-                <AlertCircle className="w-4 h-4 text-red-500" />
-                <span className="font-medium text-red-600">离线</span>
+                <AlertCircle className="w-4 h-4 text-red-500 dark:text-red-400" />
+                <span className="font-medium text-red-600 dark:text-red-400">离线</span>
               </>
             )}
           </div>
@@ -311,7 +311,7 @@ export const OfflineIndicator: React.FC<OfflineIndicatorProps> = ({
           
           {isSyncing && (
             <div className="mt-2">
-              <div className="flex items-center space-x-2 text-sm text-blue-600">
+              <div className="flex items-center space-x-2 text-sm text-blue-600 dark:text-blue-400">
                 <RefreshCw className="w-3 h-3 animate-spin" />
                 <span>同步中...</span>
               </div>
@@ -365,7 +365,7 @@ export const NetworkStatusIndicator: React.FC<{ className?: string }> = ({ class
       ) : (
         <>
           <div className="w-2 h-2 bg-red-500 rounded-full" />
-          <span className="text-sm text-red-600">离线</span>
+          <span className="text-sm text-red-600 dark:text-red-400">离线</span>
         </>
       )}
     </div>
@@ -386,8 +386,8 @@ export const SyncProgressIndicator: React.FC<{ className?: string }> = ({ classN
     <div className={cn('flex items-center space-x-2 text-sm', className)}>
       {isSyncing ? (
         <>
-          <RefreshCw className="w-4 h-4 animate-spin text-blue-500" />
-          <span className="text-blue-600">同步中...</span>
+          <RefreshCw className="w-4 h-4 animate-spin text-blue-500 dark:text-blue-400" />
+          <span className="text-blue-600 dark:text-blue-400">同步中...</span>
         </>
       ) : (
         <>

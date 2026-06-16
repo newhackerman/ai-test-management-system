@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 打字指示器组件
  * 显示AI或其他用户正在输入的状态
  */
@@ -53,16 +53,16 @@ export function TypingIndicator({
       <div className="flex gap-3 mb-4">
         <div className={cn(
           "w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0",
-          isAI ? "bg-blue-100" : "bg-gray-100"
+          isAI ? "bg-blue-100 dark:bg-blue-900/30" : "bg-gray-100 dark:bg-gray-800"
         )}>
           {isAI ? (
-            <Bot className="w-4 h-4 text-blue-600" />
+            <Bot className="w-4 h-4 text-blue-600 dark:text-blue-400" />
           ) : (
-            <User className="w-4 h-4 text-gray-600" />
+            <User className="w-4 h-4 text-gray-600 dark:text-gray-400" />
           )}
         </div>
         
-        <div className="bg-gray-100 rounded-lg px-4 py-2 max-w-[200px]">
+        <div className="bg-gray-100 rounded-lg px-4 py-2 max-w-[200px] dark:bg-gray-800">
           <div className="flex items-center gap-2">
             {/* 跳动的点动画 */}
             <div className="flex gap-1">
@@ -73,7 +73,7 @@ export function TypingIndicator({
               <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" 
                    style={{ animationDelay: '300ms' }} />
             </div>
-            <span className="text-sm text-gray-600">
+            <span className="text-sm text-gray-600 dark:text-gray-400">
               {isAI ? 'AI正在思考' : `${user.name}正在输入`}{dots}
             </span>
           </div>
@@ -89,11 +89,11 @@ export function TypingIndicator({
     
     return (
       <div className="flex gap-3 mb-4">
-        <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center flex-shrink-0">
-          <Users className="w-4 h-4 text-gray-600" />
+        <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center flex-shrink-0 dark:bg-gray-800">
+          <Users className="w-4 h-4 text-gray-600 dark:text-gray-400" />
         </div>
         
-        <div className="bg-gray-100 rounded-lg px-4 py-2">
+        <div className="bg-gray-100 rounded-lg px-4 py-2 dark:bg-gray-800">
           <div className="flex items-center gap-2">
             {/* 跳动的点动画 */}
             <div className="flex gap-1">
@@ -104,7 +104,7 @@ export function TypingIndicator({
               <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" 
                    style={{ animationDelay: '300ms' }} />
             </div>
-            <span className="text-sm text-gray-600">
+            <span className="text-sm text-gray-600 dark:text-gray-400">
               {aiUsers.length > 0 && humanUsers.length > 0 
                 ? `AI和${humanUsers.length}个用户正在输入${dots}`
                 : aiUsers.length > 0
@@ -116,7 +116,7 @@ export function TypingIndicator({
           
           {/* 显示具体的用户名 */}
           {humanUsers.length > 0 && humanUsers.length <= 3 && (
-            <div className="text-xs text-gray-500 mt-1">
+            <div className="text-xs text-gray-500 mt-1 dark:text-gray-400">
               {humanUsers.map(u => u.name).join(', ')}
             </div>
           )}
@@ -151,11 +151,11 @@ export function SimpleTypingIndicator({
 
   return (
     <div className={cn('flex gap-3 mb-4 animate-fade-in', className)}>
-      <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-        <Bot className="w-4 h-4 text-blue-600" />
+      <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 dark:bg-blue-900/30">
+        <Bot className="w-4 h-4 text-blue-600 dark:text-blue-400" />
       </div>
       
-      <div className="bg-gray-100 rounded-lg px-4 py-2">
+      <div className="bg-gray-100 rounded-lg px-4 py-2 dark:bg-gray-800">
         <div className="flex items-center gap-2">
           {/* 跳动的点动画 */}
           <div className="flex gap-1">
@@ -166,7 +166,7 @@ export function SimpleTypingIndicator({
             <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" 
                  style={{ animationDelay: '300ms' }} />
           </div>
-          <span className="text-sm text-gray-600">{message}...</span>
+          <span className="text-sm text-gray-600 dark:text-gray-400">{message}...</span>
         </div>
       </div>
     </div>

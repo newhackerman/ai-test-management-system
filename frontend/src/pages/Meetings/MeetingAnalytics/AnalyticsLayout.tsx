@@ -70,13 +70,13 @@ const AnalyticsLayout: React.FC<AnalyticsLayoutProps> = ({
         
         {/* 閿欒鎻愮ず */}
         {error && (
-          <Alert className="mb-6 border-red-200 bg-red-50">
-            <AlertCircle className="h-4 w-4 text-red-600" />
-            <AlertDescription className="text-red-800">
+          <Alert className="mb-6 border-red-200 bg-red-50 dark:bg-red-900/20 dark:border-red-800">
+            <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
+            <AlertDescription className="text-red-800 dark:text-red-300">
               {error}
               <button
                 onClick={handleClearError}
-                className="ml-2 text-red-600 hover:text-red-800 underline"
+                className="ml-2 text-red-600 hover:text-red-800 underline dark:text-red-400"
               >
                 鍏抽棴
               </button>

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react'
+﻿import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { 
   Play, 
   Pause, 
@@ -632,7 +632,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         <div className="mb-4">
           <div 
             ref={progressRef}
-            className="relative h-1 bg-white bg-opacity-30 rounded-full cursor-pointer hover:h-2 transition-all"
+            className="relative h-1 bg-white bg-opacity-30 rounded-full cursor-pointer hover:h-2 transition-all dark:bg-gray-800"
             onMouseDown={handleProgressMouseDown}
           >
             {/* 观看进度背景 */}
@@ -649,7 +649,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
             
             {/* 缓冲进度 */}
             <div 
-              className="absolute top-0 left-0 h-full bg-white bg-opacity-50 rounded-full"
+              className="absolute top-0 left-0 h-full bg-white bg-opacity-50 rounded-full dark:bg-gray-800"
               style={{ width: '0%' }} // 这里应该根据实际缓冲进度设置
             />
             
@@ -702,7 +702,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
             {/* 播放/暂停 */}
             <button
               onClick={togglePlay}
-              className="p-2 text-white hover:bg-white hover:bg-opacity-20 rounded transition-colors"
+              className="p-2 text-white hover:bg-white hover:bg-opacity-20 rounded transition-colors dark:bg-gray-800"
             >
               {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
             </button>
@@ -710,14 +710,14 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
             {/* 快退/快进 */}
             <button
               onClick={() => seek(currentTime - 10)}
-              className="p-2 text-white hover:bg-white hover:bg-opacity-20 rounded transition-colors"
+              className="p-2 text-white hover:bg-white hover:bg-opacity-20 rounded transition-colors dark:bg-gray-800"
             >
               <SkipBack className="w-4 h-4" />
             </button>
             
             <button
               onClick={() => seek(currentTime + 10)}
-              className="p-2 text-white hover:bg-white hover:bg-opacity-20 rounded transition-colors"
+              className="p-2 text-white hover:bg-white hover:bg-opacity-20 rounded transition-colors dark:bg-gray-800"
             >
               <SkipForward className="w-4 h-4" />
             </button>
@@ -726,7 +726,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
             <div className="flex items-center space-x-2">
               <button
                 onClick={toggleMute}
-                className="p-2 text-white hover:bg-white hover:bg-opacity-20 rounded transition-colors"
+                className="p-2 text-white hover:bg-white hover:bg-opacity-20 rounded transition-colors dark:bg-gray-800"
               >
                 {isMuted || volume === 0 ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
               </button>
@@ -738,7 +738,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
                 step="0.1"
                 value={isMuted ? 0 : volume}
                 onChange={(e) => changeVolume(parseFloat(e.target.value))}
-                className="w-20 h-1 bg-white bg-opacity-30 rounded-full appearance-none cursor-pointer"
+                className="w-20 h-1 bg-white bg-opacity-30 rounded-full appearance-none cursor-pointer dark:bg-gray-800"
               />
             </div>
             
@@ -764,7 +764,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
             {chapters.length > 0 && (
               <button
                 onClick={() => setShowChapters(!showChapters)}
-                className="p-2 text-white hover:bg-white hover:bg-opacity-20 rounded transition-colors"
+                className="p-2 text-white hover:bg-white hover:bg-opacity-20 rounded transition-colors dark:bg-gray-800"
                 title="章节"
               >
                 <Bookmark className="w-4 h-4" />
@@ -774,7 +774,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
             {/* 书签 */}
             <button
               onClick={() => setShowBookmarks(!showBookmarks)}
-              className="p-2 text-white hover:bg-white hover:bg-opacity-20 rounded transition-colors"
+              className="p-2 text-white hover:bg-white hover:bg-opacity-20 rounded transition-colors dark:bg-gray-800"
               title="书签"
             >
               <Bookmark className="w-4 h-4" />
@@ -785,7 +785,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
               <div className="relative">
                 <button
                   onClick={() => setShowQualityMenu(!showQualityMenu)}
-                  className="p-2 text-white hover:bg-white hover:bg-opacity-20 rounded transition-colors text-xs"
+                  className="p-2 text-white hover:bg-white hover:bg-opacity-20 rounded transition-colors text-xs dark:bg-gray-800"
                   title="视频质量"
                 >
                   {selectedQuality || 'Auto'}
@@ -803,7 +803,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
                           'block w-full text-left px-2 py-1 text-xs rounded transition-colors',
                           selectedQuality === ''
                             ? 'bg-blue-500 text-white'
-                            : 'text-gray-300 hover:bg-white hover:bg-opacity-10'
+                            : 'text-gray-300 hover:bg-white hover:bg-opacity-10 dark:bg-gray-800'
                         )}
                       >
                         Auto
@@ -820,7 +820,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
                           'block w-full text-left px-2 py-1 text-xs rounded transition-colors',
                           selectedQuality === quality.label
                             ? 'bg-blue-500 text-white'
-                            : 'text-gray-300 hover:bg-white hover:bg-opacity-10'
+                            : 'text-gray-300 hover:bg-white hover:bg-opacity-10 dark:bg-gray-800'
                         )}
                       >
                         {quality.label}
@@ -835,7 +835,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
             {document.pictureInPictureEnabled && (
               <button
                 onClick={togglePictureInPicture}
-                className="p-2 text-white hover:bg-white hover:bg-opacity-20 rounded transition-colors"
+                className="p-2 text-white hover:bg-white hover:bg-opacity-20 rounded transition-colors dark:bg-gray-800"
                 title="画中画"
               >
                 <div className="w-4 h-4 border border-current rounded flex items-center justify-center">
@@ -848,7 +848,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
             {subtitles.length > 0 && (
               <button
                 onClick={() => setShowSubtitles(!showSubtitles)}
-                className="p-2 text-white hover:bg-white hover:bg-opacity-20 rounded transition-colors"
+                className="p-2 text-white hover:bg-white hover:bg-opacity-20 rounded transition-colors dark:bg-gray-800"
                 title="字幕"
               >
                 <MessageSquare className="w-4 h-4" />
@@ -858,7 +858,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
             {/* 设置 */}
             <button
               onClick={() => setShowSettings(!showSettings)}
-              className="p-2 text-white hover:bg-white hover:bg-opacity-20 rounded transition-colors"
+              className="p-2 text-white hover:bg-white hover:bg-opacity-20 rounded transition-colors dark:bg-gray-800"
             >
               <Settings className="w-4 h-4" />
             </button>
@@ -867,7 +867,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
             {allowDownload && (
               <button
                 onClick={() => {/* 实现下载逻辑 */}}
-                className="p-2 text-white hover:bg-white hover:bg-opacity-20 rounded transition-colors"
+                className="p-2 text-white hover:bg-white hover:bg-opacity-20 rounded transition-colors dark:bg-gray-800"
                 title="下载"
               >
                 <Download className="w-4 h-4" />
@@ -878,7 +878,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
             {allowShare && (
               <button
                 onClick={() => {/* 实现分享逻辑 */}}
-                className="p-2 text-white hover:bg-white hover:bg-opacity-20 rounded transition-colors"
+                className="p-2 text-white hover:bg-white hover:bg-opacity-20 rounded transition-colors dark:bg-gray-800"
                 title="分享"
               >
                 <Share2 className="w-4 h-4" />
@@ -888,7 +888,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
             {/* 全屏 */}
             <button
               onClick={toggleFullscreen}
-              className="p-2 text-white hover:bg-white hover:bg-opacity-20 rounded transition-colors"
+              className="p-2 text-white hover:bg-white hover:bg-opacity-20 rounded transition-colors dark:bg-gray-800"
             >
               {isFullscreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
             </button>
@@ -912,7 +912,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
                   'w-full text-left p-2 rounded text-sm transition-colors',
                   currentChapter?.id === chapter.id
                     ? 'bg-blue-500 text-white'
-                    : 'text-gray-300 hover:bg-white hover:bg-opacity-10'
+                    : 'text-gray-300 hover:bg-white hover:bg-opacity-10 dark:bg-gray-800'
                 )}
               >
                 <div className="font-medium">{chapter.title}</div>
@@ -939,7 +939,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
                 'w-full text-left p-2 rounded text-sm transition-colors',
                 selectedSubtitle === ''
                   ? 'bg-blue-500 text-white'
-                  : 'text-gray-300 hover:bg-white hover:bg-opacity-10'
+                  : 'text-gray-300 hover:bg-white hover:bg-opacity-10 dark:bg-gray-800'
               )}
             >
               关闭字幕
@@ -955,7 +955,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
                   'w-full text-left p-2 rounded text-sm transition-colors',
                   selectedSubtitle === subtitle.language
                     ? 'bg-blue-500 text-white'
-                    : 'text-gray-300 hover:bg-white hover:bg-opacity-10'
+                    : 'text-gray-300 hover:bg-white hover:bg-opacity-10 dark:bg-gray-800'
                 )}
               >
                 {subtitle.label}
@@ -1012,16 +1012,16 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
             {bookmarks.map(bookmark => (
               <div
                 key={bookmark.id}
-                className="flex items-center justify-between p-2 rounded hover:bg-white hover:bg-opacity-10"
+                className="flex items-center justify-between p-2 rounded hover:bg-white hover:bg-opacity-10 dark:bg-gray-800"
               >
                 <button
                   onClick={() => jumpToBookmark(bookmark.time)}
                   className="flex-1 text-left"
                 >
                   <div className="text-white text-sm font-medium">{bookmark.title}</div>
-                  <div className="text-gray-400 text-xs">{formatTime(bookmark.time)}</div>
+                  <div className="text-gray-400 text-xs dark:text-gray-500">{formatTime(bookmark.time)}</div>
                   {bookmark.description && (
-                    <div className="text-gray-400 text-xs mt-1">{bookmark.description}</div>
+                    <div className="text-gray-400 text-xs mt-1 dark:text-gray-500">{bookmark.description}</div>
                   )}
                 </button>
                 <button
@@ -1034,7 +1034,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
             ))}
             
             {bookmarks.length === 0 && !isAddingBookmark && (
-              <div className="text-gray-400 text-sm text-center py-4">
+              <div className="text-gray-400 text-sm text-center py-4 dark:text-gray-500">
                 暂无书签
               </div>
             )}

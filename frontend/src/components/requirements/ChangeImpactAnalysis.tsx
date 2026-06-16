@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+﻿import React, { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
@@ -251,7 +251,7 @@ export function ChangeImpactAnalysis({
       LOW: { color: 'bg-green-100 text-green-800', text: '低风险' },
       MEDIUM: { color: 'bg-yellow-100 text-yellow-800', text: '中等风险' },
       HIGH: { color: 'bg-orange-100 text-orange-800', text: '高风险' },
-      CRITICAL: { color: 'bg-red-100 text-red-800', text: '严重风险' }
+      CRITICAL: { color: 'bg-red-100 text-red-800 dark:text-red-300 dark:bg-red-900/30', text: '严重风险' }
     }
 
     const config = riskConfig[risk as keyof typeof riskConfig]
@@ -267,7 +267,7 @@ export function ChangeImpactAnalysis({
     const levelConfig = {
       LOW: { color: 'bg-green-100 text-green-800', text: '低影响' },
       MEDIUM: { color: 'bg-yellow-100 text-yellow-800', text: '中等影响' },
-      HIGH: { color: 'bg-red-100 text-red-800', text: '高影响' }
+      HIGH: { color: 'bg-red-100 text-red-800 dark:text-red-300 dark:bg-red-900/30', text: '高影响' }
     }
 
     const config = levelConfig[level as keyof typeof levelConfig]
@@ -303,8 +303,8 @@ export function ChangeImpactAnalysis({
       {/* 标题和操作 */}
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-xl font-semibold text-gray-900">变更影响分析</h2>
-          <p className="text-gray-600 mt-1">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">变更影响分析</h2>
+          <p className="text-gray-600 mt-1 dark:text-gray-400">
             {changeRequest.change_request_code} - {changeRequest.title}
           </p>
         </div>
@@ -340,23 +340,23 @@ export function ChangeImpactAnalysis({
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="text-center">
-              <div className="text-3xl font-bold text-gray-900 mb-2">
+              <div className="text-3xl font-bold text-gray-900 mb-2 dark:text-gray-100">
                 {analysisData.impact_score}
               </div>
-              <div className="text-sm text-gray-600 mb-2">影响评分</div>
+              <div className="text-sm text-gray-600 mb-2 dark:text-gray-400">影响评分</div>
               <Progress value={analysisData.impact_score} className="w-full" />
             </div>
             <div className="text-center">
               <div className="mb-2">
                 {getRiskBadge(analysisData.overall_risk)}
               </div>
-              <div className="text-sm text-gray-600">整体风险等级</div>
+              <div className="text-sm text-gray-600 dark:text-gray-400">整体风险等级</div>
             </div>
             <div className="text-center">
-              <div className="text-2xl font-bold text-blue-600 mb-2">
+              <div className="text-2xl font-bold text-blue-600 mb-2 dark:text-blue-400">
                 {analysisData.timeline_impact.estimated_delay}天
               </div>
-              <div className="text-sm text-gray-600">预计延期</div>
+              <div className="text-sm text-gray-600 dark:text-gray-400">预计延期</div>
             </div>
           </div>
         </CardContent>
@@ -392,7 +392,7 @@ export function ChangeImpactAnalysis({
                   <Progress value={data.score} className="mb-3" />
                   <ul className="space-y-1">
                     {data.items.map((item, index) => (
-                      <li key={index} className="text-sm text-gray-600 flex items-start">
+                      <li key={index} className="text-sm text-gray-600 flex items-start dark:text-gray-400">
                         <span className="w-1 h-1 bg-gray-400 rounded-full mt-2 mr-2 flex-shrink-0"></span>
                         {item}
                       </li>
@@ -418,9 +418,9 @@ export function ChangeImpactAnalysis({
                 {analysisData.affected_requirements.map((req) => (
                   <div key={req.id} className="flex items-center justify-between p-3 border rounded-lg">
                     <div>
-                      <div className="font-medium text-gray-900">{req.title}</div>
-                      <div className="text-sm text-gray-500">{req.code}</div>
-                      <div className="text-sm text-gray-600 mt-1">{req.relationship}</div>
+                      <div className="font-medium text-gray-900 dark:text-gray-100">{req.title}</div>
+                      <div className="text-sm text-gray-500 dark:text-gray-400">{req.code}</div>
+                      <div className="text-sm text-gray-600 mt-1 dark:text-gray-400">{req.relationship}</div>
                     </div>
                     <div>
                       {getImpactLevelBadge(req.impact_level)}
@@ -446,8 +446,8 @@ export function ChangeImpactAnalysis({
                 {analysisData.affected_test_cases.map((test) => (
                   <div key={test.id} className="flex items-center justify-between p-3 border rounded-lg">
                     <div>
-                      <div className="font-medium text-gray-900">{test.name}</div>
-                      <div className="text-sm text-gray-600 mt-1">{test.action_required}</div>
+                      <div className="font-medium text-gray-900 dark:text-gray-100">{test.name}</div>
+                      <div className="text-sm text-gray-600 mt-1 dark:text-gray-400">{test.action_required}</div>
                     </div>
                     <div>
                       {getImpactLevelBadge(test.impact_level)}
@@ -473,8 +473,8 @@ export function ChangeImpactAnalysis({
                 {analysisData.affected_tasks.map((task) => (
                   <div key={task.id} className="flex items-center justify-between p-3 border rounded-lg">
                     <div>
-                      <div className="font-medium text-gray-900">{task.name}</div>
-                      <div className="text-sm text-gray-500">状态: {task.status}</div>
+                      <div className="font-medium text-gray-900 dark:text-gray-100">{task.name}</div>
+                      <div className="text-sm text-gray-500 dark:text-gray-400">状态: {task.status}</div>
                     </div>
                     <div>
                       {getImpactLevelBadge(task.impact_level)}
@@ -507,12 +507,12 @@ export function ChangeImpactAnalysis({
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-gray-700 mb-3">{rec.description}</p>
+                  <p className="text-gray-700 mb-3 dark:text-gray-300">{rec.description}</p>
                   <div className="space-y-2">
-                    <div className="text-sm font-medium text-gray-900">行动项:</div>
+                    <div className="text-sm font-medium text-gray-900 dark:text-gray-100">行动项:</div>
                     <ul className="space-y-1">
                       {rec.action_items.map((item, itemIndex) => (
-                        <li key={itemIndex} className="text-sm text-gray-600 flex items-start">
+                        <li key={itemIndex} className="text-sm text-gray-600 flex items-start dark:text-gray-400">
                           <span className="w-1 h-1 bg-blue-400 rounded-full mt-2 mr-2 flex-shrink-0"></span>
                           {item}
                         </li>
@@ -537,20 +537,20 @@ export function ChangeImpactAnalysis({
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="flex justify-between">
-              <span className="text-gray-600">预计延期:</span>
+              <span className="text-gray-600 dark:text-gray-400">预计延期:</span>
               <span className="font-medium">{analysisData.timeline_impact.estimated_delay} 天</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-600">关键路径影响:</span>
+              <span className="text-gray-600 dark:text-gray-400">关键路径影响:</span>
               <span className={`font-medium ${analysisData.timeline_impact.critical_path_affected ? 'text-red-600' : 'text-green-600'}`}>
                 {analysisData.timeline_impact.critical_path_affected ? '是' : '否'}
               </span>
             </div>
             {analysisData.timeline_impact.milestone_impact.length > 0 && (
               <div>
-                <div className="text-sm font-medium text-gray-900 mb-2">里程碑影响:</div>
+                <div className="text-sm font-medium text-gray-900 mb-2 dark:text-gray-100">里程碑影响:</div>
                 {analysisData.timeline_impact.milestone_impact.map((milestone, index) => (
-                  <div key={index} className="text-sm text-gray-600">
+                  <div key={index} className="text-sm text-gray-600 dark:text-gray-400">
                     {milestone.milestone}: {milestone.original_date} → {milestone.new_date}
                   </div>
                 ))}
@@ -568,15 +568,15 @@ export function ChangeImpactAnalysis({
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="flex justify-between">
-              <span className="text-gray-600">额外工作量:</span>
+              <span className="text-gray-600 dark:text-gray-400">额外工作量:</span>
               <span className="font-medium">{analysisData.resource_impact.additional_effort} 人天</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-600">影响团队成员:</span>
+              <span className="text-gray-600 dark:text-gray-400">影响团队成员:</span>
               <span className="font-medium">{analysisData.resource_impact.team_members_affected} 人</span>
             </div>
             <div>
-              <div className="text-sm font-medium text-gray-900 mb-2">技能要求:</div>
+              <div className="text-sm font-medium text-gray-900 mb-2 dark:text-gray-100">技能要求:</div>
               <div className="flex flex-wrap gap-1">
                 {analysisData.resource_impact.skill_requirements.map((skill, index) => (
                   <Badge key={index} variant="outline">{skill}</Badge>

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 建议过滤器组件
  * 
  * 功能特性：
@@ -54,15 +54,15 @@ interface SuggestionFiltersProps {
 const statusOptions = [
   { value: SuggestionStatus.PENDING, label: '待处理', color: 'text-yellow-600' },
   { value: SuggestionStatus.ACCEPTED, label: '已接受', color: 'text-green-600' },
-  { value: SuggestionStatus.REJECTED, label: '已拒绝', color: 'text-red-600' },
+  { value: SuggestionStatus.REJECTED, label: '已拒绝', color: 'text-red-600 dark:text-red-400' },
   { value: SuggestionStatus.IMPLEMENTED, label: '已实施', color: 'text-blue-600' },
-  { value: SuggestionStatus.CANCELLED, label: '已取消', color: 'text-gray-600' }
+  { value: SuggestionStatus.CANCELLED, label: '已取消', color: 'text-gray-600 dark:text-gray-400' }
 ];
 
 const typeOptions = [
   { value: SuggestionType.OPTIMIZATION, label: '优化建议', color: 'text-purple-600' },
   { value: SuggestionType.IMPROVEMENT, label: '改进建议', color: 'text-green-600' },
-  { value: SuggestionType.RISK_MITIGATION, label: '风险缓解', color: 'text-red-600' },
+  { value: SuggestionType.RISK_MITIGATION, label: '风险缓解', color: 'text-red-600 dark:text-red-400' },
   { value: SuggestionType.QUALITY_ENHANCEMENT, label: '质量提升', color: 'text-blue-600' },
   { value: SuggestionType.PROCESS_IMPROVEMENT, label: '流程改进', color: 'text-indigo-600' }
 ];
@@ -203,7 +203,7 @@ export function SuggestionFilters({
             <Filter className="w-5 h-5" />
             筛选条件
             {activeFilterCount > 0 && (
-              <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">
+              <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full dark:bg-blue-900/30 dark:text-blue-300">
                 {activeFilterCount}
               </span>
             )}
@@ -215,7 +215,7 @@ export function SuggestionFilters({
                 variant="ghost"
                 size="sm"
                 onClick={clearFilters}
-                className="text-gray-500 hover:text-gray-700"
+                className="text-gray-500 hover:text-gray-700 dark:text-gray-300"
               >
                 <RotateCcw className="w-4 h-4 mr-1" />
                 清空
@@ -236,7 +236,7 @@ export function SuggestionFilters({
       <CardContent className="space-y-4">
         {/* 搜索框 */}
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500" />
           <Input
             placeholder="搜索建议标题或描述..."
             value={searchText}
@@ -257,7 +257,7 @@ export function SuggestionFilters({
 
         {/* 快速筛选 */}
         <div>
-          <Label className="text-sm font-medium text-gray-700 mb-2 block">
+          <Label className="text-sm font-medium text-gray-700 mb-2 block dark:text-gray-300">
             快速筛选
           </Label>
           <div className="flex flex-wrap gap-2">
@@ -280,7 +280,7 @@ export function SuggestionFilters({
           <div className="space-y-4 border-t pt-4">
             {/* 状态筛选 */}
             <div>
-              <Label className="text-sm font-medium text-gray-700 mb-2 block">
+              <Label className="text-sm font-medium text-gray-700 mb-2 block dark:text-gray-300">
                 状态
               </Label>
               <div className="grid grid-cols-2 gap-2">
@@ -306,7 +306,7 @@ export function SuggestionFilters({
 
             {/* 类型筛选 */}
             <div>
-              <Label className="text-sm font-medium text-gray-700 mb-2 block">
+              <Label className="text-sm font-medium text-gray-700 mb-2 block dark:text-gray-300">
                 类型
               </Label>
               <div className="grid grid-cols-2 gap-2">
@@ -332,7 +332,7 @@ export function SuggestionFilters({
 
             {/* 优先级筛选 */}
             <div>
-              <Label className="text-sm font-medium text-gray-700 mb-2 block">
+              <Label className="text-sm font-medium text-gray-700 mb-2 block dark:text-gray-300">
                 优先级
               </Label>
               <div className="grid grid-cols-2 gap-2">
@@ -359,7 +359,7 @@ export function SuggestionFilters({
             {/* 日期范围筛选 */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label className="text-sm font-medium text-gray-700 mb-2 block">
+                <Label className="text-sm font-medium text-gray-700 mb-2 block dark:text-gray-300">
                   开始日期
                 </Label>
                 <Popover open={dateFromOpen} onOpenChange={setDateFromOpen}>
@@ -391,7 +391,7 @@ export function SuggestionFilters({
               </div>
 
               <div>
-                <Label className="text-sm font-medium text-gray-700 mb-2 block">
+                <Label className="text-sm font-medium text-gray-700 mb-2 block dark:text-gray-300">
                   结束日期
                 </Label>
                 <Popover open={dateToOpen} onOpenChange={setDateToOpen}>
@@ -426,7 +426,7 @@ export function SuggestionFilters({
             {/* 其他筛选选项 */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label className="text-sm font-medium text-gray-700 mb-2 block">
+                <Label className="text-sm font-medium text-gray-700 mb-2 block dark:text-gray-300">
                   项目ID
                 </Label>
                 <Input
@@ -441,7 +441,7 @@ export function SuggestionFilters({
               </div>
 
               <div>
-                <Label className="text-sm font-medium text-gray-700 mb-2 block">
+                <Label className="text-sm font-medium text-gray-700 mb-2 block dark:text-gray-300">
                   最低评分
                 </Label>
                 <Select

@@ -778,7 +778,7 @@ const AIAssistant: React.FC = () => {
               </Button>
             </div>
             <div className="relative mt-3">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 dark:text-gray-500" />
               <Input
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
@@ -816,7 +816,7 @@ const AIAssistant: React.FC = () => {
                     event.stopPropagation()
                     setPendingDeleteSession(session)
                   }}
-                  className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-gray-400 opacity-0 transition hover:bg-red-50 hover:text-red-600 focus:opacity-100 group-hover:opacity-100 dark:text-slate-500 dark:hover:bg-red-950/40 dark:hover:text-red-300"
+                  className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-gray-400 opacity-0 transition hover:bg-red-50 hover:text-red-600 focus:opacity-100 group-hover:opacity-100 dark:text-slate-500 dark:hover:bg-red-950/40 dark:hover:text-red-300 dark:bg-red-900/20"
                 >
                   <Trash2 className="h-4 w-4" />
                 </button>
@@ -939,12 +939,12 @@ const AIAssistant: React.FC = () => {
                         </button>
                         {message.role === 'assistant' && (
                           <>
-                            <button className="inline-flex items-center gap-1 hover:text-blue-600" onClick={() => copyMessage(message)}>
+                            <button className="inline-flex items-center gap-1 hover:text-blue-600 dark:text-blue-400" onClick={() => copyMessage(message)}>
                               {copiedMessageId === message.id ? <CheckCircle2 className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
                               复制
                             </button>
                             {message.sourcePrompt && (
-                              <button className="inline-flex items-center gap-1 hover:text-blue-600" onClick={() => retryMessage(message)}>
+                              <button className="inline-flex items-center gap-1 hover:text-blue-600 dark:text-blue-400" onClick={() => retryMessage(message)}>
                                 <RotateCcw className="h-3.5 w-3.5" />
                                 重试
                               </button>
@@ -1131,7 +1131,7 @@ const AIAssistant: React.FC = () => {
           <Card className="rounded-md">
             <CardHeader className="p-4">
               <CardTitle className="flex items-center gap-2 text-base">
-                <Clipboard className="h-5 w-5 text-amber-600" />
+                <Clipboard className="h-5 w-5 text-amber-600 dark:text-amber-400" />
                 场景模板
               </CardTitle>
             </CardHeader>
@@ -1139,7 +1139,7 @@ const AIAssistant: React.FC = () => {
               {promptTemplates.map((template) => (
                 <div
                   key={template.title}
-                  className="rounded-md border border-gray-200 px-3 py-2 hover:border-blue-300 hover:bg-blue-50 dark:border-slate-700 dark:hover:border-slate-500 dark:hover:bg-slate-800/70"
+                  className="rounded-md border border-gray-200 px-3 py-2 hover:border-blue-300 hover:bg-blue-50 dark:border-slate-700 dark:hover:border-slate-500 dark:hover:bg-slate-800/70 dark:bg-blue-900/20"
                 >
                   <button type="button" onClick={() => setInput(template.prompt)} className="w-full text-left">
                     <div className="flex items-center gap-2 text-sm font-medium text-gray-900 dark:text-slate-100">

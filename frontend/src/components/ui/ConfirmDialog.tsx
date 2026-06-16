@@ -1,4 +1,4 @@
-import React from 'react'
+﻿import React from 'react'
 import { AlertTriangle } from 'lucide-react'
 import { Button } from './Button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './Dialog'
@@ -31,13 +31,13 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center space-x-2">
-            {variant === 'destructive' && <AlertTriangle className="h-5 w-5 text-red-600" />}
+            {variant === 'destructive' && <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-400" />}
             <span>{title}</span>
           </DialogTitle>
         </DialogHeader>
 
         <div className="py-4">
-          <p className="text-gray-600">{description}</p>
+          <p className="text-gray-600 dark:text-gray-400">{description}</p>
         </div>
 
         <div className="flex justify-end space-x-2">

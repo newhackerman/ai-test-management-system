@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
+﻿import React, { useEffect, useMemo, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import {
   AlertTriangle,
@@ -359,11 +359,11 @@ const AppLayout: React.FC = () => {
       <div className={`transition-[padding] ${sidebarCollapsed ? 'lg:pl-16' : 'lg:pl-48'}`}>
         <header className="sticky top-0 z-20 flex h-14 items-center justify-between border-b border-slate-200 bg-white/95 px-4 shadow-sm backdrop-blur dark:border-slate-800 dark:bg-slate-950/95">
           <div className="flex min-w-0 items-center gap-3">
-            <button className="rounded-md p-2 hover:bg-gray-100 dark:hover:bg-slate-800 lg:hidden" onClick={() => setSidebarOpen(true)} aria-label="打开菜单">
+            <button className="rounded-md p-2 hover:bg-gray-100 dark:hover:bg-slate-800 lg:hidden dark:bg-gray-800" onClick={() => setSidebarOpen(true)} aria-label="打开菜单">
               <Menu className="h-5 w-5" />
             </button>
             <button
-              className="hidden rounded-md p-2 hover:bg-gray-100 dark:hover:bg-slate-800 lg:inline-flex"
+              className="hidden rounded-md p-2 hover:bg-gray-100 dark:hover:bg-slate-800 lg:inline-flex dark:bg-gray-800"
               onClick={() => setSidebarCollapsed((value) => !value)}
               aria-label={sidebarCollapsed ? '展开菜单' : '收起菜单'}
               title={sidebarCollapsed ? '展开菜单' : '收起菜单'}
@@ -378,7 +378,7 @@ const AppLayout: React.FC = () => {
           <div className="flex items-center gap-2">
             <button
               onClick={() => setDarkMode((value) => !value)}
-              className="inline-flex h-9 items-center gap-2 rounded-md border px-3 text-sm hover:bg-gray-50 dark:border-slate-700 dark:hover:bg-slate-800"
+              className="inline-flex h-9 items-center gap-2 rounded-md border px-3 text-sm hover:bg-gray-50 dark:border-slate-700 dark:hover:bg-slate-800 dark:bg-gray-800/50 dark:hover:bg-gray-800"
               title={darkMode ? '切换到浅色主题' : '切换到深色主题'}
             >
               {darkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
@@ -387,7 +387,7 @@ const AppLayout: React.FC = () => {
 
             <div className="relative">
               <button
-                className="relative inline-flex h-9 w-9 items-center justify-center rounded-md border hover:bg-gray-50 dark:border-slate-700 dark:hover:bg-slate-800"
+                className="relative inline-flex h-9 w-9 items-center justify-center rounded-md border hover:bg-gray-50 dark:border-slate-700 dark:hover:bg-slate-800 dark:bg-gray-800/50 dark:hover:bg-gray-800"
                 title="消息通知"
                 onClick={() => setNotificationOpen((value) => !value)}
               >
@@ -404,11 +404,11 @@ const AppLayout: React.FC = () => {
                     <span className="font-medium">消息通知</span>
                     <div className="flex items-center gap-2">
                       {unreadCount > 0 && (
-                        <button className="text-xs text-blue-600 hover:text-blue-700" onClick={markAllNotificationsRead}>
+                        <button className="text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400" onClick={markAllNotificationsRead}>
                           全部已读
                         </button>
                       )}
-                      <button className="text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300" onClick={() => setNotificationOpen(false)}>
+                      <button className="text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 dark:text-gray-300" onClick={() => setNotificationOpen(false)}>
                       关闭
                       </button>
                     </div>
@@ -433,7 +433,7 @@ const AppLayout: React.FC = () => {
                             <div className="mt-1 line-clamp-2 text-xs text-gray-500 dark:text-gray-400">{notification.content}</div>
                           )}
                           {notification.created_at && (
-                            <div className="mt-1 text-[11px] text-gray-400">{new Date(notification.created_at).toLocaleString()}</div>
+                            <div className="mt-1 text-[11px] text-gray-400 dark:text-gray-500">{new Date(notification.created_at).toLocaleString()}</div>
                           )}
                         </div>
                       ))}
@@ -445,16 +445,16 @@ const AppLayout: React.FC = () => {
 
             <Link
               to="/profile"
-              className="hidden h-9 items-center gap-2 rounded-md border px-3 hover:bg-gray-50 dark:border-slate-700 dark:hover:bg-slate-800 sm:flex"
+              className="hidden h-9 items-center gap-2 rounded-md border px-3 hover:bg-gray-50 dark:border-slate-700 dark:hover:bg-slate-800 sm:flex dark:bg-gray-800/50 dark:hover:bg-gray-800"
             >
               <User className="h-4 w-4" />
               <span className="max-w-32 truncate text-sm">{user?.real_name || user?.nickname || user?.username || '用户'}</span>
-              <ChevronDown className="h-4 w-4 text-gray-400" />
+              <ChevronDown className="h-4 w-4 text-gray-400 dark:text-gray-500" />
             </Link>
 
             <button
               onClick={handleLogout}
-              className="inline-flex h-9 items-center gap-1 rounded-md border px-3 text-sm hover:bg-gray-50 dark:border-slate-700 dark:hover:bg-slate-800"
+              className="inline-flex h-9 items-center gap-1 rounded-md border px-3 text-sm hover:bg-gray-50 dark:border-slate-700 dark:hover:bg-slate-800 dark:bg-gray-800/50 dark:hover:bg-gray-800"
             >
               <LogOut className="h-4 w-4" />
               <span className="hidden sm:inline">退出</span>

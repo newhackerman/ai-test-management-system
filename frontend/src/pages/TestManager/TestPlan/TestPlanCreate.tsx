@@ -1,4 +1,4 @@
-// @ts-nocheck
+﻿// @ts-nocheck
 import React, { useEffect, useMemo, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { ArrowLeft, Save, X } from 'lucide-react'
@@ -340,14 +340,14 @@ const TestPlanCreate: React.FC = () => {
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
           {aiDraft && (
-            <Card className="border-blue-200 bg-blue-50">
-              <CardContent className="p-4 text-sm text-blue-800">
+            <Card className="border-blue-200 bg-blue-50 dark:bg-blue-900/20">
+              <CardContent className="p-4 text-sm text-blue-800 dark:text-blue-300">
                 已从 AI 助手导入测试计划草稿。保存前请核对计划名称、测试类型、范围、策略和时间安排。
               </CardContent>
             </Card>
           )}
           {referenceError && (
-            <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:text-red-400 dark:bg-red-900/20 dark:border-red-800">
               {referenceError}
             </div>
           )}

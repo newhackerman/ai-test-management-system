@@ -1,4 +1,4 @@
-// @ts-nocheck
+﻿// @ts-nocheck
 import React, { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
@@ -83,8 +83,8 @@ export const EditRoleDialog: React.FC<EditRoleDialogProps> = ({ open, role, onCl
 
           <div className="space-y-2">
             <Label htmlFor="role-code">角色代码</Label>
-            <Input id="role-code" value={role?.code || ''} disabled className="bg-gray-100" />
-            <p className="text-sm text-gray-500">角色代码创建后不可修改。</p>
+            <Input id="role-code" value={role?.code || ''} disabled className="bg-gray-100 dark:bg-gray-800" />
+            <p className="text-sm text-gray-500 dark:text-gray-400">角色代码创建后不可修改。</p>
           </div>
 
           <div className="space-y-2">
@@ -103,7 +103,7 @@ export const EditRoleDialog: React.FC<EditRoleDialogProps> = ({ open, role, onCl
             <div className="flex items-center justify-between rounded-md border p-3">
               <div>
                 <Label htmlFor="role-active">启用角色</Label>
-                <p className="text-xs text-gray-500">关闭后该角色不会再用于新的授权判断。</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">关闭后该角色不会再用于新的授权判断。</p>
               </div>
               <Switch
                 id="role-active"

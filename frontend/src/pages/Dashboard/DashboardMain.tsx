@@ -134,7 +134,7 @@ const DashboardMainContent: React.FC<DashboardMainProps> = ({ roleType }) => {
       case 'connected': return 'bg-green-500';
       case 'connecting': return 'bg-yellow-500';
       case 'disconnected': return 'bg-red-500';
-      default: return 'bg-gray-500';
+      default: return 'bg-gray-500 dark:bg-gray-800/50';
     }
   };
 
@@ -165,7 +165,7 @@ const DashboardMainContent: React.FC<DashboardMainProps> = ({ roleType }) => {
       <div className="flex items-center justify-center h-64">
         <Card className="w-full max-w-md">
           <CardContent className="p-6 text-center">
-            <div className="text-red-500 mb-4">
+            <div className="text-red-500 mb-4 dark:text-red-400">
               <Settings className="h-12 w-12 mx-auto" />
             </div>
             <h3 className="text-lg font-semibold mb-2">鍔犺浇澶辫触</h3>
@@ -327,7 +327,7 @@ const DashboardMainContent: React.FC<DashboardMainProps> = ({ roleType }) => {
                 variant="outline"
                 size="sm"
                 onClick={handleResetLayout}
-                className="flex items-center space-x-1 text-red-600 border-red-600 hover:bg-red-50"
+                className="flex items-center space-x-1 text-red-600 border-red-600 hover:bg-red-50 dark:text-red-400 dark:bg-red-900/20"
               >
                 <RotateCcw className="h-4 w-4" />
                 <span>閲嶇疆</span>

@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+﻿import React, { useMemo, useState } from 'react';
 import {
   Bot,
   Bookmark,
@@ -116,9 +116,9 @@ export function MessageBubble({
         compactMode && 'px-3 py-2 text-sm',
         ownMessage
           ? 'ml-auto border-blue-600 bg-blue-600 text-white'
-          : 'mr-auto border-gray-200 bg-white text-gray-900',
-        message.is_error && 'border-red-300 bg-red-50 text-red-900',
-        message.is_streaming && 'border-blue-200 bg-blue-50 text-gray-900',
+          : 'mr-auto border-gray-200 bg-white text-gray-900 dark:text-gray-100 dark:bg-gray-800 dark:border-gray-700',
+        message.is_error && 'border-red-300 bg-red-50 text-red-900 dark:bg-red-900/20 dark:text-red-300',
+        message.is_streaming && 'border-blue-200 bg-blue-50 text-gray-900 dark:text-gray-100 dark:bg-blue-900/20',
         isSelected && 'ring-2 ring-blue-400',
         isHighlighted && 'shadow-md',
         groupWithPrevious && 'mt-1',
@@ -178,7 +178,7 @@ export function MessageBubble({
   return (
     <div className={cn('group flex gap-3', ownMessage && 'justify-end', className)}>
       {showAvatar && !ownMessage && (
-        <div className="mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-600">
+        <div className="mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-600 dark:text-slate-300">
           <Bot className="h-4 w-4" />
         </div>
       )}
@@ -240,7 +240,7 @@ export function MessageBubble({
                   {onDelete && (
                     <>
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem className="text-red-600" onClick={() => onDelete(message.id)}>
+                      <DropdownMenuItem className="text-red-600 dark:text-red-400" onClick={() => onDelete(message.id)}>
                         <Trash2 className="mr-2 h-4 w-4" />
                         删除
                       </DropdownMenuItem>
@@ -274,7 +274,7 @@ export function MessageBubble({
       </div>
 
       {showAvatar && ownMessage && (
-        <div className="mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-100 text-blue-600">
+        <div className="mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-100 text-blue-600 dark:text-blue-400 dark:bg-blue-900/30">
           <User className="h-4 w-4" />
         </div>
       )}

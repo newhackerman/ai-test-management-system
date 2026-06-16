@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/Dialog';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -86,9 +86,9 @@ export const EditPermissionDialog: React.FC<EditPermissionDialogProps> = ({
               id="code"
               value={permission.code}
               disabled
-              className="bg-gray-100"
+              className="bg-gray-100 dark:bg-gray-800"
             />
-            <p className="text-sm text-gray-500">权限代码不可修改</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">权限代码不可修改</p>
           </div>
 
           <div className="space-y-2">
@@ -97,9 +97,9 @@ export const EditPermissionDialog: React.FC<EditPermissionDialogProps> = ({
               id="module"
               value={permission.module}
               disabled
-              className="bg-gray-100"
+              className="bg-gray-100 dark:bg-gray-800"
             />
-            <p className="text-sm text-gray-500">所属模块不可修改</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">所属模块不可修改</p>
           </div>
 
           <div className="space-y-2">
@@ -108,9 +108,9 @@ export const EditPermissionDialog: React.FC<EditPermissionDialogProps> = ({
               id="action"
               value={permission.action}
               disabled
-              className="bg-gray-100"
+              className="bg-gray-100 dark:bg-gray-800"
             />
-            <p className="text-sm text-gray-500">操作类型不可修改</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">操作类型不可修改</p>
           </div>
 
           {permission.resource && (
@@ -120,9 +120,9 @@ export const EditPermissionDialog: React.FC<EditPermissionDialogProps> = ({
                 id="resource"
                 value={permission.resource}
                 disabled
-                className="bg-gray-100"
+                className="bg-gray-100 dark:bg-gray-800"
               />
-              <p className="text-sm text-gray-500">资源标识不可修改</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">资源标识不可修改</p>
             </div>
           )}
 

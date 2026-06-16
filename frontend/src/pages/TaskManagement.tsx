@@ -343,7 +343,7 @@ function TaskManagement() {
         </Button>
       </div>
 
-      {error && <div className="rounded-md bg-red-50 px-4 py-3 text-sm text-red-600">{error}</div>}
+      {error && <div className="rounded-md bg-red-50 px-4 py-3 text-sm text-red-600 dark:text-red-400 dark:bg-red-900/20">{error}</div>}
       {!projectsLoading && projects.length === 0 && (
         <div className="rounded-md bg-yellow-50 px-4 py-3 text-sm text-yellow-800">请先创建项目，再新建任务。</div>
       )}
@@ -458,7 +458,7 @@ function TaskManagement() {
 
           <form onSubmit={submitAssignment} className="space-y-4">
             {modalError && (
-              <div className="flex items-start gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+              <div className="flex items-start gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:text-red-400 dark:bg-red-900/20 dark:border-red-800">
                 <AlertCircle className="mt-0.5 h-4 w-4" />
                 <span>{modalError}</span>
               </div>
@@ -499,7 +499,7 @@ function TaskManagement() {
 
           <form onSubmit={createTask} className="space-y-5">
             {modalError && (
-              <div className="flex items-start gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+              <div className="flex items-start gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:text-red-400 dark:bg-red-900/20 dark:border-red-800">
                 <AlertCircle className="mt-0.5 h-4 w-4" />
                 <span>{modalError}</span>
               </div>

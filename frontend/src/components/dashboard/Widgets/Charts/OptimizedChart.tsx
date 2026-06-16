@@ -68,17 +68,17 @@ const PerformancePanel: React.FC<{
   const getScoreColor = (score: number) => {
     if (score >= 90) return 'text-green-600';
     if (score >= 70) return 'text-yellow-600';
-    return 'text-red-600';
+    return 'text-red-600 dark:text-red-400';
   };
 
   const getScoreIcon = (score: number) => {
     if (score >= 90) return <CheckCircle className="w-4 h-4 text-green-600" />;
     if (score >= 70) return <TrendingUp className="w-4 h-4 text-yellow-600" />;
-    return <AlertTriangle className="w-4 h-4 text-red-600" />;
+    return <AlertTriangle className="w-4 h-4 text-red-600 dark:text-red-400" />;
   };
 
   return (
-    <Card className="absolute top-0 right-0 w-80 p-4 bg-white shadow-lg border z-50">
+    <Card className="absolute top-0 right-0 w-80 p-4 bg-white shadow-lg border z-50 dark:bg-gray-800">
       <div className="flex items-center justify-between mb-4">
         <h4 className="text-sm font-semibold flex items-center">
           <Activity className="w-4 h-4 mr-2" />
@@ -92,7 +92,7 @@ const PerformancePanel: React.FC<{
       {/* 鎬ц兘璇勫垎 */}
       <div className="mb-4">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-sm text-gray-600">鎬ц兘璇勫垎</span>
+          <span className="text-sm text-gray-600 dark:text-gray-400">鎬ц兘璇勫垎</span>
           <div className="flex items-center">
             {getScoreIcon(analysis.score)}
             <span className={`ml-1 font-semibold ${getScoreColor(analysis.score)}`}>
@@ -106,7 +106,7 @@ const PerformancePanel: React.FC<{
       {/* 鎬ц兘鎸囨爣 */}
       <div className="space-y-3 mb-4">
         <div className="flex items-center justify-between text-sm">
-          <span className="flex items-center text-gray-600">
+          <span className="flex items-center text-gray-600 dark:text-gray-400">
             <Clock className="w-3 h-3 mr-1" />
             娓叉煋鏃堕棿
           </span>
@@ -116,7 +116,7 @@ const PerformancePanel: React.FC<{
         </div>
 
         <div className="flex items-center justify-between text-sm">
-          <span className="flex items-center text-gray-600">
+          <span className="flex items-center text-gray-600 dark:text-gray-400">
             <Database className="w-3 h-3 mr-1" />
             鏁版嵁澶勭悊
           </span>
@@ -126,7 +126,7 @@ const PerformancePanel: React.FC<{
         </div>
 
         <div className="flex items-center justify-between text-sm">
-          <span className="flex items-center text-gray-600">
+          <span className="flex items-center text-gray-600 dark:text-gray-400">
             <Zap className="w-3 h-3 mr-1" />
             鍔ㄧ敾鏃堕棿
           </span>
@@ -136,7 +136,7 @@ const PerformancePanel: React.FC<{
         </div>
 
         <div className="flex items-center justify-between text-sm">
-          <span className="flex items-center text-gray-600">
+          <span className="flex items-center text-gray-600 dark:text-gray-400">
             <BarChart3 className="w-3 h-3 mr-1" />
             鎬绘椂闂?
           </span>
@@ -147,8 +147,8 @@ const PerformancePanel: React.FC<{
       </div>
 
       {/* 缂撳瓨缁熻 */}
-      <div className="mb-4 p-2 bg-gray-50 rounded">
-        <div className="text-xs text-gray-600 mb-1">缂撳瓨缁熻</div>
+      <div className="mb-4 p-2 bg-gray-50 rounded dark:bg-gray-800/50">
+        <div className="text-xs text-gray-600 mb-1 dark:text-gray-400">缂撳瓨缁熻</div>
         <div className="flex justify-between text-xs">
           <span>澶у皬: {cacheStats.size}/{cacheStats.maxSize}</span>
           <span>鍛戒腑鐜? {(cacheStats.hitRate || 0).toFixed(1)}%</span>
@@ -158,7 +158,7 @@ const PerformancePanel: React.FC<{
       {/* 浼樺寲寤鸿 */}
       {analysis.recommendations.length > 0 && (
         <div>
-          <div className="text-xs text-gray-600 mb-2">浼樺寲寤鸿</div>
+          <div className="text-xs text-gray-600 mb-2 dark:text-gray-400">浼樺寲寤鸿</div>
           <div className="space-y-1">
             {analysis.recommendations.map((rec: string, index: number) => (
               <Badge key={index} variant="outline" className="text-xs">
@@ -325,11 +325,11 @@ export const OptimizedChart: React.FC<OptimizedChartProps> = ({
     return (
       <div
         ref={elementRef}
-        className="flex items-center justify-center h-64 bg-gray-50 rounded-lg"
+        className="flex items-center justify-center h-64 bg-gray-50 rounded-lg dark:bg-gray-800/50"
       >
         <div className="text-center">
-          <BarChart3 className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-          <p className="text-sm text-gray-500">鍥捐〃鍔犺浇涓?..</p>
+          <BarChart3 className="w-8 h-8 text-gray-400 mx-auto mb-2 dark:text-gray-500" />
+          <p className="text-sm text-gray-500 dark:text-gray-400">鍥捐〃鍔犺浇涓?..</p>
         </div>
       </div>
     );
@@ -424,8 +424,8 @@ export const OptimizedChart: React.FC<OptimizedChartProps> = ({
 
       {/* 娓叉煋鐘舵€佹寚绀哄櫒 */}
       {isRendering && (
-        <div className="absolute inset-0 bg-white bg-opacity-50 flex items-center justify-center">
-          <div className="flex items-center text-sm text-gray-600">
+        <div className="absolute inset-0 bg-white bg-opacity-50 flex items-center justify-center dark:bg-gray-800">
+          <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
             <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
             娓叉煋涓?..
           </div>

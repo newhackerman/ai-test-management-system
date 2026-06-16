@@ -1,4 +1,4 @@
-// @ts-nocheck
+﻿// @ts-nocheck
 import React, { useState } from 'react'
 import { Calendar, Copy, Download, Edit, Plus, RefreshCw, Search, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
@@ -118,7 +118,7 @@ const Projects: React.FC = () => {
         <CardContent className="p-4">
           <div className="flex flex-col gap-3 md:flex-row">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 dark:text-gray-500" />
               <Input
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
@@ -136,7 +136,7 @@ const Projects: React.FC = () => {
         </CardContent>
       </Card>
 
-      {error && <div className="rounded-md bg-red-50 px-4 py-3 text-sm text-red-600">{error}</div>}
+      {error && <div className="rounded-md bg-red-50 px-4 py-3 text-sm text-red-600 dark:text-red-400 dark:bg-red-900/20">{error}</div>}
 
       <Card>
         <CardContent className="p-0">

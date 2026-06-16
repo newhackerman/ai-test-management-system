@@ -1,4 +1,4 @@
-// WebSocket提供者组件
+﻿// WebSocket提供者组件
 
 import React, { createContext, useContext, useEffect, useState } from 'react'
 import { WebSocketClient, ConnectionState, WebSocketMessage } from '@/lib/websocket-client'
@@ -197,13 +197,13 @@ export function WebSocketStatusIndicator() {
       case 'connecting':
         return 'bg-yellow-500'
       case 'reconnecting':
-        return 'bg-orange-500'
+        return 'bg-orange-500 dark:bg-orange-900/20'
       case 'error':
         return 'bg-red-500'
       case 'disconnected':
-        return 'bg-gray-500'
+        return 'bg-gray-500 dark:bg-gray-800/50'
       default:
-        return 'bg-gray-500'
+        return 'bg-gray-500 dark:bg-gray-800/50'
     }
   }
 

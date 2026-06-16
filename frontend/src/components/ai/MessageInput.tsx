@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from 'react';
+﻿import React, { useMemo, useRef, useState } from 'react';
 import {
   FileText,
   Paperclip,
@@ -200,7 +200,7 @@ export function MessageInput({
             <button
               key={suggestion}
               type="button"
-              className="rounded-md border px-2 py-1 text-xs text-gray-600 hover:bg-gray-50"
+              className="rounded-md border px-2 py-1 text-xs text-gray-600 hover:bg-gray-50 dark:text-gray-400 dark:bg-gray-800/50 dark:hover:bg-gray-800"
               onClick={() => handleContentChange(suggestion)}
             >
               {suggestion}
@@ -228,7 +228,7 @@ export function MessageInput({
         </div>
       )}
 
-      <div className="rounded-lg border bg-white focus-within:ring-2 focus-within:ring-blue-200">
+      <div className="rounded-lg border bg-white focus-within:ring-2 focus-within:ring-blue-200 dark:bg-gray-800">
         <Textarea
           value={content}
           disabled={disabled}
@@ -262,7 +262,7 @@ export function MessageInput({
               value={contentType}
               onChange={(event) => setContentType(event.target.value as ContentType)}
               disabled={disabled}
-              className="h-8 rounded-md border bg-white px-2 text-xs"
+              className="h-8 rounded-md border bg-white px-2 text-xs dark:bg-gray-800"
             >
               {supportedTypes.map((type) => (
                 <option key={type} value={type}>
@@ -278,7 +278,7 @@ export function MessageInput({
 
           <div className="flex items-center gap-2">
             {showWordCount && (
-              <span className={cn('text-xs text-gray-500', content.length > maxLength * 0.9 && 'text-orange-600')}>
+              <span className={cn('text-xs text-gray-500 dark:text-gray-400', content.length > maxLength * 0.9 && 'text-orange-600')}>
                 {content.length}/{maxLength}
               </span>
             )}

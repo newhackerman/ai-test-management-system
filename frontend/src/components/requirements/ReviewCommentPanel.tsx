@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+﻿import React, { useState, useEffect } from 'react'
 import { 
   MessageSquare, 
   Plus, 
@@ -161,49 +161,49 @@ const getCommentTypeIcon = (type: CommentType) => {
 const getCommentTypeColor = (type: CommentType): string => {
   switch (type) {
     case 'ISSUE':
-      return 'bg-red-100 text-red-800 border-red-200'
+      return 'bg-red-100 text-red-800 border-red-200 dark:text-red-300 dark:bg-red-900/30 dark:border-red-800'
     case 'SUGGESTION':
-      return 'bg-blue-100 text-blue-800 border-blue-200'
+      return 'bg-blue-100 text-blue-800 border-blue-200 dark:text-blue-300 dark:bg-blue-900/30'
     case 'QUESTION':
       return 'bg-yellow-100 text-yellow-800 border-yellow-200'
     case 'APPROVAL':
       return 'bg-green-100 text-green-800 border-green-200'
     case 'REJECTION':
-      return 'bg-red-100 text-red-800 border-red-200'
+      return 'bg-red-100 text-red-800 border-red-200 dark:text-red-300 dark:bg-red-900/30 dark:border-red-800'
     default:
-      return 'bg-gray-100 text-gray-800 border-gray-200'
+      return 'bg-gray-100 text-gray-800 border-gray-200 dark:text-gray-200 dark:bg-gray-800 dark:border-gray-700'
   }
 }
 
 const getSeverityColor = (severity?: CommentSeverity): string => {
   switch (severity) {
     case 'CRITICAL':
-      return 'bg-red-100 text-red-800 border-red-200'
+      return 'bg-red-100 text-red-800 border-red-200 dark:text-red-300 dark:bg-red-900/30 dark:border-red-800'
     case 'MAJOR':
       return 'bg-orange-100 text-orange-800 border-orange-200'
     case 'MINOR':
       return 'bg-yellow-100 text-yellow-800 border-yellow-200'
     case 'TRIVIAL':
-      return 'bg-gray-100 text-gray-800 border-gray-200'
+      return 'bg-gray-100 text-gray-800 border-gray-200 dark:text-gray-200 dark:bg-gray-800 dark:border-gray-700'
     default:
-      return 'bg-gray-100 text-gray-800 border-gray-200'
+      return 'bg-gray-100 text-gray-800 border-gray-200 dark:text-gray-200 dark:bg-gray-800 dark:border-gray-700'
   }
 }
 
 const getStatusColor = (status: CommentStatus): string => {
   switch (status) {
     case 'OPEN':
-      return 'bg-red-100 text-red-800 border-red-200'
+      return 'bg-red-100 text-red-800 border-red-200 dark:text-red-300 dark:bg-red-900/30 dark:border-red-800'
     case 'IN_PROGRESS':
       return 'bg-yellow-100 text-yellow-800 border-yellow-200'
     case 'RESOLVED':
       return 'bg-green-100 text-green-800 border-green-200'
     case 'CLOSED':
-      return 'bg-gray-100 text-gray-800 border-gray-200'
+      return 'bg-gray-100 text-gray-800 border-gray-200 dark:text-gray-200 dark:bg-gray-800 dark:border-gray-700'
     case 'REJECTED':
-      return 'bg-red-100 text-red-800 border-red-200'
+      return 'bg-red-100 text-red-800 border-red-200 dark:text-red-300 dark:bg-red-900/30 dark:border-red-800'
     default:
-      return 'bg-gray-100 text-gray-800 border-gray-200'
+      return 'bg-gray-100 text-gray-800 border-gray-200 dark:text-gray-200 dark:bg-gray-800 dark:border-gray-700'
   }
 }
 
@@ -295,8 +295,8 @@ const CommentCard: React.FC<{
           <div className="space-y-2">
             <p className="text-sm">{comment.content}</p>
             {comment.suggestion && (
-              <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
-                <p className="text-sm text-blue-800">
+              <div className="bg-blue-50 border border-blue-200 rounded-md p-3 dark:bg-blue-900/20">
+                <p className="text-sm text-blue-800 dark:text-blue-300">
                   <strong>建议:</strong> {comment.suggestion}
                 </p>
               </div>

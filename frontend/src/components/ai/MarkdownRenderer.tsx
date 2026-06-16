@@ -89,7 +89,7 @@ export function MarkdownRenderer({
     return (
       <code 
         className={cn(
-          'bg-gray-100 px-1.5 py-0.5 rounded text-sm font-mono',
+          'bg-gray-100 px-1.5 py-0.5 rounded text-sm font-mono dark:bg-gray-800',
           codeClassName
         )} 
         {...props}
@@ -102,32 +102,32 @@ export function MarkdownRenderer({
   // 鑷畾涔夎〃鏍兼覆鏌?
   const Table = React.useCallback(({ children, ...props }: any) => (
     <div className="overflow-x-auto my-4">
-      <table className="min-w-full border-collapse border border-gray-300" {...props}>
+      <table className="min-w-full border-collapse border border-gray-300 dark:border-gray-600" {...props}>
         {children}
       </table>
     </div>
   ), []);
 
   const TableHead = React.useCallback(({ children, ...props }: any) => (
-    <thead className="bg-gray-50" {...props}>
+    <thead className="bg-gray-50 dark:bg-gray-800/50" {...props}>
       {children}
     </thead>
   ), []);
 
   const TableRow = React.useCallback(({ children, ...props }: any) => (
-    <tr className="border-b border-gray-200" {...props}>
+    <tr className="border-b border-gray-200 dark:border-gray-700" {...props}>
       {children}
     </tr>
   ), []);
 
   const TableCell = React.useCallback(({ children, ...props }: any) => (
-    <td className="border border-gray-300 px-4 py-2" {...props}>
+    <td className="border border-gray-300 px-4 py-2 dark:border-gray-600" {...props}>
       {children}
     </td>
   ), []);
 
   const TableHeaderCell = React.useCallback(({ children, ...props }: any) => (
-    <th className="border border-gray-300 px-4 py-2 font-semibold text-left" {...props}>
+    <th className="border border-gray-300 px-4 py-2 font-semibold text-left dark:border-gray-600" {...props}>
       {children}
     </th>
   ), []);
@@ -138,7 +138,7 @@ export function MarkdownRenderer({
       href={href}
       target="_blank"
       rel="noopener noreferrer"
-      className="text-blue-600 hover:text-blue-800 underline"
+      className="text-blue-600 hover:text-blue-800 underline dark:text-blue-400"
       {...props}
     >
       {children}
@@ -148,7 +148,7 @@ export function MarkdownRenderer({
   // 鑷畾涔夊紩鐢ㄥ潡娓叉煋
   const Blockquote = React.useCallback(({ children, ...props }: any) => (
     <blockquote 
-      className="border-l-4 border-gray-300 pl-4 py-2 my-4 bg-gray-50 italic"
+      className="border-l-4 border-gray-300 pl-4 py-2 my-4 bg-gray-50 italic dark:bg-gray-800/50 dark:border-gray-600"
       {...props}
     >
       {children}
@@ -191,7 +191,7 @@ export function MarkdownRenderer({
 
     return (
       <Component 
-        className={cn(sizeClasses[level as keyof typeof sizeClasses], 'text-gray-900')}
+        className={cn(sizeClasses[level as keyof typeof sizeClasses], 'text-gray-900 dark:text-gray-100')}
         {...props}
       >
         {children}
@@ -236,22 +236,22 @@ export function MarkdownRenderer({
           h5: (props) => <Heading level={5} {...props} />,
           h6: (props) => <Heading level={6} {...props} />,
           p: ({ children, ...props }) => (
-            <p className="mb-4 leading-relaxed text-gray-800" {...props}>
+            <p className="mb-4 leading-relaxed text-gray-800 dark:text-gray-200" {...props}>
               {children}
             </p>
           ),
           strong: ({ children, ...props }) => (
-            <strong className="font-semibold text-gray-900" {...props}>
+            <strong className="font-semibold text-gray-900 dark:text-gray-100" {...props}>
               {children}
             </strong>
           ),
           em: ({ children, ...props }) => (
-            <em className="italic text-gray-700" {...props}>
+            <em className="italic text-gray-700 dark:text-gray-300" {...props}>
               {children}
             </em>
           ),
           hr: (props) => (
-            <hr className="my-6 border-gray-300" {...props} />
+            <hr className="my-6 border-gray-300 dark:border-gray-600" {...props} />
           )
         }}
       >

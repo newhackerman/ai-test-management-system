@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+﻿import React, { useState, useEffect } from 'react'
 import { 
   Calendar, 
   Clock, 
@@ -87,13 +87,13 @@ const getStatusColor = (status: ReviewStatus): string => {
     case 'PENDING':
       return 'bg-yellow-100 text-yellow-800 border-yellow-200'
     case 'IN_PROGRESS':
-      return 'bg-blue-100 text-blue-800 border-blue-200'
+      return 'bg-blue-100 text-blue-800 border-blue-200 dark:text-blue-300 dark:bg-blue-900/30'
     case 'COMPLETED':
       return 'bg-green-100 text-green-800 border-green-200'
     case 'CANCELLED':
-      return 'bg-gray-100 text-gray-800 border-gray-200'
+      return 'bg-gray-100 text-gray-800 border-gray-200 dark:text-gray-200 dark:bg-gray-800 dark:border-gray-700'
     default:
-      return 'bg-gray-100 text-gray-800 border-gray-200'
+      return 'bg-gray-100 text-gray-800 border-gray-200 dark:text-gray-200 dark:bg-gray-800 dark:border-gray-700'
   }
 }
 
@@ -117,13 +117,13 @@ const getDecisionColor = (decision?: ReviewDecision): string => {
     case 'APPROVED':
       return 'bg-green-100 text-green-800 border-green-200'
     case 'APPROVED_WITH_MINOR_CHANGES':
-      return 'bg-blue-100 text-blue-800 border-blue-200'
+      return 'bg-blue-100 text-blue-800 border-blue-200 dark:text-blue-300 dark:bg-blue-900/30'
     case 'NEEDS_MAJOR_REVISION':
       return 'bg-orange-100 text-orange-800 border-orange-200'
     case 'REJECTED':
-      return 'bg-red-100 text-red-800 border-red-200'
+      return 'bg-red-100 text-red-800 border-red-200 dark:text-red-300 dark:bg-red-900/30 dark:border-red-800'
     default:
-      return 'bg-gray-100 text-gray-800 border-gray-200'
+      return 'bg-gray-100 text-gray-800 border-gray-200 dark:text-gray-200 dark:bg-gray-800 dark:border-gray-700'
   }
 }
 

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
+﻿import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import { useRealtime, ConnectionStatus } from '@/hooks/dashboard/useRealtime';
 import { toast } from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -260,7 +260,7 @@ const DataUpdateNotifications: React.FC<{ notifications: DataUpdateNotification[
             transition={{ duration: 0.3, ease: "easeOut" }}
             className="bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg flex items-center space-x-2 pointer-events-auto"
           >
-            <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+            <div className="w-2 h-2 bg-white rounded-full animate-pulse dark:bg-gray-800"></div>
             <span className="text-sm font-medium">{notification.message}</span>
           </motion.div>
         ))}
@@ -283,7 +283,7 @@ const ConnectionStatusIndicator: React.FC<{
       case 'connecting': return 'bg-yellow-500';
       case 'disconnected': return 'bg-red-500';
       case 'error': return 'bg-red-600';
-      default: return 'bg-gray-500';
+      default: return 'bg-gray-500 dark:bg-gray-800/50';
     }
   };
 
@@ -317,7 +317,7 @@ const ConnectionStatusIndicator: React.FC<{
             {getStatusText()}
           </span>
           {status === 'connected' && (
-            <span className="text-xs text-gray-500">
+            <span className="text-xs text-gray-500 dark:text-gray-400">
               {Math.floor(metrics.uptime / 60)}:{(metrics.uptime % 60).toString().padStart(2, '0')}
             </span>
           )}

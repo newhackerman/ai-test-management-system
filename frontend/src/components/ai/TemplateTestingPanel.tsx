@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+﻿import React, { useMemo, useState } from 'react';
 import { BarChart3, CheckCircle, Play, Plus, RefreshCw, Trash2, XCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -188,7 +188,7 @@ export function TemplateTestingPanel({ template, onClose }: TemplateTestingPanel
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-xl font-semibold">模板测试</h2>
-          <p className="text-sm text-gray-500">{template.title || template.name}</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400">{template.title || template.name}</p>
         </div>
         {onClose && (
           <Button variant="outline" onClick={onClose}>
@@ -291,7 +291,7 @@ export function TemplateTestingPanel({ template, onClose }: TemplateTestingPanel
               <div key={`${scenario.name}-${index}`} className="flex items-center justify-between rounded-md border p-3">
                 <div>
                   <div className="font-medium">{scenario.name}</div>
-                  <div className="text-xs text-gray-500">{Object.keys(scenario.context).length} 个变量</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400">{Object.keys(scenario.context).length} 个变量</div>
                 </div>
                 <Button
                   variant="ghost"
@@ -330,7 +330,7 @@ export function TemplateTestingPanel({ template, onClose }: TemplateTestingPanel
               </CardHeader>
               <CardContent className="space-y-3">
                 <Badge variant="secondary">整体成功率 {(batchResults.overall_success_rate * 100).toFixed(1)}%</Badge>
-                <div className="text-sm text-gray-500">
+                <div className="text-sm text-gray-500 dark:text-gray-400">
                   {batchResults.total_provider_model_combinations} 个模型组合，{batchResults.total_test_cases} 个测试用例
                 </div>
               </CardContent>
@@ -360,7 +360,7 @@ function ResultCard({ result }: { result: TemplateTestResponse }) {
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base">
-          {result.success ? <CheckCircle className="h-4 w-4 text-green-600" /> : <XCircle className="h-4 w-4 text-red-600" />}
+          {result.success ? <CheckCircle className="h-4 w-4 text-green-600" /> : <XCircle className="h-4 w-4 text-red-600 dark:text-red-400" />}
           测试结果
         </CardTitle>
       </CardHeader>
@@ -372,7 +372,7 @@ function ResultCard({ result }: { result: TemplateTestResponse }) {
           </Badge>
           <Badge variant="secondary">{formatDate(result.test_timestamp)}</Badge>
         </div>
-        <pre className="max-h-64 overflow-auto rounded-md bg-gray-50 p-3 text-xs whitespace-pre-wrap">
+        <pre className="max-h-64 overflow-auto rounded-md bg-gray-50 p-3 text-xs whitespace-pre-wrap dark:bg-gray-800/50">
           {result.rendered_content}
         </pre>
         <div className="space-y-2">
@@ -382,11 +382,11 @@ function ResultCard({ result }: { result: TemplateTestResponse }) {
                 <span className="font-medium">{item.scenario_name || `结果 ${index + 1}`}</span>
                 <Badge variant={item.success ? 'default' : 'destructive'}>{item.success ? '通过' : '失败'}</Badge>
               </div>
-              <div className="text-gray-500">
+              <div className="text-gray-500 dark:text-gray-400">
                 {item.ai_provider} / {item.ai_model} · {item.response_time.toFixed(2)}s · {item.token_usage} tokens
               </div>
               {item.response && <p className="mt-2 whitespace-pre-wrap">{item.response}</p>}
-              {item.error && <p className="mt-2 text-red-600">{item.error}</p>}
+              {item.error && <p className="mt-2 text-red-600 dark:text-red-400">{item.error}</p>}
             </div>
           ))}
         </div>
@@ -398,7 +398,7 @@ function ResultCard({ result }: { result: TemplateTestResponse }) {
 function Metric({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="rounded-md border p-3">
-      <div className="text-xs text-gray-500">{label}</div>
+      <div className="text-xs text-gray-500 dark:text-gray-400">{label}</div>
       <div className="mt-1 text-lg font-semibold">{value}</div>
     </div>
   );

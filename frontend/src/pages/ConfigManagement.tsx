@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+﻿import React, { useState, useEffect } from 'react'
 import { Card, Button, Table, Space, Input, Select, Modal, Form, Switch, Tag, Tabs, message, Drawer, Row, Col, Statistic, notification } from 'antd'
 import { 
   PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, 
@@ -220,7 +220,7 @@ export default function ConfigManagement() {
         if (isPassword && !shouldShow) {
           return (
             <div className="flex items-center space-x-2">
-              <span className="text-gray-400">••••••••</span>
+              <span className="text-gray-400 dark:text-gray-500">••••••••</span>
               <Button 
                 type="link" 
                 size="small" 

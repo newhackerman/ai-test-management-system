@@ -114,7 +114,7 @@ const DefectAnalytics: React.FC = () => {
   const generateReportPath = `/test-manager/reports/generate?type=defect${testPlanId !== 'all' ? `&test_plan_id=${testPlanId}` : ''}`
 
   if (error) {
-    return <div className="text-center text-red-500">加载缺陷分析失败：{(error as Error).message}</div>
+    return <div className="text-center text-red-500 dark:text-red-400">加载缺陷分析失败：{(error as Error).message}</div>
   }
 
   return (
@@ -151,10 +151,10 @@ const DefectAnalytics: React.FC = () => {
         <CardContent className="grid gap-2 p-3 md:grid-cols-2 xl:grid-cols-4">
           <div className="rounded-md border px-3 py-2">
             <div className="flex items-center gap-3">
-              <BarChart3 className="h-4 w-4 text-blue-500" />
+              <BarChart3 className="h-4 w-4 text-blue-500 dark:text-blue-400" />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm text-muted-foreground">缺陷总数</p>
-                <Link to={`/test-manager/defects?${listQueryPrefix}`} className="text-lg font-semibold leading-5 hover:text-blue-700">{loading ? '-' : total}</Link>
+                <Link to={`/test-manager/defects?${listQueryPrefix}`} className="text-lg font-semibold leading-5 hover:text-blue-700 dark:text-blue-300">{loading ? '-' : total}</Link>
                 <p className="truncate text-xs text-muted-foreground">当前库内全部缺陷</p>
               </div>
             </div>
@@ -162,10 +162,10 @@ const DefectAnalytics: React.FC = () => {
 
           <div className="rounded-md border px-3 py-2">
             <div className="flex items-center gap-3">
-              <AlertTriangle className="h-4 w-4 text-red-500" />
+              <AlertTriangle className="h-4 w-4 text-red-500 dark:text-red-400" />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm text-muted-foreground">高危缺陷</p>
-                <Link to={`/test-manager/defects?${listQueryPrefix}`} className="block text-lg font-semibold leading-5 text-red-600 hover:text-red-700">
+                <Link to={`/test-manager/defects?${listQueryPrefix}`} className="block text-lg font-semibold leading-5 text-red-600 hover:text-red-700 dark:text-red-400">
                   {loading ? '-' : Number(stats.critical_defects || 0) + Number(stats.high_defects || 0)}
                 </Link>
                 <p className="truncate text-xs text-muted-foreground">严重 + 高优先处理</p>
@@ -272,7 +272,7 @@ const DefectAnalytics: React.FC = () => {
               </div>
               <div className="grid grid-cols-3 gap-4 pt-2 text-center">
                 <div>
-                  <p className="text-lg font-bold text-blue-600">{openDefects}</p>
+                  <p className="text-lg font-bold text-blue-600 dark:text-blue-400">{openDefects}</p>
                   <p className="text-sm text-gray-600 dark:text-gray-400">未完成</p>
                 </div>
                 <div>
@@ -326,12 +326,12 @@ const DefectAnalytics: React.FC = () => {
         <CardContent className="px-4 pb-4">
           <div className="grid gap-2 md:grid-cols-2">
             {Number(stats.critical_defects || 0) + Number(stats.high_defects || 0) > 0 && (
-              <div className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-800">
+              <div className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-800 dark:bg-red-900/20 dark:text-red-300">
                 当前存在高危缺陷，建议优先安排负责人处理严重和高等级问题。
               </div>
             )}
             {openDefects > 0 && (
-              <div className="rounded-md bg-blue-50 px-3 py-2 text-sm text-blue-800">
+              <div className="rounded-md bg-blue-50 px-3 py-2 text-sm text-blue-800 dark:bg-blue-900/20 dark:text-blue-300">
                 仍有 {openDefects} 个缺陷未完成，建议按负责人和状态持续跟进。
               </div>
             )}

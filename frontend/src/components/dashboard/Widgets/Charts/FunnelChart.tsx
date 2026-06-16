@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useMemo, useCallback } from 'react';
+﻿import React, { useRef, useEffect, useMemo, useCallback } from 'react';
 import * as echarts from 'echarts';
 import BaseChart, { BaseChartProps, ChartConfig } from './BaseChart';
 import { getColorScheme, formatNumber, handleChartClick } from './chartUtils';
@@ -246,13 +246,13 @@ const FunnelChart: React.FC<FunnelChartProps> = ({ config, data, onDrillDown, ..
         
         {/* Conversion rates summary */}
         {conversionRates.length > 0 && (
-          <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-            <h4 className="text-sm font-medium text-gray-900 mb-2">转化率统计</h4>
+          <div className="mt-4 p-3 bg-gray-50 rounded-lg dark:bg-gray-800/50">
+            <h4 className="text-sm font-medium text-gray-900 mb-2 dark:text-gray-100">转化率统计</h4>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2">
               {conversionRates.map((item, index) => (
                 <div key={index} className="text-center">
-                  <div className="text-xs text-gray-500">{item.name}</div>
-                  <div className="text-sm font-medium text-gray-900">{item.rate}%</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400">{item.name}</div>
+                  <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{item.rate}%</div>
                 </div>
               ))}
             </div>

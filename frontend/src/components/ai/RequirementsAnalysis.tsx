@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 需求分析页面组件
  * 
  * 功能特性：
@@ -75,7 +75,7 @@ function QualityScoreCard({
   const getScoreColor = (score: number) => {
     if (score >= 0.8) return 'text-green-600 bg-green-100';
     if (score >= 0.6) return 'text-yellow-600 bg-yellow-100';
-    return 'text-red-600 bg-red-100';
+    return 'text-red-600 bg-red-100 dark:text-red-400 dark:bg-red-900/30';
   };
 
   const getScoreLabel = (score: number) => {
@@ -102,14 +102,14 @@ function QualityScoreCard({
       </CardHeader>
       <CardContent className="space-y-4">
         {/* 总体评分 */}
-        <div className="text-center p-4 bg-gray-50 rounded-lg">
+        <div className="text-center p-4 bg-gray-50 rounded-lg dark:bg-gray-800/50">
           <div className={cn(
             "text-3xl font-bold mb-2",
             getScoreColor(metrics.overall_score)
           )}>
             {Math.round(metrics.overall_score * 100)}
           </div>
-          <div className="text-sm text-gray-600">
+          <div className="text-sm text-gray-600 dark:text-gray-400">
             总体评分 - {getScoreLabel(metrics.overall_score)}
           </div>
           <Progress 
@@ -125,12 +125,12 @@ function QualityScoreCard({
               key={item.key}
               className={cn(
                 "p-3 rounded-lg border cursor-pointer transition-colors",
-                showDetails && "hover:bg-gray-50"
+                showDetails && "hover:bg-gray-50 dark:bg-gray-800/50"
               )}
               onClick={() => onDetailClick?.(item.key)}
             >
               <div className="flex items-center justify-between mb-1">
-                <span className="text-sm font-medium text-gray-700">
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
                   {item.label}
                 </span>
                 <Badge className={getScoreColor(item.value)}>
@@ -156,11 +156,11 @@ function ProblematicRequirements({
 }) {
   const getSeverityColor = (severity: string) => {
     switch (severity) {
-      case 'CRITICAL': return 'bg-red-100 text-red-800';
+      case 'CRITICAL': return 'bg-red-100 text-red-800 dark:text-red-300 dark:bg-red-900/30';
       case 'HIGH': return 'bg-orange-100 text-orange-800';
       case 'MEDIUM': return 'bg-yellow-100 text-yellow-800';
-      case 'LOW': return 'bg-gray-100 text-gray-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'LOW': return 'bg-gray-100 text-gray-800 dark:text-gray-200 dark:bg-gray-800';
+      default: return 'bg-gray-100 text-gray-800 dark:text-gray-200 dark:bg-gray-800';
     }
   };
 
@@ -185,10 +185,10 @@ function ProblematicRequirements({
           <CardContent className="p-4">
             <div className="flex items-start justify-between mb-2">
               <div className="flex-1 min-w-0">
-                <h4 className="font-medium text-gray-900 truncate">
+                <h4 className="font-medium text-gray-900 truncate dark:text-gray-100">
                   {issue.requirement_title}
                 </h4>
-                <p className="text-sm text-gray-600 mt-1">
+                <p className="text-sm text-gray-600 mt-1 dark:text-gray-400">
                   {issue.issue_type}
                 </p>
               </div>
@@ -198,22 +198,22 @@ function ProblematicRequirements({
               </Badge>
             </div>
             
-            <p className="text-sm text-gray-700 mb-3 line-clamp-2">
+            <p className="text-sm text-gray-700 mb-3 line-clamp-2 dark:text-gray-300">
               {issue.description}
             </p>
             
             {issue.suggestions.length > 0 && (
               <div className="border-t pt-2">
-                <p className="text-xs text-gray-500 mb-1">改进建议:</p>
-                <ul className="text-xs text-gray-600 space-y-1">
+                <p className="text-xs text-gray-500 mb-1 dark:text-gray-400">改进建议:</p>
+                <ul className="text-xs text-gray-600 space-y-1 dark:text-gray-400">
                   {issue.suggestions.slice(0, 2).map((suggestion, idx) => (
                     <li key={idx} className="flex items-start gap-1">
-                      <span className="text-blue-500 mt-0.5">•</span>
+                      <span className="text-blue-500 mt-0.5 dark:text-blue-400">•</span>
                       <span className="line-clamp-1">{suggestion}</span>
                     </li>
                   ))}
                   {issue.suggestions.length > 2 && (
-                    <li className="text-blue-600">
+                    <li className="text-blue-600 dark:text-blue-400">
                       +{issue.suggestions.length - 2} 更多建议...
                     </li>
                   )}
@@ -237,10 +237,10 @@ function AnalysisProgressIndicator({
 }) {
   const getStatusColor = (status: AnalysisStatus) => {
     switch (status) {
-      case 'ANALYZING': return 'text-blue-600 bg-blue-100';
+      case 'ANALYZING': return 'text-blue-600 bg-blue-100 dark:bg-blue-900/30';
       case 'COMPLETED': return 'text-green-600 bg-green-100';
-      case 'FAILED': return 'text-red-600 bg-red-100';
-      case 'CANCELLED': return 'text-gray-600 bg-gray-100';
+      case 'FAILED': return 'text-red-600 bg-red-100 dark:text-red-400 dark:bg-red-900/30';
+      case 'CANCELLED': return 'text-gray-600 bg-gray-100 dark:text-gray-400 dark:bg-gray-800';
       default: return 'text-yellow-600 bg-yellow-100';
     }
   };
@@ -274,7 +274,7 @@ function AnalysisProgressIndicator({
               )}
               {getStatusLabel(progress.status)}
             </Badge>
-            <span className="text-sm text-gray-600">
+            <span className="text-sm text-gray-600 dark:text-gray-400">
               {progress.current_step}
             </span>
           </div>
@@ -284,7 +284,7 @@ function AnalysisProgressIndicator({
               variant="outline"
               size="sm"
               onClick={onCancel}
-              className="text-red-600 border-red-200 hover:bg-red-50"
+              className="text-red-600 border-red-200 hover:bg-red-50 dark:text-red-400 dark:bg-red-900/20 dark:border-red-800"
             >
               <Square className="w-4 h-4 mr-1" />
               取消
@@ -301,14 +301,14 @@ function AnalysisProgressIndicator({
           <Progress value={progress.progress} className="h-2" />
           
           {progress.estimated_time_remaining > 0 && (
-            <div className="text-xs text-gray-500 text-center">
+            <div className="text-xs text-gray-500 text-center dark:text-gray-400">
               预计剩余时间: {formatTime(progress.estimated_time_remaining)}
             </div>
           )}
         </div>
 
         {progress.error_message && (
-          <div className="mt-3 p-2 bg-red-50 border border-red-200 rounded text-sm text-red-700">
+          <div className="mt-3 p-2 bg-red-50 border border-red-200 rounded text-sm text-red-700 dark:text-red-400 dark:bg-red-900/20 dark:border-red-800">
             {progress.error_message}
           </div>
         )}
@@ -544,8 +544,8 @@ export function RequirementsAnalysis({
         <CardContent className="p-4">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <h2 className="text-lg font-semibold text-gray-900">需求质量分析</h2>
-              <p className="text-sm text-gray-600">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">需求质量分析</h2>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
                 分析 {requirements.length} 个需求的质量指标和潜在问题
               </p>
             </div>
@@ -615,17 +615,17 @@ export function RequirementsAnalysis({
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-gray-700 leading-relaxed">
+                  <p className="text-gray-700 leading-relaxed dark:text-gray-300">
                     {analysisResult.analysis_summary}
                   </p>
                   
                   <div className="mt-4 grid grid-cols-2 gap-4 text-sm">
                     <div className="flex items-center gap-2">
-                      <FileText className="w-4 h-4 text-blue-500" />
+                      <FileText className="w-4 h-4 text-blue-500 dark:text-blue-400" />
                       <span>需求总数: {analysisResult.total_requirements}</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <AlertTriangle className="w-4 h-4 text-red-500" />
+                      <AlertTriangle className="w-4 h-4 text-red-500 dark:text-red-400" />
                       <span>问题数量: {analysisResult.issues.length}</span>
                     </div>
                   </div>
@@ -687,7 +687,7 @@ export function RequirementsAnalysis({
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-center py-8 text-gray-500">
+                <div className="text-center py-8 text-gray-500 dark:text-gray-400">
                   <Clock className="w-12 h-12 mx-auto mb-4 opacity-50" />
                   <p>暂无历史记录</p>
                 </div>
@@ -699,13 +699,13 @@ export function RequirementsAnalysis({
 
       {/* 错误提示 */}
       {error && (
-        <Card className="border-red-200 bg-red-50">
+        <Card className="border-red-200 bg-red-50 dark:bg-red-900/20 dark:border-red-800">
           <CardContent className="p-4">
-            <div className="flex items-center gap-2 text-red-700">
+            <div className="flex items-center gap-2 text-red-700 dark:text-red-400">
               <AlertTriangle className="w-5 h-5" />
               <span className="font-medium">分析失败</span>
             </div>
-            <p className="text-red-600 mt-1">{error}</p>
+            <p className="text-red-600 mt-1 dark:text-red-400">{error}</p>
           </CardContent>
         </Card>
       )}

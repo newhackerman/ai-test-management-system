@@ -1,4 +1,4 @@
-import React from 'react'
+﻿import React from 'react'
 import { Link, Navigate, RouteObject } from 'react-router-dom'
 import { AuthGuard } from '@/components/auth/AuthGuard'
 import { apiClient } from '@/services/api/client'
@@ -41,7 +41,7 @@ const ModuleGuard = ({ module, children }: { module: string; children: React.Rea
 
   if (!allowed) {
     return (
-      <div className="rounded-lg border border-amber-200 bg-amber-50 p-6 text-amber-800">
+      <div className="rounded-lg border border-amber-200 bg-amber-50 p-6 text-amber-800 dark:text-amber-300 dark:bg-amber-900/20 dark:border-amber-800">
         <h1 className="text-lg font-semibold">无权访问</h1>
         <p className="mt-2 text-sm">当前账号没有访问该模块的权限，请联系管理员分配角色或权限。</p>
         <Link to="/" className="mt-4 inline-flex text-sm font-medium text-amber-900 underline">
@@ -59,7 +59,7 @@ const withModule = (module: string, Component: React.LazyExoticComponent<React.C
 )
 
 const NotFound = () => (
-  <div className="flex min-h-screen items-center justify-center text-gray-500">页面未找到</div>
+  <div className="flex min-h-screen items-center justify-center text-gray-500 dark:text-gray-400">页面未找到</div>
 )
 
 const Layout = React.lazy(() => import('@/components/layout'))

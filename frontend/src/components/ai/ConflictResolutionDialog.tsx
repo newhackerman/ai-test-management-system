@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 冲突解决对话框组件
  * 处理数据同步冲突的用户界面
  */
@@ -66,9 +66,9 @@ export function ConflictResolutionDialog({
   const getConflictTypeColor = (type: string) => {
     switch (type) {
       case 'version': return 'bg-yellow-100 text-yellow-800';
-      case 'concurrent_edit': return 'bg-red-100 text-red-800';
-      case 'deleted': return 'bg-gray-100 text-gray-800';
-      default: return 'bg-blue-100 text-blue-800';
+      case 'concurrent_edit': return 'bg-red-100 text-red-800 dark:text-red-300 dark:bg-red-900/30';
+      case 'deleted': return 'bg-gray-100 text-gray-800 dark:text-gray-200 dark:bg-gray-800';
+      default: return 'bg-blue-100 text-blue-800 dark:text-blue-300 dark:bg-blue-900/30';
     }
   };
 
@@ -91,12 +91,12 @@ export function ConflictResolutionDialog({
           return (
             <div key={key} className={cn(
               "p-3 rounded-lg border",
-              isDifferent ? "border-red-200 bg-red-50" : "border-gray-200 bg-gray-50"
+              isDifferent ? "border-red-200 bg-red-50 dark:bg-red-900/20 dark:border-red-800" : "border-gray-200 bg-gray-50 dark:bg-gray-800/50 dark:border-gray-700"
             )}>
-              <div className="font-medium text-sm text-gray-700 mb-2">
+              <div className="font-medium text-sm text-gray-700 mb-2 dark:text-gray-300">
                 {key}
                 {isDifferent && (
-                  <Badge className="ml-2 bg-red-100 text-red-800">
+                  <Badge className="ml-2 bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300">
                     <AlertTriangle className="w-3 h-3 mr-1" />
                     冲突
                   </Badge>
@@ -105,21 +105,21 @@ export function ConflictResolutionDialog({
               
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <div className="text-xs text-gray-500 mb-1 flex items-center gap-1">
+                  <div className="text-xs text-gray-500 mb-1 flex items-center gap-1 dark:text-gray-400">
                     <User className="w-3 h-3" />
                     本地版本
                   </div>
-                  <div className="text-sm bg-white p-2 rounded border">
+                  <div className="text-sm bg-white p-2 rounded border dark:bg-gray-800">
                     {localValue !== undefined ? JSON.stringify(localValue, null, 2) : '(未设置)'}
                   </div>
                 </div>
                 
                 <div>
-                  <div className="text-xs text-gray-500 mb-1 flex items-center gap-1">
+                  <div className="text-xs text-gray-500 mb-1 flex items-center gap-1 dark:text-gray-400">
                     <Server className="w-3 h-3" />
                     服务器版本
                   </div>
-                  <div className="text-sm bg-white p-2 rounded border">
+                  <div className="text-sm bg-white p-2 rounded border dark:bg-gray-800">
                     {remoteValue !== undefined ? JSON.stringify(remoteValue, null, 2) : '(未设置)'}
                   </div>
                 </div>
@@ -137,7 +137,7 @@ export function ConflictResolutionDialog({
       label: '使用服务器版本',
       description: '丢弃本地更改，使用服务器上的最新版本',
       icon: <Server className="w-4 h-4" />,
-      color: 'border-blue-200 hover:bg-blue-50'
+      color: 'border-blue-200 hover:bg-blue-50 dark:bg-blue-900/20'
     },
     {
       value: ConflictResolution.CLIENT_WINS,
@@ -151,14 +151,14 @@ export function ConflictResolutionDialog({
       label: '自动合并',
       description: '尝试自动合并两个版本的更改',
       icon: <GitMerge className="w-4 h-4" />,
-      color: 'border-purple-200 hover:bg-purple-50'
+      color: 'border-purple-200 hover:bg-purple-50 dark:bg-purple-900/20'
     },
     {
       value: ConflictResolution.MANUAL,
       label: '手动解决',
       description: '手动选择要保留的字段和值',
       icon: <Eye className="w-4 h-4" />,
-      color: 'border-orange-200 hover:bg-orange-50'
+      color: 'border-orange-200 hover:bg-orange-50 dark:bg-orange-900/20'
     }
   ];
 
@@ -167,7 +167,7 @@ export function ConflictResolutionDialog({
       <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <AlertTriangle className="w-5 h-5 text-red-500" />
+            <AlertTriangle className="w-5 h-5 text-red-500 dark:text-red-400" />
             数据冲突解决
           </DialogTitle>
         </DialogHeader>
@@ -185,7 +185,7 @@ export function ConflictResolutionDialog({
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-3">
                     <div>
-                      <label className="text-sm font-medium text-gray-700">冲突类型</label>
+                      <label className="text-sm font-medium text-gray-700 dark:text-gray-300">冲突类型</label>
                       <div className="mt-1">
                         <Badge className={getConflictTypeColor(conflict.conflictType)}>
                           {getConflictTypeLabel(conflict.conflictType)}
@@ -194,28 +194,28 @@ export function ConflictResolutionDialog({
                     </div>
 
                     <div>
-                      <label className="text-sm font-medium text-gray-700">实体类型</label>
-                      <div className="mt-1 text-sm text-gray-900">{conflict.entityType}</div>
+                      <label className="text-sm font-medium text-gray-700 dark:text-gray-300">实体类型</label>
+                      <div className="mt-1 text-sm text-gray-900 dark:text-gray-100">{conflict.entityType}</div>
                     </div>
 
                     <div>
-                      <label className="text-sm font-medium text-gray-700">实体ID</label>
-                      <div className="mt-1 text-sm text-gray-900">{conflict.entityId}</div>
+                      <label className="text-sm font-medium text-gray-700 dark:text-gray-300">实体ID</label>
+                      <div className="mt-1 text-sm text-gray-900 dark:text-gray-100">{conflict.entityId}</div>
                     </div>
                   </div>
 
                   <div className="space-y-3">
                     <div>
-                      <label className="text-sm font-medium text-gray-700">冲突时间</label>
-                      <div className="mt-1 text-sm text-gray-900 flex items-center gap-1">
+                      <label className="text-sm font-medium text-gray-700 dark:text-gray-300">冲突时间</label>
+                      <div className="mt-1 text-sm text-gray-900 flex items-center gap-1 dark:text-gray-100">
                         <Clock className="w-4 h-4" />
                         {formatTimestamp(conflict.timestamp)}
                       </div>
                     </div>
 
                     <div>
-                      <label className="text-sm font-medium text-gray-700">冲突ID</label>
-                      <div className="mt-1 text-sm text-gray-500 font-mono">{conflict.id}</div>
+                      <label className="text-sm font-medium text-gray-700 dark:text-gray-300">冲突ID</label>
+                      <div className="mt-1 text-sm text-gray-500 font-mono dark:text-gray-400">{conflict.id}</div>
                     </div>
                   </div>
                 </div>
@@ -234,14 +234,14 @@ export function ConflictResolutionDialog({
               </TabsContent>
 
               <TabsContent value="comparison" className="space-y-4">
-                <div className="text-sm text-gray-600 mb-4">
+                <div className="text-sm text-gray-600 mb-4 dark:text-gray-400">
                   以下是本地版本和服务器版本的详细对比：
                 </div>
                 {renderDataComparison(conflict.localData, conflict.remoteData)}
               </TabsContent>
 
               <TabsContent value="resolution" className="space-y-4">
-                <div className="text-sm text-gray-600 mb-4">
+                <div className="text-sm text-gray-600 mb-4 dark:text-gray-400">
                   请选择解决冲突的方式：
                 </div>
 
@@ -253,7 +253,7 @@ export function ConflictResolutionDialog({
                         "p-4 border rounded-lg cursor-pointer transition-colors",
                         option.color,
                         selectedResolution === option.value
-                          ? "ring-2 ring-blue-500 bg-blue-50"
+                          ? "ring-2 ring-blue-500 bg-blue-50 dark:bg-blue-900/20"
                           : ""
                       )}
                       onClick={() => setSelectedResolution(option.value)}
@@ -264,12 +264,12 @@ export function ConflictResolutionDialog({
                         </div>
                         <div className="flex-1">
                           <div className="flex items-center gap-2">
-                            <h4 className="font-medium text-gray-900">{option.label}</h4>
+                            <h4 className="font-medium text-gray-900 dark:text-gray-100">{option.label}</h4>
                             {selectedResolution === option.value && (
-                              <Check className="w-4 h-4 text-blue-600" />
+                              <Check className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                             )}
                           </div>
-                          <p className="text-sm text-gray-600 mt-1">{option.description}</p>
+                          <p className="text-sm text-gray-600 mt-1 dark:text-gray-400">{option.description}</p>
                         </div>
                       </div>
                     </div>
@@ -277,9 +277,9 @@ export function ConflictResolutionDialog({
                 </div>
 
                 {selectedResolution === ConflictResolution.MANUAL && (
-                  <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-                    <h4 className="font-medium text-gray-900 mb-2">手动合并</h4>
-                    <p className="text-sm text-gray-600 mb-3">
+                  <div className="mt-4 p-4 bg-gray-50 rounded-lg dark:bg-gray-800/50">
+                    <h4 className="font-medium text-gray-900 mb-2 dark:text-gray-100">手动合并</h4>
+                    <p className="text-sm text-gray-600 mb-3 dark:text-gray-400">
                       请手动编辑要保留的数据：
                     </p>
                     <textarea

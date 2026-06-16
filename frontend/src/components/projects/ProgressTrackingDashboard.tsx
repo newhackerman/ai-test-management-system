@@ -1,4 +1,4 @@
-// @ts-nocheck
+﻿// @ts-nocheck
 import { useState } from 'react'
 import {
   Activity,
@@ -128,7 +128,7 @@ function DashboardOverview({
         ? 'text-blue-600'
         : overallProgress >= 50
           ? 'text-yellow-600'
-          : 'text-red-600'
+          : 'text-red-600 dark:text-red-400'
 
   return (
     <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
@@ -162,7 +162,7 @@ function DashboardOverview({
               {completedMilestones}/{milestones.length}
             </p>
           </div>
-          <Target className="h-8 w-8 text-blue-600" />
+          <Target className="h-8 w-8 text-blue-600 dark:text-blue-400" />
         </div>
         <div className="mt-4 space-y-2 text-xs">
           <div className="flex justify-between">
@@ -194,9 +194,9 @@ function DashboardOverview({
         <div className="flex items-center justify-between">
           <div>
             <p className="text-sm text-muted-foreground">预警中心</p>
-            <p className="text-3xl font-bold text-red-600">{unreadAlerts}</p>
+            <p className="text-3xl font-bold text-red-600 dark:text-red-400">{unreadAlerts}</p>
           </div>
-          <Bell className="h-8 w-8 text-red-600" />
+          <Bell className="h-8 w-8 text-red-600 dark:text-red-400" />
         </div>
         <div className="mt-4 space-y-2 text-xs">
           <div className="flex justify-between">
@@ -219,10 +219,10 @@ function AlertDashboard({
 }) {
   const alertTypeConfig = {
     PROGRESS: { label: '进度预警', icon: TrendingUp, color: 'bg-orange-100 text-orange-800' },
-    QUALITY: { label: '质量预警', icon: Target, color: 'bg-red-100 text-red-800' },
-    RISK: { label: '风险预警', icon: AlertTriangle, color: 'bg-red-100 text-red-800' },
+    QUALITY: { label: '质量预警', icon: Target, color: 'bg-red-100 text-red-800 dark:text-red-300 dark:bg-red-900/30' },
+    RISK: { label: '风险预警', icon: AlertTriangle, color: 'bg-red-100 text-red-800 dark:text-red-300 dark:bg-red-900/30' },
     MILESTONE: { label: '里程碑预警', icon: Calendar, color: 'bg-yellow-100 text-yellow-800' },
-    RESOURCE: { label: '资源预警', icon: Activity, color: 'bg-blue-100 text-blue-800' },
+    RESOURCE: { label: '资源预警', icon: Activity, color: 'bg-blue-100 text-blue-800 dark:text-blue-300 dark:bg-blue-900/30' },
   }
 
   const alertSeverityConfig = {
@@ -269,10 +269,10 @@ function AlertDashboard({
               type="button"
               className={`w-full rounded-lg border p-3 text-left transition-all hover:shadow-md ${
                 alert.severity === 'CRITICAL'
-                  ? 'border-red-200 bg-red-50'
+                  ? 'border-red-200 bg-red-50 dark:bg-red-900/20 dark:border-red-800'
                   : alert.severity === 'HIGH'
-                    ? 'border-orange-200 bg-orange-50'
-                    : 'border-gray-200 bg-gray-50'
+                    ? 'border-orange-200 bg-orange-50 dark:bg-orange-900/20'
+                    : 'border-gray-200 bg-gray-50 dark:bg-gray-800/50 dark:border-gray-700'
               }`}
               onClick={() => onAlertClick?.(alert)}
             >

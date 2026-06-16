@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react'
+﻿import React, { useState, useMemo } from 'react'
 import { RequirementStatus, Requirement } from '@/types/requirement'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
@@ -39,17 +39,17 @@ const STATUS_CONFIG: Record<RequirementStatus, {
 }> = {
   DRAFT: { label: '草稿', color: 'text-gray-600', bgColor: 'bg-gray-100', icon: '📝' },
   PENDING_REVIEW: { label: '待评审', color: 'text-yellow-600', bgColor: 'bg-yellow-100', icon: '⏳' },
-  REVIEWING: { label: '评审中', color: 'text-blue-600', bgColor: 'bg-blue-100', icon: '👥' },
+  REVIEWING: { label: '评审中', color: 'text-blue-600', bgColor: 'bg-blue-100 dark:bg-blue-900/30', icon: '👥' },
   NEEDS_REVISION: { label: '需修改', color: 'text-orange-600', bgColor: 'bg-orange-100', icon: '✏️' },
   APPROVED: { label: '已批准', color: 'text-green-600', bgColor: 'bg-green-100', icon: '✅' },
   IN_DEVELOPMENT: { label: '开发中', color: 'text-purple-600', bgColor: 'bg-purple-100', icon: '⚡' },
-  PAUSED: { label: '已暂停', color: 'text-gray-600', bgColor: 'bg-gray-100', icon: '⏸️' },
+  PAUSED: { label: '已暂停', color: 'text-gray-600 dark:text-gray-400', bgColor: 'bg-gray-100 dark:bg-gray-800', icon: '⏸️' },
   TESTING: { label: '待测试', color: 'text-indigo-600', bgColor: 'bg-indigo-100', icon: '🧪' },
-  TEST_FAILED: { label: '测试失败', color: 'text-red-600', bgColor: 'bg-red-100', icon: '❌' },
+  TEST_FAILED: { label: '测试失败', color: 'text-red-600 dark:text-red-400', bgColor: 'bg-red-100 dark:bg-red-900/30', icon: '❌' },
   COMPLETED: { label: '已完成', color: 'text-emerald-600', bgColor: 'bg-emerald-100', icon: '🎉' },
   DEPLOYED: { label: '已上线', color: 'text-teal-600', bgColor: 'bg-teal-100', icon: '🚀' },
   CLOSED: { label: '已关闭', color: 'text-slate-600', bgColor: 'bg-slate-100', icon: '🔒' },
-  CANCELLED: { label: '已取消', color: 'text-red-600', bgColor: 'bg-red-100', icon: '🚫' }
+  CANCELLED: { label: '已取消', color: 'text-red-600 dark:text-red-400', bgColor: 'bg-red-100 dark:bg-red-900/30', icon: '🚫' }
 }
 
 // 时间线项组件
@@ -69,14 +69,14 @@ const TimelineItem: React.FC<TimelineItemProps> = ({ record, isFirst, isLast }) 
       <div className="flex flex-col items-center">
         <div className={cn(
           'w-3 h-3 rounded-full border-2 bg-white',
-          isFirst ? 'border-green-500' : 'border-gray-300'
+          isFirst ? 'border-green-500' : 'border-gray-300 dark:border-gray-600'
         )} />
         {!isLast && <div className="w-0.5 h-full bg-gray-200 mt-2" />}
       </div>
       
       {/* 内容 */}
       <div className="flex-1 min-w-0">
-        <div className="bg-white rounded-lg border p-4 shadow-sm">
+        <div className="bg-white rounded-lg border p-4 shadow-sm dark:bg-gray-800">
           {/* 头部信息 */}
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">

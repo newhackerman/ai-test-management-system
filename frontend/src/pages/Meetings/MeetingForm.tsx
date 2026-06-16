@@ -204,7 +204,7 @@ export default function MeetingForm({
   return (
     <form onSubmit={submit} className="space-y-5">
       {error && (
-        <div className="flex items-start gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+        <div className="flex items-start gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:text-red-400 dark:bg-red-900/20 dark:border-red-800">
           <AlertCircle className="mt-0.5 h-4 w-4" />
           <span>{error}</span>
         </div>
@@ -213,7 +213,7 @@ export default function MeetingForm({
       <Card>
         <CardContent className="space-y-4 p-5">
           <div className="flex items-center gap-2 font-semibold text-gray-900 dark:text-gray-100">
-            <CheckCircle2 className="h-4 w-4 text-blue-600" />
+            <CheckCircle2 className="h-4 w-4 text-blue-600 dark:text-blue-400" />
             基本信息
           </div>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -245,7 +245,7 @@ export default function MeetingForm({
       <Card>
         <CardContent className="space-y-4 p-5">
           <div className="flex items-center gap-2 font-semibold text-gray-900 dark:text-gray-100">
-            <CalendarDays className="h-4 w-4 text-blue-600" />
+            <CalendarDays className="h-4 w-4 text-blue-600 dark:text-blue-400" />
             时间与议程
           </div>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
@@ -273,7 +273,7 @@ export default function MeetingForm({
         <Card>
           <CardContent className="space-y-4 p-5">
             <div className="flex items-center gap-2 font-semibold text-gray-900 dark:text-gray-100">
-              <Users className="h-4 w-4 text-blue-600" />
+              <Users className="h-4 w-4 text-blue-600 dark:text-blue-400" />
               参会人员
             </div>
             <div className="grid max-h-56 grid-cols-1 gap-2 overflow-y-auto rounded-md border p-3 md:grid-cols-3">
@@ -291,7 +291,7 @@ export default function MeetingForm({
       <Card>
         <CardContent className="space-y-4 p-5">
           <div className="flex items-center gap-2 font-semibold text-gray-900 dark:text-gray-100">
-            <Settings2 className="h-4 w-4 text-blue-600" />
+            <Settings2 className="h-4 w-4 text-blue-600 dark:text-blue-400" />
             会议设置
           </div>
           <div className="grid grid-cols-1 gap-3 md:grid-cols-3">

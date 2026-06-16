@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+﻿import React, { useEffect, useState } from 'react'
 import { Button, Form, Input, InputNumber, Modal, Select, Space, Switch, Tabs, Tag, message } from 'antd'
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons'
 
@@ -101,7 +101,7 @@ const ValidationRuleManager: React.FC<ValidationRuleManagerProps> = ({
       okText="保存"
       cancelText="取消"
     >
-      <div className="mb-4 flex flex-wrap gap-2 text-sm text-gray-600">
+      <div className="mb-4 flex flex-wrap gap-2 text-sm text-gray-600 dark:text-gray-400">
         <Tag>{configKey || '未选择配置'}</Tag>
         <Tag>{configType}</Tag>
         <Tag>{environment}</Tag>

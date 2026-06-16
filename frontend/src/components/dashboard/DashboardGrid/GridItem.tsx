@@ -1,4 +1,4 @@
-// @ts-nocheck
+﻿// @ts-nocheck
 import { useState } from 'react'
 import { GripVertical, Maximize2, MoreVertical, RefreshCw, Settings, X } from 'lucide-react'
 
@@ -91,8 +91,8 @@ const GridItem: React.FC<GridItemProps> = ({
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <div className="flex min-w-0 items-center gap-2">
             {editMode && (
-              <div {...dragHandleProps} className="cursor-move rounded p-1 hover:bg-gray-100" title="拖拽移动">
-                <GripVertical className="h-4 w-4 text-gray-400" />
+              <div {...dragHandleProps} className="cursor-move rounded p-1 hover:bg-gray-100 dark:bg-gray-800" title="拖拽移动">
+                <GripVertical className="h-4 w-4 text-gray-400 dark:text-gray-500" />
               </div>
             )}
 
@@ -103,7 +103,7 @@ const GridItem: React.FC<GridItemProps> = ({
             </Badge>
 
             {hasNewData && updateCount > 0 && (
-              <Badge variant="outline" className="bg-blue-100 text-xs text-blue-600">
+              <Badge variant="outline" className="bg-blue-100 text-xs text-blue-600 dark:text-blue-400 dark:bg-blue-900/30">
                 {updateCount} 次更新
               </Badge>
             )}
@@ -138,7 +138,7 @@ const GridItem: React.FC<GridItemProps> = ({
                 {editMode && (
                   <>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => onRemove(widget.id)} className="text-red-600 focus:text-red-600">
+                    <DropdownMenuItem onClick={() => onRemove(widget.id)} className="text-red-600 focus:text-red-600 dark:text-red-400">
                       <X className="mr-2 h-4 w-4" />
                       删除组件
                     </DropdownMenuItem>
@@ -153,10 +153,10 @@ const GridItem: React.FC<GridItemProps> = ({
           {error ? (
             <div className="flex h-full items-center justify-center text-center">
               <div>
-                <div className="mb-2 text-red-500">
+                <div className="mb-2 text-red-500 dark:text-red-400">
                   <X className="mx-auto h-8 w-8" />
                 </div>
-                <p className="mb-2 text-sm text-red-600">{error}</p>
+                <p className="mb-2 text-sm text-red-600 dark:text-red-400">{error}</p>
                 <Button size="sm" variant="outline" onClick={handleRefresh}>
                   重试
                 </Button>
@@ -174,7 +174,7 @@ const GridItem: React.FC<GridItemProps> = ({
 
         {showConfig && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-            <div className="w-full max-w-md rounded-lg bg-white p-6">
+            <div className="w-full max-w-md rounded-lg bg-white p-6 dark:bg-gray-800">
               <div className="mb-4 flex items-center justify-between">
                 <h3 className="text-lg font-semibold">配置组件</h3>
                 <Button variant="ghost" size="sm" onClick={() => setShowConfig(false)} className="h-6 w-6 p-0">
@@ -189,7 +189,7 @@ const GridItem: React.FC<GridItemProps> = ({
                     type="text"
                     value={widget.title}
                     onChange={(event) => onUpdate(widget.id, { title: event.target.value })}
-                    className="w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-600"
                   />
                 </div>
 
@@ -202,7 +202,7 @@ const GridItem: React.FC<GridItemProps> = ({
                         config: { ...widget.config, refreshInterval: Number(event.target.value) },
                       })
                     }
-                    className="w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-600"
                   >
                     <option value={10}>10 秒</option>
                     <option value={30}>30 秒</option>

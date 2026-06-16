@@ -306,7 +306,7 @@ const TestCaseList: React.FC = () => {
   }
 
   if (error) {
-    return <div className="text-center text-red-500">加载失败：{error.message}</div>
+    return <div className="text-center text-red-500 dark:text-red-400">加载失败：{error.message}</div>
   }
 
   return (
@@ -374,7 +374,7 @@ const TestCaseList: React.FC = () => {
                     data-testid="test-case-import-file"
                     accept={IMPORT_FILE_ACCEPT}
                     onChange={(event) => setImportFile(event.target.files?.[0] || null)}
-                    className="block w-full text-sm text-gray-600 file:mr-4 file:rounded-md file:border-0 file:bg-blue-50 file:px-4 file:py-2 file:text-sm file:font-medium file:text-blue-700 hover:file:bg-blue-100 dark:text-gray-400"
+                    className="block w-full text-sm text-gray-600 file:mr-4 file:rounded-md file:border-0 file:bg-blue-50 file:px-4 file:py-2 file:text-sm file:font-medium file:text-blue-700 hover:file:bg-blue-100 dark:text-gray-400 dark:bg-blue-900/20"
                   />
                   <p className="text-xs text-muted-foreground">
                     表格支持标题、描述、模块、步骤、预期结果、优先级、脚本类型、脚本内容等列；也可以直接上传 .py、.js、.jmx、.har、.txt 等脚本文件生成用例。
@@ -471,7 +471,7 @@ const TestCaseList: React.FC = () => {
         <CardContent className="p-3">
           <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(220px,1fr)_repeat(5,160px)]">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 dark:text-gray-500" />
               <Input
                 placeholder="搜索标题、编号或模块"
                 value={searchTerm}
@@ -537,7 +537,7 @@ const TestCaseList: React.FC = () => {
                   ))}
                 </DropdownMenuContent>
               </DropdownMenu>
-              <Button variant="outline" size="sm" className="text-red-600" onClick={handleBatchDelete}>
+              <Button variant="outline" size="sm" className="text-red-600 dark:text-red-400" onClick={handleBatchDelete}>
                 <Trash2 className="mr-2 h-4 w-4" />
                 批量删除
               </Button>
@@ -582,13 +582,13 @@ const TestCaseList: React.FC = () => {
                   <TableCell className="max-w-0 px-3">
                     <Link
                       to={`/test-manager/test-cases/${testCase.id}`}
-                      className="block truncate font-medium text-blue-600 hover:text-blue-800"
+                      className="block truncate font-medium text-blue-600 hover:text-blue-800 dark:text-blue-400"
                       title={testCase.case_title}
                     >
                       {testCase.case_title}
                     </Link>
                     <div className="truncate text-sm text-gray-500 dark:text-gray-400" title={testCase.case_code}>{testCase.case_code}</div>
-                    {testCase.module && <div className="truncate text-xs text-gray-400" title={testCase.module}>{testCase.module}</div>}
+                    {testCase.module && <div className="truncate text-xs text-gray-400 dark:text-gray-500" title={testCase.module}>{testCase.module}</div>}
                   </TableCell>
                   <TableCell className="px-3"><Badge variant="outline">{TEST_CASE_TYPE_LABELS[testCase.case_type] || testCase.case_type}</Badge></TableCell>
                   <TableCell className="px-3"><Badge variant={priorityVariant[testCase.priority] || 'secondary'}>{PRIORITY_LABELS[testCase.priority] || testCase.priority}</Badge></TableCell>
@@ -629,7 +629,7 @@ const TestCaseList: React.FC = () => {
                           <Wand2 className="mr-2 h-4 w-4" />
                           生成自动化脚本
                         </DropdownMenuItem>
-                        <DropdownMenuItem className="text-red-600" onClick={() => handleDelete(testCase.id)}>
+                        <DropdownMenuItem className="text-red-600 dark:text-red-400" onClick={() => handleDelete(testCase.id)}>
                           <Trash2 className="mr-2 h-4 w-4" />
                           删除
                         </DropdownMenuItem>

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useState } from 'react';
 import { AlertCircle, CheckCircle, Link, Loader2, RefreshCw, TrendingUp } from 'lucide-react';
 
 import { Alert, AlertDescription } from '@/components/ui/Alert';
@@ -132,7 +132,7 @@ export const MeetingTaskManager: React.FC<MeetingTaskManagerProps> = ({
   return (
     <div className="space-y-4">
       {error && (
-        <Alert className="border-red-200 bg-red-50 text-red-700">
+        <Alert className="border-red-200 bg-red-50 text-red-700 dark:text-red-400 dark:bg-red-900/20 dark:border-red-800">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>{error}</AlertDescription>
         </Alert>

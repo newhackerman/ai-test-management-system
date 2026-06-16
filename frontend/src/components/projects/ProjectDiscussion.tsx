@@ -1,4 +1,4 @@
-// @ts-nocheck
+﻿// @ts-nocheck
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Avatar,
@@ -208,7 +208,7 @@ export const ProjectDiscussion: React.FC<ProjectDiscussionProps> = ({ projectId,
     const canEdit = isOwn && Date.now() - new Date(msg.created_at).getTime() < 300000;
 
     return (
-      <List.Item key={msg.id} className={msg.is_pinned ? 'border-l-4 border-l-blue-500 bg-blue-50' : ''}>
+      <List.Item key={msg.id} className={msg.is_pinned ? 'border-l-4 border-l-blue-500 bg-blue-50 dark:bg-blue-900/20' : ''}>
         <div className="w-full">
           <div className="flex items-start space-x-3">
             <Avatar src={msg.user?.avatar} size="small">
@@ -234,7 +234,7 @@ export const ProjectDiscussion: React.FC<ProjectDiscussionProps> = ({ projectId,
               </div>
 
               {msg.reply_to && (
-                <div className="mb-2 rounded bg-gray-100 p-2 text-sm">
+                <div className="mb-2 rounded bg-gray-100 p-2 text-sm dark:bg-gray-800">
                   <Text type="secondary">
                     回复 {getUserName(msg.reply_to.user)}：{msg.reply_to.content}
                   </Text>
@@ -249,15 +249,15 @@ export const ProjectDiscussion: React.FC<ProjectDiscussionProps> = ({ projectId,
                     <button
                       key={attachment.id}
                       type="button"
-                      className="flex w-full items-center space-x-2 rounded bg-gray-50 p-2 text-left hover:bg-gray-100"
+                      className="flex w-full items-center space-x-2 rounded bg-gray-50 p-2 text-left hover:bg-gray-100 dark:bg-gray-800/50"
                       onClick={() => window.open(attachment.download_url, '_blank')}
                     >
                       {getFileIcon(attachment.file_type)}
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-sm font-medium">{attachment.filename}</span>
-                        <span className="text-xs text-gray-500">{formatFileSize(attachment.file_size)}</span>
+                        <span className="text-xs text-gray-500 dark:text-gray-400">{formatFileSize(attachment.file_size)}</span>
                       </span>
-                      <LinkOutlined className="text-blue-500" />
+                      <LinkOutlined className="text-blue-500 dark:text-blue-400" />
                     </button>
                   ))}
                 </div>
@@ -329,7 +329,7 @@ export const ProjectDiscussion: React.FC<ProjectDiscussionProps> = ({ projectId,
       </div>
 
       {replyingTo && (
-        <div className="mb-3 flex items-center justify-between rounded bg-blue-50 p-3">
+        <div className="mb-3 flex items-center justify-between rounded bg-blue-50 p-3 dark:bg-blue-900/20">
           <Text type="secondary">
             回复 {getUserName(replyingTo.user)}：{replyingTo.content.slice(0, 50)}
             {replyingTo.content.length > 50 ? '...' : ''}

@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from 'react';
+﻿import React, { useMemo, useRef, useState } from 'react';
 import { Check, Copy, Download, Loader2, Palette, Plus, Trash2, Upload, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -170,7 +170,7 @@ const ColorSchemeSelector: React.FC<ColorSchemeSelectorProps> = ({ isOpen, onClo
 
         <CardContent className="max-h-[calc(90vh-90px)] overflow-y-auto p-6">
           {error && (
-            <Alert className="mb-4 border-orange-200 bg-orange-50 text-orange-700">
+            <Alert className="mb-4 border-orange-200 bg-orange-50 text-orange-700 dark:text-orange-400 dark:bg-orange-900/20">
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}

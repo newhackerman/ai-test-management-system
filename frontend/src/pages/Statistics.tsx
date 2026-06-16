@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react'
+﻿import React, { useCallback, useEffect, useState } from 'react'
 import { Activity, RefreshCw, ShieldAlert, UserCog, Users } from 'lucide-react'
 import { apiClient } from '@/services/api/client'
 
@@ -181,7 +181,7 @@ const Statistics: React.FC = () => {
       blue: 'text-blue-600',
       green: 'text-green-600',
       yellow: 'text-amber-600',
-      red: 'text-red-600',
+      red: 'text-red-600 dark:text-red-400',
       purple: 'text-purple-600'
     }
 
@@ -254,7 +254,7 @@ const Statistics: React.FC = () => {
       </div>
 
       {error && (
-        <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:text-red-400 dark:bg-red-900/20 dark:border-red-800">
           {error}
         </div>
       )}

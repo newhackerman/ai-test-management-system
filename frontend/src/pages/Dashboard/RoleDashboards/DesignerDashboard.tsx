@@ -140,7 +140,7 @@ const DesignerDashboard: React.FC = () => {
       <div className="flex items-center justify-center h-64">
         <Card className="w-full max-w-md">
           <CardContent className="p-6 text-center">
-            <div className="text-red-500 mb-4">
+            <div className="text-red-500 mb-4 dark:text-red-400">
               <AlertTriangle className="h-12 w-12 mx-auto" />
             </div>
             <h3 className="text-lg font-semibold mb-2">加载失败</h3>
@@ -214,14 +214,14 @@ const DesignerDashboard: React.FC = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600 dark:text-gray-400">设计系统使用率</p>
-                <p className="text-2xl font-bold text-blue-600">
+                <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
                   {designMetrics.designSystemUsage}%
                 </p>
               </div>
-              <Layout className="h-8 w-8 text-blue-600" />
+              <Layout className="h-8 w-8 text-blue-600 dark:text-blue-400" />
             </div>
             <div className="mt-2">
-              <Badge variant="outline" className="text-blue-600 border-blue-600">
+              <Badge variant="outline" className="text-blue-600 border-blue-600 dark:text-blue-400">
                 高使用率
               </Badge>
             </div>
@@ -430,10 +430,10 @@ const DesignerDashboard: React.FC = () => {
               {feedbackAlerts.map((alert: any) => (
                 <div key={alert.id} className={`p-3 rounded-lg border-l-4 ${
                   alert.severity === 'high' 
-                    ? 'bg-red-50 border-red-500' 
+                    ? 'bg-red-50 border-red-500 dark:bg-red-900/20' 
                     : alert.severity === 'medium'
                     ? 'bg-yellow-50 border-yellow-500'
-                    : 'bg-blue-50 border-blue-500'
+                    : 'bg-blue-50 border-blue-500 dark:bg-blue-900/20'
                 }`}>
                   <p className="text-sm font-medium">{alert.message}</p>
                   <Badge 

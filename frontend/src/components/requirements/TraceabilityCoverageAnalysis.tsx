@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+﻿import React, { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
@@ -211,9 +211,9 @@ export function TraceabilityCoverageAnalysis({
   const getCoverageStatusBadge = (status: string) => {
     const statusConfig = {
       EXCELLENT: { color: 'bg-green-100 text-green-800', icon: CheckCircle, text: '优秀' },
-      GOOD: { color: 'bg-blue-100 text-blue-800', icon: CheckCircle, text: '良好' },
+      GOOD: { color: 'bg-blue-100 text-blue-800 dark:text-blue-300 dark:bg-blue-900/30', icon: CheckCircle, text: '良好' },
       FAIR: { color: 'bg-yellow-100 text-yellow-800', icon: AlertTriangle, text: '一般' },
-      POOR: { color: 'bg-red-100 text-red-800', icon: XCircle, text: '较差' }
+      POOR: { color: 'bg-red-100 text-red-800 dark:text-red-300 dark:bg-red-900/30', icon: XCircle, text: '较差' }
     }
 
     const config = statusConfig[status as keyof typeof statusConfig]
@@ -231,7 +231,7 @@ export function TraceabilityCoverageAnalysis({
     if (percentage >= 90) return 'text-green-600'
     if (percentage >= 70) return 'text-blue-600'
     if (percentage >= 50) return 'text-yellow-600'
-    return 'text-red-600'
+    return 'text-red-600 dark:text-red-400'
   }
 
   const sortedCoverageData = [...coverageData].sort((a, b) => {
@@ -327,7 +327,7 @@ export function TraceabilityCoverageAnalysis({
                     {statistics.forward_traceability}%
                   </div>
                   <Progress value={statistics.forward_traceability} className="mt-2" />
-                  <p className="text-sm text-gray-600 mt-2">需求 → 设计 → 实现</p>
+                  <p className="text-sm text-gray-600 mt-2 dark:text-gray-400">需求 → 设计 → 实现</p>
                 </div>
               </CardContent>
             </Card>
@@ -342,7 +342,7 @@ export function TraceabilityCoverageAnalysis({
                     {statistics.backward_traceability}%
                   </div>
                   <Progress value={statistics.backward_traceability} className="mt-2" />
-                  <p className="text-sm text-gray-600 mt-2">实现 → 设计 → 需求</p>
+                  <p className="text-sm text-gray-600 mt-2 dark:text-gray-400">实现 → 设计 → 需求</p>
                 </div>
               </CardContent>
             </Card>
@@ -357,7 +357,7 @@ export function TraceabilityCoverageAnalysis({
                     {statistics.bidirectional_traceability}%
                   </div>
                   <Progress value={statistics.bidirectional_traceability} className="mt-2" />
-                  <p className="text-sm text-gray-600 mt-2">完整的追溯链</p>
+                  <p className="text-sm text-gray-600 mt-2 dark:text-gray-400">完整的追溯链</p>
                 </div>
               </CardContent>
             </Card>
@@ -385,7 +385,7 @@ export function TraceabilityCoverageAnalysis({
                           </span>
                         </div>
                         <Progress value={data.percentage} />
-                        <div className="text-xs text-gray-500">
+                        <div className="text-xs text-gray-500 dark:text-gray-400">
                           {data.covered} / {data.total} 个需求已覆盖
                         </div>
                       </div>
@@ -413,7 +413,7 @@ export function TraceabilityCoverageAnalysis({
                           </span>
                         </div>
                         <Progress value={data.percentage} />
-                        <div className="text-xs text-gray-500">
+                        <div className="text-xs text-gray-500 dark:text-gray-400">
                           {data.covered} / {data.total} 个需求已覆盖
                         </div>
                       </div>
@@ -473,13 +473,13 @@ export function TraceabilityCoverageAnalysis({
                   </thead>
                   <tbody>
                     {sortedCoverageData.map((item) => (
-                      <tr key={item.requirement_id} className="hover:bg-gray-50">
+                      <tr key={item.requirement_id} className="hover:bg-gray-50 dark:bg-gray-800/50 dark:hover:bg-gray-800">
                         <td>
                           <div>
-                            <div className="font-medium text-gray-900">
+                            <div className="font-medium text-gray-900 dark:text-gray-100">
                               {item.requirement_code}
                             </div>
-                            <div className="text-sm text-gray-600">
+                            <div className="text-sm text-gray-600 dark:text-gray-400">
                               {item.requirement_title}
                             </div>
                           </div>
@@ -560,24 +560,24 @@ export function TraceabilityCoverageAnalysis({
                     {detailedStats.trends.coverage_trend > 0 ? (
                       <TrendingUp className="w-6 h-6 text-green-600" />
                     ) : (
-                      <TrendingDown className="w-6 h-6 text-red-600" />
+                      <TrendingDown className="w-6 h-6 text-red-600 dark:text-red-400" />
                     )}
                   </div>
                   <div className={`text-2xl font-bold ${
-                    detailedStats.trends.coverage_trend > 0 ? 'text-green-600' : 'text-red-600'
+                    detailedStats.trends.coverage_trend > 0 ? 'text-green-600' : 'text-red-600 dark:text-red-400'
                   }`}>
                     {detailedStats.trends.coverage_trend > 0 ? '+' : ''}{detailedStats.trends.coverage_trend}%
                   </div>
-                  <div className="text-sm text-gray-600">{detailedStats.trends.period}覆盖率变化</div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400">{detailedStats.trends.period}覆盖率变化</div>
                 </div>
                 <div className="text-center">
                   <div className="flex items-center justify-center mb-2">
-                    <Target className="w-6 h-6 text-blue-600" />
+                    <Target className="w-6 h-6 text-blue-600 dark:text-blue-400" />
                   </div>
-                  <div className="text-2xl font-bold text-blue-600">
+                  <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
                     {detailedStats.trends.improvement_rate}%
                   </div>
-                  <div className="text-sm text-gray-600">改进速度</div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400">改进速度</div>
                 </div>
                 <div className="text-center">
                   <div className="flex items-center justify-center mb-2">
@@ -586,7 +586,7 @@ export function TraceabilityCoverageAnalysis({
                   <div className="text-2xl font-bold text-purple-600">
                     {Math.round((detailedStats.traced_requirements / detailedStats.total_requirements) * 100)}%
                   </div>
-                  <div className="text-sm text-gray-600">当前覆盖率</div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400">当前覆盖率</div>
                 </div>
               </div>
             </CardContent>
@@ -599,9 +599,9 @@ export function TraceabilityCoverageAnalysis({
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                <div className="p-4 bg-blue-50 rounded-lg">
+                <div className="p-4 bg-blue-50 rounded-lg dark:bg-blue-900/20">
                   <h4 className="font-medium text-blue-900 mb-2">优先改进项</h4>
-                  <ul className="space-y-1 text-sm text-blue-800">
+                  <ul className="space-y-1 text-sm text-blue-800 dark:text-blue-300">
                     <li>• 完善高优先级需求的测试覆盖率</li>
                     <li>• 建立功能需求与实现代码的双向追溯</li>
                     <li>• 补充缺失的设计文档追溯关系</li>

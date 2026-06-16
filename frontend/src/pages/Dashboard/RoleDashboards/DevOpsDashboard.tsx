@@ -207,7 +207,7 @@ const DevOpsDashboard: React.FC = () => {
       <div className="flex items-center justify-center h-64">
         <Card className="w-full max-w-md">
           <CardContent className="p-6 text-center">
-            <div className="text-red-500 mb-4">
+            <div className="text-red-500 mb-4 dark:text-red-400">
               <AlertTriangle className="h-12 w-12 mx-auto" />
             </div>
             <h3 className="text-lg font-semibold mb-2">加载失败</h3>
@@ -243,14 +243,14 @@ const DevOpsDashboard: React.FC = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600 dark:text-gray-400">CPU使用率</p>
-                <p className="text-2xl font-bold text-blue-600">
+                <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
                   {systemMetrics.cpuUsage}%
                 </p>
               </div>
-              <Cpu className="h-8 w-8 text-blue-600" />
+              <Cpu className="h-8 w-8 text-blue-600 dark:text-blue-400" />
             </div>
             <div className="mt-2">
-              <Badge variant="outline" className="text-blue-600 border-blue-600">
+              <Badge variant="outline" className="text-blue-600 border-blue-600 dark:text-blue-400">
                 正常
               </Badge>
             </div>
@@ -394,13 +394,13 @@ const DevOpsDashboard: React.FC = () => {
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
                       <span className="text-gray-500 dark:text-gray-400">CPU: </span>
-                      <span className={service.cpu > 80 ? 'text-red-600' : service.cpu > 60 ? 'text-yellow-600' : 'text-green-600'}>
+                      <span className={service.cpu > 80 ? 'text-red-600 dark:text-red-400' : service.cpu > 60 ? 'text-yellow-600' : 'text-green-600'}>
                         {service.cpu}%
                       </span>
                     </div>
                     <div>
                       <span className="text-gray-500 dark:text-gray-400">内存: </span>
-                      <span className={service.memory > 80 ? 'text-red-600' : service.memory > 60 ? 'text-yellow-600' : 'text-green-600'}>
+                      <span className={service.memory > 80 ? 'text-red-600 dark:text-red-400' : service.memory > 60 ? 'text-yellow-600' : 'text-green-600'}>
                         {service.memory}%
                       </span>
                     </div>
@@ -476,10 +476,10 @@ const DevOpsDashboard: React.FC = () => {
             {systemAlerts.map((alert) => (
               <div key={alert.id} className={`p-4 rounded-lg border-l-4 ${
                 alert.severity === 'high' 
-                  ? 'bg-red-50 border-red-500' 
+                  ? 'bg-red-50 border-red-500 dark:bg-red-900/20' 
                   : alert.severity === 'medium'
                   ? 'bg-yellow-50 border-yellow-500'
-                  : 'bg-blue-50 border-blue-500'
+                  : 'bg-blue-50 border-blue-500 dark:bg-blue-900/20'
               }`}>
                 <div className="flex items-center justify-between">
                   <p className="font-medium">{alert.message}</p>

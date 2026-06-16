@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+﻿import React, { useMemo, useState } from 'react';
 import { Archive, Loader2, MessageCircle, Plus, Search, Trash2 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
@@ -149,7 +149,7 @@ export function ConversationList({
           </div>
         )}
 
-        {error && <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">加载对话失败</div>}
+        {error && <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:text-red-400 dark:bg-red-900/20 dark:border-red-800">加载对话失败</div>}
 
         {!isLoading && !isSearching && conversations.length === 0 && (
           <div className="flex h-40 flex-col items-center justify-center gap-2 text-muted-foreground">

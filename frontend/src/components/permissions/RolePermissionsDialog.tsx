@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/Dialog';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -172,7 +172,7 @@ export const RolePermissionsDialog: React.FC<RolePermissionsDialogProps> = ({
         <div className="flex flex-col space-y-4 overflow-hidden">
           {/* 搜索栏 */}
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 dark:text-gray-500" />
             <Input
               placeholder="搜索权限..."
               value={searchTerm}
@@ -182,12 +182,12 @@ export const RolePermissionsDialog: React.FC<RolePermissionsDialogProps> = ({
           </div>
 
           {/* 统计信息 */}
-          <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+          <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg dark:bg-gray-800/50">
             <div className="flex items-center space-x-4">
-              <div className="text-sm text-gray-600">
-                已选择: <span className="font-medium text-blue-600">{selectedPermissions.length}</span>
+              <div className="text-sm text-gray-600 dark:text-gray-400">
+                已选择: <span className="font-medium text-blue-600 dark:text-blue-400">{selectedPermissions.length}</span>
               </div>
-              <div className="text-sm text-gray-600">
+              <div className="text-sm text-gray-600 dark:text-gray-400">
                 总计: <span className="font-medium">{allPermissions.length}</span>
               </div>
             </div>
@@ -202,7 +202,7 @@ export const RolePermissionsDialog: React.FC<RolePermissionsDialogProps> = ({
           <div className="flex-1 overflow-y-auto">
             {isLoading ? (
               <div className="flex justify-center py-8">
-                <div className="text-gray-500">加载中...</div>
+                <div className="text-gray-500 dark:text-gray-400">加载中...</div>
               </div>
             ) : (
               <div className="space-y-4">
@@ -222,7 +222,7 @@ export const RolePermissionsDialog: React.FC<RolePermissionsDialogProps> = ({
                               handleModuleToggle(group.permissions, checked as boolean)
                             }
                           />
-                          <h3 className="font-medium text-gray-900">{group.moduleName}</h3>
+                          <h3 className="font-medium text-gray-900 dark:text-gray-100">{group.moduleName}</h3>
                           <Badge variant="outline">
                             {stats.selected}/{stats.total}
                           </Badge>
@@ -237,7 +237,7 @@ export const RolePermissionsDialog: React.FC<RolePermissionsDialogProps> = ({
                         {group.permissions.map((permission) => (
                           <div
                             key={permission.id}
-                            className="flex items-center space-x-2 p-2 rounded border hover:bg-gray-50"
+                            className="flex items-center space-x-2 p-2 rounded border hover:bg-gray-50 dark:bg-gray-800/50 dark:hover:bg-gray-800"
                           >
                             <Checkbox
                               checked={selectedPermissions.includes(permission.id)}
@@ -246,10 +246,10 @@ export const RolePermissionsDialog: React.FC<RolePermissionsDialogProps> = ({
                               }
                             />
                             <div className="flex-1 min-w-0">
-                              <div className="text-sm font-medium text-gray-900 truncate">
+                              <div className="text-sm font-medium text-gray-900 truncate dark:text-gray-100">
                                 {permission.name}
                               </div>
-                              <div className="text-xs text-gray-500 font-mono">
+                              <div className="text-xs text-gray-500 font-mono dark:text-gray-400">
                                 {permission.code}
                               </div>
                             </div>

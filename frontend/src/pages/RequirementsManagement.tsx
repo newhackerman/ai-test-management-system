@@ -562,7 +562,7 @@ function RequirementsManagement() {
       </Card>
 
       {notice && <div className="rounded-md border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">{notice}</div>}
-      {error && <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
+      {error && <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:text-red-400 dark:bg-red-900/20 dark:border-red-800">{error}</div>}
 
       <Card>
         <CardContent className="p-0">
@@ -607,11 +607,11 @@ function RequirementsManagement() {
                       </td>
                       <td className="px-3 py-2.5">
                         <div className="flex items-start gap-3">
-                          <div className="rounded-md bg-blue-50 p-2 text-blue-600">
+                          <div className="rounded-md bg-blue-50 p-2 text-blue-600 dark:text-blue-400 dark:bg-blue-900/20">
                             <FileText className="h-4 w-4" />
                           </div>
                           <div className="min-w-0">
-                            <button className="text-left font-medium text-foreground hover:text-blue-600" onClick={() => setSelectedRequirement(requirement)}>
+                            <button className="text-left font-medium text-foreground hover:text-blue-600 dark:text-blue-400" onClick={() => setSelectedRequirement(requirement)}>
                               {requirement.title}
                             </button>
                             <div className="mt-1 text-xs text-muted-foreground">{requirement.requirement_code || `REQ-${requirement.id}`}</div>
@@ -898,7 +898,7 @@ function StatusDialog({ requirement, form, setForm, onClose, onSubmit, saving })
         </div>
         <div className="space-y-4 px-6 py-5">
           {nextStatuses.length === 0 ? (
-            <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">当前状态没有可执行的下一步流转。</div>
+            <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 dark:text-amber-300 dark:bg-amber-900/20 dark:border-amber-800">当前状态没有可执行的下一步流转。</div>
           ) : (
             <>
               <Field label="目标状态" required>
@@ -907,7 +907,7 @@ function StatusDialog({ requirement, form, setForm, onClose, onSubmit, saving })
                 </SelectField>
               </Field>
               {warning && (
-                <div className="flex gap-2 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+                <div className="flex gap-2 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 dark:text-amber-300 dark:bg-amber-900/20 dark:border-amber-800">
                   <AlertTriangle className="mt-0.5 h-4 w-4 flex-none" />
                   <span>{warning}</span>
                 </div>
@@ -963,7 +963,7 @@ function Field({ label, required, className = '', children }) {
     <label className={`space-y-2 text-sm ${className}`}>
       <span className="font-medium text-gray-700 dark:text-gray-300">
         {label}
-        {required && <span className="ml-1 text-red-500">*</span>}
+        {required && <span className="ml-1 text-red-500 dark:text-red-400">*</span>}
       </span>
       {children}
     </label>
@@ -982,7 +982,7 @@ function Info({ label, value }) {
 function InfoCard({ icon, label, value }) {
   return (
     <div className="flex gap-3 rounded-md border bg-gray-50 p-4 dark:bg-gray-800/50">
-      <div className="mt-0.5 text-blue-600">{icon}</div>
+      <div className="mt-0.5 text-blue-600 dark:text-blue-400">{icon}</div>
       <div>
         <div className="text-xs text-gray-500 dark:text-gray-400">{label}</div>
         <div className="mt-1 text-sm font-medium text-gray-900 dark:text-gray-100">{value}</div>
@@ -994,20 +994,20 @@ function InfoCard({ icon, label, value }) {
 function StatusBadge({ status }) {
   const label = optionLabel(statuses, status)
   const className = {
-    DRAFT: 'bg-gray-100 text-gray-700',
+    DRAFT: 'bg-gray-100 text-gray-700 dark:text-gray-300 dark:bg-gray-800',
     PENDING_REVIEW: 'bg-yellow-100 text-yellow-800',
-    REVIEWING: 'bg-blue-100 text-blue-800',
+    REVIEWING: 'bg-blue-100 text-blue-800 dark:text-blue-300 dark:bg-blue-900/30',
     NEEDS_REVISION: 'bg-orange-100 text-orange-800',
     APPROVED: 'bg-green-100 text-green-800',
     IN_DEVELOPMENT: 'bg-purple-100 text-purple-800',
     PAUSED: 'bg-slate-100 text-slate-700',
     TESTING: 'bg-indigo-100 text-indigo-800',
-    TEST_FAILED: 'bg-red-100 text-red-800',
+    TEST_FAILED: 'bg-red-100 text-red-800 dark:text-red-300 dark:bg-red-900/30',
     COMPLETED: 'bg-emerald-100 text-emerald-800',
     DEPLOYED: 'bg-teal-100 text-teal-800',
     CLOSED: 'bg-zinc-100 text-zinc-700',
-    CANCELLED: 'bg-red-100 text-red-800',
-  }[status] || 'bg-gray-100 text-gray-700'
+    CANCELLED: 'bg-red-100 text-red-800 dark:text-red-300 dark:bg-red-900/30',
+  }[status] || 'bg-gray-100 text-gray-700 dark:text-gray-300 dark:bg-gray-800'
   return <Badge variant="secondary" className={`border-0 ${className}`}>{label}</Badge>
 }
 

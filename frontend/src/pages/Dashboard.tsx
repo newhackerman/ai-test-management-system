@@ -653,7 +653,7 @@ const Dashboard: React.FC = () => {
                 {summary.data_sources.map((source) => (
                   <div key={source.table} className="flex items-center justify-between gap-3 rounded border px-3 py-2 text-sm">
                     <span className="font-mono text-xs text-gray-700 dark:text-gray-300">{source.table}</span>
-                    <Badge variant={source.available ? 'secondary' : 'outline'} className={source.available ? 'text-emerald-700 dark:text-emerald-300' : 'text-gray-500'}>
+                    <Badge variant={source.available ? 'secondary' : 'outline'} className={source.available ? 'text-emerald-700 dark:text-emerald-300' : 'text-gray-500 dark:text-gray-400'}>
                       {source.available ? '已读取' : '无数据表'}
                     </Badge>
                   </div>

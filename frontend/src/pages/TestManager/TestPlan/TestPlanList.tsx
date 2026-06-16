@@ -92,7 +92,7 @@ const TestPlanList: React.FC = () => {
   }
 
   if (error) {
-    return <div className="text-red-500 text-center">加载失败: {error.message}</div>
+    return <div className="text-red-500 text-center dark:text-red-400">加载失败: {error.message}</div>
   }
 
   return (
@@ -112,7 +112,7 @@ const TestPlanList: React.FC = () => {
           <div className="flex flex-col md:flex-row gap-4">
             <div className="flex-1">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 dark:text-gray-500" />
                 <Input
                   placeholder="搜索测试计划..."
                   value={searchTerm}
@@ -224,7 +224,7 @@ const TestPlanList: React.FC = () => {
                       <div>
                         <Link 
                           to={`/test-manager/test-plans/${plan.id}`}
-                          className="font-medium text-blue-600 hover:text-blue-800"
+                          className="font-medium text-blue-600 hover:text-blue-800 dark:text-blue-400"
                         >
                           {plan.plan_name}
                         </Link>
@@ -298,7 +298,7 @@ const TestPlanList: React.FC = () => {
                             导出 TXT
                           </DropdownMenuItem>
                           <DropdownMenuItem 
-                            className="text-red-600"
+                            className="text-red-600 dark:text-red-400"
                             onClick={() => handleDelete(plan.id)}
                           >
                             <Trash2 className="w-4 h-4 mr-2" />

@@ -448,13 +448,13 @@ function RiskManagement() {
       </div>
 
       {error && (
-        <div className="flex items-start gap-2 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div className="flex items-start gap-2 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:text-red-400 dark:bg-red-900/20 dark:border-red-800">
           <AlertCircle className="mt-0.5 h-4 w-4" />
           <span>{error}</span>
         </div>
       )}
       {notice && <div className="rounded-md border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">{notice}</div>}
-      {projects.length === 0 && !loading && <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">请先创建项目，再登记风险。</div>}
+      {projects.length === 0 && !loading && <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:text-amber-300 dark:bg-amber-900/20 dark:border-amber-800">请先创建项目，再登记风险。</div>}
 
       <Card>
         <CardContent className="space-y-2 p-3">
@@ -648,7 +648,7 @@ function RiskManagement() {
                       <h3 className="mb-2 text-sm font-semibold text-foreground">处理建议</h3>
                       <div className="space-y-2">
                         {(analysis.recommendations || []).map((item, index) => (
-                          <div key={index} className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">{item}</div>
+                          <div key={index} className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900 dark:bg-amber-900/20 dark:border-amber-800">{item}</div>
                         ))}
                         {analysis.recommendations?.length === 0 && <div className="rounded-md border p-4 text-sm text-muted-foreground">暂无系统建议</div>}
                       </div>
@@ -742,18 +742,18 @@ function RiskFormDialog({ title, form, setForm, projects, users, modalError, onC
         <div className="max-h-[70vh] overflow-y-auto px-6 py-5">
           <div className="mb-4 space-y-2">
             {modalError && (
-              <div className="flex items-start gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+              <div className="flex items-start gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:text-red-400 dark:bg-red-900/20 dark:border-red-800">
                 <AlertCircle className="mt-0.5 h-4 w-4" />
                 <span>{modalError}</span>
               </div>
             )}
             {projects.length === 0 && (
-              <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+              <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:text-amber-300 dark:bg-amber-900/20 dark:border-amber-800">
                 当前没有可选择的项目，请先创建或加入项目后再登记风险。
               </div>
             )}
             {users.length === 0 && (
-              <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+              <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:text-amber-300 dark:bg-amber-900/20 dark:border-amber-800">
                 当前没有可选择的负责人，请先启用用户后再登记风险。
               </div>
             )}
@@ -899,7 +899,7 @@ function StatusDialog({ risk, form, setForm, onClose, onSubmit, saving }) {
         </div>
         <div className="space-y-4 px-6 py-5">
           {nextStatuses.length === 0 ? (
-            <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">当前状态没有可执行的下一步。</div>
+            <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 dark:text-amber-300 dark:bg-amber-900/20 dark:border-amber-800">当前状态没有可执行的下一步。</div>
           ) : (
             <>
               <Field label="目标状态" required>
@@ -959,7 +959,7 @@ function Field({ label, required, className = '', children }) {
     <label className={`space-y-2 text-sm ${className}`}>
       <span className="font-medium text-gray-700 dark:text-gray-300">
         {label}
-        {required && <span className="ml-1 text-red-500">*</span>}
+        {required && <span className="ml-1 text-red-500 dark:text-red-400">*</span>}
       </span>
       {children}
     </label>
@@ -978,7 +978,7 @@ function Info({ label, value }) {
 function InfoCard({ icon, label, value }) {
   return (
     <div className="flex gap-3 rounded-md border bg-gray-50 p-4 dark:bg-gray-800/50">
-      <div className="mt-0.5 text-red-600">{icon}</div>
+      <div className="mt-0.5 text-red-600 dark:text-red-400">{icon}</div>
       <div>
         <div className="text-xs text-gray-500 dark:text-gray-400">{label}</div>
         <div className="mt-1 text-sm font-medium text-gray-900 dark:text-gray-100">{value}</div>
@@ -992,19 +992,19 @@ function RiskLevelBadge({ level }) {
     [RiskLevel.LOW]: 'bg-green-100 text-green-800',
     [RiskLevel.MEDIUM]: 'bg-yellow-100 text-yellow-800',
     [RiskLevel.HIGH]: 'bg-orange-100 text-orange-800',
-    [RiskLevel.CRITICAL]: 'bg-red-100 text-red-800',
-  }[level] || 'bg-gray-100 text-gray-700'
+    [RiskLevel.CRITICAL]: 'bg-red-100 text-red-800 dark:text-red-300 dark:bg-red-900/30',
+  }[level] || 'bg-gray-100 text-gray-700 dark:text-gray-300 dark:bg-gray-800'
   return <Badge variant="secondary" className={`border-0 ${className}`}>{getRiskLevelText(level)}</Badge>
 }
 
 function RiskStatusBadge({ status }) {
   const className = {
-    [RiskStatus.IDENTIFIED]: 'bg-gray-100 text-gray-700',
-    [RiskStatus.ANALYZING]: 'bg-blue-100 text-blue-800',
+    [RiskStatus.IDENTIFIED]: 'bg-gray-100 text-gray-700 dark:text-gray-300 dark:bg-gray-800',
+    [RiskStatus.ANALYZING]: 'bg-blue-100 text-blue-800 dark:text-blue-300 dark:bg-blue-900/30',
     [RiskStatus.MITIGATING]: 'bg-orange-100 text-orange-800',
     [RiskStatus.MONITORING]: 'bg-indigo-100 text-indigo-800',
     [RiskStatus.CLOSED]: 'bg-green-100 text-green-800',
-  }[status] || 'bg-gray-100 text-gray-700'
+  }[status] || 'bg-gray-100 text-gray-700 dark:text-gray-300 dark:bg-gray-800'
   return <Badge variant="secondary" className={`border-0 ${className}`}>{getRiskStatusText(status)}</Badge>
 }
 

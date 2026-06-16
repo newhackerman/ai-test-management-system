@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import toast from 'react-hot-toast';
 import { AlertCircle, CheckCircle, Clock, Loader2, Play, RotateCcw, Zap } from 'lucide-react';
 
@@ -172,7 +172,7 @@ export const AIModelTestDialog: React.FC<AIModelTestDialogProps> = ({
                   {result.success ? (
                     <CheckCircle className="h-4 w-4 text-green-600" />
                   ) : (
-                    <AlertCircle className="h-4 w-4 text-red-600" />
+                    <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
                   )}
                   测试结果
                 </CardTitle>
@@ -194,7 +194,7 @@ export const AIModelTestDialog: React.FC<AIModelTestDialogProps> = ({
                 )}
 
                 {result.error && (
-                  <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                  <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:text-red-400 dark:bg-red-900/20 dark:border-red-800">
                     {result.error}
                   </div>
                 )}

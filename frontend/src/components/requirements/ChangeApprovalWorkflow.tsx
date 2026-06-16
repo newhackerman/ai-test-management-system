@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+﻿import React, { useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
@@ -98,8 +98,8 @@ export function ChangeApprovalWorkflow({
     const statusConfig = {
       PENDING: { color: 'bg-yellow-100 text-yellow-800', icon: Clock, text: '待审批' },
       APPROVED: { color: 'bg-green-100 text-green-800', icon: CheckCircle, text: '已批准' },
-      REJECTED: { color: 'bg-red-100 text-red-800', icon: XCircle, text: '已拒绝' },
-      SKIPPED: { color: 'bg-gray-100 text-gray-800', icon: ArrowRight, text: '已跳过' }
+      REJECTED: { color: 'bg-red-100 text-red-800 dark:text-red-300 dark:bg-red-900/30', icon: XCircle, text: '已拒绝' },
+      SKIPPED: { color: 'bg-gray-100 text-gray-800 dark:text-gray-200 dark:bg-gray-800', icon: ArrowRight, text: '已跳过' }
     }
 
     const config = statusConfig[status]
@@ -175,18 +175,18 @@ export function ChangeApprovalWorkflow({
       </CardHeader>
       <CardContent className="space-y-6">
         {/* 变更请求基本信息 */}
-        <div className="bg-gray-50 p-4 rounded-lg">
+        <div className="bg-gray-50 p-4 rounded-lg dark:bg-gray-800/50">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
             <div>
-              <span className="text-gray-600">变更编号:</span>
+              <span className="text-gray-600 dark:text-gray-400">变更编号:</span>
               <div className="font-medium">{changeRequest.change_request_code}</div>
             </div>
             <div>
-              <span className="text-gray-600">申请人:</span>
+              <span className="text-gray-600 dark:text-gray-400">申请人:</span>
               <div className="font-medium">申请人姓名</div>
             </div>
             <div>
-              <span className="text-gray-600">申请日期:</span>
+              <span className="text-gray-600 dark:text-gray-400">申请日期:</span>
               <div className="font-medium">{formatDate(changeRequest.requested_date)}</div>
             </div>
           </div>
@@ -194,7 +194,7 @@ export function ChangeApprovalWorkflow({
 
         {/* 审批流程步骤 */}
         <div className="space-y-4">
-          <h4 className="font-medium text-gray-900">审批流程</h4>
+          <h4 className="font-medium text-gray-900 dark:text-gray-100">审批流程</h4>
           
           {approvalSteps.map((step, index) => (
             <div key={step.id} className="relative">
@@ -207,21 +207,21 @@ export function ChangeApprovalWorkflow({
                 {/* 状态图标 */}
                 <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
                   step.status === 'APPROVED' ? 'bg-green-100' :
-                  step.status === 'REJECTED' ? 'bg-red-100' :
-                  step.status === 'PENDING' ? 'bg-yellow-100' : 'bg-gray-100'
+                  step.status === 'REJECTED' ? 'bg-red-100 dark:bg-red-900/30' :
+                  step.status === 'PENDING' ? 'bg-yellow-100' : 'bg-gray-100 dark:bg-gray-800'
                 }`}>
                   {step.status === 'APPROVED' && <CheckCircle className="w-6 h-6 text-green-600" />}
-                  {step.status === 'REJECTED' && <XCircle className="w-6 h-6 text-red-600" />}
+                  {step.status === 'REJECTED' && <XCircle className="w-6 h-6 text-red-600 dark:text-red-400" />}
                   {step.status === 'PENDING' && <Clock className="w-6 h-6 text-yellow-600" />}
-                  {step.status === 'SKIPPED' && <ArrowRight className="w-6 h-6 text-gray-600" />}
+                  {step.status === 'SKIPPED' && <ArrowRight className="w-6 h-6 text-gray-600 dark:text-gray-400" />}
                 </div>
 
                 {/* 步骤内容 */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h5 className="font-medium text-gray-900">{step.name}</h5>
-                      <div className="flex items-center text-sm text-gray-600 mt-1">
+                      <h5 className="font-medium text-gray-900 dark:text-gray-100">{step.name}</h5>
+                      <div className="flex items-center text-sm text-gray-600 mt-1 dark:text-gray-400">
                         <User className="w-4 h-4 mr-1" />
                         {step.approver.name} ({step.approver.role})
                       </div>
@@ -236,7 +236,7 @@ export function ChangeApprovalWorkflow({
 
                   {/* 审批时间和意见 */}
                   {step.approved_at && (
-                    <div className="mt-2 text-sm text-gray-600">
+                    <div className="mt-2 text-sm text-gray-600 dark:text-gray-400">
                       <div className="flex items-center">
                         <Calendar className="w-4 h-4 mr-1" />
                         {formatDate(step.approved_at)}
@@ -245,10 +245,10 @@ export function ChangeApprovalWorkflow({
                   )}
 
                   {step.comments && (
-                    <div className="mt-2 p-3 bg-gray-50 rounded-lg">
+                    <div className="mt-2 p-3 bg-gray-50 rounded-lg dark:bg-gray-800/50">
                       <div className="flex items-start">
-                        <MessageSquare className="w-4 h-4 mr-2 mt-0.5 text-gray-500" />
-                        <p className="text-sm text-gray-700">{step.comments}</p>
+                        <MessageSquare className="w-4 h-4 mr-2 mt-0.5 text-gray-500 dark:text-gray-400" />
+                        <p className="text-sm text-gray-700 dark:text-gray-300">{step.comments}</p>
                       </div>
                     </div>
                   )}
@@ -275,7 +275,7 @@ export function ChangeApprovalWorkflow({
                               </AlertDescription>
                             </Alert>
                             <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                              <label className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-300">
                                 审批意见 (可选)
                               </label>
                               <Textarea
@@ -310,7 +310,7 @@ export function ChangeApprovalWorkflow({
                           <Button 
                             variant="outline" 
                             size="sm"
-                            className="text-red-600 border-red-600 hover:bg-red-50"
+                            className="text-red-600 border-red-600 hover:bg-red-50 dark:text-red-400 dark:bg-red-900/20"
                           >
                             <XCircle className="w-4 h-4 mr-1" />
                             拒绝
@@ -328,7 +328,7 @@ export function ChangeApprovalWorkflow({
                               </AlertDescription>
                             </Alert>
                             <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                              <label className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-300">
                                 拒绝原因 *
                               </label>
                               <Textarea
@@ -368,20 +368,20 @@ export function ChangeApprovalWorkflow({
 
         {/* 审批历史 */}
         <div className="border-t pt-4">
-          <h4 className="font-medium text-gray-900 mb-3">审批历史</h4>
+          <h4 className="font-medium text-gray-900 mb-3 dark:text-gray-100">审批历史</h4>
           <div className="space-y-2">
             {approvalSteps
               .filter(step => step.status !== 'PENDING')
               .map((step) => (
                 <div key={step.id} className="flex items-center justify-between text-sm">
                   <div className="flex items-center">
-                    <span className="text-gray-600">{step.name}</span>
+                    <span className="text-gray-600 dark:text-gray-400">{step.name}</span>
                     <span className="mx-2">·</span>
-                    <span className="text-gray-900">{step.approver.name}</span>
+                    <span className="text-gray-900 dark:text-gray-100">{step.approver.name}</span>
                   </div>
                   <div className="flex items-center space-x-2">
                     {step.approved_at && (
-                      <span className="text-gray-500">{formatDate(step.approved_at)}</span>
+                      <span className="text-gray-500 dark:text-gray-400">{formatDate(step.approved_at)}</span>
                     )}
                     {getStatusBadge(step.status)}
                   </div>

@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+﻿import React, { useMemo, useState } from 'react';
 import { ArrowRight, CheckCircle2, Circle, RotateCcw } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -41,17 +41,17 @@ const statusOrder: RequirementStatus[] = [
 const STATUS_CONFIG: Record<RequirementStatus, { label: string; className: string; description: string }> = {
   DRAFT: { label: '草稿', className: 'bg-gray-100 text-gray-700', description: '需求刚创建，可继续补充内容。' },
   PENDING_REVIEW: { label: '待评审', className: 'bg-yellow-100 text-yellow-700', description: '需求已提交，等待评审。' },
-  REVIEWING: { label: '评审中', className: 'bg-blue-100 text-blue-700', description: '评审人员正在确认需求内容。' },
-  NEEDS_REVISION: { label: '需修改', className: 'bg-orange-100 text-orange-700', description: '评审发现问题，需要修改后再次提交。' },
+  REVIEWING: { label: '评审中', className: 'bg-blue-100 text-blue-700 dark:text-blue-300 dark:bg-blue-900/30', description: '评审人员正在确认需求内容。' },
+  NEEDS_REVISION: { label: '需修改', className: 'bg-orange-100 text-orange-700 dark:text-orange-400', description: '评审发现问题，需要修改后再次提交。' },
   APPROVED: { label: '已批准', className: 'bg-green-100 text-green-700', description: '需求通过评审，可以进入实现。' },
-  IN_DEVELOPMENT: { label: '开发中', className: 'bg-purple-100 text-purple-700', description: '需求正在开发实现。' },
+  IN_DEVELOPMENT: { label: '开发中', className: 'bg-purple-100 text-purple-700 dark:text-purple-400', description: '需求正在开发实现。' },
   PAUSED: { label: '已暂停', className: 'bg-slate-100 text-slate-700', description: '需求暂时停止推进。' },
-  TESTING: { label: '测试中', className: 'bg-indigo-100 text-indigo-700', description: '实现完成，正在测试验证。' },
-  TEST_FAILED: { label: '测试失败', className: 'bg-red-100 text-red-700', description: '测试发现问题，需要回到开发。' },
-  COMPLETED: { label: '已完成', className: 'bg-emerald-100 text-emerald-700', description: '开发和测试均已完成。' },
+  TESTING: { label: '测试中', className: 'bg-indigo-100 text-indigo-700 dark:text-indigo-300', description: '实现完成，正在测试验证。' },
+  TEST_FAILED: { label: '测试失败', className: 'bg-red-100 text-red-700 dark:text-red-400 dark:bg-red-900/30', description: '测试发现问题，需要回到开发。' },
+  COMPLETED: { label: '已完成', className: 'bg-emerald-100 text-emerald-700 dark:text-emerald-400', description: '开发和测试均已完成。' },
   DEPLOYED: { label: '已上线', className: 'bg-teal-100 text-teal-700', description: '需求已部署到目标环境。' },
   CLOSED: { label: '已关闭', className: 'bg-zinc-100 text-zinc-700', description: '需求生命周期结束。' },
-  CANCELLED: { label: '已取消', className: 'bg-red-100 text-red-700', description: '需求已取消，不再实现。' }
+  CANCELLED: { label: '已取消', className: 'bg-red-100 text-red-700 dark:text-red-400 dark:bg-red-900/30', description: '需求已取消，不再实现。' }
 };
 
 interface StatusFlowVisualizationProps {
@@ -134,7 +134,7 @@ export const StatusFlowVisualization: React.FC<StatusFlowVisualizationProps> = (
         </div>
 
         {!readOnly && availableTransitions.length > 0 && (
-          <div className="rounded-lg border border-blue-200 bg-blue-50 p-3">
+          <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 dark:bg-blue-900/20">
             <div className="mb-2 text-sm font-medium text-blue-900">可执行的状态变更</div>
             <div className="flex flex-wrap gap-2">
               {availableTransitions.map((nextStatus) => (

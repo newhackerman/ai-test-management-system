@@ -1,4 +1,4 @@
-// 文件共享组件
+﻿// 文件共享组件
 import React, { useState, useRef, useCallback, useMemo } from 'react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -133,13 +133,13 @@ const FileItem: React.FC<FileItemProps> = ({
   const getStatusIcon = () => {
     switch (file.status) {
       case 'uploading':
-        return <Clock className="h-4 w-4 text-blue-500 animate-spin" />
+        return <Clock className="h-4 w-4 text-blue-500 animate-spin dark:text-blue-400" />
       case 'processing':
         return <Clock className="h-4 w-4 text-yellow-500" />
       case 'ready':
         return <CheckCircle className="h-4 w-4 text-green-500" />
       case 'error':
-        return <AlertCircle className="h-4 w-4 text-red-500" />
+        return <AlertCircle className="h-4 w-4 text-red-500 dark:text-red-400" />
       default:
         return null
     }

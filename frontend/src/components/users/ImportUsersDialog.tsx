@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react'
+﻿import React, { useRef, useState } from 'react'
 import { AlertCircle, FileText, Upload } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/Dialog'
@@ -76,10 +76,10 @@ export const ImportUsersDialog: React.FC<ImportUsersDialogProps> = ({ open, onCl
         </DialogHeader>
 
         <div className="space-y-4">
-          <div className="rounded-md border border-blue-200 bg-blue-50 p-4">
+          <div className="rounded-md border border-blue-200 bg-blue-50 p-4 dark:bg-blue-900/20">
             <div className="flex items-start gap-2">
-              <AlertCircle className="mt-0.5 h-5 w-5 text-blue-600" />
-              <div className="text-sm text-blue-800">
+              <AlertCircle className="mt-0.5 h-5 w-5 text-blue-600 dark:text-blue-400" />
+              <div className="text-sm text-blue-800 dark:text-blue-300">
                 <div className="font-medium">文件格式要求</div>
                 <div className="mt-1 space-y-1">
                   <p>必填列：username, email, password</p>
@@ -92,7 +92,7 @@ export const ImportUsersDialog: React.FC<ImportUsersDialogProps> = ({ open, onCl
 
           <div
             className={`rounded-lg border-2 border-dashed p-6 text-center transition-colors ${
-              dragOver ? 'border-blue-400 bg-blue-50' : 'border-gray-300 hover:border-gray-400'
+              dragOver ? 'border-blue-400 bg-blue-50 dark:bg-blue-900/20' : 'border-gray-300 hover:border-gray-400 dark:border-gray-600'
             }`}
             onDrop={(event) => {
               event.preventDefault()
@@ -113,21 +113,21 @@ export const ImportUsersDialog: React.FC<ImportUsersDialogProps> = ({ open, onCl
               <div className="space-y-2">
                 <FileText className="mx-auto h-12 w-12 text-green-600" />
                 <p className="font-medium text-green-800">{selectedFile.name}</p>
-                <p className="text-sm text-gray-500">{(selectedFile.size / 1024 / 1024).toFixed(2)} MB</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{(selectedFile.size / 1024 / 1024).toFixed(2)} MB</p>
                 <Button variant="outline" size="sm" onClick={() => setSelectedFile(null)}>
                   重新选择
                 </Button>
               </div>
             ) : (
               <div className="space-y-2">
-                <Upload className="mx-auto h-12 w-12 text-gray-400" />
-                <p className="text-gray-600">
+                <Upload className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500" />
+                <p className="text-gray-600 dark:text-gray-400">
                   拖拽文件到这里，或
-                  <button type="button" className="ml-1 text-blue-600 underline" onClick={() => fileInputRef.current?.click()}>
+                  <button type="button" className="ml-1 text-blue-600 underline dark:text-blue-400" onClick={() => fileInputRef.current?.click()}>
                     点击选择文件
                   </button>
                 </p>
-                <p className="text-sm text-gray-500">支持 .csv、.xlsx</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">支持 .csv、.xlsx</p>
               </div>
             )}
           </div>
@@ -143,7 +143,7 @@ export const ImportUsersDialog: React.FC<ImportUsersDialogProps> = ({ open, onCl
             }}
           />
 
-          {error && <p className="text-sm text-red-600">{error}</p>}
+          {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
 
           <div className="text-center">
             <Button variant="outline" size="sm" onClick={downloadTemplate}>

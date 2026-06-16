@@ -320,12 +320,12 @@ const StreamingChatInner: React.FC<StreamingChatProps> = ({
   };
 
   return (
-    <div className="flex flex-col h-full max-w-4xl mx-auto bg-white rounded-lg shadow-lg">
+    <div className="flex flex-col h-full max-w-4xl mx-auto bg-white rounded-lg shadow-lg dark:bg-gray-800">
       {/* 澶撮儴 */}
-      <div className="flex items-center justify-between p-4 border-b border-gray-200">
+      <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center space-x-2">
-          <h2 className="text-lg font-semibold text-gray-800">AI鍔╂墜娴佸紡瀵硅瘽</h2>
-          <span className="text-sm text-gray-500">
+          <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-200">AI鍔╂墜娴佸紡瀵硅瘽</h2>
+          <span className="text-sm text-gray-500 dark:text-gray-400">
             ({useWebSocket ? 'WebSocket' : 'SSE'})
           </span>
         </div>
@@ -340,7 +340,7 @@ const StreamingChatInner: React.FC<StreamingChatProps> = ({
           {/* 璁剧疆鎸夐挳 */}
           <button
             onClick={() => setShowConnectionSettings(!showConnectionSettings)}
-            className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg"
+            className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg dark:text-gray-100 dark:bg-gray-800"
             title="杩炴帴璁剧疆"
           >
             <Settings className="w-4 h-4" />
@@ -350,14 +350,14 @@ const StreamingChatInner: React.FC<StreamingChatProps> = ({
 
       {/* 杩炴帴璁剧疆闈㈡澘 */}
       {showConnectionSettings && (
-        <div className="p-4 bg-gray-50 border-b border-gray-200">
+        <div className="p-4 bg-gray-50 border-b border-gray-200 dark:bg-gray-800/50 dark:border-gray-700">
           <div className="flex items-center justify-between mb-2">
-            <h3 className="text-sm font-medium text-gray-700">杩炴帴璁剧疆</h3>
-            <span className="text-xs text-gray-500">
+            <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">杩炴帴璁剧疆</h3>
+            <span className="text-xs text-gray-500 dark:text-gray-400">
               状态: {useWebSocket ? connectionState : sseConnectionStatus}
             </span>
           </div>
-          <div className="text-xs text-gray-600">
+          <div className="text-xs text-gray-600 dark:text-gray-400">
             杩炴帴妯″紡: {useWebSocket ? 'WebSocket' : 'Server-Sent Events'}
           </div>
           {!isConnected && (
@@ -375,7 +375,7 @@ const StreamingChatInner: React.FC<StreamingChatProps> = ({
       {/* 娑堟伅鍒楄〃 */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.length === 0 && (
-          <div className="text-center text-gray-500 py-8">
+          <div className="text-center text-gray-500 py-8 dark:text-gray-400">
             <p>寮€濮嬩笌AI鍔╂墜瀵硅瘽鍚э紒</p>
             <p className="text-sm mt-2">支持实时流式响应，体验更流畅的对话</p>
           </div>
@@ -390,7 +390,7 @@ const StreamingChatInner: React.FC<StreamingChatProps> = ({
               className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
                 message.role === 'user'
                   ? 'bg-blue-500 text-white'
-                  : 'bg-gray-100 text-gray-800'
+                  : 'bg-gray-100 text-gray-800 dark:text-gray-200 dark:bg-gray-800'
               }`}
             >
               <div className="whitespace-pre-wrap">
@@ -425,14 +425,14 @@ const StreamingChatInner: React.FC<StreamingChatProps> = ({
       </div>
 
       {/* 杈撳叆鍖哄煙 */}
-      <div className="p-4 border-t border-gray-200">
+      <div className="p-4 border-t border-gray-200 dark:border-gray-700">
         <div className="flex space-x-2">
           <textarea
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             onKeyPress={handleKeyPress}
             placeholder="杈撳叆鎮ㄧ殑闂..."
-            className="flex-1 p-3 border border-gray-300 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="flex-1 p-3 border border-gray-300 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:border-gray-600"
             rows={2}
             disabled={isStreaming}
           />
@@ -457,7 +457,7 @@ const StreamingChatInner: React.FC<StreamingChatProps> = ({
           )}
         </div>
         
-        <div className="mt-2 text-xs text-gray-500">
+        <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
           鎸?Enter 鍙戦€侊紝Shift + Enter 鎹㈣
         </div>
       </div>

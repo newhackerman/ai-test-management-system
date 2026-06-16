@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { Badge } from '@/components/ui/Badge';
 import { Input } from '@/components/ui/Input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/Select';
@@ -55,9 +55,9 @@ export const PermissionMatrixView: React.FC<PermissionMatrixViewProps> = ({ matr
     if (hasPermission === true) {
       return <Check className="w-4 h-4 text-green-500" />;
     } else if (hasPermission === false) {
-      return <X className="w-4 h-4 text-red-500" />;
+      return <X className="w-4 h-4 text-red-500 dark:text-red-400" />;
     } else {
-      return <Minus className="w-4 h-4 text-gray-400" />;
+      return <Minus className="w-4 h-4 text-gray-400 dark:text-gray-500" />;
     }
   };
 
@@ -81,9 +81,9 @@ export const PermissionMatrixView: React.FC<PermissionMatrixViewProps> = ({ matr
     if (hasPermission === true) {
       return 'bg-green-50 border-green-200';
     } else if (hasPermission === false) {
-      return 'bg-red-50 border-red-200';
+      return 'bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-800';
     } else {
-      return 'bg-gray-50 border-gray-200';
+      return 'bg-gray-50 border-gray-200 dark:bg-gray-800/50 dark:border-gray-700';
     }
   };
 
@@ -127,7 +127,7 @@ export const PermissionMatrixView: React.FC<PermissionMatrixViewProps> = ({ matr
       {/* 筛选控件 */}
       <div className="flex flex-wrap items-center gap-4">
         <div className="relative flex-1 min-w-64">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 dark:text-gray-500" />
           <Input
             placeholder="搜索权限..."
             value={searchTerm}
@@ -185,14 +185,14 @@ export const PermissionMatrixView: React.FC<PermissionMatrixViewProps> = ({ matr
       </div>
 
       {/* 统计信息 */}
-      <div className="flex items-center space-x-6 p-3 bg-gray-50 rounded-lg">
-        <div className="text-sm text-gray-600">
+      <div className="flex items-center space-x-6 p-3 bg-gray-50 rounded-lg dark:bg-gray-800/50">
+        <div className="text-sm text-gray-600 dark:text-gray-400">
           角色数量: <span className="font-medium">{filteredRoles.length}</span>
         </div>
-        <div className="text-sm text-gray-600">
+        <div className="text-sm text-gray-600 dark:text-gray-400">
           权限数量: <span className="font-medium">{filteredPermissions.length}</span>
         </div>
-        <div className="text-sm text-gray-600">
+        <div className="text-sm text-gray-600 dark:text-gray-400">
           模块数量: <span className="font-medium">{Object.keys(permissionsByModule).length}</span>
         </div>
       </div>
@@ -201,15 +201,15 @@ export const PermissionMatrixView: React.FC<PermissionMatrixViewProps> = ({ matr
       <div className="border rounded-lg overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gray-50">
+            <thead className="bg-gray-50 dark:bg-gray-800/50">
               <tr>
-                <th className="sticky left-0 bg-gray-50 px-4 py-3 text-left font-medium text-gray-900 border-r min-w-64">
+                <th className="sticky left-0 bg-gray-50 px-4 py-3 text-left font-medium text-gray-900 border-r min-w-64 dark:text-gray-100 dark:bg-gray-800/50">
                   权限名称
                 </th>
                 {filteredRoles.map(role => (
                   <th
                     key={role.id}
-                    className="px-3 py-3 text-center font-medium text-gray-900 min-w-24 border-r last:border-r-0"
+                    className="px-3 py-3 text-center font-medium text-gray-900 min-w-24 border-r last:border-r-0 dark:text-gray-100"
                   >
                     <div className="space-y-1">
                       <div className="text-sm">{role.name}</div>
@@ -228,7 +228,7 @@ export const PermissionMatrixView: React.FC<PermissionMatrixViewProps> = ({ matr
               {Object.entries(permissionsByModule).map(([module, permissions]) => (
                 <React.Fragment key={module}>
                   {/* 模块分组标题 */}
-                  <tr className="bg-blue-50">
+                  <tr className="bg-blue-50 dark:bg-blue-900/20">
                     <td
                       colSpan={filteredRoles.length + 1}
                       className="px-4 py-2 font-medium text-blue-900 border-b"
@@ -239,11 +239,11 @@ export const PermissionMatrixView: React.FC<PermissionMatrixViewProps> = ({ matr
                   
                   {/* 权限行 */}
                   {permissions.map(permission => (
-                    <tr key={permission.id} className="hover:bg-gray-50">
-                      <td className="sticky left-0 bg-white px-4 py-3 border-r border-b">
+                    <tr key={permission.id} className="hover:bg-gray-50 dark:bg-gray-800/50 dark:hover:bg-gray-800">
+                      <td className="sticky left-0 bg-white px-4 py-3 border-r border-b dark:bg-gray-800">
                         <div>
-                          <div className="font-medium text-gray-900">{permission.name}</div>
-                          <div className="text-sm text-gray-500 font-mono">{permission.code}</div>
+                          <div className="font-medium text-gray-900 dark:text-gray-100">{permission.name}</div>
+                          <div className="text-sm text-gray-500 font-mono dark:text-gray-400">{permission.code}</div>
                         </div>
                       </td>
                       {filteredRoles.map(role => (
@@ -266,18 +266,18 @@ export const PermissionMatrixView: React.FC<PermissionMatrixViewProps> = ({ matr
       </div>
 
       {/* 图例 */}
-      <div className="flex items-center justify-center space-x-6 p-3 bg-gray-50 rounded-lg">
+      <div className="flex items-center justify-center space-x-6 p-3 bg-gray-50 rounded-lg dark:bg-gray-800/50">
         <div className="flex items-center space-x-2">
           <Check className="w-4 h-4 text-green-500" />
-          <span className="text-sm text-gray-600">有权限</span>
+          <span className="text-sm text-gray-600 dark:text-gray-400">有权限</span>
         </div>
         <div className="flex items-center space-x-2">
-          <X className="w-4 h-4 text-red-500" />
-          <span className="text-sm text-gray-600">无权限</span>
+          <X className="w-4 h-4 text-red-500 dark:text-red-400" />
+          <span className="text-sm text-gray-600 dark:text-gray-400">无权限</span>
         </div>
         <div className="flex items-center space-x-2">
-          <Minus className="w-4 h-4 text-gray-400" />
-          <span className="text-sm text-gray-600">未设置</span>
+          <Minus className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+          <span className="text-sm text-gray-600 dark:text-gray-400">未设置</span>
         </div>
       </div>
     </div>

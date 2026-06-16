@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+﻿import React, { useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
 import {
   Activity,
@@ -66,7 +66,7 @@ const getHealthIcon = (status?: HealthStatus) => {
       return <CheckCircle className="h-4 w-4 text-green-600" />;
     case HealthStatus.UNHEALTHY:
     case HealthStatus.ERROR:
-      return <AlertCircle className="h-4 w-4 text-red-600" />;
+      return <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400" />;
     default:
       return <Activity className="h-4 w-4 text-muted-foreground" />;
   }

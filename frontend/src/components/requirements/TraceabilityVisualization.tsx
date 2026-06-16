@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+﻿import { useMemo, useState } from 'react'
 import { Download, Eye, EyeOff, Network, RotateCcw, ZoomIn, ZoomOut } from 'lucide-react'
 
 import { Badge } from '@/components/ui/Badge'
@@ -306,13 +306,13 @@ export function TraceabilityVisualization({ loading, onRefresh }: TraceabilityVi
               <Detail label="编号" value={selectedNode.code} />
               <Detail label="标题" value={selectedNode.title} />
               <div>
-                <label className="text-sm font-medium text-gray-600">类型</label>
+                <label className="text-sm font-medium text-gray-600 dark:text-gray-400">类型</label>
                 <div className="mt-1">
                   <Badge variant="outline">{typeLabels[selectedNode.type]}</Badge>
                 </div>
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-600">状态</label>
+                <label className="text-sm font-medium text-gray-600 dark:text-gray-400">状态</label>
                 <div className="mt-1">
                   <Badge>{selectedNode.status}</Badge>
                 </div>
@@ -320,17 +320,17 @@ export function TraceabilityVisualization({ loading, onRefresh }: TraceabilityVi
               <Detail label="层级" value={`第 ${selectedNode.level + 1} 层`} />
 
               <div>
-                <label className="text-sm font-medium text-gray-600">相关关系</label>
+                <label className="text-sm font-medium text-gray-600 dark:text-gray-400">相关关系</label>
                 <div className="mt-2 space-y-2">
                   {links
                     .filter((link) => link.source === selectedNode.id || link.target === selectedNode.id)
                     .map((link) => (
-                      <div key={link.id} className="rounded bg-gray-50 p-2 text-xs">
+                      <div key={link.id} className="rounded bg-gray-50 p-2 text-xs dark:bg-gray-800/50">
                         <div className="flex items-center justify-between gap-2">
                           <span>
                             {link.source === selectedNode.id ? '指向' : '来自'} {relationshipLabels[link.relationship]}
                           </span>
-                          <Badge variant="outline" className={link.coverage === 'COVERED' ? 'text-green-600' : link.coverage === 'PARTIAL' ? 'text-yellow-600' : 'text-red-600'}>
+                          <Badge variant="outline" className={link.coverage === 'COVERED' ? 'text-green-600' : link.coverage === 'PARTIAL' ? 'text-yellow-600' : 'text-red-600 dark:text-red-400'}>
                             {coverageLabels[link.coverage]}
                           </Badge>
                         </div>
@@ -350,7 +350,7 @@ export function TraceabilityVisualization({ loading, onRefresh }: TraceabilityVi
               ['bg-blue-500', '需求'],
               ['bg-green-500', '设计'],
               ['bg-yellow-500', '测试用例'],
-              ['bg-purple-500', '实现'],
+              ['bg-purple-500 dark:bg-purple-900/20', '实现'],
             ]} />
             <Legend title="链接状态" items={[
               ['bg-green-500', '已覆盖'],
@@ -367,8 +367,8 @@ export function TraceabilityVisualization({ loading, onRefresh }: TraceabilityVi
 function Detail({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <label className="text-sm font-medium text-gray-600">{label}</label>
-      <p className="text-sm text-gray-900">{value}</p>
+      <label className="text-sm font-medium text-gray-600 dark:text-gray-400">{label}</label>
+      <p className="text-sm text-gray-900 dark:text-gray-100">{value}</p>
     </div>
   )
 }
@@ -376,12 +376,12 @@ function Detail({ label, value }: { label: string; value: string }) {
 function Legend({ title, items, line = false }: { title: string; items: string[][]; line?: boolean }) {
   return (
     <div>
-      <h4 className="mb-2 text-sm font-medium text-gray-900">{title}</h4>
+      <h4 className="mb-2 text-sm font-medium text-gray-900 dark:text-gray-100">{title}</h4>
       <div className="flex flex-wrap gap-4">
         {items.map(([color, label]) => (
           <div key={label} className="flex items-center gap-2">
             <div className={`${line ? 'h-1 w-4' : 'h-4 w-4 rounded-full'} ${color}`} />
-            <span className="text-sm text-gray-600">{label}</span>
+            <span className="text-sm text-gray-600 dark:text-gray-400">{label}</span>
           </div>
         ))}
       </div>

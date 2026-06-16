@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 模板版本管理组件
  * 提供版本历史查看、版本比较、版本回滚等功能
  */
@@ -300,7 +300,7 @@ export function TemplateVersionManager({
   // 渲染变更摘要
   const renderChangesSummary = (changes: string[]) => {
     if (changes.length === 0) {
-      return <span className="text-gray-500">初始版本</span>;
+      return <span className="text-gray-500 dark:text-gray-400">初始版本</span>;
     }
     
     return (
@@ -324,7 +324,7 @@ export function TemplateVersionManager({
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-semibold">版本比较结果</h3>
-          <div className="flex items-center gap-2 text-sm text-gray-600">
+          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
             <span>版本 {comparison.version1}</span>
             <ArrowRight className="w-4 h-4" />
             <span>版本 {comparison.version2}</span>
@@ -335,7 +335,7 @@ export function TemplateVersionManager({
           <Card>
             <CardContent className="p-6 text-center">
               <CheckCircle className="w-8 h-8 text-green-600 mx-auto mb-2" />
-              <p className="text-gray-600">两个版本没有差异</p>
+              <p className="text-gray-600 dark:text-gray-400">两个版本没有差异</p>
             </CardContent>
           </Card>
         ) : (
@@ -350,10 +350,10 @@ export function TemplateVersionManager({
                 <CardContent>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <h4 className="text-sm font-medium text-red-700 mb-2">
+                      <h4 className="text-sm font-medium text-red-700 mb-2 dark:text-red-400">
                         版本 {comparison.version1} (旧)
                       </h4>
-                      <div className="p-3 bg-red-50 border border-red-200 rounded text-sm">
+                      <div className="p-3 bg-red-50 border border-red-200 rounded text-sm dark:bg-red-900/20 dark:border-red-800">
                         {typeof change.old_value === 'object' 
                           ? JSON.stringify(change.old_value, null, 2)
                           : String(change.old_value || '(空)')
@@ -410,7 +410,7 @@ export function TemplateVersionManager({
             <GitBranch className="w-6 h-6" />
             版本管理
           </h1>
-          <p className="text-gray-600 mt-1">
+          <p className="text-gray-600 mt-1 dark:text-gray-400">
             管理模板 "{template.title}" 的版本历史
           </p>
         </div>
@@ -448,15 +448,15 @@ export function TemplateVersionManager({
           ) : versionHistory.length === 0 ? (
             <Card>
               <CardContent className="p-8 text-center">
-                <History className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-600 mb-2">暂无版本历史</h3>
-                <p className="text-gray-500">这是模板的第一个版本</p>
+                <History className="w-12 h-12 text-gray-400 mx-auto mb-4 dark:text-gray-500" />
+                <h3 className="text-lg font-medium text-gray-600 mb-2 dark:text-gray-400">暂无版本历史</h3>
+                <p className="text-gray-500 dark:text-gray-400">这是模板的第一个版本</p>
               </CardContent>
             </Card>
           ) : (
             <div className="space-y-4">
               {versionHistory.map((history, index) => (
-                <Card key={history.version} className={history.is_latest ? 'border-blue-500 bg-blue-50' : ''}>
+                <Card key={history.version} className={history.is_latest ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' : ''}>
                   <CardContent className="p-4">
                     <div className="flex items-center justify-between">
                       <div className="flex-1">
@@ -470,7 +470,7 @@ export function TemplateVersionManager({
                               最新版本
                             </Badge>
                           )}
-                          <div className="flex items-center gap-4 text-sm text-gray-500">
+                          <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400">
                             <div className="flex items-center gap-1">
                               <Calendar className="w-4 h-4" />
                               {new Date(history.created_at).toLocaleString()}
@@ -489,7 +489,7 @@ export function TemplateVersionManager({
                         </div>
                         
                         <div className="mb-3">
-                          <h4 className="text-sm font-medium text-gray-700 mb-1">变更内容:</h4>
+                          <h4 className="text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">变更内容:</h4>
                           {renderChangesSummary(history.changes_summary)}
                         </div>
                       </div>
@@ -530,7 +530,7 @@ export function TemplateVersionManager({
                             variant="ghost"
                             size="sm"
                             onClick={() => handleDeleteVersion(history.version)}
-                            className="text-red-600 hover:text-red-700"
+                            className="text-red-600 hover:text-red-700 dark:text-red-400"
                           >
                             <Trash2 className="w-4 h-4" />
                           </Button>
@@ -556,13 +556,13 @@ export function TemplateVersionManager({
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-300">
                     版本 1
                   </label>
                   <select
                     value={compareVersion1}
                     onChange={(e) => setCompareVersion1(e.target.value)}
-                    className="w-full p-2 border border-gray-300 rounded-md"
+                    className="w-full p-2 border border-gray-300 rounded-md dark:border-gray-600"
                   >
                     <option value="">选择版本</option>
                     {versions.map(version => (
@@ -574,13 +574,13 @@ export function TemplateVersionManager({
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-300">
                     版本 2
                   </label>
                   <select
                     value={compareVersion2}
                     onChange={(e) => setCompareVersion2(e.target.value)}
-                    className="w-full p-2 border border-gray-300 rounded-md"
+                    className="w-full p-2 border border-gray-300 rounded-md dark:border-gray-600"
                   >
                     <option value="">选择版本</option>
                     {versions.map(version => (
@@ -625,7 +625,7 @@ export function TemplateVersionManager({
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-300">
                   新标题 (可选)
                 </label>
                 <Input
@@ -637,7 +637,7 @@ export function TemplateVersionManager({
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-300">
                   新描述 (可选)
                 </label>
                 <Textarea
@@ -649,7 +649,7 @@ export function TemplateVersionManager({
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-300">
                   新内容 (可选)
                 </label>
                 <Textarea

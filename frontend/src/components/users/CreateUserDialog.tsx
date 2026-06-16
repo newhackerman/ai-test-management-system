@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+﻿import React, { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/Button'
 import { Checkbox } from '@/components/ui/Checkbox'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/Dialog'
@@ -120,12 +120,12 @@ export const CreateUserDialog: React.FC<CreateUserDialogProps> = ({ open, onClos
             <div className="space-y-2">
               <Label htmlFor="username">用户名 *</Label>
               <Input id="username" value={formData.username} onChange={(event) => updateField('username', event.target.value)} />
-              {errors.username && <p className="text-sm text-red-600">{errors.username}</p>}
+              {errors.username && <p className="text-sm text-red-600 dark:text-red-400">{errors.username}</p>}
             </div>
             <div className="space-y-2">
               <Label htmlFor="email">邮箱 *</Label>
               <Input id="email" type="email" value={formData.email} onChange={(event) => updateField('email', event.target.value)} />
-              {errors.email && <p className="text-sm text-red-600">{errors.email}</p>}
+              {errors.email && <p className="text-sm text-red-600 dark:text-red-400">{errors.email}</p>}
             </div>
             <div className="space-y-2">
               <Label htmlFor="nickname">昵称</Label>
@@ -134,12 +134,12 @@ export const CreateUserDialog: React.FC<CreateUserDialogProps> = ({ open, onClos
             <div className="space-y-2">
               <Label htmlFor="phone">手机号</Label>
               <Input id="phone" value={formData.phone} onChange={(event) => updateField('phone', event.target.value)} />
-              {errors.phone && <p className="text-sm text-red-600">{errors.phone}</p>}
+              {errors.phone && <p className="text-sm text-red-600 dark:text-red-400">{errors.phone}</p>}
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">密码 *</Label>
               <Input id="password" type="password" value={formData.password} onChange={(event) => updateField('password', event.target.value)} />
-              {errors.password && <p className="text-sm text-red-600">{errors.password}</p>}
+              {errors.password && <p className="text-sm text-red-600 dark:text-red-400">{errors.password}</p>}
             </div>
             <div className="space-y-2">
               <Label htmlFor="confirmPassword">确认密码 *</Label>
@@ -149,7 +149,7 @@ export const CreateUserDialog: React.FC<CreateUserDialogProps> = ({ open, onClos
                 value={formData.confirmPassword}
                 onChange={(event) => updateField('confirmPassword', event.target.value)}
               />
-              {errors.confirmPassword && <p className="text-sm text-red-600">{errors.confirmPassword}</p>}
+              {errors.confirmPassword && <p className="text-sm text-red-600 dark:text-red-400">{errors.confirmPassword}</p>}
             </div>
           </div>
 
@@ -157,20 +157,20 @@ export const CreateUserDialog: React.FC<CreateUserDialogProps> = ({ open, onClos
             <Label>角色 *</Label>
             <div className="max-h-44 space-y-2 overflow-y-auto rounded-md border p-3">
               {loadingRoles ? (
-                <p className="text-sm text-gray-500">正在加载角色...</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">正在加载角色...</p>
               ) : roles.length > 0 ? (
                 roles.map((role) => (
-                  <label key={role.id} className="flex items-center gap-3 rounded-md px-2 py-1 hover:bg-gray-50">
+                  <label key={role.id} className="flex items-center gap-3 rounded-md px-2 py-1 hover:bg-gray-50 dark:bg-gray-800/50 dark:hover:bg-gray-800">
                     <Checkbox checked={formData.role_ids.includes(role.id)} onCheckedChange={(checked) => toggleRole(role.id, checked)} />
                     <span className="text-sm">{role.name}</span>
-                    <span className="text-xs text-gray-500">{role.code}</span>
+                    <span className="text-xs text-gray-500 dark:text-gray-400">{role.code}</span>
                   </label>
                 ))
               ) : (
-                <p className="text-sm text-gray-500">暂无可选角色</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">暂无可选角色</p>
               )}
             </div>
-            {errors.role_ids && <p className="text-sm text-red-600">{errors.role_ids}</p>}
+            {errors.role_ids && <p className="text-sm text-red-600 dark:text-red-400">{errors.role_ids}</p>}
           </div>
 
           <label className="flex items-center gap-2 text-sm">

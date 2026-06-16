@@ -50,7 +50,7 @@ export default function Monitoring() {
       case 'warning':
         return <AlertTriangle className="h-4 w-4 text-yellow-500" />
       case 'error':
-        return <XCircle className="h-4 w-4 text-red-500" />
+        return <XCircle className="h-4 w-4 text-red-500 dark:text-red-400" />
       default:
         return <Clock className="h-4 w-4 text-gray-500 dark:text-gray-400" />
     }
@@ -240,7 +240,7 @@ export default function Monitoring() {
         <CardContent>
           <div className="flex h-64 items-center justify-center rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600">
             <div className="text-center">
-              <TrendingUp className="mx-auto mb-2 h-12 w-12 text-gray-400" />
+              <TrendingUp className="mx-auto mb-2 h-12 w-12 text-gray-400 dark:text-gray-500" />
               <p className="text-muted-foreground">暂无性能趋势数据</p>
             </div>
           </div>

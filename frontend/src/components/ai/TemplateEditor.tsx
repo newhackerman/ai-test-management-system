@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 提示词模板编辑器
  * 提供可视化的模板编辑功能，包括内容编辑、变量管理、预览等
  */
@@ -439,7 +439,7 @@ export function TemplateEditor({
               </div>
             )}
           </div>
-          <p className="text-gray-600 mt-1">
+          <p className="text-gray-600 mt-1 dark:text-gray-400">
             {mode === 'create' 
               ? '创建一个新的提示词模板，可以在AI对话中重复使用'
               : '修改现有的提示词模板内容和设置'
@@ -522,13 +522,13 @@ export function TemplateEditor({
 
       {/* 语法错误提示 */}
       {syntaxErrors.length > 0 && (
-        <Card className="mb-6 border-red-200 bg-red-50">
+        <Card className="mb-6 border-red-200 bg-red-50 dark:bg-red-900/20 dark:border-red-800">
           <CardContent className="p-4">
             <div className="flex items-start gap-3">
-              <AlertCircle className="w-5 h-5 text-red-600 mt-0.5" />
+              <AlertCircle className="w-5 h-5 text-red-600 mt-0.5 dark:text-red-400" />
               <div>
-                <h3 className="font-medium text-red-800 mb-2">模板语法错误</h3>
-                <ul className="text-sm text-red-700 space-y-1">
+                <h3 className="font-medium text-red-800 mb-2 dark:text-red-300">模板语法错误</h3>
+                <ul className="text-sm text-red-700 space-y-1 dark:text-red-400">
                   {syntaxErrors.map((error, index) => (
                     <li key={index}>• {error}</li>
                   ))}
@@ -556,7 +556,7 @@ export function TemplateEditor({
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-300">
                     模板名称 *
                   </label>
                   <Input
@@ -566,12 +566,12 @@ export function TemplateEditor({
                     className={getFieldError('name') ? 'border-red-300' : ''}
                   />
                   {getFieldError('name') && (
-                    <p className="text-sm text-red-600 mt-1">{getFieldError('name')}</p>
+                    <p className="text-sm text-red-600 mt-1 dark:text-red-400">{getFieldError('name')}</p>
                   )}
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-300">
                     模板标题 *
                   </label>
                   <Input
@@ -581,12 +581,12 @@ export function TemplateEditor({
                     className={getFieldError('title') ? 'border-red-300' : ''}
                   />
                   {getFieldError('title') && (
-                    <p className="text-sm text-red-600 mt-1">{getFieldError('title')}</p>
+                    <p className="text-sm text-red-600 mt-1 dark:text-red-400">{getFieldError('title')}</p>
                   )}
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-300">
                     模板描述
                   </label>
                   <Textarea
@@ -598,13 +598,13 @@ export function TemplateEditor({
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-300">
                     分类
                   </label>
                   <select
                     value={formData.category}
                     onChange={(e) => setFormData(prev => ({ ...prev, category: e.target.value }))}
-                    className="w-full p-2 border border-gray-300 rounded-md"
+                    className="w-full p-2 border border-gray-300 rounded-md dark:border-gray-600"
                   >
                     {categories.map(category => (
                       <option key={category.value} value={category.value}>
@@ -615,7 +615,7 @@ export function TemplateEditor({
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-300">
                     子分类
                   </label>
                   <Input
@@ -633,7 +633,7 @@ export function TemplateEditor({
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-300">
                     可见性
                   </label>
                   <div className="space-y-2">
@@ -653,7 +653,7 @@ export function TemplateEditor({
                           {option.value === 'PUBLIC' && <Globe className="w-4 h-4" />}
                           <div>
                             <div className="font-medium">{option.label}</div>
-                            <div className="text-sm text-gray-500">{option.description}</div>
+                            <div className="text-sm text-gray-500 dark:text-gray-400">{option.description}</div>
                           </div>
                         </div>
                       </label>
@@ -662,7 +662,7 @@ export function TemplateEditor({
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-300">
                     标签
                   </label>
                   <div className="flex flex-wrap gap-2 mb-2">
@@ -675,7 +675,7 @@ export function TemplateEditor({
                             ...prev,
                             tags: prev.tags.filter((_, i) => i !== index)
                           }))}
-                          className="ml-1 hover:text-red-600"
+                          className="ml-1 hover:text-red-600 dark:text-red-400"
                         >
                           <Trash2 className="w-3 h-3" />
                         </button>
@@ -702,7 +702,7 @@ export function TemplateEditor({
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-300">
                     使用场景
                   </label>
                   <Textarea
@@ -740,7 +740,7 @@ export function TemplateEditor({
                     className={`font-mono text-sm ${getFieldError('content') ? 'border-red-300' : ''}`}
                   />
                   {getFieldError('content') && (
-                    <p className="text-sm text-red-600">{getFieldError('content')}</p>
+                    <p className="text-sm text-red-600 dark:text-red-400">{getFieldError('content')}</p>
                   )}
                   
                   <div className="flex items-center gap-2">
@@ -753,7 +753,7 @@ export function TemplateEditor({
                       自动检测变量
                     </Button>
                     
-                    <div className="text-sm text-gray-500">
+                    <div className="text-sm text-gray-500 dark:text-gray-400">
                       字符数: {formData.content.length}
                     </div>
                   </div>
@@ -770,9 +770,9 @@ export function TemplateEditor({
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  <div className="p-4 bg-gray-50 rounded-lg border min-h-[300px]">
+                  <div className="p-4 bg-gray-50 rounded-lg border min-h-[300px] dark:bg-gray-800/50">
                     {syntaxErrors.length > 0 ? (
-                      <div className="text-red-600">
+                      <div className="text-red-600 dark:text-red-400">
                         <AlertCircle className="w-5 h-5 inline mr-2" />
                         模板包含语法错误，无法预览
                       </div>
@@ -781,7 +781,7 @@ export function TemplateEditor({
                         {previewContent}
                       </div>
                     ) : (
-                      <div className="text-gray-400 text-center py-8">
+                      <div className="text-gray-400 text-center py-8 dark:text-gray-500">
                         输入模板内容以查看预览
                       </div>
                     )}
@@ -812,7 +812,7 @@ export function TemplateEditor({
               <CardContent>
                 <div className="space-y-3">
                   {formData.variables.length === 0 ? (
-                    <div className="text-center py-8 text-gray-400">
+                    <div className="text-center py-8 text-gray-400 dark:text-gray-500">
                       暂无变量，请添加变量或使用自动检测功能
                     </div>
                   ) : (
@@ -821,7 +821,7 @@ export function TemplateEditor({
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
                             <div className="flex items-center gap-2 mb-1">
-                              <code className="text-sm bg-gray-100 px-2 py-1 rounded">
+                              <code className="text-sm bg-gray-100 px-2 py-1 rounded dark:bg-gray-800">
                                 {variable.name}
                               </code>
                               <Badge variant={variable.required ? 'default' : 'secondary'}>
@@ -829,9 +829,9 @@ export function TemplateEditor({
                               </Badge>
                               <Badge variant="outline">{variable.type}</Badge>
                             </div>
-                            <p className="text-sm text-gray-600">{variable.description}</p>
+                            <p className="text-sm text-gray-600 dark:text-gray-400">{variable.description}</p>
                             {variable.default_value && (
-                              <p className="text-xs text-gray-500 mt-1">
+                              <p className="text-xs text-gray-500 mt-1 dark:text-gray-400">
                                 默认值: {String(variable.default_value)}
                               </p>
                             )}
@@ -840,7 +840,7 @@ export function TemplateEditor({
                             variant="ghost"
                             size="sm"
                             onClick={() => handleRemoveVariable(index)}
-                            className="text-red-600 hover:text-red-700"
+                            className="text-red-600 hover:text-red-700 dark:text-red-400"
                           >
                             <Trash2 className="w-4 h-4" />
                           </Button>
@@ -858,7 +858,7 @@ export function TemplateEditor({
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-300">
                     变量名称 *
                   </label>
                   <Input
@@ -869,13 +869,13 @@ export function TemplateEditor({
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-300">
                     变量类型
                   </label>
                   <select
                     value={newVariable.type}
                     onChange={(e) => setNewVariable(prev => ({ ...prev, type: e.target.value as any }))}
-                    className="w-full p-2 border border-gray-300 rounded-md"
+                    className="w-full p-2 border border-gray-300 rounded-md dark:border-gray-600"
                   >
                     <option value="string">字符串</option>
                     <option value="number">数字</option>
@@ -886,7 +886,7 @@ export function TemplateEditor({
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-300">
                     变量描述 *
                   </label>
                   <Textarea
@@ -898,7 +898,7 @@ export function TemplateEditor({
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-300">
                     默认值
                   </label>
                   <Input
@@ -916,7 +916,7 @@ export function TemplateEditor({
                     onChange={(e) => setNewVariable(prev => ({ ...prev, required: e.target.checked }))}
                     className="w-4 h-4"
                   />
-                  <label htmlFor="required" className="text-sm font-medium text-gray-700">
+                  <label htmlFor="required" className="text-sm font-medium text-gray-700 dark:text-gray-300">
                     必需变量
                   </label>
                 </div>
@@ -936,7 +936,7 @@ export function TemplateEditor({
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-gray-600 dark:text-gray-400">
                   为模板变量提供示例值，用于预览和测试模板效果
                 </p>
                 <Textarea
@@ -967,7 +967,7 @@ export function TemplateEditor({
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-300">
                     支持的AI提供商
                   </label>
                   <div className="space-y-2">
@@ -998,7 +998,7 @@ export function TemplateEditor({
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-300">
                     推荐模型
                   </label>
                   <Textarea
@@ -1020,7 +1020,7 @@ export function TemplateEditor({
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  <p className="text-sm text-gray-600">
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
                     为模板变量设置默认值，当用户未提供值时使用
                   </p>
                   <Textarea

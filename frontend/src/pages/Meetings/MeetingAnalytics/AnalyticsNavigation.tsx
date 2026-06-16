@@ -64,7 +64,7 @@ const AnalyticsNavigation: React.FC<AnalyticsNavigationProps> = ({ className }) 
   ]
   
   return (
-    <nav className={cn('bg-white border-b border-gray-200', className)}>
+    <nav className={cn('bg-white border-b border-gray-200 dark:bg-gray-800 dark:border-gray-700', className)}>
       <div className="px-6">
         <div className="flex items-center space-x-8">
           {/* 返回会议详情 */}
@@ -91,7 +91,7 @@ const AnalyticsNavigation: React.FC<AnalyticsNavigationProps> = ({ className }) 
                   'flex items-center space-x-2 py-4 border-b-2 transition-colors',
                   isActive
                     ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
+                    : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300 dark:text-gray-100 dark:border-gray-600'
                 )}
               >
                 <Icon className="h-5 w-5" />

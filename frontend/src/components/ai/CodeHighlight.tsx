@@ -165,9 +165,9 @@ export function CodeHighlight({
           {displayLanguage}
         </Badge>
         {filename && (
-          <span className="text-gray-400">{filename}</span>
+          <span className="text-gray-400 dark:text-gray-500">{filename}</span>
         )}
-        <span className="text-gray-500">
+        <span className="text-gray-500 dark:text-gray-400">
           {lineCount} 琛?
         </span>
       </div>
@@ -177,7 +177,7 @@ export function CodeHighlight({
           <Button
             variant="ghost"
             size="sm"
-            className="h-6 w-6 p-0 text-gray-400 hover:text-white"
+            className="h-6 w-6 p-0 text-gray-400 hover:text-white dark:text-gray-500"
             onClick={() => setIsCollapsed(!isCollapsed)}
           >
             {isCollapsed ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
@@ -188,7 +188,7 @@ export function CodeHighlight({
           <Button
             variant="ghost"
             size="sm"
-            className="h-6 w-6 p-0 text-gray-400 hover:text-white"
+            className="h-6 w-6 p-0 text-gray-400 hover:text-white dark:text-gray-500"
             onClick={handleRun}
           >
             <Play className="w-3 h-3" />
@@ -199,7 +199,7 @@ export function CodeHighlight({
           <Button
             variant="ghost"
             size="sm"
-            className="h-6 w-6 p-0 text-gray-400 hover:text-white"
+            className="h-6 w-6 p-0 text-gray-400 hover:text-white dark:text-gray-500"
             onClick={handleDownload}
           >
             <Download className="w-3 h-3" />
@@ -210,7 +210,7 @@ export function CodeHighlight({
           <Button
             variant="ghost"
             size="sm"
-            className="h-6 w-6 p-0 text-gray-400 hover:text-white"
+            className="h-6 w-6 p-0 text-gray-400 hover:text-white dark:text-gray-500"
             onClick={handleCopy}
           >
             {copied ? (
@@ -227,7 +227,7 @@ export function CodeHighlight({
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-6 w-6 p-0 text-gray-400 hover:text-white"
+                className="h-6 w-6 p-0 text-gray-400 hover:text-white dark:text-gray-500"
               >
                 <Maximize2 className="w-3 h-3" />
               </Button>
@@ -285,7 +285,7 @@ export function CodeHighlight({
 
   return (
     <div className={cn(
-      'rounded-lg overflow-hidden border border-gray-300 my-4',
+      'rounded-lg overflow-hidden border border-gray-300 my-4 dark:border-gray-600',
       className
     )}>
       {renderToolbar()}
@@ -298,7 +298,7 @@ export function CodeHighlight({
             <Button
               variant="ghost"
               size="sm"
-              className="text-gray-400 hover:text-white text-xs"
+              className="text-gray-400 hover:text-white text-xs dark:text-gray-500"
               onClick={() => setIsCollapsed(false)}
             >
               鏄剧ず鍏ㄩ儴 ({lineCount - 10} 琛?
@@ -324,7 +324,7 @@ export function InlineCode({
 }) {
   return (
     <code className={cn(
-      'bg-gray-100 px-1.5 py-0.5 rounded text-sm font-mono',
+      'bg-gray-100 px-1.5 py-0.5 rounded text-sm font-mono dark:bg-gray-800',
       className
     )}>
       {code}

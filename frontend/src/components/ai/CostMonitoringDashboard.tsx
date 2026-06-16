@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -220,11 +220,11 @@ const CostMonitoringDashboard: React.FC = () => {
       case 'warning':
         return 'bg-yellow-500';
       case 'critical':
-        return 'bg-orange-500';
+        return 'bg-orange-500 dark:bg-orange-900/20';
       case 'exceeded':
         return 'bg-red-500';
       default:
-        return 'bg-gray-500';
+        return 'bg-gray-500 dark:bg-gray-800/50';
     }
   };
 
@@ -237,9 +237,9 @@ const CostMonitoringDashboard: React.FC = () => {
       case 'critical':
         return <AlertTriangle className="h-4 w-4 text-orange-500" />;
       case 'exceeded':
-        return <XCircle className="h-4 w-4 text-red-500" />;
+        return <XCircle className="h-4 w-4 text-red-500 dark:text-red-400" />;
       default:
-        return <CheckCircle className="h-4 w-4 text-gray-500" />;
+        return <CheckCircle className="h-4 w-4 text-gray-500 dark:text-gray-400" />;
     }
   };
 
@@ -373,7 +373,7 @@ const CostMonitoringDashboard: React.FC = () => {
             <AlertTriangle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600">
+            <div className="text-2xl font-bold text-red-600 dark:text-red-400">
               {formatNumber(dashboardData.cost_summary.error_count)}
             </div>
             <p className="text-xs text-muted-foreground">
@@ -605,7 +605,7 @@ const CostMonitoringDashboard: React.FC = () => {
                         <td className="p-2 text-right">{formatNumber(stat.total_tokens)}</td>
                         <td className="p-2 text-right">{formatPercentage(stat.success_rate)}</td>
                         <td className="p-2 text-right">{stat.avg_response_time.toFixed(2)}s</td>
-                        <td className="p-2 text-right text-red-600">{formatNumber(stat.error_count)}</td>
+                        <td className="p-2 text-right text-red-600 dark:text-red-400">{formatNumber(stat.error_count)}</td>
                       </tr>
                     ))}
                   </tbody>

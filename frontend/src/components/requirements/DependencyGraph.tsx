@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'
+﻿import React, { useState, useEffect, useRef } from 'react'
 import { RequirementDependency, Requirement, DependencyType } from '@/types/requirement'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
@@ -19,15 +19,15 @@ const DEPENDENCY_CONFIG: Record<DependencyType, {
   DEPENDS_ON: {
     label: '依赖于',
     color: 'text-blue-600',
-    bgColor: 'bg-blue-100',
+    bgColor: 'bg-blue-100 dark:bg-blue-900/30',
     description: '当前需求依赖于目标需求完成',
     icon: '🔗',
     lineStyle: 'solid'
   },
   BLOCKS: {
     label: '阻塞',
-    color: 'text-red-600',
-    bgColor: 'bg-red-100',
+    color: 'text-red-600 dark:text-red-400',
+    bgColor: 'bg-red-100 dark:bg-red-900/30',
     description: '当前需求阻塞目标需求开始',
     icon: '🚫',
     lineStyle: 'dashed'
@@ -90,18 +90,18 @@ const RequirementNode: React.FC<RequirementNodeProps> = ({
 }) => {
   const getStatusColor = (status: string) => {
     const statusColors: Record<string, string> = {
-      DRAFT: 'bg-gray-100 text-gray-700',
+      DRAFT: 'bg-gray-100 text-gray-700 dark:text-gray-300 dark:bg-gray-800',
       PENDING_REVIEW: 'bg-yellow-100 text-yellow-700',
-      REVIEWING: 'bg-blue-100 text-blue-700',
+      REVIEWING: 'bg-blue-100 text-blue-700 dark:text-blue-300 dark:bg-blue-900/30',
       APPROVED: 'bg-green-100 text-green-700',
-      IN_DEVELOPMENT: 'bg-purple-100 text-purple-700',
-      TESTING: 'bg-indigo-100 text-indigo-700',
-      COMPLETED: 'bg-emerald-100 text-emerald-700',
+      IN_DEVELOPMENT: 'bg-purple-100 text-purple-700 dark:text-purple-400',
+      TESTING: 'bg-indigo-100 text-indigo-700 dark:text-indigo-300',
+      COMPLETED: 'bg-emerald-100 text-emerald-700 dark:text-emerald-400',
       DEPLOYED: 'bg-teal-100 text-teal-700',
       CLOSED: 'bg-slate-100 text-slate-700',
-      CANCELLED: 'bg-red-100 text-red-700'
+      CANCELLED: 'bg-red-100 text-red-700 dark:text-red-400 dark:bg-red-900/30'
     }
-    return statusColors[status] || 'bg-gray-100 text-gray-700'
+    return statusColors[status] || 'bg-gray-100 text-gray-700 dark:text-gray-300 dark:bg-gray-800'
   }
 
   return (
@@ -130,7 +130,7 @@ const RequirementNode: React.FC<RequirementNodeProps> = ({
       }>
         <div className={cn(
           'p-3 rounded-lg border-2 bg-white shadow-sm min-w-[120px] max-w-[200px]',
-          isSelected ? 'border-primary' : 'border-gray-200',
+          isSelected ? 'border-primary' : 'border-gray-200 dark:border-gray-700',
           'hover:shadow-md'
         )}>
           <div className="space-y-2">
@@ -396,7 +396,7 @@ export const DependencyGraph: React.FC<DependencyGraphProps> = ({
       <CardContent className="p-0">
         <div 
           ref={containerRef}
-          className="relative w-full h-96 overflow-hidden border rounded-lg bg-gray-50"
+          className="relative w-full h-96 overflow-hidden border rounded-lg bg-gray-50 dark:bg-gray-800/50"
         >
           {/* SVG 连接线层 */}
           <svg className="absolute inset-0 w-full h-full pointer-events-none">
@@ -466,7 +466,7 @@ export const DependencyGraph: React.FC<DependencyGraphProps> = ({
         </div>
         
         {/* 图例 */}
-        <div className="p-4 border-t bg-white">
+        <div className="p-4 border-t bg-white dark:bg-gray-800">
           <h4 className="text-sm font-medium mb-3">依赖关系图例</h4>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
             {Object.entries(DEPENDENCY_CONFIG).map(([type, config]) => (

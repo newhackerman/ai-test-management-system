@@ -500,7 +500,7 @@ const DefectList: React.FC = () => {
   }
 
   if (error) {
-    return <div className="text-red-500 text-center">加载失败: {error.message}</div>
+    return <div className="text-red-500 text-center dark:text-red-400">加载失败: {error.message}</div>
   }
 
   return (
@@ -529,7 +529,7 @@ const DefectList: React.FC = () => {
       </div>
 
       {referenceError && (
-        <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+        <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:text-amber-300 dark:bg-amber-900/20 dark:border-amber-800">
           {referenceError}
         </div>
       )}
@@ -546,7 +546,7 @@ const DefectList: React.FC = () => {
             </div>
             <div className="grid grid-cols-1 gap-2 md:grid-cols-[minmax(220px,1fr)_160px_140px_140px_150px] xl:w-[860px]">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 dark:text-gray-500" />
                 <Input
                   placeholder="搜索缺陷标题、描述或编号"
                   value={searchTerm}
@@ -674,13 +674,13 @@ const DefectList: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => setDetailDefect(defect)}
-                        className="text-left font-medium text-blue-600 hover:text-blue-800"
+                        className="text-left font-medium text-blue-600 hover:text-blue-800 dark:text-blue-400"
                       >
                         {defect.title}
                       </button>
                       <div className="text-sm text-gray-500 dark:text-gray-400">{defect.defect_code}</div>
                       {defect.found_in_version && (
-                        <div className="text-xs text-gray-400">发现版本：{defect.found_in_version}</div>
+                        <div className="text-xs text-gray-400 dark:text-gray-500">发现版本：{defect.found_in_version}</div>
                       )}
                     </TableCell>
                     <TableCell><Badge variant="outline">{labelOf(defectTypeOptions, defect.defect_type)}</Badge></TableCell>
@@ -690,22 +690,22 @@ const DefectList: React.FC = () => {
                     <TableCell>
                       <div className="max-w-[220px] space-y-1 text-xs">
                         {getRelatedPlanId(defect) ? (
-                          <Link to={`/test-manager/test-plans/${getRelatedPlanId(defect)}`} className="block truncate text-blue-600 hover:text-blue-800">
+                          <Link to={`/test-manager/test-plans/${getRelatedPlanId(defect)}`} className="block truncate text-blue-600 hover:text-blue-800 dark:text-blue-400">
                             {getPlanLabel(getRelatedPlanId(defect))}
                           </Link>
                         ) : null}
                         {defect.test_case_id ? (
-                          <Link to={`/test-manager/test-cases/${defect.test_case_id}`} className="block truncate text-blue-600 hover:text-blue-800">
+                          <Link to={`/test-manager/test-cases/${defect.test_case_id}`} className="block truncate text-blue-600 hover:text-blue-800 dark:text-blue-400">
                             {getCaseLabel(defect.test_case_id)}
                           </Link>
                         ) : null}
                         {defect.test_execution_id ? (
-                          <Link to={`/test-manager/executions/${defect.test_execution_id}`} className="block truncate text-blue-600 hover:text-blue-800">
+                          <Link to={`/test-manager/executions/${defect.test_execution_id}`} className="block truncate text-blue-600 hover:text-blue-800 dark:text-blue-400">
                             {getExecutionLabel(defect.test_execution_id)}
                           </Link>
                         ) : null}
                         {defect.requirement_id ? (
-                          <Link to={`/requirements?search=${encodeURIComponent(getRequirementLabel(defect.requirement_id))}`} className="block truncate text-blue-600 hover:text-blue-800">
+                          <Link to={`/requirements?search=${encodeURIComponent(getRequirementLabel(defect.requirement_id))}`} className="block truncate text-blue-600 hover:text-blue-800 dark:text-blue-400">
                             {getRequirementLabel(defect.requirement_id)}
                           </Link>
                         ) : null}
@@ -714,19 +714,19 @@ const DefectList: React.FC = () => {
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center space-x-2">
-                        <User className="w-4 h-4 text-gray-400" />
+                        <User className="w-4 h-4 text-gray-400 dark:text-gray-500" />
                         <span>{userNameById[Number(defect.reporter_id)] || `用户 #${defect.reporter_id}`}</span>
                       </div>
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center space-x-2">
-                        <User className="w-4 h-4 text-gray-400" />
+                        <User className="w-4 h-4 text-gray-400 dark:text-gray-500" />
                         <span>{defect.assignee_id ? (userNameById[Number(defect.assignee_id)] || `用户 #${defect.assignee_id}`) : '未分配'}</span>
                       </div>
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center space-x-2">
-                        <Calendar className="w-4 h-4 text-gray-400" />
+                        <Calendar className="w-4 h-4 text-gray-400 dark:text-gray-500" />
                         <span>{formatDate(defect.reported_at)}</span>
                       </div>
                     </TableCell>
@@ -783,7 +783,7 @@ const DefectList: React.FC = () => {
               <DialogTitle>{editingDefect ? '编辑缺陷' : '创建缺陷'}</DialogTitle>
             </DialogHeader>
 
-            {formError && <div className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{formError}</div>}
+            {formError && <div className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:text-red-400 dark:bg-red-900/20">{formError}</div>}
 
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <label className="space-y-1 md:col-span-2">
@@ -972,22 +972,22 @@ const DefectList: React.FC = () => {
                 <div className="mb-1 text-sm font-medium">关联对象</div>
                 <div className="grid grid-cols-1 gap-2 rounded-md bg-gray-50 p-3 text-sm md:grid-cols-2 dark:bg-gray-800/50">
                   {getRelatedPlanId(detailDefect) ? (
-                    <Link to={`/test-manager/test-plans/${getRelatedPlanId(detailDefect)}`} className="text-blue-600 hover:text-blue-800">
+                    <Link to={`/test-manager/test-plans/${getRelatedPlanId(detailDefect)}`} className="text-blue-600 hover:text-blue-800 dark:text-blue-400">
                       计划：{getPlanLabel(getRelatedPlanId(detailDefect))}
                     </Link>
                   ) : <span className="text-gray-500 dark:text-gray-400">计划：未关联</span>}
                   {detailDefect.test_case_id ? (
-                    <Link to={`/test-manager/test-cases/${detailDefect.test_case_id}`} className="text-blue-600 hover:text-blue-800">
+                    <Link to={`/test-manager/test-cases/${detailDefect.test_case_id}`} className="text-blue-600 hover:text-blue-800 dark:text-blue-400">
                       用例：{getCaseLabel(detailDefect.test_case_id)}
                     </Link>
                   ) : <span className="text-gray-500 dark:text-gray-400">用例：未关联</span>}
                   {detailDefect.test_execution_id ? (
-                    <Link to={`/test-manager/executions/${detailDefect.test_execution_id}`} className="text-blue-600 hover:text-blue-800">
+                    <Link to={`/test-manager/executions/${detailDefect.test_execution_id}`} className="text-blue-600 hover:text-blue-800 dark:text-blue-400">
                       执行：{getExecutionLabel(detailDefect.test_execution_id)}
                     </Link>
                   ) : <span className="text-gray-500 dark:text-gray-400">执行：未关联</span>}
                   {detailDefect.requirement_id ? (
-                    <Link to={`/requirements?search=${encodeURIComponent(getRequirementLabel(detailDefect.requirement_id))}`} className="text-blue-600 hover:text-blue-800">
+                    <Link to={`/requirements?search=${encodeURIComponent(getRequirementLabel(detailDefect.requirement_id))}`} className="text-blue-600 hover:text-blue-800 dark:text-blue-400">
                       需求：{getRequirementLabel(detailDefect.requirement_id)}
                     </Link>
                   ) : <span className="text-gray-500 dark:text-gray-400">需求：未关联</span>}
@@ -1161,7 +1161,7 @@ const DefectList: React.FC = () => {
                   placeholder="说明处理原因、修复范围、验证依据或重开原因"
                 />
               </label>
-              {statusError && <div className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{statusError}</div>}
+              {statusError && <div className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:text-red-400 dark:bg-red-900/20">{statusError}</div>}
             </div>
           )}
           <DialogFooter>

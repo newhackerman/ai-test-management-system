@@ -163,16 +163,16 @@ const TestCaseCreate: React.FC = () => {
 
       <form onSubmit={handleSubmit} className="space-y-4">
         {aiDraft && (
-          <Card className="border-blue-200 bg-blue-50">
-            <CardContent className="p-4 text-sm text-blue-800">
+          <Card className="border-blue-200 bg-blue-50 dark:bg-blue-900/20">
+            <CardContent className="p-4 text-sm text-blue-800 dark:text-blue-300">
               已从 AI 助手导入测试用例草稿，请核对标题、步骤、测试数据和预期结果后保存。
             </CardContent>
           </Card>
         )}
 
         {submitError && (
-          <Card className="border-red-200 bg-red-50">
-            <CardContent className="p-4 text-sm text-red-700">{submitError}</CardContent>
+          <Card className="border-red-200 bg-red-50 dark:bg-red-900/20 dark:border-red-800">
+            <CardContent className="p-4 text-sm text-red-700 dark:text-red-400">{submitError}</CardContent>
           </Card>
         )}
 
@@ -247,7 +247,7 @@ const TestCaseCreate: React.FC = () => {
                 <Textarea rows={2} value={step.expected_result} onChange={(event) => updateStep(index, 'expected_result', event.target.value)} placeholder="该步骤预期结果" required />
                 <Textarea rows={2} value={String(step.test_data || '')} onChange={(event) => updateStep(index, 'test_data', event.target.value)} placeholder="测试数据" />
                 <Button type="button" variant="ghost" size="icon" onClick={() => removeStep(index)} disabled={steps.length <= 1} aria-label="删除步骤">
-                  <Trash2 className="h-4 w-4 text-red-500" />
+                  <Trash2 className="h-4 w-4 text-red-500 dark:text-red-400" />
                 </Button>
               </div>
             ))}

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useState } from 'react';
 import { Activity, AlertTriangle, Clock, Target, TrendingUp, Users } from 'lucide-react';
 
 import { Alert, AlertDescription } from '@/components/ui/Alert';
@@ -58,7 +58,7 @@ export const PerformanceAnalysis: React.FC<PerformanceAnalysisProps> = ({ projec
   return (
     <div className={cn('space-y-4', className)}>
       {error && (
-        <Alert className="border-orange-200 bg-orange-50 text-orange-700">
+        <Alert className="border-orange-200 bg-orange-50 text-orange-700 dark:text-orange-400 dark:bg-orange-900/20">
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}

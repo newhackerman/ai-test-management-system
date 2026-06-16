@@ -1,4 +1,4 @@
-import React from 'react'
+﻿import React from 'react'
 import { Card, CardContent } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
@@ -47,21 +47,21 @@ export function ChangeRequestList({
   if (changes.length === 0) {
     return (
       <div className="text-center py-8">
-        <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-        <h3 className="text-lg font-medium text-gray-900 mb-2">暂无变更请求</h3>
-        <p className="text-gray-500">当前没有符合条件的变更请求</p>
+        <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4 dark:text-gray-500" />
+        <h3 className="text-lg font-medium text-gray-900 mb-2 dark:text-gray-100">暂无变更请求</h3>
+        <p className="text-gray-500 dark:text-gray-400">当前没有符合条件的变更请求</p>
       </div>
     )
   }
 
   const getStatusBadge = (status: ChangeStatus) => {
     const statusConfig = {
-      SUBMITTED: { color: 'bg-blue-100 text-blue-800', icon: Clock, text: '已提交' },
+      SUBMITTED: { color: 'bg-blue-100 text-blue-800 dark:text-blue-300 dark:bg-blue-900/30', icon: Clock, text: '已提交' },
       UNDER_REVIEW: { color: 'bg-yellow-100 text-yellow-800', icon: Eye, text: '审核中' },
       APPROVED: { color: 'bg-green-100 text-green-800', icon: Check, text: '已批准' },
-      REJECTED: { color: 'bg-red-100 text-red-800', icon: X, text: '已拒绝' },
+      REJECTED: { color: 'bg-red-100 text-red-800 dark:text-red-300 dark:bg-red-900/30', icon: X, text: '已拒绝' },
       IMPLEMENTED: { color: 'bg-purple-100 text-purple-800', icon: Check, text: '已实施' },
-      CLOSED: { color: 'bg-gray-100 text-gray-800', icon: Check, text: '已关闭' }
+      CLOSED: { color: 'bg-gray-100 text-gray-800 dark:text-gray-200 dark:bg-gray-800', icon: Check, text: '已关闭' }
     }
 
     const config = statusConfig[status]
@@ -77,7 +77,7 @@ export function ChangeRequestList({
 
   const getPriorityBadge = (priority: ChangePriority) => {
     const priorityConfig = {
-      EMERGENCY: { color: 'bg-red-100 text-red-800', text: '紧急' },
+      EMERGENCY: { color: 'bg-red-100 text-red-800 dark:text-red-300 dark:bg-red-900/30', text: '紧急' },
       HIGH: { color: 'bg-orange-100 text-orange-800', text: '高' },
       MEDIUM: { color: 'bg-yellow-100 text-yellow-800', text: '中' },
       LOW: { color: 'bg-green-100 text-green-800', text: '低' }
@@ -94,10 +94,10 @@ export function ChangeRequestList({
 
   const getChangeTypeBadge = (type: ChangeType) => {
     const typeConfig = {
-      ADDITION: { color: 'bg-blue-100 text-blue-800', text: '新增' },
+      ADDITION: { color: 'bg-blue-100 text-blue-800 dark:text-blue-300 dark:bg-blue-900/30', text: '新增' },
       MODIFICATION: { color: 'bg-yellow-100 text-yellow-800', text: '修改' },
-      DELETION: { color: 'bg-red-100 text-red-800', text: '删除' },
-      CLARIFICATION: { color: 'bg-gray-100 text-gray-800', text: '澄清' }
+      DELETION: { color: 'bg-red-100 text-red-800 dark:text-red-300 dark:bg-red-900/30', text: '删除' },
+      CLARIFICATION: { color: 'bg-gray-100 text-gray-800 dark:text-gray-200 dark:bg-gray-800', text: '澄清' }
     }
 
     const config = typeConfig[type]
@@ -135,12 +135,12 @@ export function ChangeRequestList({
           </thead>
           <tbody>
             {changes.map((change) => (
-              <tr key={change.id} className="hover:bg-gray-50">
+              <tr key={change.id} className="hover:bg-gray-50 dark:bg-gray-800/50 dark:hover:bg-gray-800">
                 <td>
                   <div>
-                    <div className="font-medium text-gray-900">{change.title}</div>
-                    <div className="text-sm text-gray-500">{change.change_request_code}</div>
-                    <div className="text-sm text-gray-600 mt-1 line-clamp-2">
+                    <div className="font-medium text-gray-900 dark:text-gray-100">{change.title}</div>
+                    <div className="text-sm text-gray-500 dark:text-gray-400">{change.change_request_code}</div>
+                    <div className="text-sm text-gray-600 mt-1 line-clamp-2 dark:text-gray-400">
                       {change.description}
                     </div>
                   </div>
@@ -159,17 +159,17 @@ export function ChangeRequestList({
                     {change.effort_estimate ? `${change.effort_estimate} 人天` : '-'}
                   </div>
                   {change.cost_estimate && (
-                    <div className="text-xs text-gray-500">
+                    <div className="text-xs text-gray-500 dark:text-gray-400">
                       ¥{change.cost_estimate.toLocaleString()}
                     </div>
                   )}
                 </td>
                 <td>
-                  <div className="text-sm text-gray-900">
+                  <div className="text-sm text-gray-900 dark:text-gray-100">
                     {formatDate(change.requested_date)}
                   </div>
                   {change.target_date && (
-                    <div className="text-xs text-gray-500">
+                    <div className="text-xs text-gray-500 dark:text-gray-400">
                       目标: {formatDate(change.target_date)}
                     </div>
                   )}
@@ -204,7 +204,7 @@ export function ChangeRequestList({
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="text-red-600 hover:text-red-700"
+                        className="text-red-600 hover:text-red-700 dark:text-red-400"
                         onClick={() => onReject(change.id, '需要提供拒绝原因')}
                       >
                         <X className="w-4 h-4" />
@@ -226,12 +226,12 @@ export function ChangeRequestList({
               <div className="space-y-3">
                 {/* 标题和编号 */}
                 <div>
-                  <h3 className="font-medium text-gray-900">{change.title}</h3>
-                  <p className="text-sm text-gray-500">{change.change_request_code}</p>
+                  <h3 className="font-medium text-gray-900 dark:text-gray-100">{change.title}</h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">{change.change_request_code}</p>
                 </div>
 
                 {/* 描述 */}
-                <p className="text-sm text-gray-600 line-clamp-2">
+                <p className="text-sm text-gray-600 line-clamp-2 dark:text-gray-400">
                   {change.description}
                 </p>
 
@@ -245,20 +245,20 @@ export function ChangeRequestList({
                 {/* 详细信息 */}
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
-                    <div className="flex items-center text-gray-500">
+                    <div className="flex items-center text-gray-500 dark:text-gray-400">
                       <Calendar className="w-4 h-4 mr-1" />
                       申请日期
                     </div>
-                    <div className="text-gray-900">
+                    <div className="text-gray-900 dark:text-gray-100">
                       {formatDate(change.requested_date)}
                     </div>
                   </div>
                   <div>
-                    <div className="flex items-center text-gray-500">
+                    <div className="flex items-center text-gray-500 dark:text-gray-400">
                       <Clock className="w-4 h-4 mr-1" />
                       工作量
                     </div>
-                    <div className="text-gray-900">
+                    <div className="text-gray-900 dark:text-gray-100">
                       {change.effort_estimate ? `${change.effort_estimate} 人天` : '-'}
                     </div>
                   </div>
@@ -299,7 +299,7 @@ export function ChangeRequestList({
                       <Button
                         variant="outline"
                         size="sm"
-                        className="text-red-600 border-red-600 hover:bg-red-50"
+                        className="text-red-600 border-red-600 hover:bg-red-50 dark:text-red-400 dark:bg-red-900/20"
                         onClick={() => onReject(change.id, '需要提供拒绝原因')}
                       >
                         <X className="w-4 h-4 mr-1" />

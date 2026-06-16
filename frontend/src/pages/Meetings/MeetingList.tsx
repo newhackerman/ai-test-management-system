@@ -19,11 +19,11 @@ const toDateTimeStart = (date: Date) => `${toDateText(date)}T00:00:00`
 const toDateTimeEnd = (date: Date) => `${toDateText(date)}T23:59:59`
 
 const statusBadgeClass: Record<string, string> = {
-  SCHEDULED: 'border-blue-200 bg-blue-50 text-blue-700',
-  IN_PROGRESS: 'border-emerald-200 bg-emerald-50 text-emerald-700',
-  COMPLETED: 'border-gray-200 bg-gray-50 text-gray-700',
-  CANCELLED: 'border-red-200 bg-red-50 text-red-700',
-  POSTPONED: 'border-amber-200 bg-amber-50 text-amber-700',
+  SCHEDULED: 'border-blue-200 bg-blue-50 text-blue-700 dark:text-blue-300 dark:bg-blue-900/20',
+  IN_PROGRESS: 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:text-emerald-400',
+  COMPLETED: 'border-gray-200 bg-gray-50 text-gray-700 dark:text-gray-300 dark:bg-gray-800/50 dark:border-gray-700',
+  CANCELLED: 'border-red-200 bg-red-50 text-red-700 dark:text-red-400 dark:bg-red-900/20 dark:border-red-800',
+  POSTPONED: 'border-amber-200 bg-amber-50 text-amber-700 dark:text-amber-400 dark:bg-amber-900/20',
 }
 
 const quickFilters = [

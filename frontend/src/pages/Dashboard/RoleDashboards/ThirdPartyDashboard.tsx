@@ -214,7 +214,7 @@ const ThirdPartyDashboard: React.FC = () => {
       <div className="flex items-center justify-center h-64">
         <Card className="w-full max-w-md">
           <CardContent className="p-6 text-center">
-            <div className="text-red-500 mb-4">
+            <div className="text-red-500 mb-4 dark:text-red-400">
               <AlertTriangle className="h-12 w-12 mx-auto" />
             </div>
             <h3 className="text-lg font-semibold mb-2">加载失败</h3>
@@ -269,14 +269,14 @@ const ThirdPartyDashboard: React.FC = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600 dark:text-gray-400">响应时间</p>
-                <p className="text-2xl font-bold text-blue-600">
+                <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
                   {collaborationMetrics.responseTime}h
                 </p>
               </div>
-              <Clock className="h-8 w-8 text-blue-600" />
+              <Clock className="h-8 w-8 text-blue-600 dark:text-blue-400" />
             </div>
             <div className="mt-2">
-              <Badge variant="outline" className="text-blue-600 border-blue-600">
+              <Badge variant="outline" className="text-blue-600 border-blue-600 dark:text-blue-400">
                 快速响应
               </Badge>
             </div>
@@ -413,7 +413,7 @@ const ThirdPartyDashboard: React.FC = () => {
                     <span>进度: {project.progress}%</span>
                     <span>截止: {project.deadline}</span>
                   </div>
-                  <p className="text-xs text-gray-400 mt-1">最后活动: {project.lastActivity}</p>
+                  <p className="text-xs text-gray-400 mt-1 dark:text-gray-500">最后活动: {project.lastActivity}</p>
                 </div>
               ))}
             </div>
@@ -451,7 +451,7 @@ const ThirdPartyDashboard: React.FC = () => {
                       </Badge>
                       <span className="text-xs text-gray-500 dark:text-gray-400">截止: {task.deadline}</span>
                     </div>
-                    <p className="text-xs text-gray-400 mt-1">分配人: {task.assignedBy}</p>
+                    <p className="text-xs text-gray-400 mt-1 dark:text-gray-500">分配人: {task.assignedBy}</p>
                   </div>
                 </div>
               ))}
@@ -474,11 +474,11 @@ const ThirdPartyDashboard: React.FC = () => {
             <div className="space-y-4">
               {communications.map((comm) => (
                 <div key={comm.id} className={`p-3 border rounded-lg ${
-                  comm.status === 'unread' ? 'bg-blue-50 border-blue-200' : ''
+                  comm.status === 'unread' ? 'bg-blue-50 border-blue-200 dark:bg-blue-900/20' : ''
                 }`}>
                   <div className="flex items-center justify-between mb-1">
                     <div className="flex items-center space-x-2">
-                      {comm.type === 'message' && <MessageCircle className="h-4 w-4 text-blue-500" />}
+                      {comm.type === 'message' && <MessageCircle className="h-4 w-4 text-blue-500 dark:text-blue-400" />}
                       {comm.type === 'meeting' && <Calendar className="h-4 w-4 text-purple-500" />}
                       {comm.type === 'document' && <FileText className="h-4 w-4 text-green-500" />}
                       {comm.type === 'feedback' && <Eye className="h-4 w-4 text-orange-500" />}
@@ -523,7 +523,7 @@ const ThirdPartyDashboard: React.FC = () => {
                 <div key={request.id} className="border rounded-lg p-3">
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center space-x-2">
-                      {request.type === 'document' && <FileText className="h-4 w-4 text-blue-500" />}
+                      {request.type === 'document' && <FileText className="h-4 w-4 text-blue-500 dark:text-blue-400" />}
                       {request.type === 'data' && <Download className="h-4 w-4 text-green-500" />}
                       {request.type === 'system' && <Lock className="h-4 w-4 text-purple-500" />}
                       <p className="font-medium text-sm">{request.resource}</p>

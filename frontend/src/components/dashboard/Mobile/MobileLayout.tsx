@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+﻿import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useMobileDashboard } from '@/hooks/dashboard/useMobileDashboard';
 import { touchFeedback } from '@/utils/touchGestures';
@@ -157,7 +157,7 @@ const MobileLayout: React.FC<MobileLayoutProps> = ({
             <h3 className="text-lg font-medium mb-2">
               {searchQuery ? '未找到匹配的组件' : '暂无组件'}
             </h3>
-            <p className="text-gray-600 mb-4">
+            <p className="text-gray-600 mb-4 dark:text-gray-400">
               {searchQuery 
                 ? `没有找到包含"${searchQuery}"的组件` 
                 : '添加一些组件来开始使用仪表板'
@@ -191,7 +191,7 @@ const MobileLayout: React.FC<MobileLayoutProps> = ({
         </div>
 
         {/* Widget Navigation */}
-        <div className="flex items-center justify-between p-4 bg-white border-b">
+        <div className="flex items-center justify-between p-4 bg-white border-b dark:bg-gray-800">
           <Button
             variant="ghost"
             size="sm"
@@ -204,7 +204,7 @@ const MobileLayout: React.FC<MobileLayoutProps> = ({
           
           <div className="text-center flex-1">
             <h3 className="font-medium truncate">{currentWidget?.title}</h3>
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-gray-500 dark:text-gray-400">
               {currentWidgetIndex + 1} / {filteredWidgets.length}
             </p>
           </div>
@@ -291,7 +291,7 @@ const MobileLayout: React.FC<MobileLayoutProps> = ({
           <div className="mobile-empty-state">
             <div className="mobile-empty-state-icon text-4xl mb-4">🔍</div>
             <h3 className="text-lg font-medium mb-2">未找到组件</h3>
-            <p className="text-gray-600">尝试调整搜索条件</p>
+            <p className="text-gray-600 dark:text-gray-400">尝试调整搜索条件</p>
           </div>
         )}
       </div>
@@ -317,7 +317,7 @@ const MobileLayout: React.FC<MobileLayoutProps> = ({
         </div>
 
         {filteredWidgets.map((widget) => (
-          <div key={widget.id} className="border-b border-gray-200 last:border-b-0 p-4">
+          <div key={widget.id} className="border-b border-gray-200 last:border-b-0 p-4 dark:border-gray-700">
             <MobileWidgetCard
               widget={widget}
               realtimeData={realtimeData[widget.type]}
@@ -333,7 +333,7 @@ const MobileLayout: React.FC<MobileLayoutProps> = ({
           <div className="mobile-empty-state">
             <div className="mobile-empty-state-icon text-4xl mb-4">📋</div>
             <h3 className="text-lg font-medium mb-2">列表为空</h3>
-            <p className="text-gray-600">没有找到匹配的组件</p>
+            <p className="text-gray-600 dark:text-gray-400">没有找到匹配的组件</p>
           </div>
         )}
       </div>
@@ -345,7 +345,7 @@ const MobileLayout: React.FC<MobileLayoutProps> = ({
   }
 
   return (
-    <div className="h-screen flex flex-col bg-gray-50 safe-area-all">
+    <div className="h-screen flex flex-col bg-gray-50 safe-area-all dark:bg-gray-800/50">
       {/* Status Bar */}
       <div className="flex items-center justify-between px-4 py-1 bg-gray-900 text-white text-xs safe-area-top">
         <div className="flex items-center space-x-2">

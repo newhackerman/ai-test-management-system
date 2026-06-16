@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+﻿import React, { useMemo } from 'react';
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
 
 interface StatCardProps {
@@ -51,16 +51,16 @@ const StatCard: React.FC<StatCardProps> = ({ config, data }) => {
     if (trend > 0) {
       return <TrendingUp className="h-4 w-4 text-green-500" />;
     } else if (trend < 0) {
-      return <TrendingDown className="h-4 w-4 text-red-500" />;
+      return <TrendingDown className="h-4 w-4 text-red-500 dark:text-red-400" />;
     } else {
-      return <Minus className="h-4 w-4 text-gray-400" />;
+      return <Minus className="h-4 w-4 text-gray-400 dark:text-gray-500" />;
     }
   };
 
   const getTrendColor = (trend: number) => {
     if (trend > 0) return 'text-green-600';
-    if (trend < 0) return 'text-red-600';
-    return 'text-gray-500';
+    if (trend < 0) return 'text-red-600 dark:text-red-400';
+    return 'text-gray-500 dark:text-gray-400';
   };
 
   if (stats.length === 1) {
@@ -69,10 +69,10 @@ const StatCard: React.FC<StatCardProps> = ({ config, data }) => {
     return (
       <div className="h-full flex flex-col justify-center">
         <div className="text-center">
-          <div className="text-3xl font-bold text-gray-900 mb-1">
+          <div className="text-3xl font-bold text-gray-900 mb-1 dark:text-gray-100">
             {formatValue(stat.value)}{unit}
           </div>
-          <div className="text-sm text-gray-600 mb-2">
+          <div className="text-sm text-gray-600 mb-2 dark:text-gray-400">
             {stat.label}
           </div>
           {showTrend && (
@@ -91,12 +91,12 @@ const StatCard: React.FC<StatCardProps> = ({ config, data }) => {
     <div className="h-full">
       <div className="grid grid-cols-1 gap-3 h-full">
         {stats.map((stat, index) => (
-          <div key={stat.key} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+          <div key={stat.key} className="flex items-center justify-between p-2 bg-gray-50 rounded dark:bg-gray-800/50">
             <div className="flex-1">
-              <div className="text-lg font-semibold text-gray-900">
+              <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                 {formatValue(stat.value)}{unit}
               </div>
-              <div className="text-xs text-gray-600">
+              <div className="text-xs text-gray-600 dark:text-gray-400">
                 {stat.label}
               </div>
             </div>

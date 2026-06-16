@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react'
+﻿import React, { useMemo } from 'react'
 
 import { Badge } from '@/components/ui/Badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
@@ -12,8 +12,8 @@ interface RiskMatrixProps {
 const levelStyles: Record<RiskLevel, string> = {
   [RiskLevel.LOW]: 'bg-green-50 text-green-700 border-green-200',
   [RiskLevel.MEDIUM]: 'bg-yellow-50 text-yellow-700 border-yellow-200',
-  [RiskLevel.HIGH]: 'bg-orange-50 text-orange-700 border-orange-200',
-  [RiskLevel.CRITICAL]: 'bg-red-50 text-red-700 border-red-200',
+  [RiskLevel.HIGH]: 'bg-orange-50 text-orange-700 border-orange-200 dark:text-orange-400 dark:bg-orange-900/20',
+  [RiskLevel.CRITICAL]: 'bg-red-50 text-red-700 border-red-200 dark:text-red-400 dark:bg-red-900/20 dark:border-red-800',
 }
 
 const clampPercent = (value?: number) => {
@@ -23,8 +23,8 @@ const clampPercent = (value?: number) => {
 
 const cellClass = (row: number, column: number) => {
   const score = (5 - row) * (column + 1)
-  if (score >= 20) return 'bg-red-50 hover:bg-red-100 border-red-200'
-  if (score >= 15) return 'bg-orange-50 hover:bg-orange-100 border-orange-200'
+  if (score >= 20) return 'bg-red-50 hover:bg-red-100 border-red-200 dark:bg-red-900/20 dark:border-red-800'
+  if (score >= 15) return 'bg-orange-50 hover:bg-orange-100 border-orange-200 dark:bg-orange-900/20'
   if (score >= 8) return 'bg-yellow-50 hover:bg-yellow-100 border-yellow-200'
   return 'bg-green-50 hover:bg-green-100 border-green-200'
 }

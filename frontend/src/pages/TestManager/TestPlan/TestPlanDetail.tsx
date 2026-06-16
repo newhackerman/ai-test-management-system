@@ -53,7 +53,7 @@ const TestPlanDetail: React.FC = () => {
   }
 
   if (error || !testPlan) {
-    return <div className="text-red-500 text-center">加载失败</div>
+    return <div className="text-red-500 text-center dark:text-red-400">加载失败</div>
   }
 
   const getStatusBadge = (status: TestPlanStatus) => {
@@ -356,7 +356,7 @@ const TestPlanDetail: React.FC = () => {
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center space-x-2">
-              <Target className="w-5 h-5 text-blue-500" />
+              <Target className="w-5 h-5 text-blue-500 dark:text-blue-400" />
               <div>
                 <p className="text-sm font-medium text-gray-600 dark:text-gray-400">总用例数</p>
                 <p className="text-2xl font-bold">{stats.total_cases}</p>
@@ -395,7 +395,7 @@ const TestPlanDetail: React.FC = () => {
               <div className="w-5 h-5 bg-red-500 rounded-full" />
               <div>
                 <p className="text-sm font-medium text-gray-600 dark:text-gray-400">失败</p>
-                <p className="text-2xl font-bold text-red-600">{stats.failed_cases}</p>
+                <p className="text-2xl font-bold text-red-600 dark:text-red-400">{stats.failed_cases}</p>
               </div>
             </div>
           </CardContent>
@@ -531,7 +531,7 @@ const TestPlanDetail: React.FC = () => {
                       return (
                         <TableRow key={testCase.id}>
                           <TableCell>
-                            <Link to={`/test-manager/test-cases/${testCase.id}`} className="font-medium text-blue-600 hover:text-blue-800">
+                            <Link to={`/test-manager/test-cases/${testCase.id}`} className="font-medium text-blue-600 hover:text-blue-800 dark:text-blue-400">
                               {testCase.case_title}
                             </Link>
                             <div className="text-xs text-gray-500 dark:text-gray-400">{testCase.case_code}</div>
@@ -549,7 +549,7 @@ const TestPlanDetail: React.FC = () => {
                             )}
                           </TableCell>
                           <TableCell>
-                            <Link to={`/test-manager/defects?test_plan_id=${planId}&test_case_id=${testCase.id}`} className="text-blue-600 hover:text-blue-800">
+                            <Link to={`/test-manager/defects?test_plan_id=${planId}&test_case_id=${testCase.id}`} className="text-blue-600 hover:text-blue-800 dark:text-blue-400">
                               {defectCount}
                             </Link>
                           </TableCell>
@@ -593,7 +593,7 @@ const TestPlanDetail: React.FC = () => {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 dark:text-gray-500" />
                 <Input
                   value={caseSearch}
                   onChange={(event) => setCaseSearch(event.target.value)}
@@ -633,7 +633,7 @@ const TestPlanDetail: React.FC = () => {
                           />
                         </TableCell>
                         <TableCell>
-                          <Link to={`/test-manager/test-cases/${testCase.id}`} className="font-medium text-blue-600 hover:text-blue-800">
+                          <Link to={`/test-manager/test-cases/${testCase.id}`} className="font-medium text-blue-600 hover:text-blue-800 dark:text-blue-400">
                             {testCase.case_title}
                           </Link>
                           <div className="text-xs text-gray-500 dark:text-gray-400">{testCase.case_code}</div>
@@ -698,7 +698,7 @@ const TestPlanDetail: React.FC = () => {
                         <TableCell className="font-medium">{execution.execution_code || `#${execution.id}`}</TableCell>
                         <TableCell>
                           {execution.test_case_id ? (
-                            <Link to={`/test-manager/test-cases/${execution.test_case_id}`} className="text-blue-600 hover:text-blue-800">
+                            <Link to={`/test-manager/test-cases/${execution.test_case_id}`} className="text-blue-600 hover:text-blue-800 dark:text-blue-400">
                               #{execution.test_case_id}
                             </Link>
                           ) : '-'}
@@ -757,7 +757,7 @@ const TestPlanDetail: React.FC = () => {
                         </TableCell>
                         <TableCell>
                           {defect.test_case_id ? (
-                            <Link to={`/test-manager/test-cases/${defect.test_case_id}`} className="text-blue-600 hover:text-blue-800">
+                            <Link to={`/test-manager/test-cases/${defect.test_case_id}`} className="text-blue-600 hover:text-blue-800 dark:text-blue-400">
                               #{defect.test_case_id}
                             </Link>
                           ) : '-'}

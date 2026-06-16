@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+﻿import React, { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/Button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/Dialog'
 import { Label } from '@/components/ui/Label'
@@ -58,9 +58,9 @@ export const BatchOperationDialog: React.FC<BatchOperationDialogProps> = ({
         </DialogHeader>
 
         <div className="space-y-4">
-          <div className="rounded-md bg-gray-50 p-3">
-            <p className="mb-2 text-sm text-gray-600">已选择 {selectedUsers.length} 个用户</p>
-            <div className="max-h-28 space-y-1 overflow-y-auto text-sm text-gray-800">
+          <div className="rounded-md bg-gray-50 p-3 dark:bg-gray-800/50">
+            <p className="mb-2 text-sm text-gray-600 dark:text-gray-400">已选择 {selectedUsers.length} 个用户</p>
+            <div className="max-h-28 space-y-1 overflow-y-auto text-sm text-gray-800 dark:text-gray-200">
               {selectedUsers.map((user) => (
                 <div key={user.id}>
                   {user.username} ({user.email})

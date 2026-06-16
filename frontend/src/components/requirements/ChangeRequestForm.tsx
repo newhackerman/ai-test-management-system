@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useState } from 'react';
 import { AlertTriangle, Calculator, FileText } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/Alert';
 import { Button } from '@/components/ui/Button';
@@ -306,7 +306,7 @@ function Field({ label, error, children }: { label: string; error?: string; chil
     <div className="space-y-2">
       <Label>{label}</Label>
       {children}
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
     </div>
   );
 }

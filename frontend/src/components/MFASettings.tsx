@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+﻿import React, { useEffect, useState } from 'react'
 import { AlertTriangle, Copy, Key, Shield, Smartphone } from 'lucide-react'
 
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/AlertDialog'
@@ -202,7 +202,7 @@ const MFASettings: React.FC = () => {
           <Shield className="h-6 w-6" />
           <span>多因素认证 (MFA)</span>
         </h1>
-        <p className="mt-2 text-gray-600">为账号增加额外安全保护。</p>
+        <p className="mt-2 text-gray-600 dark:text-gray-400">为账号增加额外安全保护。</p>
       </div>
 
       <Card>
@@ -218,13 +218,13 @@ const MFASettings: React.FC = () => {
           {!mfaStatus?.enabled ? (
             <>
               <div className="flex items-start space-x-4">
-                <Smartphone className="mt-1 h-8 w-8 text-blue-500" />
+                <Smartphone className="mt-1 h-8 w-8 text-blue-500 dark:text-blue-400" />
                 <div>
                   <h3 className="font-medium">保护您的账号</h3>
-                  <p className="mt-1 text-gray-600">
+                  <p className="mt-1 text-gray-600 dark:text-gray-400">
                     启用 MFA 后，登录时除了密码，还需要输入身份验证应用生成的动态验证码。
                   </p>
-                  <ul className="mt-2 space-y-1 text-sm text-gray-500">
+                  <ul className="mt-2 space-y-1 text-sm text-gray-500 dark:text-gray-400">
                     <li>防止未授权访问</li>
                     <li>即使密码泄露，账号仍有额外保护</li>
                     <li>支持 Google Authenticator、Authy 等应用</li>
@@ -250,7 +250,7 @@ const MFASettings: React.FC = () => {
                         <h4 className="mb-2 font-medium">1. 扫描二维码</h4>
                         <div className="flex justify-center">
                           <div
-                            className="rounded-lg border bg-white p-4"
+                            className="rounded-lg border bg-white p-4 dark:bg-gray-800"
                             dangerouslySetInnerHTML={{ __html: setupData.qr_code }}
                           />
                         </div>
@@ -283,10 +283,10 @@ const MFASettings: React.FC = () => {
                         />
                       </div>
 
-                      <div className="rounded-lg border border-amber-200 bg-amber-50 p-3">
+                      <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 dark:bg-amber-900/20 dark:border-amber-800">
                         <div className="flex items-start space-x-2 text-sm">
-                          <AlertTriangle className="mt-0.5 h-5 w-5 flex-shrink-0 text-amber-600" />
-                          <p className="text-amber-700">
+                          <AlertTriangle className="mt-0.5 h-5 w-5 flex-shrink-0 text-amber-600 dark:text-amber-400" />
+                          <p className="text-amber-700 dark:text-amber-400">
                             启用后请妥善保存备用代码，以防无法访问身份验证应用。
                           </p>
                         </div>
@@ -329,10 +329,10 @@ const MFASettings: React.FC = () => {
               <div className="space-y-4">
                 <div>
                   <h4 className="mb-2 font-medium">备用代码</h4>
-                  <div className="flex items-center justify-between rounded-lg bg-gray-50 p-3">
+                  <div className="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50">
                     <div>
                       <p className="text-sm">剩余备用代码：{mfaStatus?.backup_codes_count || 0} 个</p>
-                      <p className="text-xs text-gray-600">备用代码用于无法使用验证应用时登录。</p>
+                      <p className="text-xs text-gray-600 dark:text-gray-400">备用代码用于无法使用验证应用时登录。</p>
                     </div>
                     <Button type="button" size="sm" variant="outline">
                       <Key className="mr-1 h-4 w-4" />

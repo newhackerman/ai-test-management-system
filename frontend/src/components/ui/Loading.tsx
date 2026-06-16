@@ -1,4 +1,4 @@
-import React from 'react'
+﻿import React from 'react'
 import { cn } from '@/lib/utils'
 
 interface LoadingProps {
@@ -16,7 +16,7 @@ const Loading: React.FC<LoadingProps> = ({ size = 'md', className }) => {
   return (
     <div
       className={cn(
-        'animate-spin rounded-full border-2 border-gray-300 border-t-blue-600',
+        'animate-spin rounded-full border-2 border-gray-300 border-t-blue-600 dark:border-gray-600',
         sizeClasses[size],
         className
       )}

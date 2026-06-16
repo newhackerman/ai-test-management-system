@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+﻿import React, { useState } from 'react'
 import {
   Modal,
   Form,
@@ -310,7 +310,7 @@ export const MemberInvitation: React.FC<MemberInvitationProps> = ({
         return (
           <div className="text-center py-8">
             <div className="mb-4">
-              <ClockCircleOutlined className="text-4xl text-blue-500" />
+              <ClockCircleOutlined className="text-4xl text-blue-500 dark:text-blue-400" />
             </div>
             <Title level={4}>正在发送邀请...</Title>
             <Text type="secondary">

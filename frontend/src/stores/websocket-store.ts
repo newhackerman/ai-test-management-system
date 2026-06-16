@@ -382,13 +382,13 @@ export const webSocketUtils = {
       case 'connected':
         return 'text-green-500'
       case 'disconnected':
-        return 'text-gray-500'
+        return 'text-gray-500 dark:text-gray-400'
       case 'reconnecting':
         return 'text-blue-500'
       case 'error':
         return 'text-red-500'
       default:
-        return 'text-gray-500'
+        return 'text-gray-500 dark:text-gray-400'
     }
   },
 

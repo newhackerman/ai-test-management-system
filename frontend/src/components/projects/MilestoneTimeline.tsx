@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+﻿import { useMemo } from 'react'
 import { AlertTriangle, Calendar, CheckCircle, Clock, FileText, Flag, Target, TrendingUp, Users } from 'lucide-react'
 
 import { Badge } from '@/components/ui/Badge'
@@ -40,11 +40,11 @@ const milestoneTypeConfig = {
 }
 
 const statusConfig = {
-  PENDING: { label: '待开始', color: 'bg-gray-100 text-gray-800', icon: Clock, dotColor: 'bg-gray-400' },
-  IN_PROGRESS: { label: '进行中', color: 'bg-blue-100 text-blue-800', icon: TrendingUp, dotColor: 'bg-blue-500' },
+  PENDING: { label: '待开始', color: 'bg-gray-100 text-gray-800 dark:text-gray-200 dark:bg-gray-800', icon: Clock, dotColor: 'bg-gray-400' },
+  IN_PROGRESS: { label: '进行中', color: 'bg-blue-100 text-blue-800 dark:text-blue-300 dark:bg-blue-900/30', icon: TrendingUp, dotColor: 'bg-blue-500' },
   COMPLETED: { label: '已完成', color: 'bg-green-100 text-green-800', icon: CheckCircle, dotColor: 'bg-green-500' },
-  OVERDUE: { label: '已逾期', color: 'bg-red-100 text-red-800', icon: AlertTriangle, dotColor: 'bg-red-500' },
-  CANCELLED: { label: '已取消', color: 'bg-gray-100 text-gray-800', icon: Clock, dotColor: 'bg-gray-400' },
+  OVERDUE: { label: '已逾期', color: 'bg-red-100 text-red-800 dark:text-red-300 dark:bg-red-900/30', icon: AlertTriangle, dotColor: 'bg-red-500' },
+  CANCELLED: { label: '已取消', color: 'bg-gray-100 text-gray-800 dark:text-gray-200 dark:bg-gray-800', icon: Clock, dotColor: 'bg-gray-400' },
 }
 
 const formatDate = (value: string) => {
@@ -203,11 +203,11 @@ function MilestoneStats({ milestones }: { milestones: Milestone[] }) {
         <div className="text-sm text-muted-foreground">已完成</div>
       </Card>
       <Card className="p-4 text-center">
-        <div className="text-2xl font-bold text-blue-600">{stats.inProgress}</div>
+        <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{stats.inProgress}</div>
         <div className="text-sm text-muted-foreground">进行中</div>
       </Card>
       <Card className="p-4 text-center">
-        <div className="text-2xl font-bold text-red-600">{stats.overdue}</div>
+        <div className="text-2xl font-bold text-red-600 dark:text-red-400">{stats.overdue}</div>
         <div className="text-sm text-muted-foreground">已逾期</div>
       </Card>
       <Card className="p-4 text-center">

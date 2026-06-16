@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+﻿import React, { useMemo } from 'react';
 import { Badge } from '@/components/ui/Badge';
 import { CheckCircle, Clock, AlertTriangle, User } from 'lucide-react';
 
@@ -82,13 +82,13 @@ const TaskList: React.FC<TaskListProps> = ({ config, data }) => {
   const getPriorityColor = (priority: string) => {
     switch (priority) {
       case 'high':
-        return 'bg-red-100 text-red-800';
+        return 'bg-red-100 text-red-800 dark:text-red-300 dark:bg-red-900/30';
       case 'medium':
         return 'bg-yellow-100 text-yellow-800';
       case 'low':
         return 'bg-green-100 text-green-800';
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-gray-100 text-gray-800 dark:text-gray-200 dark:bg-gray-800';
     }
   };
 
@@ -110,11 +110,11 @@ const TaskList: React.FC<TaskListProps> = ({ config, data }) => {
       case 'completed':
         return <CheckCircle className="h-4 w-4 text-green-500" />;
       case 'in_progress':
-        return <Clock className="h-4 w-4 text-blue-500" />;
+        return <Clock className="h-4 w-4 text-blue-500 dark:text-blue-400" />;
       case 'todo':
-        return <AlertTriangle className="h-4 w-4 text-gray-400" />;
+        return <AlertTriangle className="h-4 w-4 text-gray-400 dark:text-gray-500" />;
       default:
-        return <Clock className="h-4 w-4 text-gray-400" />;
+        return <Clock className="h-4 w-4 text-gray-400 dark:text-gray-500" />;
     }
   };
 
@@ -158,16 +158,16 @@ const TaskList: React.FC<TaskListProps> = ({ config, data }) => {
     <div className="h-full flex flex-col">
       <div className="flex-1 space-y-3 overflow-auto">
         {tasks.map((task) => (
-          <div key={task.id} className="p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+          <div key={task.id} className="p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors dark:bg-gray-800/50 dark:hover:bg-gray-800 dark:border-gray-700">
             <div className="flex items-start justify-between mb-2">
               <div className="flex items-start space-x-2 flex-1">
                 {getStatusIcon(task.status)}
                 <div className="flex-1 min-w-0">
-                  <h4 className="text-sm font-medium text-gray-900 truncate">
+                  <h4 className="text-sm font-medium text-gray-900 truncate dark:text-gray-100">
                     {task.title}
                   </h4>
                   <div className="flex items-center space-x-2 mt-1">
-                    <div className="flex items-center space-x-1 text-xs text-gray-500">
+                    <div className="flex items-center space-x-1 text-xs text-gray-500 dark:text-gray-400">
                       <User className="h-3 w-3" />
                       <span>{task.assignee}</span>
                     </div>
@@ -194,7 +194,7 @@ const TaskList: React.FC<TaskListProps> = ({ config, data }) => {
             {/* Progress bar */}
             {task.progress > 0 && (
               <div className="mt-2">
-                <div className="flex items-center justify-between text-xs text-gray-600 mb-1">
+                <div className="flex items-center justify-between text-xs text-gray-600 mb-1 dark:text-gray-400">
                   <span>进度</span>
                   <span>{task.progress}%</span>
                 </div>
@@ -211,7 +211,7 @@ const TaskList: React.FC<TaskListProps> = ({ config, data }) => {
       </div>
 
       {/* Summary */}
-      <div className="mt-4 pt-3 border-t text-xs text-gray-500 text-center">
+      <div className="mt-4 pt-3 border-t text-xs text-gray-500 text-center dark:text-gray-400">
         显示 {tasks.length} 个任务
         {tasks.length >= limit && ` (共 ${limit}+ 个)`}
       </div>

@@ -144,7 +144,7 @@ const TestCaseDetail: React.FC = () => {
   }
 
   if (error || !testCase) {
-    return <div className="text-center text-red-500">加载失败</div>
+    return <div className="text-center text-red-500 dark:text-red-400">加载失败</div>
   }
 
   const executions = executionsData?.data || []
@@ -200,7 +200,7 @@ const TestCaseDetail: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-        <MetricCard icon={<FileText className="h-5 w-5 text-blue-500" />} label="测试类型" value={TEST_CASE_TYPE_LABELS[testCase.case_type] || testCase.case_type} />
+        <MetricCard icon={<FileText className="h-5 w-5 text-blue-500 dark:text-blue-400" />} label="测试类型" value={TEST_CASE_TYPE_LABELS[testCase.case_type] || testCase.case_type} />
         <Card>
           <CardContent className="pt-6">
             <p className="text-sm font-medium text-gray-600 dark:text-gray-400">优先级</p>

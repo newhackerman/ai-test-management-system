@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
+﻿import React, { useEffect, useMemo, useState } from 'react'
 import { AlertCircle, Calendar, Check, DollarSign, Tag, User, X } from 'lucide-react'
 
 import { Badge } from '@/components/ui/Badge'
@@ -183,14 +183,14 @@ const ProjectCreateModal: React.FC<ProjectCreateModalProps> = ({
       <DialogContent className="max-h-[92vh] max-w-3xl overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{editProject ? '编辑项目' : '新建项目'}</DialogTitle>
-          <p className="mt-1 text-sm text-gray-600">
+          <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
             填好名称和计划周期即可创建，其他信息可以之后补充。
           </p>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {(submitError || errors.date_range) && (
-            <div className="flex items-start gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+            <div className="flex items-start gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:text-red-400 dark:bg-red-900/20 dark:border-red-800">
               <AlertCircle className="mt-0.5 h-4 w-4" />
               <span>{submitError || errors.date_range}</span>
             </div>
@@ -208,7 +208,7 @@ const ProjectCreateModal: React.FC<ProjectCreateModalProps> = ({
                   className={errors.project_name ? 'border-red-500' : ''}
                   autoFocus
                 />
-                {errors.project_name && <p className="mt-1 text-sm text-red-500">{errors.project_name}</p>}
+                {errors.project_name && <p className="mt-1 text-sm text-red-500 dark:text-red-400">{errors.project_name}</p>}
               </div>
 
               <div className="md:col-span-2">
@@ -225,7 +225,7 @@ const ProjectCreateModal: React.FC<ProjectCreateModalProps> = ({
           </section>
 
           <section className="space-y-3">
-            <div className="flex items-center gap-2 text-base font-semibold text-gray-900">
+            <div className="flex items-center gap-2 text-base font-semibold text-gray-900 dark:text-gray-100">
               <Check className="h-4 w-4" />
               类型与优先级
             </div>
@@ -241,7 +241,7 @@ const ProjectCreateModal: React.FC<ProjectCreateModalProps> = ({
                     <option key={option.value} value={option.value}>{option.label}</option>
                   ))}
                 </select>
-                <p className="mt-1 text-xs text-gray-500">{selectedType.description}</p>
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{selectedType.description}</p>
               </div>
 
               <div>
@@ -255,7 +255,7 @@ const ProjectCreateModal: React.FC<ProjectCreateModalProps> = ({
                       className={`h-10 border-r text-sm last:border-r-0 ${
                         formData.priority === option.value
                           ? 'bg-blue-600 text-white'
-                          : 'bg-white text-gray-700 hover:bg-gray-50'
+                          : 'bg-white text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:bg-gray-800'
                       }`}
                     >
                       {option.label}
@@ -267,7 +267,7 @@ const ProjectCreateModal: React.FC<ProjectCreateModalProps> = ({
           </section>
 
           <section className="space-y-3">
-            <div className="flex items-center gap-2 text-base font-semibold text-gray-900">
+            <div className="flex items-center gap-2 text-base font-semibold text-gray-900 dark:text-gray-100">
               <Calendar className="h-4 w-4" />
               计划周期
             </div>
@@ -281,7 +281,7 @@ const ProjectCreateModal: React.FC<ProjectCreateModalProps> = ({
                   onChange={(event) => handleStartDateChange(event.target.value)}
                   className={errors.planned_start_date ? 'border-red-500' : ''}
                 />
-                {errors.planned_start_date && <p className="mt-1 text-sm text-red-500">{errors.planned_start_date}</p>}
+                {errors.planned_start_date && <p className="mt-1 text-sm text-red-500 dark:text-red-400">{errors.planned_start_date}</p>}
               </div>
 
               <div>
@@ -293,20 +293,20 @@ const ProjectCreateModal: React.FC<ProjectCreateModalProps> = ({
                   onChange={(event) => updateField('planned_end_date', event.target.value)}
                   className={errors.planned_end_date || errors.date_range ? 'border-red-500' : ''}
                 />
-                {errors.planned_end_date && <p className="mt-1 text-sm text-red-500">{errors.planned_end_date}</p>}
+                {errors.planned_end_date && <p className="mt-1 text-sm text-red-500 dark:text-red-400">{errors.planned_end_date}</p>}
               </div>
             </div>
           </section>
 
           <section className="space-y-3">
-            <div className="flex items-center gap-2 text-base font-semibold text-gray-900">
+            <div className="flex items-center gap-2 text-base font-semibold text-gray-900 dark:text-gray-100">
               <User className="h-4 w-4" />
               负责人和补充信息
             </div>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
               <div>
                 <Label>项目负责人</Label>
-                <div className="mt-1 flex h-10 items-center rounded-md border bg-gray-50 px-3 text-sm text-gray-700">
+                <div className="mt-1 flex h-10 items-center rounded-md border bg-gray-50 px-3 text-sm text-gray-700 dark:text-gray-300 dark:bg-gray-800/50">
                   {currentUserName}
                 </div>
               </div>
@@ -322,7 +322,7 @@ const ProjectCreateModal: React.FC<ProjectCreateModalProps> = ({
               <div>
                 <Label htmlFor="budget">预算</Label>
                 <div className="relative">
-                  <DollarSign className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                  <DollarSign className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 dark:text-gray-500" />
                   <Input
                     id="budget"
                     type="number"
@@ -334,13 +334,13 @@ const ProjectCreateModal: React.FC<ProjectCreateModalProps> = ({
                     className={`pl-9 ${errors.budget ? 'border-red-500' : ''}`}
                   />
                 </div>
-                {errors.budget && <p className="mt-1 text-sm text-red-500">{errors.budget}</p>}
+                {errors.budget && <p className="mt-1 text-sm text-red-500 dark:text-red-400">{errors.budget}</p>}
               </div>
             </div>
           </section>
 
           <section className="space-y-3">
-            <div className="flex items-center gap-2 text-base font-semibold text-gray-900">
+            <div className="flex items-center gap-2 text-base font-semibold text-gray-900 dark:text-gray-100">
               <Tag className="h-4 w-4" />
               标签
             </div>
@@ -364,7 +364,7 @@ const ProjectCreateModal: React.FC<ProjectCreateModalProps> = ({
               {(formData.tags || []).map((tag) => (
                 <Badge key={tag} variant="secondary" className="flex items-center gap-1">
                   {tag}
-                  <button type="button" onClick={() => removeTag(tag)} className="rounded-sm hover:text-red-600">
+                  <button type="button" onClick={() => removeTag(tag)} className="rounded-sm hover:text-red-600 dark:text-red-400">
                     <X className="h-3 w-3" />
                   </button>
                 </Badge>

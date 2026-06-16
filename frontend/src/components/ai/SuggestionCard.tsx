@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 建议卡片组件
  * 
  * 功能特性：
@@ -53,17 +53,17 @@ const statusConfig = {
   },
   [SuggestionStatus.REJECTED]: {
     label: '已拒绝',
-    color: 'bg-red-100 text-red-800',
+    color: 'bg-red-100 text-red-800 dark:text-red-300 dark:bg-red-900/30',
     icon: XCircle
   },
   [SuggestionStatus.IMPLEMENTED]: {
     label: '已实施',
-    color: 'bg-blue-100 text-blue-800',
+    color: 'bg-blue-100 text-blue-800 dark:text-blue-300 dark:bg-blue-900/30',
     icon: CheckCircle
   },
   [SuggestionStatus.CANCELLED]: {
     label: '已取消',
-    color: 'bg-gray-100 text-gray-800',
+    color: 'bg-gray-100 text-gray-800 dark:text-gray-200 dark:bg-gray-800',
     icon: XCircle
   }
 };
@@ -71,11 +71,11 @@ const statusConfig = {
 const priorityConfig = {
   [SuggestionPriority.LOW]: {
     label: '低',
-    color: 'bg-gray-100 text-gray-800'
+    color: 'bg-gray-100 text-gray-800 dark:text-gray-200 dark:bg-gray-800'
   },
   [SuggestionPriority.MEDIUM]: {
     label: '中',
-    color: 'bg-blue-100 text-blue-800'
+    color: 'bg-blue-100 text-blue-800 dark:text-blue-300 dark:bg-blue-900/30'
   },
   [SuggestionPriority.HIGH]: {
     label: '高',
@@ -83,7 +83,7 @@ const priorityConfig = {
   },
   [SuggestionPriority.CRITICAL]: {
     label: '紧急',
-    color: 'bg-red-100 text-red-800'
+    color: 'bg-red-100 text-red-800 dark:text-red-300 dark:bg-red-900/30'
   }
 };
 
@@ -98,11 +98,11 @@ const typeConfig = {
   },
   [SuggestionType.RISK_MITIGATION]: {
     label: '风险缓解',
-    color: 'bg-red-100 text-red-800'
+    color: 'bg-red-100 text-red-800 dark:text-red-300 dark:bg-red-900/30'
   },
   [SuggestionType.QUALITY_ENHANCEMENT]: {
     label: '质量提升',
-    color: 'bg-blue-100 text-blue-800'
+    color: 'bg-blue-100 text-blue-800 dark:text-blue-300 dark:bg-blue-900/30'
   },
   [SuggestionType.PROCESS_IMPROVEMENT]: {
     label: '流程改进',
@@ -222,14 +222,14 @@ export function SuggestionCard({
               </Badge>
 
               {suggestion._syncing && (
-                <Badge variant="outline" className="bg-blue-50 text-blue-600">
+                <Badge variant="outline" className="bg-blue-50 text-blue-600 dark:text-blue-400 dark:bg-blue-900/20">
                   <Loader2 className="w-3 h-3 mr-1 animate-spin" />
                   同步中
                 </Badge>
               )}
             </div>
 
-            <div className="flex items-center gap-4 text-sm text-gray-500">
+            <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400">
               <div className="flex items-center gap-1">
                 <Calendar className="w-4 h-4" />
                 {formatDate(suggestion.created_at)}
@@ -270,7 +270,7 @@ export function SuggestionCard({
         <div className="space-y-4">
           {/* 建议描述 */}
           <div className={cn(
-            'text-gray-700',
+            'text-gray-700 dark:text-gray-300',
             !isExpanded && 'line-clamp-3'
           )}>
             {suggestion.description}
@@ -282,8 +282,8 @@ export function SuggestionCard({
               {/* 行动项 */}
               {suggestion.action_items && suggestion.action_items.length > 0 && (
                 <div>
-                  <h4 className="font-medium text-gray-900 mb-2">行动项</h4>
-                  <ul className="list-disc list-inside space-y-1 text-sm text-gray-600">
+                  <h4 className="font-medium text-gray-900 mb-2 dark:text-gray-100">行动项</h4>
+                  <ul className="list-disc list-inside space-y-1 text-sm text-gray-600 dark:text-gray-400">
                     {suggestion.action_items.map((item, index) => (
                       <li key={index}>{item}</li>
                     ))}
@@ -294,32 +294,32 @@ export function SuggestionCard({
               {/* 预期收益 */}
               {suggestion.expected_benefit && (
                 <div>
-                  <h4 className="font-medium text-gray-900 mb-2">预期收益</h4>
-                  <p className="text-sm text-gray-600">{suggestion.expected_benefit}</p>
+                  <h4 className="font-medium text-gray-900 mb-2 dark:text-gray-100">预期收益</h4>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">{suggestion.expected_benefit}</p>
                 </div>
               )}
 
               {/* 预估工作量 */}
               {suggestion.estimated_effort && (
                 <div>
-                  <h4 className="font-medium text-gray-900 mb-2">预估工作量</h4>
-                  <p className="text-sm text-gray-600">{suggestion.estimated_effort}</p>
+                  <h4 className="font-medium text-gray-900 mb-2 dark:text-gray-100">预估工作量</h4>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">{suggestion.estimated_effort}</p>
                 </div>
               )}
 
               {/* 实施说明 */}
               {suggestion.implementation_notes && (
                 <div>
-                  <h4 className="font-medium text-gray-900 mb-2">实施说明</h4>
-                  <p className="text-sm text-gray-600">{suggestion.implementation_notes}</p>
+                  <h4 className="font-medium text-gray-900 mb-2 dark:text-gray-100">实施说明</h4>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">{suggestion.implementation_notes}</p>
                 </div>
               )}
 
               {/* 用户反馈 */}
               {suggestion.user_feedback && !isFeedback && (
                 <div>
-                  <h4 className="font-medium text-gray-900 mb-2">用户反馈</h4>
-                  <p className="text-sm text-gray-600">{suggestion.user_feedback}</p>
+                  <h4 className="font-medium text-gray-900 mb-2 dark:text-gray-100">用户反馈</h4>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">{suggestion.user_feedback}</p>
                 </div>
               )}
 
@@ -362,7 +362,7 @@ export function SuggestionCard({
                     variant="outline"
                     onClick={handleReject}
                     disabled={isLoading}
-                    className="border-red-200 text-red-600 hover:bg-red-50"
+                    className="border-red-200 text-red-600 hover:bg-red-50 dark:text-red-400 dark:bg-red-900/20 dark:border-red-800"
                   >
                     {isLoading ? (
                       <Loader2 className="w-4 h-4 mr-1 animate-spin" />
@@ -402,8 +402,8 @@ export function SuggestionCard({
 
           {/* 评分界面 */}
           {isRating && (
-            <div className="bg-gray-50 p-3 rounded-lg space-y-3">
-              <h4 className="font-medium text-gray-900">为此建议评分</h4>
+            <div className="bg-gray-50 p-3 rounded-lg space-y-3 dark:bg-gray-800/50">
+              <h4 className="font-medium text-gray-900 dark:text-gray-100">为此建议评分</h4>
               <div className="flex items-center gap-2">
                 {[1, 2, 3, 4, 5].map((star) => (
                   <button
@@ -419,7 +419,7 @@ export function SuggestionCard({
                     <Star className="w-4 h-4" />
                   </button>
                 ))}
-                <span className="ml-2 text-sm text-gray-600">
+                <span className="ml-2 text-sm text-gray-600 dark:text-gray-400">
                   {rating > 0 ? `${rating}/5` : '请选择评分'}
                 </span>
               </div>
@@ -437,8 +437,8 @@ export function SuggestionCard({
 
           {/* 反馈界面 */}
           {isFeedback && (
-            <div className="bg-gray-50 p-3 rounded-lg space-y-3">
-              <h4 className="font-medium text-gray-900">添加反馈</h4>
+            <div className="bg-gray-50 p-3 rounded-lg space-y-3 dark:bg-gray-800/50">
+              <h4 className="font-medium text-gray-900 dark:text-gray-100">添加反馈</h4>
               <Textarea
                 value={feedback}
                 onChange={(e) => setFeedback(e.target.value)}

@@ -1,4 +1,4 @@
-// @ts-nocheck
+﻿// @ts-nocheck
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertCircle,
@@ -267,10 +267,10 @@ export function ChatInterface({
 
   return (
     <div className={cn('flex h-full flex-col bg-white', settings.compactMode && 'text-sm', className)}>
-      <div className="flex items-center justify-between border-b bg-gray-50 px-4 py-3">
+      <div className="flex items-center justify-between border-b bg-gray-50 px-4 py-3 dark:bg-gray-800/50">
         <div className="flex min-w-0 items-center gap-3">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-100">
-            <Bot className="h-5 w-5 text-blue-600" />
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/30">
+            <Bot className="h-5 w-5 text-blue-600 dark:text-blue-400" />
           </div>
           <div className="min-w-0">
             <div className="flex items-center gap-2">
@@ -279,7 +279,7 @@ export function ChatInterface({
                 {settings.streamingEnabled ? '流式' : '普通'}
               </Badge>
             </div>
-            <div className="flex items-center gap-2 text-xs text-gray-500">
+            <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
               <span>{conversation.ai_provider || 'AI'}</span>
               {conversation.ai_model && <span>{conversation.ai_model}</span>}
               <span>{stats.total} 条消息</span>
@@ -290,7 +290,7 @@ export function ChatInterface({
 
         <div className="flex items-center gap-2">
           <div className="relative hidden sm:block">
-            <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+            <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 dark:text-gray-500" />
             <Input
               value={searchQuery}
               onChange={(event) => setSearchQuery(event.target.value)}
@@ -318,12 +318,12 @@ export function ChatInterface({
         </div>
       </div>
 
-      <div className="flex items-center justify-between border-b px-4 py-2 text-xs text-gray-500">
+      <div className="flex items-center justify-between border-b px-4 py-2 text-xs text-gray-500 dark:text-gray-400">
         <div className="flex items-center gap-2">
           {navigator.onLine ? <Wifi className="h-3.5 w-3.5 text-green-600" /> : <WifiOff className="h-3.5 w-3.5 text-orange-600" />}
           <span>{navigator.onLine ? '在线' : '离线'}</span>
           {sending && (
-            <span className="inline-flex items-center gap-1 text-blue-600">
+            <span className="inline-flex items-center gap-1 text-blue-600 dark:text-blue-400">
               <Loader2 className="h-3.5 w-3.5 animate-spin" />
               正在处理
             </span>
@@ -359,7 +359,7 @@ export function ChatInterface({
 
       <div className="flex-1 overflow-y-auto p-4">
         {isLoading ? (
-          <div className="flex items-center justify-center py-12 text-gray-500">
+          <div className="flex items-center justify-center py-12 text-gray-500 dark:text-gray-400">
             <Loader2 className="mr-2 h-5 w-5 animate-spin" />
             加载消息中...
           </div>
@@ -456,11 +456,11 @@ const SettingSwitch: React.FC<{ label: string; checked: boolean; onChange: (valu
 
 const EmptyState: React.FC<{ enableTemplates: boolean }> = ({ enableTemplates }) => (
   <div className="flex h-full flex-col items-center justify-center py-12 text-center">
-    <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-blue-100">
-      <Bot className="h-8 w-8 text-blue-600" />
+    <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/30">
+      <Bot className="h-8 w-8 text-blue-600 dark:text-blue-400" />
     </div>
     <h3 className="mb-2 text-lg font-medium">开始对话</h3>
-    <p className="mb-4 max-w-md text-gray-500">发送消息，与 AI 助手讨论测试设计、缺陷分析、代码审查或项目问题。</p>
+    <p className="mb-4 max-w-md text-gray-500 dark:text-gray-400">发送消息，与 AI 助手讨论测试设计、缺陷分析、代码审查或项目问题。</p>
     {enableTemplates && (
       <div className="flex flex-wrap justify-center gap-2">
         <Badge variant="outline" className="gap-1">
@@ -489,18 +489,18 @@ const MessageRow: React.FC<{
   return (
     <div className={cn('flex gap-3', isUser && 'flex-row-reverse')}>
       {showAvatar && (
-        <div className={cn('flex h-8 w-8 shrink-0 items-center justify-center rounded-full', isUser ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700')}>
+        <div className={cn('flex h-8 w-8 shrink-0 items-center justify-center rounded-full', isUser ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 dark:text-gray-300 dark:bg-gray-800')}>
           {isUser ? <User className="h-4 w-4" /> : <Bot className="h-4 w-4" />}
         </div>
       )}
       <Card className={cn('max-w-[78%]', isUser ? 'bg-blue-600 text-white' : 'bg-white')}>
         <CardContent className="p-3">
           <div className="whitespace-pre-wrap break-words text-sm leading-6">{message.content}</div>
-          <div className={cn('mt-3 flex flex-wrap items-center gap-2 text-xs', isUser ? 'text-blue-100' : 'text-gray-500')}>
+          <div className={cn('mt-3 flex flex-wrap items-center gap-2 text-xs', isUser ? 'text-blue-100' : 'text-gray-500 dark:text-gray-400')}>
             {showTimestamp && <span>{formatDateTime(message.created_at)}</span>}
             {showTokenCount && message.tokens_used > 0 && <span>{message.tokens_used} tokens</span>}
             {message.is_streaming && <span>生成中...</span>}
-            {message.is_error && <span className="text-red-500">异常</span>}
+            {message.is_error && <span className="text-red-500 dark:text-red-400">异常</span>}
             <div className="ml-auto flex items-center gap-1">
               <Button type="button" variant="ghost" size="sm" className="h-7 px-2" onClick={onCopy}>
                 <Copy className="mr-1 h-3.5 w-3.5" />

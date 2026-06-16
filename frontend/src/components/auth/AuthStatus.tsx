@@ -34,7 +34,7 @@ export const AuthStatus: React.FC<AuthStatusProps> = ({
     }
     
     if (error) {
-      return <XCircle className="w-4 h-4 text-red-500" />
+      return <XCircle className="w-4 h-4 text-red-500 dark:text-red-400" />
     }
     
     if (isAuthenticated && user) {
@@ -45,7 +45,7 @@ export const AuthStatus: React.FC<AuthStatusProps> = ({
       return <AlertCircle className="w-4 h-4 text-yellow-500" />
     }
     
-    return <XCircle className="w-4 h-4 text-gray-400" />
+    return <XCircle className="w-4 h-4 text-gray-400 dark:text-gray-500" />
   }
 
   const getStatusText = () => {

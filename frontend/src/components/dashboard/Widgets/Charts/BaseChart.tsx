@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+﻿import React, { useMemo } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { MoreHorizontal, Download, Maximize2, RefreshCw } from 'lucide-react';
@@ -111,15 +111,15 @@ export const BaseChart: React.FC<BaseChartProps> = ({
         <div className="flex items-center justify-between mb-4">
           {title && (
             <div>
-              <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
-              {subtitle && <p className="text-sm text-gray-500">{subtitle}</p>}
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{title}</h3>
+              {subtitle && <p className="text-sm text-gray-500 dark:text-gray-400">{subtitle}</p>}
             </div>
           )}
         </div>
-        <div className="flex items-center justify-center h-48 text-red-500">
+        <div className="flex items-center justify-center h-48 text-red-500 dark:text-red-400">
           <div className="text-center">
             <p className="text-lg font-medium">加载失败</p>
-            <p className="text-sm text-gray-500 mt-1">{error}</p>
+            <p className="text-sm text-gray-500 mt-1 dark:text-gray-400">{error}</p>
             {refreshable && onRefresh && (
               <Button
                 variant="outline"
@@ -144,10 +144,10 @@ export const BaseChart: React.FC<BaseChartProps> = ({
         {(title || subtitle) && (
           <div className="flex-1">
             {title && (
-              <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{title}</h3>
             )}
             {subtitle && (
-              <p className="text-sm text-gray-500">{subtitle}</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">{subtitle}</p>
             )}
           </div>
         )}
@@ -201,8 +201,8 @@ export const BaseChart: React.FC<BaseChartProps> = ({
         {loading ? (
           <div className="flex items-center justify-center h-full">
             <div className="text-center">
-              <RefreshCw className="w-8 h-8 animate-spin text-blue-500 mx-auto mb-2" />
-              <p className="text-sm text-gray-500">加载中...</p>
+              <RefreshCw className="w-8 h-8 animate-spin text-blue-500 mx-auto mb-2 dark:text-blue-400" />
+              <p className="text-sm text-gray-500 dark:text-gray-400">加载中...</p>
             </div>
           </div>
         ) : (

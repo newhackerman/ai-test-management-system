@@ -1,4 +1,4 @@
-import { AlertOutlined, CheckCircleOutlined, ClockCircleOutlined, TeamOutlined, UserOutlined } from '@ant-design/icons'
+﻿import { AlertOutlined, CheckCircleOutlined, ClockCircleOutlined, TeamOutlined, UserOutlined } from '@ant-design/icons'
 import { Avatar, Card, Col, Empty, Progress, Row, Space, Statistic, Tag, Tooltip } from 'antd'
 import { useMemo } from 'react'
 import { Bar, BarChart, CartesianGrid, Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip as RechartsTooltip, XAxis, YAxis } from 'recharts'
@@ -218,7 +218,7 @@ export const WorkloadChart: React.FC<WorkloadChartProps> = ({ members, loading =
 
                     {member.responsibilities && (
                       <Tooltip title={member.responsibilities}>
-                        <div className="truncate text-xs text-gray-500">职责：{member.responsibilities}</div>
+                        <div className="truncate text-xs text-gray-500 dark:text-gray-400">职责：{member.responsibilities}</div>
                       </Tooltip>
                     )}
                   </div>

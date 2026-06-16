@@ -144,7 +144,7 @@ const PerformanceTest: React.FC = () => {
         </Button>
       </div>
 
-      {error && <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
+      {error && <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:text-red-400 dark:bg-red-900/20 dark:border-red-800">{error}</div>}
 
       {lastExecution && (
         <Card>
@@ -267,7 +267,7 @@ const Field = ({ label, children }: { label: string; children: React.ReactNode }
 
 const Metric = ({ label, value }: { label: string; value: React.ReactNode }) => (
   <div>
-    <p className="text-lg font-bold text-blue-600">{value}</p>
+    <p className="text-lg font-bold text-blue-600 dark:text-blue-400">{value}</p>
     <p className="text-sm text-gray-600 dark:text-gray-400">{label}</p>
   </div>
 )

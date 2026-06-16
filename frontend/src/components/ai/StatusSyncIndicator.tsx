@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 状态同步指示器组件
  * 显示实时同步状态、连接状态和待处理操作
  */
@@ -63,14 +63,14 @@ const syncStatusConfig: Record<SyncStatus, StatusConfig> = {
   syncing: {
     icon: RefreshCw,
     color: 'text-blue-600',
-    bgColor: 'bg-blue-100',
+    bgColor: 'bg-blue-100 dark:bg-blue-900/30',
     label: '同步中',
     description: '正在与服务器同步数据'
   },
   error: {
     icon: XCircle,
-    color: 'text-red-600',
-    bgColor: 'bg-red-100',
+    color: 'text-red-600 dark:text-red-400',
+    bgColor: 'bg-red-100 dark:bg-red-900/30',
     label: '同步错误',
     description: '同步过程中发生错误'
   },
@@ -107,8 +107,8 @@ const connectionStatusConfig: Record<ConnectionStatus, StatusConfig> = {
   },
   disconnected: {
     icon: WifiOff,
-    color: 'text-red-600',
-    bgColor: 'bg-red-100',
+    color: 'text-red-600 dark:text-red-400',
+    bgColor: 'bg-red-100 dark:bg-red-900/30',
     label: '已断开',
     description: 'WebSocket连接已断开'
   }
@@ -204,14 +204,14 @@ export function StatusSyncIndicator({
           <TooltipContent>
             <div className="text-sm">
               <div className="font-medium">{syncConfig.label}</div>
-              <div className="text-gray-500">{syncConfig.description}</div>
+              <div className="text-gray-500 dark:text-gray-400">{syncConfig.description}</div>
               {pendingCount > 0 && (
                 <div className="text-orange-600">
                   {pendingCount} 个待处理操作
                 </div>
               )}
               {conflictsCount > 0 && (
-                <div className="text-red-600">
+                <div className="text-red-600 dark:text-red-400">
                   {conflictsCount} 个冲突需要解决
                 </div>
               )}
@@ -273,7 +273,7 @@ export function StatusSyncIndicator({
             {/* 同步状态详情 */}
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">状态</span>
+                <span className="text-sm text-gray-600 dark:text-gray-400">状态</span>
                 <div className="flex items-center gap-2">
                   <syncConfig.icon className={cn("w-4 h-4", syncConfig.color)} />
                   <span className={cn("text-sm font-medium", syncConfig.color)}>
@@ -283,7 +283,7 @@ export function StatusSyncIndicator({
               </div>
               
               <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">连接状态</span>
+                <span className="text-sm text-gray-600 dark:text-gray-400">连接状态</span>
                 <div className="flex items-center gap-2">
                   <connectionConfig.icon className={cn("w-4 h-4", connectionConfig.color)} />
                   <span className={cn("text-sm", connectionConfig.color)}>
@@ -293,8 +293,8 @@ export function StatusSyncIndicator({
               </div>
               
               <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">最后同步</span>
-                <span className="text-sm text-gray-500">
+                <span className="text-sm text-gray-600 dark:text-gray-400">最后同步</span>
+                <span className="text-sm text-gray-500 dark:text-gray-400">
                   {formatTime(lastSyncTime)}
                 </span>
               </div>
@@ -304,8 +304,8 @@ export function StatusSyncIndicator({
             {syncState.status === 'syncing' && (
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">同步进度</span>
-                  <span className="text-sm text-gray-500">
+                  <span className="text-sm text-gray-600 dark:text-gray-400">同步进度</span>
+                  <span className="text-sm text-gray-500 dark:text-gray-400">
                     {Math.round(getSyncProgress())}%
                   </span>
                 </div>
@@ -324,7 +324,7 @@ export function StatusSyncIndicator({
                   </div>
                   <Badge variant="secondary">{pendingCount}</Badge>
                 </div>
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-gray-500 dark:text-gray-400">
                   有 {pendingCount} 个操作等待同步到服务器
                 </p>
               </div>
@@ -336,12 +336,12 @@ export function StatusSyncIndicator({
                 <Separator />
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <AlertTriangle className="w-4 h-4 text-red-500" />
-                    <span className="text-sm font-medium text-red-600">数据冲突</span>
+                    <AlertTriangle className="w-4 h-4 text-red-500 dark:text-red-400" />
+                    <span className="text-sm font-medium text-red-600 dark:text-red-400">数据冲突</span>
                   </div>
                   <Badge variant="destructive">{conflictsCount}</Badge>
                 </div>
-                <p className="text-xs text-red-600">
+                <p className="text-xs text-red-600 dark:text-red-400">
                   发现 {conflictsCount} 个数据冲突，需要手动解决
                 </p>
                 <Button 
@@ -381,10 +381,10 @@ export function StatusSyncIndicator({
             </div>
             
             {/* 帮助信息 */}
-            <div className="bg-blue-50 p-3 rounded-md">
+            <div className="bg-blue-50 p-3 rounded-md dark:bg-blue-900/20">
               <div className="flex items-start gap-2">
-                <Info className="w-4 h-4 text-blue-600 mt-0.5" />
-                <div className="text-xs text-blue-700">
+                <Info className="w-4 h-4 text-blue-600 mt-0.5 dark:text-blue-400" />
+                <div className="text-xs text-blue-700 dark:text-blue-300">
                   <p className="font-medium mb-1">同步说明</p>
                   <p>
                     系统会自动同步您的操作到服务器。离线时的操作会在网络恢复后自动同步。

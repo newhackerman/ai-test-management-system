@@ -1,4 +1,4 @@
-// @ts-nocheck
+﻿// @ts-nocheck
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Activity,
@@ -323,14 +323,14 @@ const EnhancedStreamingChatInner: React.FC = () => {
   const isStreaming = currentSession?.status === 'streaming';
 
   return (
-    <div className="flex h-screen flex-col bg-gray-50">
-      <div className="flex items-center justify-between border-b border-gray-200 bg-white p-4">
+    <div className="flex h-screen flex-col bg-gray-50 dark:bg-gray-800/50">
+      <div className="flex items-center justify-between border-b border-gray-200 bg-white p-4 dark:bg-gray-800 dark:border-gray-700">
         <div className="flex items-center gap-4">
-          <h1 className="text-xl font-semibold text-gray-900">增强流式 AI 助手</h1>
+          <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100">增强流式 AI 助手</h1>
           <ConnectionStatusIndicator />
           <ConnectionQualityIndicator />
           {currentSession && (
-            <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-medium text-blue-700">
+            <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-medium text-blue-700 dark:text-blue-300 dark:bg-blue-900/20">
               会话状态：{statusLabel[currentSession.status] || currentSession.status}
             </span>
           )}
@@ -338,42 +338,42 @@ const EnhancedStreamingChatInner: React.FC = () => {
 
         <div className="flex items-center gap-2">
           {currentSession?.status === 'streaming' && (
-            <button className="rounded-lg p-2 hover:bg-gray-100" title="暂停" onClick={() => updateSessionStatus('pause')}>
+            <button className="rounded-lg p-2 hover:bg-gray-100 dark:bg-gray-800" title="暂停" onClick={() => updateSessionStatus('pause')}>
               <Pause className="h-4 w-4" />
             </button>
           )}
           {currentSession?.status === 'paused' && (
-            <button className="rounded-lg p-2 hover:bg-gray-100" title="继续" onClick={() => updateSessionStatus('resume')}>
+            <button className="rounded-lg p-2 hover:bg-gray-100 dark:bg-gray-800" title="继续" onClick={() => updateSessionStatus('resume')}>
               <Play className="h-4 w-4" />
             </button>
           )}
           {currentSession && ['streaming', 'paused'].includes(currentSession.status) && (
-            <button className="rounded-lg p-2 text-red-600 hover:bg-red-50" title="取消" onClick={() => updateSessionStatus('cancel')}>
+            <button className="rounded-lg p-2 text-red-600 hover:bg-red-50 dark:text-red-400 dark:bg-red-900/20" title="取消" onClick={() => updateSessionStatus('cancel')}>
               <Square className="h-4 w-4" />
             </button>
           )}
-          <button className="rounded-lg p-2 hover:bg-gray-100" title="性能指标" onClick={() => setShowMetrics((value) => !value)}>
+          <button className="rounded-lg p-2 hover:bg-gray-100 dark:bg-gray-800" title="性能指标" onClick={() => setShowMetrics((value) => !value)}>
             <BarChart3 className="h-4 w-4" />
           </button>
-          <button className="rounded-lg p-2 hover:bg-gray-100" title="连接统计" onClick={() => setShowConnectionStats((value) => !value)}>
+          <button className="rounded-lg p-2 hover:bg-gray-100 dark:bg-gray-800" title="连接统计" onClick={() => setShowConnectionStats((value) => !value)}>
             <Activity className="h-4 w-4" />
           </button>
-          <button className="rounded-lg p-2 hover:bg-gray-100" title="设置" onClick={() => setShowSettings((value) => !value)}>
+          <button className="rounded-lg p-2 hover:bg-gray-100 dark:bg-gray-800" title="设置" onClick={() => setShowSettings((value) => !value)}>
             <Settings className="h-4 w-4" />
           </button>
         </div>
       </div>
 
       {showSettings && (
-        <div className="border-b border-gray-200 bg-white p-4">
+        <div className="border-b border-gray-200 bg-white p-4 dark:bg-gray-800 dark:border-gray-700">
           <h3 className="mb-4 text-lg font-medium">流式处理设置</h3>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
             <label className="text-sm">
-              <span className="mb-2 block font-medium text-gray-700">处理模式</span>
+              <span className="mb-2 block font-medium text-gray-700 dark:text-gray-300">处理模式</span>
               <select
                 value={streamConfig.processingMode}
                 onChange={(event) => updateStreamConfig({ processingMode: event.target.value as StreamConfig['processingMode'] })}
-                className="w-full rounded-md border border-gray-300 px-3 py-2"
+                className="w-full rounded-md border border-gray-300 px-3 py-2 dark:border-gray-600"
               >
                 <option value="real_time">实时模式</option>
                 <option value="buffered">缓冲模式</option>
@@ -388,7 +388,7 @@ const EnhancedStreamingChatInner: React.FC = () => {
       )}
 
       {showMetrics && (
-        <div className="border-b border-gray-200 bg-white p-4">
+        <div className="border-b border-gray-200 bg-white p-4 dark:bg-gray-800 dark:border-gray-700">
           <h3 className="mb-4 text-lg font-medium">性能指标</h3>
           {streamMetrics ? (
             <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
@@ -400,20 +400,20 @@ const EnhancedStreamingChatInner: React.FC = () => {
               <Metric label="错误数" value={streamMetrics.errorCount} />
             </div>
           ) : (
-            <div className="text-sm text-gray-500">暂无指标数据，开始生成后会自动刷新。</div>
+            <div className="text-sm text-gray-500 dark:text-gray-400">暂无指标数据，开始生成后会自动刷新。</div>
           )}
         </div>
       )}
 
       {showConnectionStats && (
-        <div className="border-b border-gray-200 bg-white p-4">
+        <div className="border-b border-gray-200 bg-white p-4 dark:bg-gray-800 dark:border-gray-700">
           <ConnectionStatsPanel />
         </div>
       )}
 
       <div className="flex-1 space-y-4 overflow-y-auto p-4">
         {messages.length === 0 && (
-          <div className="rounded-lg border border-dashed border-gray-300 bg-white p-8 text-center text-gray-500">
+          <div className="rounded-lg border border-dashed border-gray-300 bg-white p-8 text-center text-gray-500 dark:text-gray-400 dark:bg-gray-800 dark:border-gray-600">
             输入问题后开始流式对话。
           </div>
         )}
@@ -435,7 +435,7 @@ const EnhancedStreamingChatInner: React.FC = () => {
                 )}
               </div>
               {message.isStreaming && (
-                <div className="mt-2 flex items-center text-xs text-gray-500">
+                <div className="mt-2 flex items-center text-xs text-gray-500 dark:text-gray-400">
                   <Activity className="mr-1 h-3 w-3 animate-pulse" />
                   正在生成...
                 </div>
@@ -449,7 +449,7 @@ const EnhancedStreamingChatInner: React.FC = () => {
         <div ref={messagesEndRef} />
       </div>
 
-      <div className="border-t border-gray-200 bg-white p-4">
+      <div className="border-t border-gray-200 bg-white p-4 dark:bg-gray-800 dark:border-gray-700">
         <div className="flex gap-2">
           <input
             type="text"
@@ -459,7 +459,7 @@ const EnhancedStreamingChatInner: React.FC = () => {
               if (event.key === 'Enter') handleSendMessage();
             }}
             placeholder="输入消息..."
-            className="flex-1 rounded-lg border border-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="flex-1 rounded-lg border border-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-600"
             disabled={isStreaming || isSending}
           />
           <button
@@ -486,7 +486,7 @@ const Slider: React.FC<{
   onChange: (value: number) => void;
 }> = ({ label, min, max, step = 1, value, onChange }) => (
   <label className="text-sm">
-    <span className="mb-2 block font-medium text-gray-700">{label}</span>
+    <span className="mb-2 block font-medium text-gray-700 dark:text-gray-300">{label}</span>
     <input
       type="range"
       min={min}
@@ -500,9 +500,9 @@ const Slider: React.FC<{
 );
 
 const Metric: React.FC<{ label: string; value: React.ReactNode }> = ({ label, value }) => (
-  <div className="rounded-md border border-gray-200 p-3 text-center">
-    <div className="text-xl font-semibold text-blue-600">{value}</div>
-    <div className="text-sm text-gray-600">{label}</div>
+  <div className="rounded-md border border-gray-200 p-3 text-center dark:border-gray-700">
+    <div className="text-xl font-semibold text-blue-600 dark:text-blue-400">{value}</div>
+    <div className="text-sm text-gray-600 dark:text-gray-400">{label}</div>
   </div>
 );
 

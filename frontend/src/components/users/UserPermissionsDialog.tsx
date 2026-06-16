@@ -1,4 +1,4 @@
-import React from 'react'
+﻿import React from 'react'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/Dialog'
@@ -26,21 +26,21 @@ export const UserPermissionsDialog: React.FC<UserPermissionsDialogProps> = ({ op
         </DialogHeader>
 
         <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-3 rounded-md bg-gray-50 p-3 text-sm">
+          <div className="grid grid-cols-2 gap-3 rounded-md bg-gray-50 p-3 text-sm dark:bg-gray-800/50">
             <div>
-              <span className="text-gray-500">用户名：</span>
+              <span className="text-gray-500 dark:text-gray-400">用户名：</span>
               {user.username}
             </div>
             <div>
-              <span className="text-gray-500">邮箱：</span>
+              <span className="text-gray-500 dark:text-gray-400">邮箱：</span>
               {user.email}
             </div>
             <div>
-              <span className="text-gray-500">状态：</span>
+              <span className="text-gray-500 dark:text-gray-400">状态：</span>
               <Badge variant={user.is_active ? 'default' : 'destructive'}>{user.is_active ? '启用' : '禁用'}</Badge>
             </div>
             <div>
-              <span className="text-gray-500">角色数：</span>
+              <span className="text-gray-500 dark:text-gray-400">角色数：</span>
               {displayRoles.length}
             </div>
           </div>
@@ -55,7 +55,7 @@ export const UserPermissionsDialog: React.FC<UserPermissionsDialogProps> = ({ op
                   </Badge>
                 ))
               ) : (
-                <span className="text-sm text-gray-500">未分配角色</span>
+                <span className="text-sm text-gray-500 dark:text-gray-400">未分配角色</span>
               )}
             </div>
           </div>
@@ -64,17 +64,17 @@ export const UserPermissionsDialog: React.FC<UserPermissionsDialogProps> = ({ op
             <h4 className="font-medium">权限</h4>
             <div className="max-h-64 overflow-y-auto rounded-md border p-3">
               {isLoading ? (
-                <p className="text-sm text-gray-500">加载中...</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">加载中...</p>
               ) : data?.all_permissions?.length ? (
                 <div className="grid grid-cols-1 gap-2">
                   {data.all_permissions.map((permission) => (
-                    <div key={permission} className="rounded-md bg-gray-50 px-3 py-2 text-sm">
+                    <div key={permission} className="rounded-md bg-gray-50 px-3 py-2 text-sm dark:bg-gray-800/50">
                       {permission}
                     </div>
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-gray-500">当前角色暂未分配权限</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">当前角色暂未分配权限</p>
               )}
             </div>
           </div>

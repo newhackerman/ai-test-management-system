@@ -218,7 +218,7 @@ const ReportDashboard: React.FC = () => {
       </div>
 
       {error && (
-        <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:text-red-400 dark:bg-red-900/20 dark:border-red-800">
           {error}
         </div>
       )}
@@ -235,7 +235,7 @@ const ReportDashboard: React.FC = () => {
             </div>
             <div className="grid grid-cols-1 gap-2 md:grid-cols-[minmax(220px,1fr)_150px_130px_190px] xl:w-[760px]">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 dark:text-gray-500" />
                 <Input
                   value={filters.search}
                   onChange={(event) => updateFilter('search', event.target.value)}

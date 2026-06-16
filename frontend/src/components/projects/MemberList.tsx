@@ -1,4 +1,4 @@
-// @ts-nocheck
+﻿// @ts-nocheck
 import { useState } from 'react'
 import {
   DeleteOutlined,
@@ -191,7 +191,7 @@ export const MemberList: React.FC<MemberListProps> = ({ projectId, editable = fa
           <Avatar src={record.user?.avatar || record.user?.avatar_url} icon={<UserOutlined />} size="small" />
           <div>
             <div className="font-medium">{getUserName(record.user)}</div>
-            <div className="text-xs text-gray-500">{record.user?.email || '-'}</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400">{record.user?.email || '-'}</div>
           </div>
         </Space>
       ),

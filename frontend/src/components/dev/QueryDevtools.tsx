@@ -141,7 +141,7 @@ export function QueryDevtools({
       case 'success': return 'text-green-500'
       case 'error': return 'text-red-500'
       case 'loading': return 'text-blue-500'
-      default: return 'text-gray-500'
+      default: return 'text-gray-500 dark:text-gray-400'
     }
   }
 
@@ -274,7 +274,7 @@ export function QueryDevtools({
                       <div className="text-xs text-muted-foreground">Total</div>
                     </div>
                     <div className="text-center">
-                      <div className="text-lg font-bold text-blue-500">{stats.active}</div>
+                      <div className="text-lg font-bold text-blue-500 dark:text-blue-400">{stats.active}</div>
                       <div className="text-xs text-muted-foreground">Active</div>
                     </div>
                     <div className="text-center">
@@ -282,11 +282,11 @@ export function QueryDevtools({
                       <div className="text-xs text-muted-foreground">Stale</div>
                     </div>
                     <div className="text-center">
-                      <div className="text-lg font-bold text-red-500">{stats.error}</div>
+                      <div className="text-lg font-bold text-red-500 dark:text-red-400">{stats.error}</div>
                       <div className="text-xs text-muted-foreground">Error</div>
                     </div>
                     <div className="text-center">
-                      <div className="text-lg font-bold text-blue-500">{stats.loading}</div>
+                      <div className="text-lg font-bold text-blue-500 dark:text-blue-400">{stats.loading}</div>
                       <div className="text-xs text-muted-foreground">Loading</div>
                     </div>
                   </div>

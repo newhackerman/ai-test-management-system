@@ -448,7 +448,7 @@ const ReportGenerate: React.FC = () => {
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <div className={previewData ? 'lg:col-span-2' : 'lg:col-span-3'}>
           {error && (
-            <div className="mb-3 flex items-start gap-2 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            <div className="mb-3 flex items-start gap-2 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:text-red-400 dark:bg-red-900/20 dark:border-red-800">
               <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
               <span>{error}</span>
             </div>
@@ -576,7 +576,7 @@ const ReportGenerate: React.FC = () => {
                 placeholder="填写或从 AI 助手导入报告正文"
               />
               {aiDraft && (
-                <p className="mt-2 text-xs text-blue-700">已从 AI 助手导入报告内容，生成前可继续编辑。</p>
+                <p className="mt-2 text-xs text-blue-700 dark:text-blue-300">已从 AI 助手导入报告内容，生成前可继续编辑。</p>
               )}
             </CardContent>
           </Card>

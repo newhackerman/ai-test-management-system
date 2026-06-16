@@ -13,11 +13,11 @@ import EndMeetingMinutesDialog from './EndMeetingMinutesDialog'
 import { meetingStatusLabels, meetingTypeLabels } from './MeetingForm'
 
 const statusBadgeClass: Record<string, string> = {
-  SCHEDULED: 'border-blue-200 bg-blue-50 text-blue-700',
-  IN_PROGRESS: 'border-emerald-200 bg-emerald-50 text-emerald-700',
-  COMPLETED: 'border-gray-200 bg-gray-50 text-gray-700',
-  CANCELLED: 'border-red-200 bg-red-50 text-red-700',
-  POSTPONED: 'border-amber-200 bg-amber-50 text-amber-700',
+  SCHEDULED: 'border-blue-200 bg-blue-50 text-blue-700 dark:text-blue-300 dark:bg-blue-900/20',
+  IN_PROGRESS: 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:text-emerald-400',
+  COMPLETED: 'border-gray-200 bg-gray-50 text-gray-700 dark:text-gray-300 dark:bg-gray-800/50 dark:border-gray-700',
+  CANCELLED: 'border-red-200 bg-red-50 text-red-700 dark:text-red-400 dark:bg-red-900/20 dark:border-red-800',
+  POSTPONED: 'border-amber-200 bg-amber-50 text-amber-700 dark:text-amber-400 dark:bg-amber-900/20',
 }
 
 const formatDateTime = (value?: string) => {
@@ -173,7 +173,7 @@ export default function MeetingDetail() {
                 <ol className="space-y-3">
                   {agenda.map((item, index) => (
                     <li key={`${item.title}-${index}`} className="flex gap-3 rounded-md border p-3">
-                      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-50 text-xs font-semibold text-blue-700">{index + 1}</span>
+                      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-50 text-xs font-semibold text-blue-700 dark:text-blue-300 dark:bg-blue-900/20">{index + 1}</span>
                       <div className="min-w-0">
                         <div className="font-medium text-gray-900 dark:text-gray-100">{item.title || item.description}</div>
                         <div className="text-sm text-muted-foreground">预计 {item.duration_minutes || 15} 分钟{item.presenter ? `，主讲：${item.presenter}` : ''}</div>
