@@ -63,7 +63,7 @@ const statusLabels: Record<HealthStatus, string> = {
 const getHealthIcon = (status?: HealthStatus) => {
   switch (status) {
     case HealthStatus.HEALTHY:
-      return <CheckCircle className="h-4 w-4 text-green-600" />;
+      return <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />;
     case HealthStatus.UNHEALTHY:
     case HealthStatus.ERROR:
       return <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400" />;

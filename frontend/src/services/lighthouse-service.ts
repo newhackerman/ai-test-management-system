@@ -181,7 +181,7 @@ export class LighthouseService {
    * 格式化性能评分颜色
    */
   static getScoreColor(score: number): string {
-    if (score >= 90) return 'text-green-600'
+    if (score >= 90) return 'text-green-600 dark:text-green-400'
     if (score >= 50) return 'text-yellow-600'
     return 'text-red-600 dark:text-red-400'
   }

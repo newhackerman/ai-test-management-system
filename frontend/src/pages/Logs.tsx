@@ -240,7 +240,7 @@ export default function Logs() {
         <StatCard icon={<XCircle className="h-8 w-8 text-red-500 dark:text-red-400" />} value={stats.error} label="错误日志" />
         <StatCard icon={<AlertCircle className="h-8 w-8 text-yellow-500" />} value={stats.warning} label="警告日志" />
         <StatCard icon={<Info className="h-8 w-8 text-blue-500 dark:text-blue-400" />} value={stats.info} label="信息日志" />
-        <StatCard icon={<CheckCircle className="h-8 w-8 text-green-500" />} value={stats.success} label="成功日志" />
+        <StatCard icon={<CheckCircle className="h-8 w-8 text-green-500 dark:text-green-400" />} value={stats.success} label="成功日志" />
       </div>
 
       <Card>

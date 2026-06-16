@@ -249,8 +249,8 @@ const AutomationExecution: React.FC = () => {
             </div>
             <div className="grid grid-cols-4 gap-4 text-center">
               <div><p className="text-2xl font-semibold text-blue-600 dark:text-blue-400">{executionStatus.total_cases}</p><p className="text-sm text-muted-foreground">总数</p></div>
-              <div><p className="text-2xl font-semibold text-emerald-600">{executionStatus.completed_cases}</p><p className="text-sm text-muted-foreground">已完成</p></div>
-              <div><p className="text-2xl font-semibold text-green-600">{executionStatus.passed_cases}</p><p className="text-sm text-muted-foreground">通过</p></div>
+              <div><p className="text-2xl font-semibold text-emerald-600 dark:text-emerald-400">{executionStatus.completed_cases}</p><p className="text-sm text-muted-foreground">已完成</p></div>
+              <div><p className="text-2xl font-semibold text-green-600 dark:text-green-400">{executionStatus.passed_cases}</p><p className="text-sm text-muted-foreground">通过</p></div>
               <div><p className="text-2xl font-semibold text-red-600 dark:text-red-400">{executionStatus.failed_cases}</p><p className="text-sm text-muted-foreground">失败</p></div>
             </div>
           </CardContent>

@@ -231,11 +231,11 @@ const CostMonitoringDashboard: React.FC = () => {
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'normal':
-        return <CheckCircle className="h-4 w-4 text-green-500" />;
+        return <CheckCircle className="h-4 w-4 text-green-500 dark:text-green-400" />;
       case 'warning':
         return <AlertTriangle className="h-4 w-4 text-yellow-500" />;
       case 'critical':
-        return <AlertTriangle className="h-4 w-4 text-orange-500" />;
+        return <AlertTriangle className="h-4 w-4 text-orange-500 dark:text-orange-400" />;
       case 'exceeded':
         return <XCircle className="h-4 w-4 text-red-500 dark:text-red-400" />;
       default:

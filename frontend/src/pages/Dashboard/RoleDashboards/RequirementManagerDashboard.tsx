@@ -127,7 +127,7 @@ const RequirementManagerDashboard: React.FC = () => {
         <div className="bg-gradient-to-r from-blue-300 to-purple-400 rounded-lg h-32"></div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {[1, 2, 3, 4].map(i => (
-            <div key={i} className="bg-gray-300 rounded-lg h-24"></div>
+            <div key={i} className="bg-gray-300 rounded-lg h-24 dark:bg-gray-500"></div>
           ))}
         </div>
       </div>
@@ -175,14 +175,14 @@ const RequirementManagerDashboard: React.FC = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600 dark:text-gray-400">完成率</p>
-                <p className="text-2xl font-bold text-green-600">
+                <p className="text-2xl font-bold text-green-600 dark:text-green-400">
                   {requirementMetrics.completionRate}%
                 </p>
               </div>
-              <CheckCircle className="h-8 w-8 text-green-600" />
+              <CheckCircle className="h-8 w-8 text-green-600 dark:text-green-400" />
             </div>
             <div className="mt-2">
-              <Badge variant="outline" className="text-green-600 border-green-600">
+              <Badge variant="outline" className="text-green-600 border-green-600 dark:text-green-400">
                 +2.3% 本周
               </Badge>
             </div>
@@ -213,14 +213,14 @@ const RequirementManagerDashboard: React.FC = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600 dark:text-gray-400">追溯覆盖率</p>
-                <p className="text-2xl font-bold text-purple-600">
+                <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">
                   {requirementMetrics.traceabilityCoverage}%
                 </p>
               </div>
-              <GitBranch className="h-8 w-8 text-purple-600" />
+              <GitBranch className="h-8 w-8 text-purple-600 dark:text-purple-400" />
             </div>
             <div className="mt-2">
-              <Badge variant="outline" className="text-purple-600 border-purple-600">
+              <Badge variant="outline" className="text-purple-600 border-purple-600 dark:text-purple-400">
                 高覆盖
               </Badge>
             </div>
@@ -232,14 +232,14 @@ const RequirementManagerDashboard: React.FC = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600 dark:text-gray-400">干系人参与度</p>
-                <p className="text-2xl font-bold text-orange-600">
+                <p className="text-2xl font-bold text-orange-600 dark:text-orange-400">
                   {requirementMetrics.stakeholderEngagement}%
                 </p>
               </div>
-              <Users className="h-8 w-8 text-orange-600" />
+              <Users className="h-8 w-8 text-orange-600 dark:text-orange-400" />
             </div>
             <div className="mt-2">
-              <Badge variant="outline" className="text-orange-600 border-orange-600">
+              <Badge variant="outline" className="text-orange-600 border-orange-600 dark:text-orange-400">
                 活跃
               </Badge>
             </div>

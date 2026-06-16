@@ -108,7 +108,7 @@ const TaskList: React.FC<TaskListProps> = ({ config, data }) => {
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'completed':
-        return <CheckCircle className="h-4 w-4 text-green-500" />;
+        return <CheckCircle className="h-4 w-4 text-green-500 dark:text-green-400" />;
       case 'in_progress':
         return <Clock className="h-4 w-4 text-blue-500 dark:text-blue-400" />;
       case 'todo':
@@ -172,7 +172,7 @@ const TaskList: React.FC<TaskListProps> = ({ config, data }) => {
                       <span>{task.assignee}</span>
                     </div>
                     <span className="text-gray-300">•</span>
-                    <span className={`text-xs ${isOverdue(task.dueDate) ? 'text-red-600' : 'text-gray-500'}`}>
+                    <span className={`text-xs ${isOverdue(task.dueDate) ? 'text-red-600' : 'text-gray-500 dark:text-gray-400'}`}>
                       {formatDate(task.dueDate)}
                     </span>
                   </div>
@@ -198,7 +198,7 @@ const TaskList: React.FC<TaskListProps> = ({ config, data }) => {
                   <span>进度</span>
                   <span>{task.progress}%</span>
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-1.5">
+                <div className="w-full bg-gray-200 rounded-full h-1.5 dark:bg-gray-600">
                   <div
                     className="bg-blue-500 h-1.5 rounded-full transition-all duration-300"
                     style={{ width: `${task.progress}%` }}

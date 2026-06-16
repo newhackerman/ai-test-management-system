@@ -440,7 +440,7 @@ const EnhancedStreamingChatInner: React.FC = () => {
                   正在生成...
                 </div>
               )}
-              <div className={`mt-2 text-xs ${message.role === 'user' ? 'text-blue-100' : 'text-gray-500'}`}>
+              <div className={`mt-2 text-xs ${message.role === 'user' ? 'text-blue-100' : 'text-gray-500 dark:text-gray-400'}`}>
                 {formatTime(message.timestamp)}
               </div>
             </div>

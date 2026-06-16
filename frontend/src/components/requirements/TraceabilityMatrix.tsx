@@ -413,7 +413,7 @@ export function TraceabilityMatrix({
                                 }`} />
                               </Tooltip>
                             ) : (
-                              <div className="w-6 h-6 rounded-full mx-auto bg-gray-200" />
+                              <div className="w-6 h-6 rounded-full mx-auto bg-gray-200 dark:bg-gray-600" />
                             )}
                           </div>
                         )
@@ -437,7 +437,7 @@ export function TraceabilityMatrix({
                     <span className="text-sm text-gray-600 dark:text-gray-400">未覆盖</span>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <div className="w-4 h-4 rounded-full bg-gray-200" />
+                    <div className="w-4 h-4 rounded-full bg-gray-200 dark:bg-gray-600" />
                     <span className="text-sm text-gray-600 dark:text-gray-400">无关系</span>
                   </div>
                 </div>

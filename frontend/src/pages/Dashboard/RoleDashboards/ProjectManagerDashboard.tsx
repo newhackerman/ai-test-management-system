@@ -185,7 +185,7 @@ const ProjectManagerDashboard: React.FC = () => {
         <div className="bg-gradient-to-r from-emerald-300 to-teal-400 rounded-lg h-32"></div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {[1, 2, 3, 4].map(i => (
-            <div key={i} className="bg-gray-300 rounded-lg h-24"></div>
+            <div key={i} className="bg-gray-300 rounded-lg h-24 dark:bg-gray-500"></div>
           ))}
         </div>
       </div>
@@ -233,14 +233,14 @@ const ProjectManagerDashboard: React.FC = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600 dark:text-gray-400">项目总数</p>
-                <p className="text-2xl font-bold text-emerald-600">
+                <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
                   {projectMetrics.totalProjects}
                 </p>
               </div>
-              <Briefcase className="h-8 w-8 text-emerald-600" />
+              <Briefcase className="h-8 w-8 text-emerald-600 dark:text-emerald-400" />
             </div>
             <div className="mt-2">
-              <Badge variant="outline" className="text-emerald-600 border-emerald-600">
+              <Badge variant="outline" className="text-emerald-600 border-emerald-600 dark:text-emerald-400">
                 完成: {projectMetrics.completedProjects}
               </Badge>
             </div>
@@ -271,14 +271,14 @@ const ProjectManagerDashboard: React.FC = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600 dark:text-gray-400">预算使用率</p>
-                <p className="text-2xl font-bold text-orange-600">
+                <p className="text-2xl font-bold text-orange-600 dark:text-orange-400">
                   {projectMetrics.budgetUtilization}%
                 </p>
               </div>
-              <DollarSign className="h-8 w-8 text-orange-600" />
+              <DollarSign className="h-8 w-8 text-orange-600 dark:text-orange-400" />
             </div>
             <div className="mt-2">
-              <Badge variant="outline" className="text-orange-600 border-orange-600">
+              <Badge variant="outline" className="text-orange-600 border-orange-600 dark:text-orange-400">
                 预算内
               </Badge>
             </div>
@@ -290,14 +290,14 @@ const ProjectManagerDashboard: React.FC = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600 dark:text-gray-400">整体进度</p>
-                <p className="text-2xl font-bold text-purple-600">
+                <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">
                   {projectMetrics.overallProgress}%
                 </p>
               </div>
-              <Target className="h-8 w-8 text-purple-600" />
+              <Target className="h-8 w-8 text-purple-600 dark:text-purple-400" />
             </div>
             <div className="mt-2">
-              <Badge variant="outline" className="text-purple-600 border-purple-600">
+              <Badge variant="outline" className="text-purple-600 border-purple-600 dark:text-purple-400">
                 按计划进行
               </Badge>
             </div>
@@ -323,7 +323,7 @@ const ProjectManagerDashboard: React.FC = () => {
                     <span className="font-medium">{project.name}</span>
                     <span className="text-gray-500 dark:text-gray-400">健康度: {project.health}%</span>
                   </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div className="w-full bg-gray-200 rounded-full h-2 dark:bg-gray-600">
                     <div 
                       className={`h-2 rounded-full ${
                         project.health >= 80 ? 'bg-green-500' :
@@ -335,7 +335,7 @@ const ProjectManagerDashboard: React.FC = () => {
                   <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400">
                     <span>进度: {project.progress}%</span>
                     <span className={
-                      project.health >= 80 ? 'text-green-600' :
+                      project.health >= 80 ? 'text-green-600 dark:text-green-400' :
                       project.health >= 60 ? 'text-yellow-600' : 'text-red-600 dark:text-red-400'
                     }>
                       {project.health >= 80 ? '健康' :
@@ -398,7 +398,7 @@ const ProjectManagerDashboard: React.FC = () => {
                        project.health === 'warning' ? '警告' : '风险'}
                     </Badge>
                   </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2 mb-2">
+                  <div className="w-full bg-gray-200 rounded-full h-2 mb-2 dark:bg-gray-600">
                     <div 
                       className="bg-emerald-600 h-2 rounded-full" 
                       style={{ width: `${project.progress}%` }}

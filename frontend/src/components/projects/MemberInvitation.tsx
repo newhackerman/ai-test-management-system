@@ -323,7 +323,7 @@ export const MemberInvitation: React.FC<MemberInvitationProps> = ({
         return (
           <div className="space-y-4">
             <div className="text-center mb-6">
-              <CheckCircleOutlined className="text-4xl text-green-500 mb-2" />
+              <CheckCircleOutlined className="text-4xl text-green-500 mb-2 dark:text-green-400" />
               <Title level={4}>邀请发送完成</Title>
             </div>
 

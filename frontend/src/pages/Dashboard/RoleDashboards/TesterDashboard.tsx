@@ -192,7 +192,7 @@ const TesterDashboard: React.FC = () => {
         <div className="bg-gradient-to-r from-cyan-300 to-blue-400 rounded-lg h-32"></div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {[1, 2, 3, 4].map(i => (
-            <div key={i} className="bg-gray-300 rounded-lg h-24"></div>
+            <div key={i} className="bg-gray-300 rounded-lg h-24 dark:bg-gray-500"></div>
           ))}
         </div>
       </div>
@@ -240,14 +240,14 @@ const TesterDashboard: React.FC = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600 dark:text-gray-400">测试通过率</p>
-                <p className="text-2xl font-bold text-green-600">
+                <p className="text-2xl font-bold text-green-600 dark:text-green-400">
                   {((testMetrics.passedTests / testMetrics.executedTests) * 100).toFixed(1)}%
                 </p>
               </div>
-              <CheckCircle className="h-8 w-8 text-green-600" />
+              <CheckCircle className="h-8 w-8 text-green-600 dark:text-green-400" />
             </div>
             <div className="mt-2">
-              <Badge variant="outline" className="text-green-600 border-green-600">
+              <Badge variant="outline" className="text-green-600 border-green-600 dark:text-green-400">
                 {testMetrics.passedTests}/{testMetrics.executedTests}
               </Badge>
             </div>
@@ -278,14 +278,14 @@ const TesterDashboard: React.FC = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600 dark:text-gray-400">自动化率</p>
-                <p className="text-2xl font-bold text-purple-600">
+                <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">
                   {testMetrics.automationRate}%
                 </p>
               </div>
-              <Activity className="h-8 w-8 text-purple-600" />
+              <Activity className="h-8 w-8 text-purple-600 dark:text-purple-400" />
             </div>
             <div className="mt-2">
-              <Badge variant="outline" className="text-purple-600 border-purple-600">
+              <Badge variant="outline" className="text-purple-600 border-purple-600 dark:text-purple-400">
                 持续提升
               </Badge>
             </div>
@@ -297,14 +297,14 @@ const TesterDashboard: React.FC = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600 dark:text-gray-400">缺陷密度</p>
-                <p className="text-2xl font-bold text-orange-600">
+                <p className="text-2xl font-bold text-orange-600 dark:text-orange-400">
                   {testMetrics.defectDensity}
                 </p>
               </div>
-              <Bug className="h-8 w-8 text-orange-600" />
+              <Bug className="h-8 w-8 text-orange-600 dark:text-orange-400" />
             </div>
             <div className="mt-2">
-              <Badge variant="outline" className="text-orange-600 border-orange-600">
+              <Badge variant="outline" className="text-orange-600 border-orange-600 dark:text-orange-400">
                 每千行代码
               </Badge>
             </div>
@@ -508,7 +508,7 @@ const TesterDashboard: React.FC = () => {
                     <span>{env.lastUpdate}</span>
                   </div>
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
+                <div className="w-full bg-gray-200 rounded-full h-2 mt-2 dark:bg-gray-600">
                   <div 
                     className={`h-2 rounded-full ${
                       env.usage < 50 ? 'bg-green-500' :

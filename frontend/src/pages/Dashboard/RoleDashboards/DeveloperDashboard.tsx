@@ -184,7 +184,7 @@ const DeveloperDashboard: React.FC = () => {
         <div className="bg-gradient-to-r from-indigo-300 to-purple-400 rounded-lg h-32"></div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {[1, 2, 3, 4].map(i => (
-            <div key={i} className="bg-gray-300 rounded-lg h-24"></div>
+            <div key={i} className="bg-gray-300 rounded-lg h-24 dark:bg-gray-500"></div>
           ))}
         </div>
       </div>
@@ -232,14 +232,14 @@ const DeveloperDashboard: React.FC = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600 dark:text-gray-400">任务完成率</p>
-                <p className="text-2xl font-bold text-green-600">
+                <p className="text-2xl font-bold text-green-600 dark:text-green-400">
                   {((developerMetrics.completedTasks / developerMetrics.totalTasks) * 100).toFixed(1)}%
                 </p>
               </div>
-              <CheckCircle className="h-8 w-8 text-green-600" />
+              <CheckCircle className="h-8 w-8 text-green-600 dark:text-green-400" />
             </div>
             <div className="mt-2">
-              <Badge variant="outline" className="text-green-600 border-green-600">
+              <Badge variant="outline" className="text-green-600 border-green-600 dark:text-green-400">
                 {developerMetrics.completedTasks}/{developerMetrics.totalTasks}
               </Badge>
             </div>
@@ -270,14 +270,14 @@ const DeveloperDashboard: React.FC = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600 dark:text-gray-400">测试覆盖率</p>
-                <p className="text-2xl font-bold text-purple-600">
+                <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">
                   {developerMetrics.testCoverage}%
                 </p>
               </div>
-              <Target className="h-8 w-8 text-purple-600" />
+              <Target className="h-8 w-8 text-purple-600 dark:text-purple-400" />
             </div>
             <div className="mt-2">
-              <Badge variant="outline" className="text-purple-600 border-purple-600">
+              <Badge variant="outline" className="text-purple-600 border-purple-600 dark:text-purple-400">
                 达标
               </Badge>
             </div>
@@ -289,14 +289,14 @@ const DeveloperDashboard: React.FC = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600 dark:text-gray-400">评审评分</p>
-                <p className="text-2xl font-bold text-orange-600">
+                <p className="text-2xl font-bold text-orange-600 dark:text-orange-400">
                   {developerMetrics.reviewScore}/5
                 </p>
               </div>
-              <Users className="h-8 w-8 text-orange-600" />
+              <Users className="h-8 w-8 text-orange-600 dark:text-orange-400" />
             </div>
             <div className="mt-2">
-              <Badge variant="outline" className="text-orange-600 border-orange-600">
+              <Badge variant="outline" className="text-orange-600 border-orange-600 dark:text-orange-400">
                 高质量
               </Badge>
             </div>
@@ -345,7 +345,7 @@ const DeveloperDashboard: React.FC = () => {
                     <span className="font-medium">{metric.metric}</span>
                     <span className="text-gray-500 dark:text-gray-400">{metric.current}/{metric.target}</span>
                   </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div className="w-full bg-gray-200 rounded-full h-2 dark:bg-gray-600">
                     <div 
                       className={`h-2 rounded-full ${
                         metric.current <= metric.target ? 'bg-green-500' : 'bg-red-500'
@@ -356,7 +356,7 @@ const DeveloperDashboard: React.FC = () => {
                   <div className="text-xs text-gray-500 dark:text-gray-400">
                     目标: {metric.target} | 
                     状态: {metric.current <= metric.target ? 
-                      <span className="text-green-600">达标</span> : 
+                      <span className="text-green-600 dark:text-green-400">达标</span> : 
                       <span className="text-red-600 dark:text-red-400">超标</span>
                     }
                   </div>

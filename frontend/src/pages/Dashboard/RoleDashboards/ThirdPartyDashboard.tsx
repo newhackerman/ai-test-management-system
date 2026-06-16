@@ -202,7 +202,7 @@ const ThirdPartyDashboard: React.FC = () => {
         <div className="bg-gradient-to-r from-teal-300 to-cyan-400 rounded-lg h-32"></div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {[1, 2, 3, 4].map(i => (
-            <div key={i} className="bg-gray-300 rounded-lg h-24"></div>
+            <div key={i} className="bg-gray-300 rounded-lg h-24 dark:bg-gray-500"></div>
           ))}
         </div>
       </div>
@@ -250,14 +250,14 @@ const ThirdPartyDashboard: React.FC = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600 dark:text-gray-400">SLA合规率</p>
-                <p className="text-2xl font-bold text-green-600">
+                <p className="text-2xl font-bold text-green-600 dark:text-green-400">
                   {collaborationMetrics.slaCompliance}%
                 </p>
               </div>
-              <Shield className="h-8 w-8 text-green-600" />
+              <Shield className="h-8 w-8 text-green-600 dark:text-green-400" />
             </div>
             <div className="mt-2">
-              <Badge variant="outline" className="text-green-600 border-green-600">
+              <Badge variant="outline" className="text-green-600 border-green-600 dark:text-green-400">
                 优秀
               </Badge>
             </div>
@@ -288,14 +288,14 @@ const ThirdPartyDashboard: React.FC = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600 dark:text-gray-400">满意度评分</p>
-                <p className="text-2xl font-bold text-purple-600">
+                <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">
                   {collaborationMetrics.satisfactionScore}/5
                 </p>
               </div>
-              <CheckCircle className="h-8 w-8 text-purple-600" />
+              <CheckCircle className="h-8 w-8 text-purple-600 dark:text-purple-400" />
             </div>
             <div className="mt-2">
-              <Badge variant="outline" className="text-purple-600 border-purple-600">
+              <Badge variant="outline" className="text-purple-600 border-purple-600 dark:text-purple-400">
                 高满意度
               </Badge>
             </div>
@@ -307,14 +307,14 @@ const ThirdPartyDashboard: React.FC = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600 dark:text-gray-400">交付率</p>
-                <p className="text-2xl font-bold text-orange-600">
+                <p className="text-2xl font-bold text-orange-600 dark:text-orange-400">
                   {collaborationMetrics.deliveryRate}%
                 </p>
               </div>
-              <Activity className="h-8 w-8 text-orange-600" />
+              <Activity className="h-8 w-8 text-orange-600 dark:text-orange-400" />
             </div>
             <div className="mt-2">
-              <Badge variant="outline" className="text-orange-600 border-orange-600">
+              <Badge variant="outline" className="text-orange-600 border-orange-600 dark:text-orange-400">
                 按时交付
               </Badge>
             </div>
@@ -363,7 +363,7 @@ const ThirdPartyDashboard: React.FC = () => {
                     <span className="font-medium">{project.project}</span>
                     <span className="text-gray-500 dark:text-gray-400">{project.completed}/{project.total}</span>
                   </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div className="w-full bg-gray-200 rounded-full h-2 dark:bg-gray-600">
                     <div 
                       className="bg-teal-600 h-2 rounded-full" 
                       style={{ width: `${(project.completed / project.total) * 100}%` }}
@@ -403,7 +403,7 @@ const ThirdPartyDashboard: React.FC = () => {
                     </Badge>
                   </div>
                   <p className="text-sm text-gray-600 mb-2 dark:text-gray-400">角色: {project.role}</p>
-                  <div className="w-full bg-gray-200 rounded-full h-2 mb-2">
+                  <div className="w-full bg-gray-200 rounded-full h-2 mb-2 dark:bg-gray-600">
                     <div 
                       className="bg-teal-600 h-2 rounded-full" 
                       style={{ width: `${project.progress}%` }}
@@ -479,9 +479,9 @@ const ThirdPartyDashboard: React.FC = () => {
                   <div className="flex items-center justify-between mb-1">
                     <div className="flex items-center space-x-2">
                       {comm.type === 'message' && <MessageCircle className="h-4 w-4 text-blue-500 dark:text-blue-400" />}
-                      {comm.type === 'meeting' && <Calendar className="h-4 w-4 text-purple-500" />}
-                      {comm.type === 'document' && <FileText className="h-4 w-4 text-green-500" />}
-                      {comm.type === 'feedback' && <Eye className="h-4 w-4 text-orange-500" />}
+                      {comm.type === 'meeting' && <Calendar className="h-4 w-4 text-purple-500 dark:text-purple-400" />}
+                      {comm.type === 'document' && <FileText className="h-4 w-4 text-green-500 dark:text-green-400" />}
+                      {comm.type === 'feedback' && <Eye className="h-4 w-4 text-orange-500 dark:text-orange-400" />}
                       <p className="font-medium text-sm">{comm.title}</p>
                     </div>
                     <Badge 
@@ -524,8 +524,8 @@ const ThirdPartyDashboard: React.FC = () => {
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center space-x-2">
                       {request.type === 'document' && <FileText className="h-4 w-4 text-blue-500 dark:text-blue-400" />}
-                      {request.type === 'data' && <Download className="h-4 w-4 text-green-500" />}
-                      {request.type === 'system' && <Lock className="h-4 w-4 text-purple-500" />}
+                      {request.type === 'data' && <Download className="h-4 w-4 text-green-500 dark:text-green-400" />}
+                      {request.type === 'system' && <Lock className="h-4 w-4 text-purple-500 dark:text-purple-400" />}
                       <p className="font-medium text-sm">{request.resource}</p>
                     </div>
                     <Badge 

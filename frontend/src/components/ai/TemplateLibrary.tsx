@@ -305,8 +305,8 @@ export function TemplateLibrary({
   // 获取可见性颜色
   const getVisibilityColor = (visibility: string) => {
     switch (visibility) {
-      case 'PUBLIC': return 'text-green-600';
-      case 'TEAM': return 'text-blue-600';
+      case 'PUBLIC': return 'text-green-600 dark:text-green-400';
+      case 'TEAM': return 'text-blue-600 dark:text-blue-400';
       case 'PRIVATE': return 'text-gray-600 dark:text-gray-400';
       default: return 'text-gray-600 dark:text-gray-400';
     }

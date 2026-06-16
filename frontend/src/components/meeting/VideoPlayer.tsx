@@ -639,7 +639,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
             {watchedSegments.map((segment, index) => (
               <div
                 key={index}
-                className="absolute top-0 h-full bg-gray-400 bg-opacity-30 rounded-full"
+                className="absolute top-0 h-full bg-gray-400 bg-opacity-30 rounded-full dark:bg-gray-500"
                 style={{
                   left: `${(segment.start / videoDuration) * 100}%`,
                   width: `${((segment.end - segment.start) / videoDuration) * 100}%`

@@ -119,7 +119,7 @@ const getDecisionColor = (decision?: ReviewDecision): string => {
     case 'APPROVED_WITH_MINOR_CHANGES':
       return 'bg-blue-100 text-blue-800 border-blue-200 dark:text-blue-300 dark:bg-blue-900/30'
     case 'NEEDS_MAJOR_REVISION':
-      return 'bg-orange-100 text-orange-800 border-orange-200'
+      return 'bg-orange-100 text-orange-800 border-orange-200 dark:text-orange-300 dark:bg-orange-900/30'
     case 'REJECTED':
       return 'bg-red-100 text-red-800 border-red-200 dark:text-red-300 dark:bg-red-900/30 dark:border-red-800'
     default:

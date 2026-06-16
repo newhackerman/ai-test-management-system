@@ -60,11 +60,11 @@ const statusOptions = [
 ];
 
 const typeOptions = [
-  { value: SuggestionType.OPTIMIZATION, label: '优化建议', color: 'text-purple-600' },
-  { value: SuggestionType.IMPROVEMENT, label: '改进建议', color: 'text-green-600' },
+  { value: SuggestionType.OPTIMIZATION, label: '优化建议', color: 'text-purple-600 dark:text-purple-400' },
+  { value: SuggestionType.IMPROVEMENT, label: '改进建议', color: 'text-green-600 dark:text-green-400' },
   { value: SuggestionType.RISK_MITIGATION, label: '风险缓解', color: 'text-red-600 dark:text-red-400' },
-  { value: SuggestionType.QUALITY_ENHANCEMENT, label: '质量提升', color: 'text-blue-600' },
-  { value: SuggestionType.PROCESS_IMPROVEMENT, label: '流程改进', color: 'text-indigo-600' }
+  { value: SuggestionType.QUALITY_ENHANCEMENT, label: '质量提升', color: 'text-blue-600 dark:text-blue-400' },
+  { value: SuggestionType.PROCESS_IMPROVEMENT, label: '流程改进', color: 'text-indigo-600 dark:text-indigo-400' }
 ];
 
 const priorityOptions = [

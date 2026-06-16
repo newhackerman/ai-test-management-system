@@ -368,7 +368,7 @@ const TestPlanDetail: React.FC = () => {
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center space-x-2">
-              <CheckCircle className="w-5 h-5 text-green-500" />
+              <CheckCircle className="w-5 h-5 text-green-500 dark:text-green-400" />
               <div>
                 <p className="text-sm font-medium text-gray-600 dark:text-gray-400">已执行</p>
                 <p className="text-2xl font-bold">{stats.executed_cases}</p>
@@ -383,7 +383,7 @@ const TestPlanDetail: React.FC = () => {
               <div className="w-5 h-5 bg-green-500 rounded-full" />
               <div>
                 <p className="text-sm font-medium text-gray-600 dark:text-gray-400">通过</p>
-                <p className="text-2xl font-bold text-green-600">{stats.passed_cases}</p>
+                <p className="text-2xl font-bold text-green-600 dark:text-green-400">{stats.passed_cases}</p>
               </div>
             </div>
           </CardContent>

@@ -260,7 +260,7 @@ const MeetingControls: React.FC<MeetingControlsProps> = ({ meeting, className })
             {safeParticipants.map((participant) => (
               <div key={participant.user_id} className="flex items-center justify-between rounded-lg border p-3">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-200">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-200 dark:bg-gray-600">
                     {participant.user?.name?.charAt(0) || 'U'}
                   </div>
                   <div>

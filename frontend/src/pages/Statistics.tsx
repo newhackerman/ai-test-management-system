@@ -178,11 +178,11 @@ const Statistics: React.FC = () => {
     icon: React.ElementType
   }) => {
     const colorClasses = {
-      blue: 'text-blue-600',
-      green: 'text-green-600',
-      yellow: 'text-amber-600',
+      blue: 'text-blue-600 dark:text-blue-400',
+      green: 'text-green-600 dark:text-green-400',
+      yellow: 'text-amber-600 dark:text-amber-400',
       red: 'text-red-600 dark:text-red-400',
-      purple: 'text-purple-600'
+      purple: 'text-purple-600 dark:text-purple-400'
     }
 
     return (

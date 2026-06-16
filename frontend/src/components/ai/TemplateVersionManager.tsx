@@ -334,7 +334,7 @@ export function TemplateVersionManager({
         {changedFields.length === 0 ? (
           <Card>
             <CardContent className="p-6 text-center">
-              <CheckCircle className="w-8 h-8 text-green-600 mx-auto mb-2" />
+              <CheckCircle className="w-8 h-8 text-green-600 mx-auto mb-2 dark:text-green-400" />
               <p className="text-gray-600 dark:text-gray-400">两个版本没有差异</p>
             </CardContent>
           </Card>

@@ -1,4 +1,4 @@
-// @ts-nocheck
+﻿// @ts-nocheck
 import { useState } from 'react'
 import { Copy, Eye, EyeOff, Globe, Lock, Share2, Users } from 'lucide-react'
 import { toast } from 'sonner'
@@ -233,7 +233,7 @@ export function TemplateShareDialog({ open, onOpenChange, template, onShare }: T
 
           {shareUrl && (
             <div className="space-y-3 rounded-lg bg-muted/50 p-4">
-              <h4 className="font-medium text-green-600">分享链接已创建</h4>
+              <h4 className="font-medium text-green-600 dark:text-green-400">分享链接已创建</h4>
               <div className="flex items-center gap-2">
                 <Input value={shareUrl} readOnly className="flex-1" />
                 <Button type="button" variant="outline" size="sm" onClick={handleCopyUrl}>

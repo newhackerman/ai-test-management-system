@@ -68,7 +68,7 @@ const GridItem: React.FC<GridItemProps> = ({
     if (error) return 'bg-red-500'
     if (isLoading || isUpdating) return 'bg-yellow-500'
     if (widgetRealtimeData || realtimeData) return 'bg-green-500'
-    return 'bg-gray-400'
+    return 'bg-gray-400 dark:bg-gray-500'
   }
 
   const getStatusText = () => {

@@ -18,7 +18,7 @@ const DEPENDENCY_CONFIG: Record<DependencyType, {
 }> = {
   DEPENDS_ON: {
     label: '依赖于',
-    color: 'text-blue-600',
+    color: 'text-blue-600 dark:text-blue-400',
     bgColor: 'bg-blue-100 dark:bg-blue-900/30',
     description: '当前需求依赖于目标需求完成',
     icon: '🔗',
@@ -34,7 +34,7 @@ const DEPENDENCY_CONFIG: Record<DependencyType, {
   },
   RELATES_TO: {
     label: '关联',
-    color: 'text-green-600',
+    color: 'text-green-600 dark:text-green-400',
     bgColor: 'bg-green-100',
     description: '与目标需求存在业务关联',
     icon: '🔄',
@@ -42,16 +42,16 @@ const DEPENDENCY_CONFIG: Record<DependencyType, {
   },
   CONFLICTS_WITH: {
     label: '冲突',
-    color: 'text-orange-600',
-    bgColor: 'bg-orange-100',
+    color: 'text-orange-600 dark:text-orange-400',
+    bgColor: 'bg-orange-100 dark:bg-orange-900/30',
     description: '与目标需求存在冲突',
     icon: '⚡',
     lineStyle: 'double'
   },
   DUPLICATES: {
     label: '重复',
-    color: 'text-purple-600',
-    bgColor: 'bg-purple-100',
+    color: 'text-purple-600 dark:text-purple-400',
+    bgColor: 'bg-purple-100 dark:bg-purple-900/30',
     description: '与目标需求重复',
     icon: '📋',
     lineStyle: 'solid'
@@ -98,7 +98,7 @@ const RequirementNode: React.FC<RequirementNodeProps> = ({
       TESTING: 'bg-indigo-100 text-indigo-700 dark:text-indigo-300',
       COMPLETED: 'bg-emerald-100 text-emerald-700 dark:text-emerald-400',
       DEPLOYED: 'bg-teal-100 text-teal-700',
-      CLOSED: 'bg-slate-100 text-slate-700',
+      CLOSED: 'bg-slate-100 text-slate-700 dark:text-slate-300 dark:bg-slate-800',
       CANCELLED: 'bg-red-100 text-red-700 dark:text-red-400 dark:bg-red-900/30'
     }
     return statusColors[status] || 'bg-gray-100 text-gray-700 dark:text-gray-300 dark:bg-gray-800'

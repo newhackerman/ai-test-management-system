@@ -66,13 +66,13 @@ const PerformancePanel: React.FC<{
   if (!analysis) return null;
 
   const getScoreColor = (score: number) => {
-    if (score >= 90) return 'text-green-600';
+    if (score >= 90) return 'text-green-600 dark:text-green-400';
     if (score >= 70) return 'text-yellow-600';
     return 'text-red-600 dark:text-red-400';
   };
 
   const getScoreIcon = (score: number) => {
-    if (score >= 90) return <CheckCircle className="w-4 h-4 text-green-600" />;
+    if (score >= 90) return <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400" />;
     if (score >= 70) return <TrendingUp className="w-4 h-4 text-yellow-600" />;
     return <AlertTriangle className="w-4 h-4 text-red-600 dark:text-red-400" />;
   };

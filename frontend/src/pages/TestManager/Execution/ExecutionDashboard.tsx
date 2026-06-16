@@ -141,7 +141,7 @@ const ExecutionDashboard: React.FC = () => {
             </div>
         </div>
         <div className="flex items-center gap-3 rounded-md border bg-background px-3 py-2">
-            <Play className="h-5 w-5 text-emerald-600" />
+            <Play className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
             <div>
               <p className="text-xs text-muted-foreground">执行中</p>
               <p className="text-xl font-semibold leading-6">{stats.in_progress}</p>

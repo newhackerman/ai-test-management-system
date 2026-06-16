@@ -393,7 +393,7 @@ export default function AuditManagement() {
       {statistics && (
         <div className="grid grid-cols-2 gap-2 rounded-lg border bg-card p-3 md:grid-cols-4">
           <AuditStat icon={<ClockCircleOutlined />} label="待审核" value={statistics.status_stats.pending} className="text-amber-600 dark:text-amber-400" />
-          <AuditStat label="审核通过率" value={`${Number(statistics.approval_rate || 0).toFixed(1)}%`} className="text-green-600" />
+          <AuditStat label="审核通过率" value={`${Number(statistics.approval_rate || 0).toFixed(1)}%`} className="text-green-600 dark:text-green-400" />
           <AuditStat icon={<SettingOutlined />} label="本月审核" value={statistics.processed_count} className="text-blue-600 dark:text-blue-400" />
           <AuditStat icon={<UserOutlined />} label="总申请数" value={statistics.status_stats.total} className="text-foreground" />
         </div>

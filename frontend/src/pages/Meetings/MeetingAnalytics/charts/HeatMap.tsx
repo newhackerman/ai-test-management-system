@@ -76,7 +76,7 @@ const HeatMap: React.FC<HeatMapProps> = ({
               y={60 + yIndex * (cellSize + 2) + cellSize / 2}
               textAnchor="end"
               dominantBaseline="middle"
-              className="text-xs fill-gray-600"
+              className="text-xs fill-gray-600 dark:fill-gray-300"
             >
               {y}
             </text>
@@ -90,7 +90,7 @@ const HeatMap: React.FC<HeatMapProps> = ({
               y={35}
               textAnchor="middle"
               dominantBaseline="middle"
-              className="text-xs fill-gray-600"
+              className="text-xs fill-gray-600 dark:fill-gray-300"
             >
               {x}
             </text>

@@ -127,7 +127,7 @@ export const OfflineIndicator: React.FC<OfflineIndicatorProps> = ({
     return (
       <div className={cn('flex items-center space-x-2', className)}>
         {isOnline ? (
-          <Wifi className="w-4 h-4 text-green-500" />
+          <Wifi className="w-4 h-4 text-green-500 dark:text-green-400" />
         ) : (
           <WifiOff className="w-4 h-4 text-red-500 dark:text-red-400" />
         )}
@@ -152,7 +152,7 @@ export const OfflineIndicator: React.FC<OfflineIndicatorProps> = ({
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center space-x-2">
             {isOnline ? (
-              <Wifi className="w-5 h-5 text-green-500" />
+              <Wifi className="w-5 h-5 text-green-500 dark:text-green-400" />
             ) : (
               <WifiOff className="w-5 h-5 text-red-500 dark:text-red-400" />
             )}
@@ -165,7 +165,7 @@ export const OfflineIndicator: React.FC<OfflineIndicatorProps> = ({
               <span className="text-muted-foreground">网络状态</span>
               <div className="font-medium">
                 {isOnline ? (
-                  <span className="text-green-600">在线</span>
+                  <span className="text-green-600 dark:text-green-400">在线</span>
                 ) : (
                   <span className="text-red-600 dark:text-red-400">离线</span>
                 )}
@@ -262,7 +262,7 @@ export const OfflineIndicator: React.FC<OfflineIndicatorProps> = ({
           className={cn('relative', className)}
         >
           {isOnline ? (
-            <Wifi className="w-4 h-4 text-green-500" />
+            <Wifi className="w-4 h-4 text-green-500 dark:text-green-400" />
           ) : (
             <WifiOff className="w-4 h-4 text-red-500 dark:text-red-400" />
           )}
@@ -287,8 +287,8 @@ export const OfflineIndicator: React.FC<OfflineIndicatorProps> = ({
           <div className="flex items-center space-x-2 mb-2">
             {isOnline ? (
               <>
-                <CheckCircle className="w-4 h-4 text-green-500" />
-                <span className="font-medium text-green-600">在线</span>
+                <CheckCircle className="w-4 h-4 text-green-500 dark:text-green-400" />
+                <span className="font-medium text-green-600 dark:text-green-400">在线</span>
               </>
             ) : (
               <>
@@ -360,7 +360,7 @@ export const NetworkStatusIndicator: React.FC<{ className?: string }> = ({ class
       {isOnline ? (
         <>
           <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-          <span className="text-sm text-green-600">在线</span>
+          <span className="text-sm text-green-600 dark:text-green-400">在线</span>
         </>
       ) : (
         <>
@@ -391,8 +391,8 @@ export const SyncProgressIndicator: React.FC<{ className?: string }> = ({ classN
         </>
       ) : (
         <>
-          <Clock className="w-4 h-4 text-orange-500" />
-          <span className="text-orange-600">
+          <Clock className="w-4 h-4 text-orange-500 dark:text-orange-400" />
+          <span className="text-orange-600 dark:text-orange-400">
             {syncStatus.pendingOperations} 个操作待同步
           </span>
         </>

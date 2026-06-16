@@ -207,8 +207,8 @@ const TestCaseDetail: React.FC = () => {
             <div className="mt-2"><Badge variant={priorityVariant[testCase.priority] || 'secondary'}>{PRIORITY_LABELS[testCase.priority] || testCase.priority}</Badge></div>
           </CardContent>
         </Card>
-        <MetricCard icon={<Clock className="h-5 w-5 text-green-500" />} label="复杂度" value={COMPLEXITY_LABELS[testCase.complexity] || testCase.complexity} />
-        <MetricCard icon={<Wand2 className="h-5 w-5 text-purple-500" />} label="自动化" value={AUTOMATION_LABELS[testCase.automation_level] || testCase.automation_level} />
+        <MetricCard icon={<Clock className="h-5 w-5 text-green-500 dark:text-green-400" />} label="复杂度" value={COMPLEXITY_LABELS[testCase.complexity] || testCase.complexity} />
+        <MetricCard icon={<Wand2 className="h-5 w-5 text-purple-500 dark:text-purple-400" />} label="自动化" value={AUTOMATION_LABELS[testCase.automation_level] || testCase.automation_level} />
       </div>
 
       <Tabs defaultValue="details" className="space-y-4">

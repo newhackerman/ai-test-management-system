@@ -246,9 +246,9 @@ export function getStatusColor(status: Task['status']): string {
     TODO: 'bg-gray-100 text-gray-800 dark:text-gray-200 dark:bg-gray-800',
     ASSIGNED: 'bg-blue-100 text-blue-800 dark:text-blue-300 dark:bg-blue-900/30',
     IN_PROGRESS: 'bg-yellow-100 text-yellow-800',
-    ON_HOLD: 'bg-orange-100 text-orange-800',
+    ON_HOLD: 'bg-orange-100 text-orange-800 dark:text-orange-300 dark:bg-orange-900/30',
     BLOCKED: 'bg-red-100 text-red-800 dark:text-red-300 dark:bg-red-900/30',
-    PENDING_REVIEW: 'bg-purple-100 text-purple-800',
+    PENDING_REVIEW: 'bg-purple-100 text-purple-800 dark:text-purple-300 dark:bg-purple-900/30',
     COMPLETED: 'bg-green-100 text-green-800',
     CANCELLED: 'bg-gray-100 text-gray-800 dark:text-gray-200 dark:bg-gray-800'
   };
@@ -269,7 +269,7 @@ export function getPriorityColor(priority: Task['priority']): string {
   const priorityColors: Record<Task['priority'], string> = {
     LOW: 'bg-gray-100 text-gray-800 dark:text-gray-200 dark:bg-gray-800',
     MEDIUM: 'bg-blue-100 text-blue-800 dark:text-blue-300 dark:bg-blue-900/30',
-    HIGH: 'bg-orange-100 text-orange-800',
+    HIGH: 'bg-orange-100 text-orange-800 dark:text-orange-300 dark:bg-orange-900/30',
     URGENT: 'bg-red-100 text-red-800 dark:text-red-300 dark:bg-red-900/30'
   };
   return priorityColors[priority] || 'bg-gray-100 text-gray-800 dark:text-gray-200 dark:bg-gray-800';

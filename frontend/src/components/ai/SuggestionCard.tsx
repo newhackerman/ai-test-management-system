@@ -79,7 +79,7 @@ const priorityConfig = {
   },
   [SuggestionPriority.HIGH]: {
     label: '高',
-    color: 'bg-orange-100 text-orange-800'
+    color: 'bg-orange-100 text-orange-800 dark:text-orange-300 dark:bg-orange-900/30'
   },
   [SuggestionPriority.CRITICAL]: {
     label: '紧急',
@@ -90,7 +90,7 @@ const priorityConfig = {
 const typeConfig = {
   [SuggestionType.OPTIMIZATION]: {
     label: '优化建议',
-    color: 'bg-purple-100 text-purple-800'
+    color: 'bg-purple-100 text-purple-800 dark:text-purple-300 dark:bg-purple-900/30'
   },
   [SuggestionType.IMPROVEMENT]: {
     label: '改进建议',
@@ -106,7 +106,7 @@ const typeConfig = {
   },
   [SuggestionType.PROCESS_IMPROVEMENT]: {
     label: '流程改进',
-    color: 'bg-indigo-100 text-indigo-800'
+    color: 'bg-indigo-100 text-indigo-800 dark:text-indigo-300 dark:bg-indigo-900/30'
   }
 };
 
@@ -413,7 +413,7 @@ export function SuggestionCard({
                       'w-8 h-8 rounded-full flex items-center justify-center transition-colors',
                       star <= rating
                         ? 'bg-yellow-400 text-white'
-                        : 'bg-gray-200 text-gray-400 hover:bg-gray-300'
+                        : 'bg-gray-200 text-gray-400 hover:bg-gray-300 dark:bg-gray-600'
                     )}
                   >
                     <Star className="w-4 h-4" />

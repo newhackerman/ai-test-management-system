@@ -138,9 +138,9 @@ export function QueryDevtools({
   // 鑾峰彇鐘舵€侀鑹?
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'success': return 'text-green-500'
-      case 'error': return 'text-red-500'
-      case 'loading': return 'text-blue-500'
+      case 'success': return 'text-green-500 dark:text-green-400'
+      case 'error': return 'text-red-500 dark:text-red-400'
+      case 'loading': return 'text-blue-500 dark:text-blue-400'
       default: return 'text-gray-500 dark:text-gray-400'
     }
   }

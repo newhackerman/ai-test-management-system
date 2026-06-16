@@ -200,7 +200,7 @@ export function ChangeApprovalWorkflow({
             <div key={step.id} className="relative">
               {/* 连接线 */}
               {index < approvalSteps.length - 1 && (
-                <div className="absolute left-6 top-12 w-0.5 h-8 bg-gray-200"></div>
+                <div className="absolute left-6 top-12 w-0.5 h-8 bg-gray-200 dark:bg-gray-600"></div>
               )}
               
               <div className="flex items-start space-x-4">
@@ -210,7 +210,7 @@ export function ChangeApprovalWorkflow({
                   step.status === 'REJECTED' ? 'bg-red-100 dark:bg-red-900/30' :
                   step.status === 'PENDING' ? 'bg-yellow-100' : 'bg-gray-100 dark:bg-gray-800'
                 }`}>
-                  {step.status === 'APPROVED' && <CheckCircle className="w-6 h-6 text-green-600" />}
+                  {step.status === 'APPROVED' && <CheckCircle className="w-6 h-6 text-green-600 dark:text-green-400" />}
                   {step.status === 'REJECTED' && <XCircle className="w-6 h-6 text-red-600 dark:text-red-400" />}
                   {step.status === 'PENDING' && <Clock className="w-6 h-6 text-yellow-600" />}
                   {step.status === 'SKIPPED' && <ArrowRight className="w-6 h-6 text-gray-600 dark:text-gray-400" />}

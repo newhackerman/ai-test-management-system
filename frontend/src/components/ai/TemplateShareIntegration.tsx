@@ -166,7 +166,7 @@ export function TemplateShareIntegration({
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <TrendingUp className="h-5 w-5 text-green-500" />
+                  <TrendingUp className="h-5 w-5 text-green-500 dark:text-green-400" />
                   璇勫垎鏈€楂?
                 </CardTitle>
                 <CardDescription>

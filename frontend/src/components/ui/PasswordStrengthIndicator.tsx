@@ -42,9 +42,9 @@ export const PasswordStrengthIndicator: React.FC<PasswordStrengthIndicatorProps>
   
   const getStrengthColor = () => {
     if (strength === 0) return 'text-gray-400'
-    if (strength <= 2) return 'text-red-500'
+    if (strength <= 2) return 'text-red-500 dark:text-red-400'
     if (strength <= 4) return 'text-yellow-500'
-    return 'text-green-500'
+    return 'text-green-500 dark:text-green-400'
   }
 
   const getStrengthText = () => {
@@ -70,7 +70,7 @@ export const PasswordStrengthIndicator: React.FC<PasswordStrengthIndicatorProps>
             <div
               key={req.key}
               className={`flex items-center transition-colors ${
-                passed ? 'text-green-600' : 'text-gray-400'
+                passed ? 'text-green-600 dark:text-green-400' : 'text-gray-400'
               }`}
             >
               <span className="mr-2 text-sm">
@@ -95,7 +95,7 @@ export const PasswordStrengthIndicator: React.FC<PasswordStrengthIndicatorProps>
                     : strength <= 4
                     ? 'bg-yellow-400'
                     : 'bg-green-400'
-                  : 'bg-gray-200'
+                  : 'bg-gray-200 dark:bg-gray-600'
               }`}
             />
           ))}

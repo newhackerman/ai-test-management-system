@@ -99,7 +99,7 @@ export const StatusFlowVisualization: React.FC<StatusFlowVisualizationProps> = (
         <div className="rounded-lg border bg-muted/40 p-4">
           <div className="mb-2 text-sm text-muted-foreground">当前状态</div>
           <div className="flex items-center gap-3">
-            <CheckCircle2 className="h-5 w-5 text-green-600" />
+            <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400" />
             <Badge className={cn('border-0', STATUS_CONFIG[status].className)}>{STATUS_CONFIG[status].label}</Badge>
             <span className="text-sm text-muted-foreground">{STATUS_CONFIG[status].description}</span>
           </div>
@@ -135,7 +135,7 @@ export const StatusFlowVisualization: React.FC<StatusFlowVisualizationProps> = (
 
         {!readOnly && availableTransitions.length > 0 && (
           <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 dark:bg-blue-900/20">
-            <div className="mb-2 text-sm font-medium text-blue-900">可执行的状态变更</div>
+            <div className="mb-2 text-sm font-medium text-blue-900 dark:text-blue-100">可执行的状态变更</div>
             <div className="flex flex-wrap gap-2">
               {availableTransitions.map((nextStatus) => (
                 <Badge

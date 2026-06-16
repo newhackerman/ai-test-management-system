@@ -66,11 +66,11 @@ export function TypingIndicator({
           <div className="flex items-center gap-2">
             {/* 跳动的点动画 */}
             <div className="flex gap-1">
-              <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" 
+              <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce dark:bg-gray-500" 
                    style={{ animationDelay: '0ms' }} />
-              <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" 
+              <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce dark:bg-gray-500" 
                    style={{ animationDelay: '150ms' }} />
-              <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" 
+              <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce dark:bg-gray-500" 
                    style={{ animationDelay: '300ms' }} />
             </div>
             <span className="text-sm text-gray-600 dark:text-gray-400">
@@ -97,11 +97,11 @@ export function TypingIndicator({
           <div className="flex items-center gap-2">
             {/* 跳动的点动画 */}
             <div className="flex gap-1">
-              <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" 
+              <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce dark:bg-gray-500" 
                    style={{ animationDelay: '0ms' }} />
-              <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" 
+              <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce dark:bg-gray-500" 
                    style={{ animationDelay: '150ms' }} />
-              <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" 
+              <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce dark:bg-gray-500" 
                    style={{ animationDelay: '300ms' }} />
             </div>
             <span className="text-sm text-gray-600 dark:text-gray-400">
@@ -159,11 +159,11 @@ export function SimpleTypingIndicator({
         <div className="flex items-center gap-2">
           {/* 跳动的点动画 */}
           <div className="flex gap-1">
-            <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" 
+            <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce dark:bg-gray-500" 
                  style={{ animationDelay: '0ms' }} />
-            <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" 
+            <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce dark:bg-gray-500" 
                  style={{ animationDelay: '150ms' }} />
-            <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" 
+            <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce dark:bg-gray-500" 
                  style={{ animationDelay: '300ms' }} />
           </div>
           <span className="text-sm text-gray-600 dark:text-gray-400">{message}...</span>

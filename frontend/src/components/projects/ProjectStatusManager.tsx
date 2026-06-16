@@ -25,14 +25,14 @@ const statusConfig: Record<
   PLANNING: {
     label: '规划中',
     icon: Clock,
-    color: 'text-blue-600',
+    color: 'text-blue-600 dark:text-blue-400',
     bgColor: 'bg-blue-50 dark:bg-blue-900/20',
     description: '项目正在规划阶段，正在制定计划和准备资源。',
   },
   IN_PROGRESS: {
     label: '进行中',
     icon: Activity,
-    color: 'text-green-600',
+    color: 'text-green-600 dark:text-green-400',
     bgColor: 'bg-green-50',
     description: '项目正在执行中，团队可以继续推进任务。',
   },

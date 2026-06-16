@@ -23,10 +23,10 @@ const formatDateTime = (value: string) =>
 
 export default function Monitoring() {
   const systemMetrics: Record<string, SystemMetric> = {
-    cpu: { label: 'CPU 使用率', usage: 45, status: 'normal', icon: Cpu, color: 'text-blue-500' },
-    memory: { label: '内存使用率', usage: 62, status: 'warning', icon: Database, color: 'text-green-500' },
-    disk: { label: '磁盘使用率', usage: 23, status: 'normal', icon: HardDrive, color: 'text-purple-500' },
-    network: { label: '网络延迟', latency: 23, status: 'normal', icon: Wifi, color: 'text-orange-500' },
+    cpu: { label: 'CPU 使用率', usage: 45, status: 'normal', icon: Cpu, color: 'text-blue-500 dark:text-blue-400' },
+    memory: { label: '内存使用率', usage: 62, status: 'warning', icon: Database, color: 'text-green-500 dark:text-green-400' },
+    disk: { label: '磁盘使用率', usage: 23, status: 'normal', icon: HardDrive, color: 'text-purple-500 dark:text-purple-400' },
+    network: { label: '网络延迟', latency: 23, status: 'normal', icon: Wifi, color: 'text-orange-500 dark:text-orange-400' },
   }
 
   const services = [
@@ -46,7 +46,7 @@ export default function Monitoring() {
     switch (status) {
       case 'running':
       case 'normal':
-        return <CheckCircle className="h-4 w-4 text-green-500" />
+        return <CheckCircle className="h-4 w-4 text-green-500 dark:text-green-400" />
       case 'warning':
         return <AlertTriangle className="h-4 w-4 text-yellow-500" />
       case 'error':
@@ -212,10 +212,10 @@ export default function Monitoring() {
         <CardContent>
           <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
             {[
-              [Zap, 'Lighthouse Performance', 'Ready', 'text-blue-500'],
-              [Clock, 'Page Load', '< 2s', 'text-green-500'],
-              [Eye, 'Accessibility', '95+', 'text-purple-500'],
-              [Search, 'SEO', 'Good', 'text-orange-500'],
+              [Zap, 'Lighthouse Performance', 'Ready', 'text-blue-500 dark:text-blue-400'],
+              [Clock, 'Page Load', '< 2s', 'text-green-500 dark:text-green-400'],
+              [Eye, 'Accessibility', '95+', 'text-purple-500 dark:text-purple-400'],
+              [Search, 'SEO', 'Good', 'text-orange-500 dark:text-orange-400'],
             ].map(([Icon, label, value, color]) => (
               <div key={label as string} className="rounded-lg border p-4 text-center">
                 <Icon className={`mx-auto mb-2 h-8 w-8 ${color}`} />

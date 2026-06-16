@@ -160,7 +160,7 @@ const statusInfo = (status: ConnectionStatus, isOnline: boolean) => {
       return {
         label: '已连接',
         description: '实时连接工作正常。',
-        icon: <CheckCircle className="h-4 w-4 text-green-600" />,
+        icon: <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />,
         className: 'border-green-200 bg-green-50 text-green-700',
       };
     case 'connecting':
@@ -175,7 +175,7 @@ const statusInfo = (status: ConnectionStatus, isOnline: boolean) => {
       return {
         label: '未连接',
         description: '实时连接未建立，可尝试重新连接。',
-        icon: <AlertCircle className="h-4 w-4 text-orange-600" />,
+        icon: <AlertCircle className="h-4 w-4 text-orange-600 dark:text-orange-400" />,
         className: 'border-orange-200 bg-orange-50 text-orange-700 dark:text-orange-400 dark:bg-orange-900/20',
       };
   }

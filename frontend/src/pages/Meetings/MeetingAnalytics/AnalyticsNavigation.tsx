@@ -76,7 +76,7 @@ const AnalyticsNavigation: React.FC<AnalyticsNavigationProps> = ({ className }) 
             <span className="font-medium">返回会议</span>
           </Link>
           
-          <div className="h-6 w-px bg-gray-300" />
+          <div className="h-6 w-px bg-gray-300 dark:bg-gray-500" />
           
           {/* 分析导航项 */}
           {navigationItems.map((item) => {
@@ -90,7 +90,7 @@ const AnalyticsNavigation: React.FC<AnalyticsNavigationProps> = ({ className }) 
                 className={cn(
                   'flex items-center space-x-2 py-4 border-b-2 transition-colors',
                   isActive
-                    ? 'border-blue-500 text-blue-600'
+                    ? 'border-blue-500 text-blue-600 dark:text-blue-400'
                     : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300 dark:text-gray-100 dark:border-gray-600'
                 )}
               >

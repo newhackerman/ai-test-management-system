@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { Activity, CheckCircle, Clock, DollarSign, Server, Zap } from 'lucide-react';
 
 import { Badge } from '../ui/Badge';
@@ -97,7 +97,7 @@ export const AIProviderStatsCard: React.FC<AIProviderStatsCardProps> = ({ stats 
                   <TableCell>
                     <div className="flex items-center gap-2">
                       <Badge variant="outline">{item.enabled_models}/{item.total_models}</Badge>
-                      <CheckCircle className="h-4 w-4 text-green-600" />
+                      <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
                     </div>
                   </TableCell>
                   <TableCell>{item.default_models}</TableCell>

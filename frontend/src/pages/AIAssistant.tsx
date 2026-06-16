@@ -830,7 +830,7 @@ const AIAssistant: React.FC = () => {
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
                 <CardTitle className="flex items-center gap-2 text-base">
-                  <MessageSquare className="h-5 w-5 text-emerald-600" />
+                  <MessageSquare className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
                   {activeSession?.title || 'AI 对话'}
                 </CardTitle>
               </div>
@@ -882,7 +882,7 @@ const AIAssistant: React.FC = () => {
               {!activeSession?.messages.length && (
                 <div className="flex h-full items-center justify-center">
                   <div className="max-w-lg text-center">
-                    <Sparkles className="mx-auto h-10 w-10 text-amber-500" />
+                    <Sparkles className="mx-auto h-10 w-10 text-amber-500 dark:text-amber-400" />
                     <h2 className="mt-3 text-lg font-semibold text-gray-900 dark:text-slate-100">选择模板或直接输入问题</h2>
                   </div>
                 </div>

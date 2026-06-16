@@ -195,7 +195,7 @@ const DevOpsDashboard: React.FC = () => {
         <div className="bg-gradient-to-r from-green-300 to-blue-400 rounded-lg h-32"></div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {[1, 2, 3, 4].map(i => (
-            <div key={i} className="bg-gray-300 rounded-lg h-24"></div>
+            <div key={i} className="bg-gray-300 rounded-lg h-24 dark:bg-gray-500"></div>
           ))}
         </div>
       </div>
@@ -262,14 +262,14 @@ const DevOpsDashboard: React.FC = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600 dark:text-gray-400">内存使用率</p>
-                <p className="text-2xl font-bold text-orange-600">
+                <p className="text-2xl font-bold text-orange-600 dark:text-orange-400">
                   {systemMetrics.memoryUsage}%
                 </p>
               </div>
-              <HardDrive className="h-8 w-8 text-orange-600" />
+              <HardDrive className="h-8 w-8 text-orange-600 dark:text-orange-400" />
             </div>
             <div className="mt-2">
-              <Badge variant="outline" className="text-orange-600 border-orange-600">
+              <Badge variant="outline" className="text-orange-600 border-orange-600 dark:text-orange-400">
                 注意
               </Badge>
             </div>
@@ -281,14 +281,14 @@ const DevOpsDashboard: React.FC = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600 dark:text-gray-400">部署成功率</p>
-                <p className="text-2xl font-bold text-green-600">
+                <p className="text-2xl font-bold text-green-600 dark:text-green-400">
                   {systemMetrics.deploymentSuccess}%
                 </p>
               </div>
-              <GitBranch className="h-8 w-8 text-green-600" />
+              <GitBranch className="h-8 w-8 text-green-600 dark:text-green-400" />
             </div>
             <div className="mt-2">
-              <Badge variant="outline" className="text-green-600 border-green-600">
+              <Badge variant="outline" className="text-green-600 border-green-600 dark:text-green-400">
                 优秀
               </Badge>
             </div>
@@ -300,14 +300,14 @@ const DevOpsDashboard: React.FC = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600 dark:text-gray-400">系统可用性</p>
-                <p className="text-2xl font-bold text-purple-600">
+                <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">
                   {systemMetrics.uptime}%
                 </p>
               </div>
-              <Activity className="h-8 w-8 text-purple-600" />
+              <Activity className="h-8 w-8 text-purple-600 dark:text-purple-400" />
             </div>
             <div className="mt-2">
-              <Badge variant="outline" className="text-purple-600 border-purple-600">
+              <Badge variant="outline" className="text-purple-600 border-purple-600 dark:text-purple-400">
                 SLA达标
               </Badge>
             </div>

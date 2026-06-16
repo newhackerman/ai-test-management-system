@@ -36,7 +36,7 @@ const RankingList: React.FC<RankingListProps> = ({ config, data }) => {
       case 1:
         return <Medal className="h-4 w-4 text-gray-400 dark:text-gray-500" />;
       case 2:
-        return <Award className="h-4 w-4 text-orange-500" />;
+        return <Award className="h-4 w-4 text-orange-500 dark:text-orange-400" />;
       default:
         return <span className="text-sm font-bold text-gray-500 dark:text-gray-400">#{index + 1}</span>;
     }
@@ -58,7 +58,7 @@ const RankingList: React.FC<RankingListProps> = ({ config, data }) => {
                   variant="outline" 
                   className={`text-xs ${
                     item.change.startsWith('+') ? 'text-green-600' : 
-                    item.change.startsWith('-') ? 'text-red-600' : 'text-gray-600'
+                    item.change.startsWith('-') ? 'text-red-600' : 'text-gray-600 dark:text-gray-400'
                   }`}
                 >
                   {item.change}

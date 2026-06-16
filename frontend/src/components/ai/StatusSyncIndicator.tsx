@@ -55,14 +55,14 @@ interface StatusConfig {
 const syncStatusConfig: Record<SyncStatus, StatusConfig> = {
   synced: {
     icon: CheckCircle2,
-    color: 'text-green-600',
+    color: 'text-green-600 dark:text-green-400',
     bgColor: 'bg-green-100',
     label: '已同步',
     description: '所有数据已与服务器同步'
   },
   syncing: {
     icon: RefreshCw,
-    color: 'text-blue-600',
+    color: 'text-blue-600 dark:text-blue-400',
     bgColor: 'bg-blue-100 dark:bg-blue-900/30',
     label: '同步中',
     description: '正在与服务器同步数据'
@@ -76,8 +76,8 @@ const syncStatusConfig: Record<SyncStatus, StatusConfig> = {
   },
   offline: {
     icon: WifiOff,
-    color: 'text-orange-600',
-    bgColor: 'bg-orange-100',
+    color: 'text-orange-600 dark:text-orange-400',
+    bgColor: 'bg-orange-100 dark:bg-orange-900/30',
     label: '离线',
     description: '当前处于离线状态，数据将在连接恢复后同步'
   }
@@ -86,7 +86,7 @@ const syncStatusConfig: Record<SyncStatus, StatusConfig> = {
 const connectionStatusConfig: Record<ConnectionStatus, StatusConfig> = {
   connected: {
     icon: Wifi,
-    color: 'text-green-600',
+    color: 'text-green-600 dark:text-green-400',
     bgColor: 'bg-green-100',
     label: '已连接',
     description: 'WebSocket连接正常'
@@ -197,7 +197,7 @@ export function StatusSyncIndicator({
                 </Badge>
               )}
               {conflictsCount > 0 && (
-                <AlertTriangle className="w-3 h-3 text-orange-500" />
+                <AlertTriangle className="w-3 h-3 text-orange-500 dark:text-orange-400" />
               )}
             </div>
           </TooltipTrigger>
@@ -206,7 +206,7 @@ export function StatusSyncIndicator({
               <div className="font-medium">{syncConfig.label}</div>
               <div className="text-gray-500 dark:text-gray-400">{syncConfig.description}</div>
               {pendingCount > 0 && (
-                <div className="text-orange-600">
+                <div className="text-orange-600 dark:text-orange-400">
                   {pendingCount} 个待处理操作
                 </div>
               )}
@@ -257,7 +257,7 @@ export function StatusSyncIndicator({
             
             {/* 冲突指示器 */}
             {conflictsCount > 0 && (
-              <AlertTriangle className="w-4 h-4 text-orange-500" />
+              <AlertTriangle className="w-4 h-4 text-orange-500 dark:text-orange-400" />
             )}
           </Button>
         </PopoverTrigger>
@@ -319,7 +319,7 @@ export function StatusSyncIndicator({
                 <Separator />
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <Clock className="w-4 h-4 text-orange-500" />
+                    <Clock className="w-4 h-4 text-orange-500 dark:text-orange-400" />
                     <span className="text-sm font-medium">待处理操作</span>
                   </div>
                   <Badge variant="secondary">{pendingCount}</Badge>
@@ -401,9 +401,9 @@ export function StatusSyncIndicator({
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
-              <div className="flex items-center gap-1 px-2 py-1 bg-orange-100 rounded-md">
-                <WifiOff className="w-3 h-3 text-orange-600" />
-                <span className="text-xs text-orange-600">离线</span>
+              <div className="flex items-center gap-1 px-2 py-1 bg-orange-100 rounded-md dark:bg-orange-900/30">
+                <WifiOff className="w-3 h-3 text-orange-600 dark:text-orange-400" />
+                <span className="text-xs text-orange-600 dark:text-orange-400">离线</span>
               </div>
             </TooltipTrigger>
             <TooltipContent>

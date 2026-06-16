@@ -788,7 +788,7 @@ export function TemplateEditor({
                   </div>
                   
                   {syntaxErrors.length === 0 && (
-                    <div className="flex items-center gap-2 text-sm text-green-600">
+                    <div className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
                       <CheckCircle className="w-4 h-4" />
                       模板语法正确
                     </div>

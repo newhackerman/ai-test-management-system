@@ -38,7 +38,7 @@ export const AuthStatus: React.FC<AuthStatusProps> = ({
     }
     
     if (isAuthenticated && user) {
-      return <CheckCircle className="w-4 h-4 text-green-500" />
+      return <CheckCircle className="w-4 h-4 text-green-500 dark:text-green-400" />
     }
     
     if (isAuthenticated && !user) {

@@ -250,7 +250,7 @@ export function ChangeImpactAnalysis({
     const riskConfig = {
       LOW: { color: 'bg-green-100 text-green-800', text: '低风险' },
       MEDIUM: { color: 'bg-yellow-100 text-yellow-800', text: '中等风险' },
-      HIGH: { color: 'bg-orange-100 text-orange-800', text: '高风险' },
+      HIGH: { color: 'bg-orange-100 text-orange-800 dark:text-orange-300 dark:bg-orange-900/30', text: '高风险' },
       CRITICAL: { color: 'bg-red-100 text-red-800 dark:text-red-300 dark:bg-red-900/30', text: '严重风险' }
     }
 
@@ -393,7 +393,7 @@ export function ChangeImpactAnalysis({
                   <ul className="space-y-1">
                     {data.items.map((item, index) => (
                       <li key={index} className="text-sm text-gray-600 flex items-start dark:text-gray-400">
-                        <span className="w-1 h-1 bg-gray-400 rounded-full mt-2 mr-2 flex-shrink-0"></span>
+                        <span className="w-1 h-1 bg-gray-400 rounded-full mt-2 mr-2 flex-shrink-0 dark:bg-gray-500"></span>
                         {item}
                       </li>
                     ))}
@@ -542,7 +542,7 @@ export function ChangeImpactAnalysis({
             </div>
             <div className="flex justify-between">
               <span className="text-gray-600 dark:text-gray-400">关键路径影响:</span>
-              <span className={`font-medium ${analysisData.timeline_impact.critical_path_affected ? 'text-red-600' : 'text-green-600'}`}>
+              <span className={`font-medium ${analysisData.timeline_impact.critical_path_affected ? 'text-red-600' : 'text-green-600 dark:text-green-400'}`}>
                 {analysisData.timeline_impact.critical_path_affected ? '是' : '否'}
               </span>
             </div>

@@ -243,7 +243,7 @@ const MobileLayout: React.FC<MobileLayoutProps> = ({
               className={`w-3 h-3 rounded-full transition-all duration-200 touch-optimized ${
                 index === currentWidgetIndex 
                   ? 'bg-blue-500 scale-125' 
-                  : 'bg-gray-300 hover:bg-gray-400'
+                  : 'bg-gray-300 hover:bg-gray-400 dark:bg-gray-500'
               }`}
             />
           ))}

@@ -67,7 +67,7 @@ export function MarkdownRenderer({
               onClick={() => handleCopyCode(code)}
             >
               {copiedCode === code ? (
-                <Check className="w-4 h-4 text-green-600" />
+                <Check className="w-4 h-4 text-green-600 dark:text-green-400" />
               ) : (
                 <Copy className="w-4 h-4" />
               )}

@@ -134,7 +134,7 @@ export default function RequirementTraceability() {
         <StatCard
           label="追溯覆盖率"
           value={`${statistics.coverage_percentage}%`}
-          icon={<CoverageIcon className="h-8 w-8 text-green-500" />}
+          icon={<CoverageIcon className="h-8 w-8 text-green-500 dark:text-green-400" />}
         />
         <StatCard label="已追溯需求" value={statistics.traced_requirements} icon={<GitBranch className="h-8 w-8 text-green-400" />} />
         <StatCard label="追溯缺口" value={statistics.gap_count} icon={<AlertTriangle className="h-8 w-8 text-red-400" />} />

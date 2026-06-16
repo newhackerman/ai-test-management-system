@@ -192,7 +192,7 @@ export const RolePermissionsDialog: React.FC<RolePermissionsDialogProps> = ({
               </div>
             </div>
             {hasChanges && (
-              <Badge variant="outline" className="text-orange-600 border-orange-200">
+              <Badge variant="outline" className="text-orange-600 border-orange-200 dark:text-orange-400">
                 有未保存的更改
               </Badge>
             )}
@@ -228,7 +228,7 @@ export const RolePermissionsDialog: React.FC<RolePermissionsDialogProps> = ({
                           </Badge>
                         </div>
                         <div className="flex items-center space-x-2">
-                          {isFullySelected && <Check className="w-4 h-4 text-green-500" />}
+                          {isFullySelected && <Check className="w-4 h-4 text-green-500 dark:text-green-400" />}
                           {isPartiallySelected && <div className="w-2 h-2 bg-orange-400 rounded-full" />}
                         </div>
                       </div>

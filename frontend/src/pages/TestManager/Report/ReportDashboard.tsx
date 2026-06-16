@@ -16,9 +16,9 @@ import { testPlanService } from '../../../services/testmanager/testPlanService'
 import { formatDate } from '../../../utils/date'
 
 const reportTypeCards = [
-  { type: 'execution', title: '执行报告', description: '汇总测试执行结果和通过率', icon: FileText, color: 'text-blue-500' },
-  { type: 'defect', title: '缺陷报告', description: '汇总缺陷数量、状态和严重程度', icon: BarChart3, color: 'text-red-500' },
-  { type: 'coverage', title: '覆盖率报告', description: '汇总需求和测试覆盖情况', icon: BarChart3, color: 'text-green-500' },
+  { type: 'execution', title: '执行报告', description: '汇总测试执行结果和通过率', icon: FileText, color: 'text-blue-500 dark:text-blue-400' },
+  { type: 'defect', title: '缺陷报告', description: '汇总缺陷数量、状态和严重程度', icon: BarChart3, color: 'text-red-500 dark:text-red-400' },
+  { type: 'coverage', title: '覆盖率报告', description: '汇总需求和测试覆盖情况', icon: BarChart3, color: 'text-green-500 dark:text-green-400' },
 ]
 
 const formatLabel = (format?: string) => String(format || '-').toUpperCase()

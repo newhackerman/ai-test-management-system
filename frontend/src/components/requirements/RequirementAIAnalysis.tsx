@@ -238,7 +238,7 @@ const RequirementAIAnalysis: React.FC<RequirementAIAnalysisProps> = ({
 
   // 获取质量评分颜色
   const getScoreColor = (score: number) => {
-    if (score >= 8) return 'text-green-600';
+    if (score >= 8) return 'text-green-600 dark:text-green-400';
     if (score >= 6) return 'text-yellow-600';
     return 'text-red-600 dark:text-red-400';
   };
@@ -248,7 +248,7 @@ const RequirementAIAnalysis: React.FC<RequirementAIAnalysisProps> = ({
     switch (complexity) {
       case 'simple': return 'bg-green-100 text-green-800';
       case 'medium': return 'bg-yellow-100 text-yellow-800';
-      case 'complex': return 'bg-orange-100 text-orange-800';
+      case 'complex': return 'bg-orange-100 text-orange-800 dark:text-orange-300 dark:bg-orange-900/30';
       case 'very_complex': return 'bg-red-100 text-red-800 dark:text-red-300 dark:bg-red-900/30';
       default: return 'bg-gray-100 text-gray-800 dark:text-gray-200 dark:bg-gray-800';
     }
@@ -259,7 +259,7 @@ const RequirementAIAnalysis: React.FC<RequirementAIAnalysisProps> = ({
     switch (severity) {
       case 'low': return 'bg-green-100 text-green-800';
       case 'medium': return 'bg-yellow-100 text-yellow-800';
-      case 'high': return 'bg-orange-100 text-orange-800';
+      case 'high': return 'bg-orange-100 text-orange-800 dark:text-orange-300 dark:bg-orange-900/30';
       case 'critical': return 'bg-red-100 text-red-800 dark:text-red-300 dark:bg-red-900/30';
       default: return 'bg-gray-100 text-gray-800 dark:text-gray-200 dark:bg-gray-800';
     }
@@ -418,7 +418,7 @@ const RequirementAIAnalysis: React.FC<RequirementAIAnalysisProps> = ({
                     <ul className="space-y-2">
                       {qualityAnalysis.improvement_suggestions.map((suggestion, index) => (
                         <li key={index} className="flex items-start gap-2">
-                          <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
+                          <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0 dark:text-green-400" />
                           <span className="text-sm">{suggestion}</span>
                         </li>
                       ))}
@@ -515,8 +515,8 @@ const RequirementAIAnalysis: React.FC<RequirementAIAnalysisProps> = ({
                     </div>
                   ) : (
                     <div className="text-center py-4">
-                      <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-2" />
-                      <p className="text-green-600 font-medium">未发现冲突</p>
+                      <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-2 dark:text-green-400" />
+                      <p className="text-green-600 font-medium dark:text-green-400">未发现冲突</p>
                       <p className="text-sm text-gray-500 dark:text-gray-400">当前需求与已有需求不存在冲突</p>
                     </div>
                   )}
@@ -559,13 +559,13 @@ const RequirementAIAnalysis: React.FC<RequirementAIAnalysisProps> = ({
                       <div className="text-sm text-gray-600 dark:text-gray-400">冲突数量</div>
                     </div>
                     <div className="text-center">
-                      <div className="text-2xl font-bold text-green-600">
+                      <div className="text-2xl font-bold text-green-600 dark:text-green-400">
                         {optimizationResult.dependencies_count}
                       </div>
                       <div className="text-sm text-gray-600 dark:text-gray-400">依赖关系</div>
                     </div>
                     <div className="text-center">
-                      <div className="text-2xl font-bold text-purple-600">
+                      <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
                         {optimizationResult.best_practices_count}
                       </div>
                       <div className="text-sm text-gray-600 dark:text-gray-400">最佳实践</div>
@@ -620,7 +620,7 @@ const RequirementAIAnalysis: React.FC<RequirementAIAnalysisProps> = ({
                       <ul className="space-y-1">
                         {realTimeAnalysis.suggestions.map((suggestion, index) => (
                           <li key={index} className="flex items-start gap-2">
-                            <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
+                            <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0 dark:text-green-400" />
                             <span className="text-sm">{suggestion}</span>
                           </li>
                         ))}

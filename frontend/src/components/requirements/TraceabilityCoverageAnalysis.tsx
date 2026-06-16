@@ -228,8 +228,8 @@ export function TraceabilityCoverageAnalysis({
   }
 
   const getCoverageColor = (percentage: number) => {
-    if (percentage >= 90) return 'text-green-600'
-    if (percentage >= 70) return 'text-blue-600'
+    if (percentage >= 90) return 'text-green-600 dark:text-green-400'
+    if (percentage >= 70) return 'text-blue-600 dark:text-blue-400'
     if (percentage >= 50) return 'text-yellow-600'
     return 'text-red-600 dark:text-red-400'
   }
@@ -558,7 +558,7 @@ export function TraceabilityCoverageAnalysis({
                 <div className="text-center">
                   <div className="flex items-center justify-center mb-2">
                     {detailedStats.trends.coverage_trend > 0 ? (
-                      <TrendingUp className="w-6 h-6 text-green-600" />
+                      <TrendingUp className="w-6 h-6 text-green-600 dark:text-green-400" />
                     ) : (
                       <TrendingDown className="w-6 h-6 text-red-600 dark:text-red-400" />
                     )}
@@ -581,9 +581,9 @@ export function TraceabilityCoverageAnalysis({
                 </div>
                 <div className="text-center">
                   <div className="flex items-center justify-center mb-2">
-                    <CheckCircle className="w-6 h-6 text-purple-600" />
+                    <CheckCircle className="w-6 h-6 text-purple-600 dark:text-purple-400" />
                   </div>
-                  <div className="text-2xl font-bold text-purple-600">
+                  <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
                     {Math.round((detailedStats.traced_requirements / detailedStats.total_requirements) * 100)}%
                   </div>
                   <div className="text-sm text-gray-600 dark:text-gray-400">当前覆盖率</div>
@@ -600,7 +600,7 @@ export function TraceabilityCoverageAnalysis({
             <CardContent>
               <div className="space-y-4">
                 <div className="p-4 bg-blue-50 rounded-lg dark:bg-blue-900/20">
-                  <h4 className="font-medium text-blue-900 mb-2">优先改进项</h4>
+                  <h4 className="font-medium text-blue-900 mb-2 dark:text-blue-100">优先改进项</h4>
                   <ul className="space-y-1 text-sm text-blue-800 dark:text-blue-300">
                     <li>• 完善高优先级需求的测试覆盖率</li>
                     <li>• 建立功能需求与实现代码的双向追溯</li>

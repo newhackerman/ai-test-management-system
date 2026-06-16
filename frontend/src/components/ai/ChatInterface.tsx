@@ -320,7 +320,7 @@ export function ChatInterface({
 
       <div className="flex items-center justify-between border-b px-4 py-2 text-xs text-gray-500 dark:text-gray-400">
         <div className="flex items-center gap-2">
-          {navigator.onLine ? <Wifi className="h-3.5 w-3.5 text-green-600" /> : <WifiOff className="h-3.5 w-3.5 text-orange-600" />}
+          {navigator.onLine ? <Wifi className="h-3.5 w-3.5 text-green-600 dark:text-green-400" /> : <WifiOff className="h-3.5 w-3.5 text-orange-600 dark:text-orange-400" />}
           <span>{navigator.onLine ? '在线' : '离线'}</span>
           {sending && (
             <span className="inline-flex items-center gap-1 text-blue-600 dark:text-blue-400">

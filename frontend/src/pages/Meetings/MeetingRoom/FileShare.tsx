@@ -137,7 +137,7 @@ const FileItem: React.FC<FileItemProps> = ({
       case 'processing':
         return <Clock className="h-4 w-4 text-yellow-500" />
       case 'ready':
-        return <CheckCircle className="h-4 w-4 text-green-500" />
+        return <CheckCircle className="h-4 w-4 text-green-500 dark:text-green-400" />
       case 'error':
         return <AlertCircle className="h-4 w-4 text-red-500 dark:text-red-400" />
       default:

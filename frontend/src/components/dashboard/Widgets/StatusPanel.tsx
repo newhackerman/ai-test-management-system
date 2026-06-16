@@ -36,7 +36,7 @@ const StatusPanel: React.FC<StatusPanelProps> = ({ config, data }) => {
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'healthy':
-        return <CheckCircle className="h-4 w-4 text-green-500" />;
+        return <CheckCircle className="h-4 w-4 text-green-500 dark:text-green-400" />;
       case 'warning':
         return <AlertCircle className="h-4 w-4 text-yellow-500" />;
       case 'error':

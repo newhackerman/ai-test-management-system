@@ -87,7 +87,7 @@ const MobileWidgetCard: React.FC<MobileWidgetCardProps> = ({
     }
     
     if (realtimeData?.status === 'success') {
-      return <CheckCircle className="h-3 w-3 text-green-500" />;
+      return <CheckCircle className="h-3 w-3 text-green-500 dark:text-green-400" />;
     }
     
     return null;
@@ -101,7 +101,7 @@ const MobileWidgetCard: React.FC<MobileWidgetCardProps> = ({
     
     if (direction === 'up') {
       return (
-        <div className="flex items-center text-green-600 text-xs">
+        <div className="flex items-center text-green-600 text-xs dark:text-green-400">
           <TrendingUp className="h-3 w-3 mr-1" />
           <span>+{value}%</span>
         </div>

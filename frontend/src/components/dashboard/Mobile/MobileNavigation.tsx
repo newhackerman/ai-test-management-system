@@ -282,7 +282,7 @@ const MobileNavigation: React.FC<MobileNavigationProps> = ({
 
       {/* Loading Bar (when refreshing) */}
       {isRefreshing && (
-        <div className="h-1 bg-gray-200">
+        <div className="h-1 bg-gray-200 dark:bg-gray-600">
           <div className="h-full bg-blue-500 animate-pulse" style={{ width: '100%' }} />
         </div>
       )}

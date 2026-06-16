@@ -390,7 +390,7 @@ const SecurityTest: React.FC = () => {
               <div className="flex items-center justify-between">
                 <span className="text-sm">安全评分</span>
                 <div className="flex items-center space-x-2">
-                  <div className="h-2 w-20 rounded-full bg-gray-200">
+                  <div className="h-2 w-20 rounded-full bg-gray-200 dark:bg-gray-600">
                     <div className={scoreColor(securityScore)} style={{ width: `${securityScore ?? 0}%` }} />
                   </div>
                   <span className="text-sm font-medium">{securityScore === null ? '-' : `${securityScore}/100`}</span>
@@ -410,7 +410,7 @@ const SecurityTest: React.FC = () => {
             <CardContent className="space-y-3">
               {recommendations.map((recommendation: string, index: number) => (
                 <div key={`${recommendation}-${index}`} className="flex items-start space-x-3 rounded-md border bg-gray-50 p-3 dark:bg-gray-800/50">
-                  {summary.total > 0 ? <AlertTriangle className="mt-0.5 h-5 w-5 text-orange-500" /> : <CheckCircle className="mt-0.5 h-5 w-5 text-green-500" />}
+                  {summary.total > 0 ? <AlertTriangle className="mt-0.5 h-5 w-5 text-orange-500 dark:text-orange-400" /> : <CheckCircle className="mt-0.5 h-5 w-5 text-green-500 dark:text-green-400" />}
                   <p className="text-sm text-gray-700 dark:text-gray-300">{recommendation}</p>
                 </div>
               ))}

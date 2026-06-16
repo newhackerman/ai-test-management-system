@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useState } from 'react';
 import { Activity, AlertTriangle, CheckCircle, Clock, Target, Users } from 'lucide-react';
 
 import { Badge } from '../ui/Badge';
@@ -48,7 +48,7 @@ const StatisticsDashboard: React.FC<StatisticsDashboardProps> = ({ projectId, cl
           <ProgressItem label="质量得分" value={quality} />
           <ProgressItem label="协作得分" value={collaboration} />
           <div className="flex items-center gap-2">
-            <AlertTriangle className="h-4 w-4 text-orange-600" />
+            <AlertTriangle className="h-4 w-4 text-orange-600 dark:text-orange-400" />
             <span className="text-sm">高风险 {stats?.risk_metrics?.high_risks ?? 0} / 总风险 {stats?.risk_metrics?.total_risks ?? 0}</span>
           </div>
           <div className="flex items-center gap-2">

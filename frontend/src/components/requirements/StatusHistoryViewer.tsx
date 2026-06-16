@@ -71,7 +71,7 @@ const TimelineItem: React.FC<TimelineItemProps> = ({ record, isFirst, isLast }) 
           'w-3 h-3 rounded-full border-2 bg-white',
           isFirst ? 'border-green-500' : 'border-gray-300 dark:border-gray-600'
         )} />
-        {!isLast && <div className="w-0.5 h-full bg-gray-200 mt-2" />}
+        {!isLast && <div className="w-0.5 h-full bg-gray-200 mt-2 dark:bg-gray-600" />}
       </div>
       
       {/* 内容 */}
@@ -186,7 +186,7 @@ const StatusStatistics: React.FC<StatusStatisticsProps> = ({ history }) => {
               </Badge>
               <span className="text-sm font-medium">{days} 天</span>
             </div>
-            <div className="w-full bg-gray-200 rounded-full h-2">
+            <div className="w-full bg-gray-200 rounded-full h-2 dark:bg-gray-600">
               <div
                 className="bg-primary h-2 rounded-full transition-all duration-300"
                 style={{ width: `${(days / maxDays) * 100}%` }}

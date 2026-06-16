@@ -153,7 +153,7 @@ const DashboardMainContent: React.FC<DashboardMainProps> = ({ roleType }) => {
         <div className="bg-gradient-to-r from-gray-300 to-gray-400 rounded-lg h-32"></div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {[1, 2, 3, 4].map(i => (
-            <div key={i} className="bg-gray-300 rounded-lg h-24"></div>
+            <div key={i} className="bg-gray-300 rounded-lg h-24 dark:bg-gray-500"></div>
           ))}
         </div>
       </div>
@@ -285,7 +285,7 @@ const DashboardMainContent: React.FC<DashboardMainProps> = ({ roleType }) => {
           {/* Header Actions */}
           <div className="flex items-center space-x-2">
             {hasUnsavedChanges && (
-              <Badge variant="outline" className="text-orange-600 border-orange-600">
+              <Badge variant="outline" className="text-orange-600 border-orange-600 dark:text-orange-400">
                 鏈繚瀛樼殑鏇存敼
               </Badge>
             )}

@@ -53,7 +53,7 @@ export const PermissionMatrixView: React.FC<PermissionMatrixViewProps> = ({ matr
     const hasPermission = matrix.matrix[roleCode]?.[permissionCode];
     
     if (hasPermission === true) {
-      return <Check className="w-4 h-4 text-green-500" />;
+      return <Check className="w-4 h-4 text-green-500 dark:text-green-400" />;
     } else if (hasPermission === false) {
       return <X className="w-4 h-4 text-red-500 dark:text-red-400" />;
     } else {
@@ -231,7 +231,7 @@ export const PermissionMatrixView: React.FC<PermissionMatrixViewProps> = ({ matr
                   <tr className="bg-blue-50 dark:bg-blue-900/20">
                     <td
                       colSpan={filteredRoles.length + 1}
-                      className="px-4 py-2 font-medium text-blue-900 border-b"
+                      className="px-4 py-2 font-medium text-blue-900 border-b dark:text-blue-100"
                     >
                       {MODULE_NAMES[module] || module} ({permissions.length} 个权限)
                     </td>
@@ -268,7 +268,7 @@ export const PermissionMatrixView: React.FC<PermissionMatrixViewProps> = ({ matr
       {/* 图例 */}
       <div className="flex items-center justify-center space-x-6 p-3 bg-gray-50 rounded-lg dark:bg-gray-800/50">
         <div className="flex items-center space-x-2">
-          <Check className="w-4 h-4 text-green-500" />
+          <Check className="w-4 h-4 text-green-500 dark:text-green-400" />
           <span className="text-sm text-gray-600 dark:text-gray-400">有权限</span>
         </div>
         <div className="flex items-center space-x-2">

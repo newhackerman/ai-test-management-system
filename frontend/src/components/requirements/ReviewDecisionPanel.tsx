@@ -69,9 +69,9 @@ const getDecisionIcon = (decision: ReviewDecision) => {
   switch (decision) {
     case 'APPROVED':
     case 'APPROVED_WITH_MINOR_CHANGES':
-      return <CheckCircle className="h-5 w-5 text-green-600" />
+      return <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
     case 'NEEDS_MAJOR_REVISION':
-      return <AlertTriangle className="h-5 w-5 text-orange-600" />
+      return <AlertTriangle className="h-5 w-5 text-orange-600 dark:text-orange-400" />
     case 'REJECTED':
       return <XCircle className="h-5 w-5 text-red-600 dark:text-red-400" />
     default:
@@ -86,7 +86,7 @@ const getDecisionColor = (decision: ReviewDecision) => {
     case 'APPROVED_WITH_MINOR_CHANGES':
       return 'bg-blue-100 text-blue-800 border-blue-200 dark:text-blue-300 dark:bg-blue-900/30'
     case 'NEEDS_MAJOR_REVISION':
-      return 'bg-orange-100 text-orange-800 border-orange-200'
+      return 'bg-orange-100 text-orange-800 border-orange-200 dark:text-orange-300 dark:bg-orange-900/30'
     case 'REJECTED':
       return 'bg-red-100 text-red-800 border-red-200 dark:text-red-300 dark:bg-red-900/30 dark:border-red-800'
     default:
@@ -95,7 +95,7 @@ const getDecisionColor = (decision: ReviewDecision) => {
 }
 
 const getStatusIcon = (status: 'pending' | 'completed' | 'in_progress') => {
-  if (status === 'completed') return <CheckCircle className="h-4 w-4 text-green-600" />
+  if (status === 'completed') return <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
   if (status === 'in_progress') return <Clock className="h-4 w-4 text-blue-600 dark:text-blue-400" />
   return <Clock className="h-4 w-4 text-gray-400 dark:text-gray-500" />
 }

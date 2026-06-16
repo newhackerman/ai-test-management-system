@@ -140,7 +140,7 @@ const ResetPasswordPage: React.FC = () => {
                 </div>
               </div>
               <div className="space-y-2 rounded-md bg-gray-50 p-3 dark:bg-gray-800/50">
-                <div className="h-1.5 overflow-hidden rounded-full bg-gray-200">
+                <div className="h-1.5 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-600">
                   <div className="h-full bg-blue-600 transition-all" style={{ width: `${progress}%` }} />
                 </div>
                 <div className="grid grid-cols-1 gap-1 text-xs text-gray-600 dark:text-gray-400">

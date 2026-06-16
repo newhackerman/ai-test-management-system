@@ -49,7 +49,7 @@ const StatCard: React.FC<StatCardProps> = ({ config, data }) => {
 
   const getTrendIcon = (trend: number) => {
     if (trend > 0) {
-      return <TrendingUp className="h-4 w-4 text-green-500" />;
+      return <TrendingUp className="h-4 w-4 text-green-500 dark:text-green-400" />;
     } else if (trend < 0) {
       return <TrendingDown className="h-4 w-4 text-red-500 dark:text-red-400" />;
     } else {
@@ -58,7 +58,7 @@ const StatCard: React.FC<StatCardProps> = ({ config, data }) => {
   };
 
   const getTrendColor = (trend: number) => {
-    if (trend > 0) return 'text-green-600';
+    if (trend > 0) return 'text-green-600 dark:text-green-400';
     if (trend < 0) return 'text-red-600 dark:text-red-400';
     return 'text-gray-500 dark:text-gray-400';
   };

@@ -612,10 +612,10 @@ const Roles: React.FC = () => {
       <Spin spinning={statsLoading}>
         <div className="grid grid-cols-2 gap-2 rounded-lg border bg-card p-3 md:grid-cols-5">
           <StatCard value={stats?.total_roles ?? 0} label="总角色数" className="text-blue-600 dark:text-blue-400" />
-          <StatCard value={stats?.active_roles ?? 0} label="启用角色" className="text-green-600" />
+          <StatCard value={stats?.active_roles ?? 0} label="启用角色" className="text-green-600 dark:text-green-400" />
           <StatCard value={stats?.inactive_roles ?? 0} label="停用角色" className="text-gray-600 dark:text-gray-400" />
-          <StatCard value={stats?.total_permissions ?? 0} label="权限总数" className="text-purple-600" />
-          <StatCard value={(stats?.average_users_per_role ?? 0).toFixed(1)} label="平均用户数" className="text-orange-600" />
+          <StatCard value={stats?.total_permissions ?? 0} label="权限总数" className="text-purple-600 dark:text-purple-400" />
+          <StatCard value={(stats?.average_users_per_role ?? 0).toFixed(1)} label="平均用户数" className="text-orange-600 dark:text-orange-400" />
         </div>
       </Spin>
 

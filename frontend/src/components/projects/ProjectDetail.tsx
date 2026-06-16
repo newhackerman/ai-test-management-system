@@ -88,14 +88,14 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({
         label: '规划中', 
         variant: 'outline' as const, 
         icon: Clock,
-        color: 'text-blue-600',
+        color: 'text-blue-600 dark:text-blue-400',
         bgColor: 'bg-blue-50 dark:bg-blue-900/20'
       },
       IN_PROGRESS: { 
         label: '进行中', 
         variant: 'default' as const, 
         icon: Activity,
-        color: 'text-green-600',
+        color: 'text-green-600 dark:text-green-400',
         bgColor: 'bg-green-50'
       },
       ON_HOLD: { 
@@ -146,15 +146,15 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({
     const configs = {
       BUSINESS_SYSTEM: { label: '业务系统', color: 'bg-blue-100 text-blue-800 dark:text-blue-300 dark:bg-blue-900/30' },
       MOBILE_APP: { label: '移动应用', color: 'bg-cyan-100 text-cyan-800' },
-      API_SERVICE: { label: '接口服务', color: 'bg-orange-100 text-orange-800' },
-      DATA_AI: { label: '数据/AI', color: 'bg-purple-100 text-purple-800' },
-      INFRASTRUCTURE: { label: '基础设施', color: 'bg-slate-100 text-slate-800' },
+      API_SERVICE: { label: '接口服务', color: 'bg-orange-100 text-orange-800 dark:text-orange-300 dark:bg-orange-900/30' },
+      DATA_AI: { label: '数据/AI', color: 'bg-purple-100 text-purple-800 dark:text-purple-300 dark:bg-purple-900/30' },
+      INFRASTRUCTURE: { label: '基础设施', color: 'bg-slate-100 text-slate-800 dark:bg-slate-800' },
       INTERNAL_TOOL: { label: '内部工具', color: 'bg-green-100 text-green-800' },
       FUNCTIONAL: { label: '业务系统', color: 'bg-blue-100 text-blue-800 dark:text-blue-300 dark:bg-blue-900/30' },
-      PERFORMANCE: { label: '基础设施', color: 'bg-slate-100 text-slate-800' },
-      SECURITY: { label: '基础设施', color: 'bg-slate-100 text-slate-800' },
+      PERFORMANCE: { label: '基础设施', color: 'bg-slate-100 text-slate-800 dark:bg-slate-800' },
+      SECURITY: { label: '基础设施', color: 'bg-slate-100 text-slate-800 dark:bg-slate-800' },
       AUTOMATION: { label: '内部工具', color: 'bg-green-100 text-green-800' },
-      INTEGRATION: { label: '接口服务', color: 'bg-orange-100 text-orange-800' }
+      INTEGRATION: { label: '接口服务', color: 'bg-orange-100 text-orange-800 dark:text-orange-300 dark:bg-orange-900/30' }
     }
     return configs[type] || { label: getProjectTypeLabel(type), color: 'bg-gray-100 text-gray-800 dark:text-gray-200 dark:bg-gray-800' }
   }
@@ -213,7 +213,7 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({
     const actualProgress = Number(project.progress_percentage) || 0
     
     if (actualProgress > expectedProgress + 10) {
-      return { icon: TrendingUp, color: 'text-green-600', label: '进度超前' }
+      return { icon: TrendingUp, color: 'text-green-600 dark:text-green-400', label: '进度超前' }
     } else if (actualProgress < expectedProgress - 10) {
       return { icon: TrendingDown, color: 'text-red-600 dark:text-red-400', label: '进度滞后' }
     } else {
@@ -527,7 +527,7 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-muted-foreground">已完成任务</span>
-                    <span className="font-semibold text-green-600">{project.completed_task_count}</span>
+                    <span className="font-semibold text-green-600 dark:text-green-400">{project.completed_task_count}</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-muted-foreground">测试用例数</span>
@@ -535,7 +535,7 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-muted-foreground">通过用例数</span>
-                    <span className="font-semibold text-green-600">{project.passed_test_count}</span>
+                    <span className="font-semibold text-green-600 dark:text-green-400">{project.passed_test_count}</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-muted-foreground">发现缺陷数</span>
@@ -566,7 +566,7 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({
                       <span className="text-sm text-muted-foreground">成本使用率</span>
                       <span className={`font-semibold ${
                         (project.actual_cost / project.budget) > 0.9 ? 'text-red-600 dark:text-red-400' : 
-                        (project.actual_cost / project.budget) > 0.7 ? 'text-yellow-600' : 'text-green-600'
+                        (project.actual_cost / project.budget) > 0.7 ? 'text-yellow-600' : 'text-green-600 dark:text-green-400'
                       }`}>
                         {((project.actual_cost / project.budget) * 100).toFixed(1)}%
                       </span>

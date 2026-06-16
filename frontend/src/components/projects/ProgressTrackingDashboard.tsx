@@ -123,9 +123,9 @@ function DashboardOverview({
 
   const progressColor =
     overallProgress >= 90
-      ? 'text-green-600'
+      ? 'text-green-600 dark:text-green-400'
       : overallProgress >= 70
-        ? 'text-blue-600'
+        ? 'text-blue-600 dark:text-blue-400'
         : overallProgress >= 50
           ? 'text-yellow-600'
           : 'text-red-600 dark:text-red-400'
@@ -177,9 +177,9 @@ function DashboardOverview({
         <div className="flex items-center justify-between">
           <div>
             <p className="text-sm text-muted-foreground">风险管理</p>
-            <p className="text-3xl font-bold text-orange-600">{risks.length}</p>
+            <p className="text-3xl font-bold text-orange-600 dark:text-orange-400">{risks.length}</p>
           </div>
-          <AlertTriangle className="h-8 w-8 text-orange-600" />
+          <AlertTriangle className="h-8 w-8 text-orange-600 dark:text-orange-400" />
         </div>
         <div className="mt-4 space-y-2 text-xs">
           <div className="flex justify-between">
@@ -218,7 +218,7 @@ function AlertDashboard({
   onAlertClick?: (alert: Alert) => void
 }) {
   const alertTypeConfig = {
-    PROGRESS: { label: '进度预警', icon: TrendingUp, color: 'bg-orange-100 text-orange-800' },
+    PROGRESS: { label: '进度预警', icon: TrendingUp, color: 'bg-orange-100 text-orange-800 dark:text-orange-300 dark:bg-orange-900/30' },
     QUALITY: { label: '质量预警', icon: Target, color: 'bg-red-100 text-red-800 dark:text-red-300 dark:bg-red-900/30' },
     RISK: { label: '风险预警', icon: AlertTriangle, color: 'bg-red-100 text-red-800 dark:text-red-300 dark:bg-red-900/30' },
     MILESTONE: { label: '里程碑预警', icon: Calendar, color: 'bg-yellow-100 text-yellow-800' },
@@ -303,7 +303,7 @@ function AlertDashboard({
 
         {sortedAlerts.length === 0 && (
           <div className="py-8 text-center">
-            <CheckCircle className="mx-auto mb-4 h-12 w-12 text-green-500" />
+            <CheckCircle className="mx-auto mb-4 h-12 w-12 text-green-500 dark:text-green-400" />
             <h4 className="mb-2 text-lg font-semibold text-foreground">暂无预警</h4>
             <p className="text-muted-foreground">项目运行正常，没有需要关注的预警信息。</p>
           </div>

@@ -175,7 +175,7 @@ const DefectAnalytics: React.FC = () => {
 
           <div className="rounded-md border px-3 py-2">
             <div className="flex items-center gap-3">
-              <TrendingUp className="h-4 w-4 text-green-500" />
+              <TrendingUp className="h-4 w-4 text-green-500 dark:text-green-400" />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm text-muted-foreground">解决率</p>
                 <p className="text-lg font-semibold leading-5">{loading ? '-' : `${stats.resolution_rate}%`}</p>
@@ -186,7 +186,7 @@ const DefectAnalytics: React.FC = () => {
 
           <div className="rounded-md border px-3 py-2">
             <div className="flex items-center gap-3">
-              <Calendar className="h-4 w-4 text-purple-500" />
+              <Calendar className="h-4 w-4 text-purple-500 dark:text-purple-400" />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm text-muted-foreground">平均解决时间</p>
                 <p className="text-lg font-semibold leading-5">{loading ? '-' : `${stats.avg_resolution_time || 0}天`}</p>
@@ -245,7 +245,7 @@ const DefectAnalytics: React.FC = () => {
               {severityRows.map((item) => (
                 <div key={item.key} className="flex items-center justify-between gap-4">
                   <span className="w-16 text-sm">{item.label}</span>
-                  <div className="h-2 flex-1 rounded-full bg-gray-200">
+                  <div className="h-2 flex-1 rounded-full bg-gray-200 dark:bg-gray-600">
                     <div className="h-2 rounded-full bg-red-500" style={{ width: `${percent(item.value, total)}%` }} />
                   </div>
                   <Link to={`/test-manager/defects?${listQueryPrefix}severity=${item.key}`}>
@@ -276,11 +276,11 @@ const DefectAnalytics: React.FC = () => {
                   <p className="text-sm text-gray-600 dark:text-gray-400">未完成</p>
                 </div>
                 <div>
-                  <p className="text-lg font-bold text-green-600">{stats.resolved_defects}</p>
+                  <p className="text-lg font-bold text-green-600 dark:text-green-400">{stats.resolved_defects}</p>
                   <p className="text-sm text-gray-600 dark:text-gray-400">已完成</p>
                 </div>
                 <div>
-                  <p className="text-lg font-bold text-orange-600">{stats.reopen_rate || 0}%</p>
+                  <p className="text-lg font-bold text-orange-600 dark:text-orange-400">{stats.reopen_rate || 0}%</p>
                   <p className="text-sm text-gray-600 dark:text-gray-400">重开率</p>
                 </div>
               </div>

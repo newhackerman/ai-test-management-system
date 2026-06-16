@@ -60,7 +60,7 @@ export function ChangeRequestList({
       UNDER_REVIEW: { color: 'bg-yellow-100 text-yellow-800', icon: Eye, text: '审核中' },
       APPROVED: { color: 'bg-green-100 text-green-800', icon: Check, text: '已批准' },
       REJECTED: { color: 'bg-red-100 text-red-800 dark:text-red-300 dark:bg-red-900/30', icon: X, text: '已拒绝' },
-      IMPLEMENTED: { color: 'bg-purple-100 text-purple-800', icon: Check, text: '已实施' },
+      IMPLEMENTED: { color: 'bg-purple-100 text-purple-800 dark:text-purple-300 dark:bg-purple-900/30', icon: Check, text: '已实施' },
       CLOSED: { color: 'bg-gray-100 text-gray-800 dark:text-gray-200 dark:bg-gray-800', icon: Check, text: '已关闭' }
     }
 
@@ -78,7 +78,7 @@ export function ChangeRequestList({
   const getPriorityBadge = (priority: ChangePriority) => {
     const priorityConfig = {
       EMERGENCY: { color: 'bg-red-100 text-red-800 dark:text-red-300 dark:bg-red-900/30', text: '紧急' },
-      HIGH: { color: 'bg-orange-100 text-orange-800', text: '高' },
+      HIGH: { color: 'bg-orange-100 text-orange-800 dark:text-orange-300 dark:bg-orange-900/30', text: '高' },
       MEDIUM: { color: 'bg-yellow-100 text-yellow-800', text: '中' },
       LOW: { color: 'bg-green-100 text-green-800', text: '低' }
     }
@@ -194,7 +194,7 @@ export function ChangeRequestList({
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="text-green-600 hover:text-green-700"
+                        className="text-green-600 hover:text-green-700 dark:text-green-400"
                         onClick={() => onApprove(change.id)}
                       >
                         <Check className="w-4 h-4" />

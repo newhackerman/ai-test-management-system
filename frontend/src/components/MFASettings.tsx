@@ -319,10 +319,10 @@ const MFASettings: React.FC = () => {
           ) : (
             <>
               <div className="flex items-center space-x-3 rounded-lg border border-green-200 bg-green-50 p-4">
-                <Shield className="h-6 w-6 text-green-600" />
+                <Shield className="h-6 w-6 text-green-600 dark:text-green-400" />
                 <div>
                   <h3 className="font-medium text-green-800">MFA 已启用</h3>
-                  <p className="text-sm text-green-600">您的账号受到多因素认证保护。</p>
+                  <p className="text-sm text-green-600 dark:text-green-400">您的账号受到多因素认证保护。</p>
                 </div>
               </div>
 

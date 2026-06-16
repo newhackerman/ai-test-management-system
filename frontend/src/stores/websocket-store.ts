@@ -380,13 +380,13 @@ export const webSocketUtils = {
       case 'connecting':
         return 'text-yellow-500'
       case 'connected':
-        return 'text-green-500'
+        return 'text-green-500 dark:text-green-400'
       case 'disconnected':
         return 'text-gray-500 dark:text-gray-400'
       case 'reconnecting':
-        return 'text-blue-500'
+        return 'text-blue-500 dark:text-blue-400'
       case 'error':
-        return 'text-red-500'
+        return 'text-red-500 dark:text-red-400'
       default:
         return 'text-gray-500 dark:text-gray-400'
     }

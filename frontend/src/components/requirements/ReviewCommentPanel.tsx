@@ -180,7 +180,7 @@ const getSeverityColor = (severity?: CommentSeverity): string => {
     case 'CRITICAL':
       return 'bg-red-100 text-red-800 border-red-200 dark:text-red-300 dark:bg-red-900/30 dark:border-red-800'
     case 'MAJOR':
-      return 'bg-orange-100 text-orange-800 border-orange-200'
+      return 'bg-orange-100 text-orange-800 border-orange-200 dark:text-orange-300 dark:bg-orange-900/30'
     case 'MINOR':
       return 'bg-yellow-100 text-yellow-800 border-yellow-200'
     case 'TRIVIAL':
@@ -307,15 +307,15 @@ const CommentCard: React.FC<{
           {comment.status === 'RESOLVED' && comment.resolution && (
             <div className="bg-green-50 border border-green-200 rounded-md p-3">
               <div className="flex items-center space-x-2 mb-2">
-                <CheckCircle className="w-4 h-4 text-green-600" />
+                <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400" />
                 <span className="text-sm font-medium text-green-800">已解决</span>
                 {comment.resolver && (
-                  <span className="text-sm text-green-600">
+                  <span className="text-sm text-green-600 dark:text-green-400">
                     by {comment.resolver.real_name || comment.resolver.username}
                   </span>
                 )}
                 {comment.resolved_at && (
-                  <span className="text-sm text-green-600">
+                  <span className="text-sm text-green-600 dark:text-green-400">
                     {formatDate(comment.resolved_at)}
                   </span>
                 )}

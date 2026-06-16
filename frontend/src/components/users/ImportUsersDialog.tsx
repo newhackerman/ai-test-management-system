@@ -111,7 +111,7 @@ export const ImportUsersDialog: React.FC<ImportUsersDialogProps> = ({ open, onCl
           >
             {selectedFile ? (
               <div className="space-y-2">
-                <FileText className="mx-auto h-12 w-12 text-green-600" />
+                <FileText className="mx-auto h-12 w-12 text-green-600 dark:text-green-400" />
                 <p className="font-medium text-green-800">{selectedFile.name}</p>
                 <p className="text-sm text-gray-500 dark:text-gray-400">{(selectedFile.size / 1024 / 1024).toFixed(2)} MB</p>
                 <Button variant="outline" size="sm" onClick={() => setSelectedFile(null)}>

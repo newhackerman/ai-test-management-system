@@ -991,7 +991,7 @@ function RiskLevelBadge({ level }) {
   const className = {
     [RiskLevel.LOW]: 'bg-green-100 text-green-800',
     [RiskLevel.MEDIUM]: 'bg-yellow-100 text-yellow-800',
-    [RiskLevel.HIGH]: 'bg-orange-100 text-orange-800',
+    [RiskLevel.HIGH]: 'bg-orange-100 text-orange-800 dark:text-orange-300 dark:bg-orange-900/30',
     [RiskLevel.CRITICAL]: 'bg-red-100 text-red-800 dark:text-red-300 dark:bg-red-900/30',
   }[level] || 'bg-gray-100 text-gray-700 dark:text-gray-300 dark:bg-gray-800'
   return <Badge variant="secondary" className={`border-0 ${className}`}>{getRiskLevelText(level)}</Badge>
@@ -1001,8 +1001,8 @@ function RiskStatusBadge({ status }) {
   const className = {
     [RiskStatus.IDENTIFIED]: 'bg-gray-100 text-gray-700 dark:text-gray-300 dark:bg-gray-800',
     [RiskStatus.ANALYZING]: 'bg-blue-100 text-blue-800 dark:text-blue-300 dark:bg-blue-900/30',
-    [RiskStatus.MITIGATING]: 'bg-orange-100 text-orange-800',
-    [RiskStatus.MONITORING]: 'bg-indigo-100 text-indigo-800',
+    [RiskStatus.MITIGATING]: 'bg-orange-100 text-orange-800 dark:text-orange-300 dark:bg-orange-900/30',
+    [RiskStatus.MONITORING]: 'bg-indigo-100 text-indigo-800 dark:text-indigo-300 dark:bg-indigo-900/30',
     [RiskStatus.CLOSED]: 'bg-green-100 text-green-800',
   }[status] || 'bg-gray-100 text-gray-700 dark:text-gray-300 dark:bg-gray-800'
   return <Badge variant="secondary" className={`border-0 ${className}`}>{getRiskStatusText(status)}</Badge>

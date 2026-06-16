@@ -293,7 +293,7 @@ const Profile: React.FC = () => {
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
                 className={`border-b-2 px-1 py-4 text-sm font-medium ${
-                  activeTab === tab.id ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:text-gray-300 dark:border-gray-600'
+                  activeTab === tab.id ? 'border-blue-500 text-blue-600 dark:border-blue-400 dark:text-blue-400' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:text-gray-400 dark:hover:border-gray-400 dark:hover:text-gray-100 dark:text-gray-300 dark:border-gray-600'
                 }`}
               >
                 {tab.name}
@@ -308,7 +308,7 @@ const Profile: React.FC = () => {
               <h3 className="text-lg font-medium text-gray-900 dark:text-white">基本信息</h3>
               <div className="flex items-center space-x-6">
                 <div className="relative">
-                  <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-full bg-gray-200">
+                  <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-full bg-gray-200 dark:bg-gray-600">
                     {profile.avatar ? (
                       <img src={resolveAssetUrl(profile.avatar)} alt="头像" className="h-full w-full object-cover" />
                     ) : (
@@ -443,7 +443,7 @@ const Profile: React.FC = () => {
   )
 }
 
-const inputClass = 'w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500 dark:border-gray-600'
+const inputClass = 'w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 focus:border-transparent focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100'
 
 const Field = ({ label, children }: { label: string; children: React.ReactNode }) => (
   <label className="block">

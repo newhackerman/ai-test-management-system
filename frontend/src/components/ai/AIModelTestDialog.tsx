@@ -170,7 +170,7 @@ export const AIModelTestDialog: React.FC<AIModelTestDialogProps> = ({
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-base">
                   {result.success ? (
-                    <CheckCircle className="h-4 w-4 text-green-600" />
+                    <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
                   ) : (
                     <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
                   )}

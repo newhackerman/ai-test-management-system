@@ -199,7 +199,7 @@ function MilestoneStats({ milestones }: { milestones: Milestone[] }) {
         <div className="text-sm text-muted-foreground">总里程碑</div>
       </Card>
       <Card className="p-4 text-center">
-        <div className="text-2xl font-bold text-green-600">{stats.completed}</div>
+        <div className="text-2xl font-bold text-green-600 dark:text-green-400">{stats.completed}</div>
         <div className="text-sm text-muted-foreground">已完成</div>
       </Card>
       <Card className="p-4 text-center">
@@ -211,7 +211,7 @@ function MilestoneStats({ milestones }: { milestones: Milestone[] }) {
         <div className="text-sm text-muted-foreground">已逾期</div>
       </Card>
       <Card className="p-4 text-center">
-        <div className="text-2xl font-bold text-orange-600">{stats.upcoming}</div>
+        <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">{stats.upcoming}</div>
         <div className="text-sm text-muted-foreground">即将到期</div>
       </Card>
     </div>
@@ -254,7 +254,7 @@ export function MilestoneTimeline({ milestones, onMilestoneClick, className = ''
               ['bg-green-500', '已完成'],
               ['bg-blue-500', '进行中'],
               ['bg-red-500', '逾期'],
-              ['bg-gray-400', '待开始'],
+              ['bg-gray-400 dark:bg-gray-500', '待开始'],
             ].map(([colorClass, label]) => (
               <div key={label} className="flex items-center gap-1">
                 <div className={`h-3 w-3 rounded-full ${colorClass}`} />
