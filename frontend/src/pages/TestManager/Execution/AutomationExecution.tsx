@@ -1,6 +1,6 @@
-﻿import React, { useMemo, useState } from 'react'
+﻿import React, { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowLeft, FileText, Monitor, Play, Search, Settings, Square } from 'lucide-react'
+import { ArrowLeft, FileText, Monitor, Play, RefreshCw, Search, Settings, Square } from 'lucide-react'
 import { Badge } from '../../../components/ui/Badge'
 import { Button } from '../../../components/ui/Button'
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/Card'
@@ -17,6 +17,14 @@ import {
   useStartAutomationExecution,
 } from '../../../hooks/testmanager/useExecution'
 import { useTestCases } from '../../../hooks/testmanager/useTestCase'
+import {
+  EXECUTION_ENVIRONMENTS,
+  RESULT_COLLECTION_OPTIONS,
+  RUNNER_TYPE_OPTIONS,
+  TestExecutionConfigService,
+  type TestExecutionConfig,
+  type TestExecutionEnvironment,
+} from '../../../services/testExecutionConfigService'
 import { AutomationLevel, ExecutionStatus, Priority } from '../../../types/testmanager'
 
 const statusLabels: Record<string, string> = {
@@ -62,14 +70,11 @@ const AutomationExecution: React.FC = () => {
   const [activeExecutionId, setActiveExecutionId] = useState('')
   const [search, setSearch] = useState('')
   const [automationFilter, setAutomationFilter] = useState('all')
-  const [executionConfig, setExecutionConfig] = useState({
-    framework: 'auto',
-    browser: 'chrome',
-    environment: 'test',
-    parallel: 1,
-    retry: 1,
-    headless: true,
-  })
+  const [executionConfigs, setExecutionConfigs] = useState<TestExecutionConfig[]>([])
+  const [executionConfigLoading, setExecutionConfigLoading] = useState(false)
+  const [executionConfigError, setExecutionConfigError] = useState('')
+  const [executionEnvironment, setExecutionEnvironment] = useState<TestExecutionEnvironment>('test')
+  const [selectedConfigId, setSelectedConfigId] = useState('')
 
   const { data: testCasesData, isLoading } = useTestCases({ page: 1, size: 100 })
   const startAutomation = useStartAutomationExecution()
@@ -96,6 +101,50 @@ const AutomationExecution: React.FC = () => {
 
   const visibleCaseIds = testCases.map((item) => item.id)
   const allVisibleSelected = visibleCaseIds.length > 0 && visibleCaseIds.every((id) => selectedCaseSet.has(id))
+  const enabledExecutionConfigs = useMemo(() => executionConfigs.filter((item) => item.enabled), [executionConfigs])
+  const availableEnvironments = useMemo(() => (
+    EXECUTION_ENVIRONMENTS.filter((environment) => enabledExecutionConfigs.some((item) => item.environment === environment.value))
+  ), [enabledExecutionConfigs])
+  const environmentConfigs = useMemo(() => (
+    enabledExecutionConfigs.filter((item) => item.environment === executionEnvironment)
+  ), [enabledExecutionConfigs, executionEnvironment])
+  const selectedExecutionConfig = useMemo(() => (
+    environmentConfigs.find((item) => item.id === selectedConfigId) || environmentConfigs[0]
+  ), [environmentConfigs, selectedConfigId])
+
+  const loadExecutionConfigs = async () => {
+    setExecutionConfigLoading(true)
+    setExecutionConfigError('')
+    try {
+      const list = await TestExecutionConfigService.listAll()
+      setExecutionConfigs(list)
+    } catch (error) {
+      setExecutionConfigError('测试执行配置加载失败，请检查配置项页面中的测试执行配置。')
+      setExecutionConfigs([])
+    } finally {
+      setExecutionConfigLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    loadExecutionConfigs()
+  }, [])
+
+  useEffect(() => {
+    if (!enabledExecutionConfigs.length) {
+      setSelectedConfigId('')
+      return
+    }
+
+    if (!enabledExecutionConfigs.some((item) => item.environment === executionEnvironment)) {
+      setExecutionEnvironment(enabledExecutionConfigs[0].environment)
+      return
+    }
+
+    if (!environmentConfigs.some((item) => item.id === selectedConfigId)) {
+      setSelectedConfigId(environmentConfigs[0]?.id || '')
+    }
+  }, [enabledExecutionConfigs, environmentConfigs, executionEnvironment, selectedConfigId])
 
   const toggleCase = (caseId: number) => {
     setSelectedCases((prev) => prev.includes(caseId) ? prev.filter((id) => id !== caseId) : [...prev, caseId])
@@ -112,15 +161,67 @@ const AutomationExecution: React.FC = () => {
   }
 
   const startExecution = async () => {
+    if (!selectedExecutionConfig) return
     const response = await startAutomation.mutateAsync({
       test_case_ids: selectedCases,
-      framework: executionConfig.framework,
-      test_environment: executionConfig.environment,
-      browser: executionConfig.browser,
-      parallel_count: executionConfig.parallel,
-      retry_count: executionConfig.retry,
+      framework: selectedExecutionConfig.framework,
+      test_environment: selectedExecutionConfig.environment,
+      browser: selectedExecutionConfig.browser || 'chrome',
+      parallel_count: selectedExecutionConfig.parallel_count,
+      retry_count: selectedExecutionConfig.retry_count,
+      timeout: selectedExecutionConfig.timeout,
       execution_config: {
-        headless: executionConfig.headless,
+        source: 'test_execution_config',
+        config_id: selectedExecutionConfig.id,
+        config_name: selectedExecutionConfig.name,
+        framework_label: selectedExecutionConfig.framework_label,
+        framework: selectedExecutionConfig.framework,
+        browser: selectedExecutionConfig.browser,
+        environment: selectedExecutionConfig.environment,
+        parallel_count: selectedExecutionConfig.parallel_count,
+        retry_count: selectedExecutionConfig.retry_count,
+        timeout: selectedExecutionConfig.timeout,
+        headless: selectedExecutionConfig.headless,
+        runner_type: selectedExecutionConfig.runner_type,
+        runner_name: selectedExecutionConfig.runner_name,
+        runner_host: selectedExecutionConfig.runner_host,
+        runner_port: selectedExecutionConfig.runner_port,
+        runner_user: selectedExecutionConfig.runner_user,
+        runner_os: selectedExecutionConfig.runner_os,
+        runner_workdir: selectedExecutionConfig.runner_workdir,
+        credential_ref: selectedExecutionConfig.credential_ref,
+        agent_id: selectedExecutionConfig.agent_id,
+        agent_callback_url: selectedExecutionConfig.agent_callback_url,
+        docker_image: selectedExecutionConfig.docker_image,
+        docker_network: selectedExecutionConfig.docker_network,
+        docker_volumes: selectedExecutionConfig.docker_volumes,
+        docker_args: selectedExecutionConfig.docker_args,
+        kubernetes_context: selectedExecutionConfig.kubernetes_context,
+        kubernetes_namespace: selectedExecutionConfig.kubernetes_namespace,
+        kubernetes_image: selectedExecutionConfig.kubernetes_image,
+        kubernetes_job_template: selectedExecutionConfig.kubernetes_job_template,
+        ci_provider: selectedExecutionConfig.ci_provider,
+        ci_pipeline_url: selectedExecutionConfig.ci_pipeline_url,
+        ci_project: selectedExecutionConfig.ci_project,
+        ci_branch: selectedExecutionConfig.ci_branch,
+        ci_token_ref: selectedExecutionConfig.ci_token_ref,
+        ci_variables: selectedExecutionConfig.ci_variables,
+        tool_home: selectedExecutionConfig.tool_home,
+        executable_path: selectedExecutionConfig.executable_path,
+        working_directory: selectedExecutionConfig.working_directory,
+        command: selectedExecutionConfig.command,
+        command_template: selectedExecutionConfig.command_template,
+        pre_command: selectedExecutionConfig.pre_command,
+        post_command: selectedExecutionConfig.post_command,
+        result_collection: selectedExecutionConfig.result_collection,
+        result_directory: selectedExecutionConfig.result_directory,
+        result_file_pattern: selectedExecutionConfig.result_file_pattern,
+        report_directory: selectedExecutionConfig.report_directory,
+        result_format: selectedExecutionConfig.result_format,
+        artifact_patterns: selectedExecutionConfig.artifact_patterns,
+        jmeter_properties: selectedExecutionConfig.jmeter_properties,
+        distributed_hosts: selectedExecutionConfig.distributed_hosts,
+        environment_variables: selectedExecutionConfig.environment_variables,
       },
     })
     setActiveExecutionId(response.execution_id)
@@ -148,7 +249,7 @@ const AutomationExecution: React.FC = () => {
           </Button>
         </div>
         {!isRunning ? (
-          <Button onClick={startExecution} disabled={selectedCases.length === 0 || startAutomation.isPending}>
+          <Button onClick={startExecution} disabled={selectedCases.length === 0 || !selectedExecutionConfig || startAutomation.isPending}>
             <Play className="mr-2 h-4 w-4" />
             {startAutomation.isPending ? '启动中...' : `开始执行 ${selectedCases.length} 条`}
           </Button>
@@ -162,68 +263,101 @@ const AutomationExecution: React.FC = () => {
 
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-lg">
-            <Settings className="h-5 w-5" />
-            执行配置
-          </CardTitle>
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Settings className="h-5 w-5" />
+              执行配置
+            </CardTitle>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" onClick={loadExecutionConfigs} disabled={executionConfigLoading}>
+                <RefreshCw className="mr-2 h-4 w-4" />
+                {executionConfigLoading ? '刷新中' : '刷新配置'}
+              </Button>
+              <Button asChild variant="outline" size="sm">
+                <Link to="/config">去配置项维护</Link>
+              </Button>
+            </div>
+          </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-5">
-            <div>
-              <label className="mb-2 block text-sm font-medium">执行方式</label>
-              <Select value={executionConfig.framework} onValueChange={(value) => setExecutionConfig((prev) => ({ ...prev, framework: value }))}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="auto">自动识别导入脚本</SelectItem>
-                  <SelectItem value="playwright">Playwright</SelectItem>
-                  <SelectItem value="selenium">Selenium</SelectItem>
-                  <SelectItem value="pytest">Pytest / Python</SelectItem>
-                  <SelectItem value="jest">Node.js / JavaScript</SelectItem>
-                  <SelectItem value="jmeter">JMeter</SelectItem>
-                  <SelectItem value="har">HAR 回放</SelectItem>
-                </SelectContent>
-              </Select>
+          {executionConfigError && (
+            <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-300">
+              {executionConfigError}
             </div>
-            <div>
-              <label className="mb-2 block text-sm font-medium">浏览器</label>
-              <Select value={executionConfig.browser} onValueChange={(value) => setExecutionConfig((prev) => ({ ...prev, browser: value }))}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="chrome">Chrome</SelectItem>
-                  <SelectItem value="firefox">Firefox</SelectItem>
-                  <SelectItem value="edge">Edge</SelectItem>
-                </SelectContent>
-              </Select>
+          )}
+          {!executionConfigLoading && enabledExecutionConfigs.length === 0 && (
+            <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-200">
+              当前没有启用的测试执行配置，请先在“配置项 - 测试执行配置”中创建或初始化配置。
             </div>
+          )}
+          <div className="grid gap-4 md:grid-cols-[180px_minmax(260px,1fr)]">
             <div>
               <label className="mb-2 block text-sm font-medium">环境</label>
-              <Select value={executionConfig.environment} onValueChange={(value) => setExecutionConfig((prev) => ({ ...prev, environment: value }))}>
+              <Select value={executionEnvironment} onValueChange={(value) => setExecutionEnvironment(value as TestExecutionEnvironment)} disabled={executionConfigLoading || !availableEnvironments.length}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="test">测试环境</SelectItem>
-                  <SelectItem value="staging">预发环境</SelectItem>
-                  <SelectItem value="dev">开发环境</SelectItem>
-                  <SelectItem value="local">本地环境</SelectItem>
+                  {availableEnvironments.map((environment) => (
+                    <SelectItem key={environment.value} value={environment.value}>{environment.label}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
             <div>
-              <label className="mb-2 block text-sm font-medium">并发数</label>
-              <Input type="number" min="1" max="20" value={executionConfig.parallel} onChange={(event) => setExecutionConfig((prev) => ({ ...prev, parallel: Number(event.target.value) || 1 }))} />
-            </div>
-            <div>
-              <label className="mb-2 block text-sm font-medium">重试次数</label>
-              <Input type="number" min="0" max="10" value={executionConfig.retry} onChange={(event) => setExecutionConfig((prev) => ({ ...prev, retry: Number(event.target.value) || 0 }))} />
+              <label className="mb-2 block text-sm font-medium">执行方式</label>
+              <Select value={selectedExecutionConfig?.id || ''} onValueChange={setSelectedConfigId} disabled={executionConfigLoading || !environmentConfigs.length}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {environmentConfigs.map((config) => (
+                    <SelectItem key={config.id} value={config.id}>
+                      {config.name}（{config.framework_label || config.framework}）
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Checkbox
-              id="headless"
-              checked={executionConfig.headless}
-              onCheckedChange={(checked) => setExecutionConfig((prev) => ({ ...prev, headless: Boolean(checked) }))}
-            />
-            <label htmlFor="headless" className="text-sm">无头模式</label>
-          </div>
+          {selectedExecutionConfig && (
+            <div className="grid gap-3 rounded-md border bg-muted/20 p-3 text-sm md:grid-cols-6">
+              <div>
+                <div className="text-xs text-muted-foreground">执行方式</div>
+                <div className="font-medium">{selectedExecutionConfig.framework_label || selectedExecutionConfig.framework}</div>
+              </div>
+              <div>
+                <div className="text-xs text-muted-foreground">执行节点</div>
+                <div className="font-medium">
+                  {selectedExecutionConfig.runner_name || RUNNER_TYPE_OPTIONS.find((item) => item.value === selectedExecutionConfig.runner_type)?.label || selectedExecutionConfig.runner_type || '本机执行'}
+                </div>
+                {selectedExecutionConfig.runner_host && (
+                  <div className="truncate text-xs text-muted-foreground">
+                    {selectedExecutionConfig.runner_user ? `${selectedExecutionConfig.runner_user}@` : ''}{selectedExecutionConfig.runner_host}
+                    {selectedExecutionConfig.runner_port ? `:${selectedExecutionConfig.runner_port}` : ''}
+                  </div>
+                )}
+                {selectedExecutionConfig.docker_image && <div className="truncate text-xs text-muted-foreground">{selectedExecutionConfig.docker_image}</div>}
+                {selectedExecutionConfig.agent_id && <div className="truncate text-xs text-muted-foreground">{selectedExecutionConfig.agent_id}</div>}
+                {selectedExecutionConfig.kubernetes_namespace && <div className="truncate text-xs text-muted-foreground">{selectedExecutionConfig.kubernetes_namespace}</div>}
+                {selectedExecutionConfig.ci_provider && <div className="truncate text-xs text-muted-foreground">{selectedExecutionConfig.ci_provider}</div>}
+              </div>
+              <div>
+                <div className="text-xs text-muted-foreground">并发 / 重试</div>
+                <div className="font-medium">{selectedExecutionConfig.parallel_count} / {selectedExecutionConfig.retry_count}</div>
+              </div>
+              <div>
+                <div className="text-xs text-muted-foreground">超时</div>
+                <div className="font-medium">{selectedExecutionConfig.timeout}s</div>
+              </div>
+              <div>
+                <div className="text-xs text-muted-foreground">结果采集</div>
+                <div className="font-medium">
+                  {RESULT_COLLECTION_OPTIONS.find((item) => item.value === selectedExecutionConfig.result_collection)?.label || selectedExecutionConfig.result_collection || '-'}
+                </div>
+              </div>
+              <div>
+                <div className="text-xs text-muted-foreground">命令/模板</div>
+                <div className="font-medium">{selectedExecutionConfig.command ? '固定命令' : selectedExecutionConfig.command_template ? '命令模板' : '按脚本类型执行'}</div>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 

@@ -74,6 +74,10 @@ def _build_allowed_frontend_origins() -> set:
     # 开发兜底，确保本地始终可用
     allowed.add("http://127.0.0.1:5173")
     allowed.add("http://localhost:5173")
+    allowed.add("http://127.0.0.1:5174")
+    allowed.add("http://localhost:5174")
+    allowed.add("http://127.0.0.1:5175")
+    allowed.add("http://localhost:5175")
     return allowed
 
 

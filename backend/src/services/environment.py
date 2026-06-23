@@ -3,7 +3,7 @@
 """
 import json
 from typing import Any, Dict, List, Optional, Tuple, Union
-from datetime import datetime
+from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_, desc
 from sqlalchemy.exc import IntegrityError
@@ -558,6 +558,31 @@ class EnvironmentService:
                         SystemConfig.is_encrypted == True
                     )
                 ).count()
+
+                # 必填配置数
+                required_configs = db.query(SystemConfig).filter(
+                    and_(
+                        SystemConfig.environment == environment,
+                        SystemConfig.deleted_at.is_(None),
+                        SystemConfig.is_required == True
+                    )
+                ).count()
+
+                # 最近 7 天变更数与最后更新时间
+                recent_threshold = datetime.utcnow() - timedelta(days=7)
+                recently_updated_configs = db.query(SystemConfig).filter(
+                    and_(
+                        SystemConfig.environment == environment,
+                        SystemConfig.deleted_at.is_(None),
+                        SystemConfig.updated_at >= recent_threshold
+                    )
+                ).count()
+                latest_config = db.query(SystemConfig).filter(
+                    and_(
+                        SystemConfig.environment == environment,
+                        SystemConfig.deleted_at.is_(None)
+                    )
+                ).order_by(desc(SystemConfig.updated_at)).first()
                 
                 # 按类型统计
                 type_stats = {}
@@ -573,9 +598,12 @@ class EnvironmentService:
                 
                 # 按分组统计
                 group_stats = []
-                groups = db.query(ConfigGroup).filter(
-                    ConfigGroup.deleted_at.is_(None)
-                ).all()
+                group_query = db.query(ConfigGroup)
+                if hasattr(ConfigGroup, "deleted_at"):
+                    group_query = group_query.filter(ConfigGroup.deleted_at.is_(None))
+                if hasattr(ConfigGroup, "is_enabled"):
+                    group_query = group_query.filter(ConfigGroup.is_enabled == True)
+                groups = group_query.all()
                 
                 for group in groups:
                     count = db.query(SystemConfig).filter(
@@ -591,6 +619,20 @@ class EnvironmentService:
                         "group_name": group.group_name,
                         "config_count": count
                     })
+
+                ungrouped_count = db.query(SystemConfig).filter(
+                    and_(
+                        SystemConfig.environment == environment,
+                        SystemConfig.group_id.is_(None),
+                        SystemConfig.deleted_at.is_(None)
+                    )
+                ).count()
+                if ungrouped_count:
+                    group_stats.insert(0, {
+                        "group_id": None,
+                        "group_name": "\u672a\u5206\u7ec4",
+                        "config_count": ungrouped_count
+                    })
                 
                 return {
                     "environment": environment.value,
@@ -599,6 +641,9 @@ class EnvironmentService:
                     "disabled_configs": total_configs - enabled_configs,
                     "core_configs": core_configs,
                     "encrypted_configs": encrypted_configs,
+                    "required_configs": required_configs,
+                    "recently_updated_configs": recently_updated_configs,
+                    "last_updated_at": latest_config.updated_at.isoformat() if latest_config and latest_config.updated_at else None,
                     "type_statistics": type_stats,
                     "group_statistics": group_stats
                 }

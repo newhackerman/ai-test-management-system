@@ -11,6 +11,7 @@
 from datetime import datetime, date
 import json
 import os
+import shlex
 import shutil
 import subprocess
 import sys
@@ -293,37 +294,7 @@ def _run_javascript_content(content: str, timeout: int) -> Dict[str, Any]:
         FilePath(script_path).unlink(missing_ok=True)
 
 
-def _run_jmeter_script(content: str, timeout: int, execution_code: str) -> Dict[str, Any]:
-    jmeter_executable = _resolve_jmeter_executable()
-    with tempfile.TemporaryDirectory(prefix=f"jmeter-{execution_code}-") as work_dir:
-        work_path = FilePath(work_dir)
-        jmx_path = work_path / "test-plan.jmx"
-        jtl_path = work_path / "results.jtl"
-        log_path = work_path / "jmeter.log"
-        jmx_path.write_text(content or "", encoding="utf-8")
-        command = _wrap_windows_batch_command([
-            jmeter_executable,
-            "-n",
-            "-t",
-            str(jmx_path),
-            "-l",
-            str(jtl_path),
-            "-j",
-            str(log_path),
-        ])
-        result = _run_command(command, timeout, cwd=str(work_path))
-        jtl_summary = ""
-        if jtl_path.exists():
-            jtl_summary = jtl_path.read_text(encoding="utf-8", errors="replace")[:4000]
-        log_summary = ""
-        if log_path.exists():
-            log_summary = log_path.read_text(encoding="utf-8", errors="replace")[:4000]
-        result["stdout"] = "\n".join(part for part in [result.get("stdout"), jtl_summary] if part)
-        result["stderr"] = "\n".join(part for part in [result.get("stderr"), log_summary] if part)
-        return result
-
-
-def _resolve_jmeter_executable() -> str:
+def _legacy_resolve_jmeter_executable() -> str:
     configured = os.environ.get("JMETER_BIN") or os.environ.get("JMETER_EXECUTABLE")
     path_candidates = [configured]
     if os.name == "nt":
@@ -352,6 +323,405 @@ def _wrap_windows_batch_command(command: List[str]) -> List[str]:
     if os.name == "nt" and (executable.endswith(".bat") or executable.endswith(".cmd")):
         return ["cmd", "/c", *command]
     return command
+
+
+def _shell_quote(value: Any) -> str:
+    text = str(value or "")
+    if os.name == "nt":
+        return subprocess.list2cmdline([text])
+    return shlex.quote(text)
+
+
+def _read_text_sample(path: FilePath, limit: int = 4000) -> str:
+    if not path.exists() or not path.is_file():
+        return ""
+    return path.read_text(encoding="utf-8", errors="replace")[:limit]
+
+
+def _render_command_template(template: str, values: Dict[str, Any]) -> str:
+    rendered = template or ""
+    for key, value in values.items():
+        rendered = rendered.replace(f"{{{key}}}", _shell_quote(value))
+    return rendered
+
+
+def _parse_key_value_lines(value: Any) -> Dict[str, str]:
+    parsed: Dict[str, str] = {}
+    for line in str(value or "").splitlines():
+        normalized = line.strip()
+        if not normalized or normalized.startswith("#") or "=" not in normalized:
+            continue
+        key, val = normalized.split("=", 1)
+        key = key.strip()
+        if key:
+            parsed[key] = val.strip()
+    return parsed
+
+
+def _resolve_jmeter_executable(runtime_config: Optional[Dict[str, Any]] = None) -> str:
+    runtime_config = runtime_config or {}
+    configured = (
+        runtime_config.get("executable_path")
+        or os.environ.get("JMETER_BIN")
+        or os.environ.get("JMETER_EXECUTABLE")
+    )
+    tool_home = runtime_config.get("tool_home")
+    path_candidates = [configured]
+    if tool_home:
+        home = FilePath(str(tool_home)).expanduser()
+        if os.name == "nt":
+            path_candidates.extend([str(home / "bin" / "jmeter.bat"), str(home / "bin" / "jmeter.cmd")])
+        else:
+            path_candidates.append(str(home / "bin" / "jmeter"))
+    if os.name == "nt":
+        path_candidates.extend([
+            shutil.which("jmeter.bat"),
+            shutil.which("jmeter.cmd"),
+            r"C:\apache-jmeter\bin\jmeter.bat",
+            r"E:\test\apache-jmeter-5.6.3\bin\jmeter.bat",
+            shutil.which("jmeter"),
+        ])
+    else:
+        path_candidates.append(shutil.which("jmeter"))
+
+    candidates = []
+    for candidate in path_candidates:
+        if candidate and candidate not in candidates:
+            candidates.append(candidate)
+    for candidate in candidates:
+        if candidate and FilePath(candidate).exists():
+            return candidate
+    raise RuntimeError("未找到 JMeter 可执行文件，请安装 JMeter 或配置 JMETER_BIN/JMETER_EXECUTABLE")
+
+
+def _build_jmeter_args(
+    jmeter_executable: str,
+    jmx_path: str,
+    jtl_path: str,
+    log_path: str,
+    report_dir: Optional[str],
+    runtime_config: Dict[str, Any],
+) -> List[str]:
+    args = [jmeter_executable, "-n", "-t", jmx_path, "-l", jtl_path, "-j", log_path]
+    if report_dir:
+        args.extend(["-e", "-o", report_dir])
+    for key, value in _parse_key_value_lines(runtime_config.get("jmeter_properties")).items():
+        args.append(f"-J{key}={value}")
+    distributed_hosts = str(runtime_config.get("distributed_hosts") or "").strip()
+    if distributed_hosts:
+        args.extend(["-R", distributed_hosts])
+    return args
+
+
+def _ssh_target(runtime_config: Dict[str, Any]) -> str:
+    host = str(runtime_config.get("runner_host") or "").strip()
+    if not host:
+        raise RuntimeError("SSH 执行节点未配置目标机器")
+    user = str(runtime_config.get("runner_user") or "").strip()
+    return f"{user}@{host}" if user else host
+
+
+def _ssh_base_command(runtime_config: Dict[str, Any]) -> List[str]:
+    command = ["ssh"]
+    port = runtime_config.get("runner_port")
+    if port:
+        command.extend(["-p", str(port)])
+    credential_ref = str(runtime_config.get("credential_ref") or "").strip()
+    if credential_ref and FilePath(credential_ref).expanduser().exists():
+        command.extend(["-i", str(FilePath(credential_ref).expanduser())])
+    command.append(_ssh_target(runtime_config))
+    return command
+
+
+def _scp_base_command(runtime_config: Dict[str, Any]) -> List[str]:
+    command = ["scp"]
+    port = runtime_config.get("runner_port")
+    if port:
+        command.extend(["-P", str(port)])
+    credential_ref = str(runtime_config.get("credential_ref") or "").strip()
+    if credential_ref and FilePath(credential_ref).expanduser().exists():
+        command.extend(["-i", str(FilePath(credential_ref).expanduser())])
+    return command
+
+
+def _run_jmeter_script_via_ssh(content: str, timeout: int, execution_code: str, runtime_config: Dict[str, Any]) -> Dict[str, Any]:
+    remote_dir = str(runtime_config.get("runner_workdir") or f"/tmp/test-runs/{execution_code}").strip()
+    remote_script = f"{remote_dir}/{execution_code}.jmx"
+    remote_jtl = f"{remote_dir}/{execution_code}.jtl"
+    remote_log = f"{remote_dir}/jmeter.log"
+    remote_report = str(runtime_config.get("report_directory") or f"{remote_dir}/report").strip()
+    if not remote_report.startswith("/"):
+        remote_report = f"{remote_dir}/{remote_report}"
+
+    with tempfile.TemporaryDirectory(prefix=f"jmeter-ssh-{execution_code}-") as temp_dir:
+        local_dir = FilePath(temp_dir)
+        local_script = local_dir / f"{execution_code}.jmx"
+        local_jtl = local_dir / f"{execution_code}.jtl"
+        local_report = local_dir / "report"
+        local_script.write_text(content or "", encoding="utf-8")
+
+        mkdir_result = _run_command([*_ssh_base_command(runtime_config), f"mkdir -p {shlex.quote(remote_dir)} {shlex.quote(remote_report)}"], timeout)
+        if mkdir_result["status"] != "PASSED":
+            return mkdir_result
+        upload_result = _run_command([*_scp_base_command(runtime_config), str(local_script), f"{_ssh_target(runtime_config)}:{remote_script}"], timeout)
+        if upload_result["status"] != "PASSED":
+            return upload_result
+
+        executable = str(runtime_config.get("executable_path") or "jmeter").strip()
+        template = str(runtime_config.get("command_template") or "jmeter -n -t {script} -l {result_jtl} -j {log_file} -e -o {report_dir}").strip()
+        command_text = _render_command_template(template, {
+            "jmeter": executable,
+            "script": remote_script,
+            "result_file": remote_jtl,
+            "result_jtl": remote_jtl,
+            "report_dir": remote_report,
+            "log_file": remote_log,
+        })
+        if runtime_config.get("executable_path") and command_text.strip().lower().startswith("jmeter "):
+            command_text = f"{shlex.quote(executable)} {command_text.strip()[7:]}"
+
+        remote_parts = [f"cd {shlex.quote(remote_dir)}"]
+        pre_command = str(runtime_config.get("pre_command") or "").strip()
+        post_command = str(runtime_config.get("post_command") or "").strip()
+        if pre_command:
+            remote_parts.append(pre_command)
+        remote_parts.append(command_text)
+        if post_command:
+            remote_parts.append(post_command)
+
+        started = time.perf_counter()
+        completed = subprocess.run(
+            [*_ssh_base_command(runtime_config), " && ".join(remote_parts)],
+            capture_output=True,
+            text=True,
+            timeout=max(1, timeout),
+            encoding="utf-8",
+            errors="replace",
+        )
+        duration = int(time.perf_counter() - started)
+        download_result = _run_command([*_scp_base_command(runtime_config), f"{_ssh_target(runtime_config)}:{remote_jtl}", str(local_jtl)], max(10, min(timeout, 300)))
+        report_result = _run_command([*_scp_base_command(runtime_config), "-r", f"{_ssh_target(runtime_config)}:{remote_report}", str(local_report)], max(10, min(timeout, 300)))
+        artifact_summary = "\n".join([
+            f"远端 JMeter 结果文件: {remote_jtl}",
+            f"远端 JMeter HTML 报告目录: {remote_report}",
+            f"本地采集目录: {local_dir}",
+            "结果文件已下载" if download_result["status"] == "PASSED" else f"结果文件下载失败: {download_result.get('stderr') or download_result.get('stdout')}",
+            "HTML 报告已下载" if report_result["status"] == "PASSED" else f"HTML 报告下载失败: {report_result.get('stderr') or report_result.get('stdout')}",
+        ])
+        return {
+            "status": "PASSED" if completed.returncode == 0 and download_result["status"] == "PASSED" else "FAILED",
+            "stdout": "\n".join(part for part in [completed.stdout or "", artifact_summary, _read_text_sample(local_jtl)] if part),
+            "stderr": completed.stderr or "",
+            "return_code": completed.returncode,
+            "duration": duration,
+            "command": command_text,
+        }
+
+
+def _run_jmeter_script(content: str, timeout: int, execution_code: str, runtime_config: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    runtime_config = runtime_config or {}
+    if str(runtime_config.get("runner_type") or "local").lower() == "ssh":
+        return _run_jmeter_script_via_ssh(content, timeout, execution_code, runtime_config)
+
+    jmeter_executable = _resolve_jmeter_executable(runtime_config)
+    configured_result_dir = str(runtime_config.get("result_directory") or "").strip()
+    with tempfile.TemporaryDirectory(prefix=f"jmeter-{execution_code}-") as temp_dir:
+        base_path = FilePath(runtime_config.get("working_directory") or temp_dir).expanduser()
+        base_path.mkdir(parents=True, exist_ok=True)
+        result_path = FilePath(configured_result_dir).expanduser() if configured_result_dir else base_path
+        if not result_path.is_absolute():
+            result_path = base_path / result_path
+        result_path.mkdir(parents=True, exist_ok=True)
+
+        jmx_path = base_path / "test-plan.jmx"
+        jtl_path = result_path / f"{execution_code}.jtl"
+        log_path = result_path / "jmeter.log"
+        report_path = FilePath(str(runtime_config.get("report_directory") or "report")).expanduser()
+        if not report_path.is_absolute():
+            report_path = result_path / report_path
+        if report_path.exists():
+            shutil.rmtree(report_path)
+        jmx_path.write_text(content or "", encoding="utf-8")
+
+        template = str(runtime_config.get("command_template") or "").strip()
+        if template:
+            command_text = _render_command_template(template, {
+                "jmeter": jmeter_executable,
+                "script": str(jmx_path),
+                "result_file": str(jtl_path),
+                "result_jtl": str(jtl_path),
+                "report_dir": str(report_path),
+                "log_file": str(log_path),
+            })
+            if runtime_config.get("executable_path") and command_text.strip().lower().startswith("jmeter "):
+                command_text = f"{_shell_quote(jmeter_executable)} {command_text.strip()[7:]}"
+            result = _run_configured_command(command_text, timeout, type("_ExecutionShim", (), {
+                "id": "",
+                "execution_code": execution_code,
+                "test_case_id": "",
+                "test_environment": runtime_config.get("environment") or "",
+            })(), {**runtime_config, "working_directory": str(base_path)})
+        else:
+            command = _wrap_windows_batch_command(_build_jmeter_args(
+                jmeter_executable,
+                str(jmx_path),
+                str(jtl_path),
+                str(log_path),
+                str(report_path),
+                runtime_config,
+            ))
+            result = _run_command(command, timeout, cwd=str(base_path))
+
+        artifact_summary = f"JMeter 结果文件: {jtl_path}\nJMeter HTML 报告目录: {report_path}"
+        result["stdout"] = "\n".join(part for part in [result.get("stdout"), artifact_summary, _read_text_sample(jtl_path)] if part)
+        result["stderr"] = "\n".join(part for part in [result.get("stderr"), _read_text_sample(log_path)] if part)
+        return result
+
+
+def _script_suffix_for_format(script_format: str) -> str:
+    normalized = _normalize_script_format(script_format)
+    if normalized in {"js", "javascript", "jest", "cypress"}:
+        return ".js"
+    if normalized in {"har"}:
+        return ".har"
+    if normalized in {"json"}:
+        return ".json"
+    if normalized in {"jmeter", "jmx"}:
+        return ".jmx"
+    return ".py"
+
+
+def _default_command_template_for_format(script_format: str, requested_framework: str) -> str:
+    normalized = _normalize_script_format(script_format)
+    framework = str(requested_framework or "").lower()
+    if normalized in {"playwright"} or framework == "playwright":
+        return "npx playwright test {script}"
+    if normalized in {"selenium"} or framework == "selenium":
+        return "python {script}"
+    if normalized in {"pytest", "python", "py"} or framework == "pytest":
+        return "pytest {script} --junitxml={result_file}" if framework == "pytest" else "python {script}"
+    if normalized in {"js", "javascript", "jest", "cypress"} or framework in {"javascript", "jest"}:
+        return "node {script}"
+    if normalized == "har" or framework == "har":
+        return "har-replay {script} --output {result_file}"
+    return "python {script}"
+
+
+def _build_runtime_values(script_path: str, result_file: str, report_dir: str, log_file: str) -> Dict[str, str]:
+    return {
+        "script": script_path,
+        "result_file": result_file,
+        "result_jtl": result_file,
+        "report_dir": report_dir,
+        "log_file": log_file,
+    }
+
+
+def _append_runtime_artifact_summary(result: Dict[str, Any], result_file: FilePath, report_dir: FilePath, log_file: FilePath) -> Dict[str, Any]:
+    artifact_summary = "\n".join([
+        f"结果文件: {result_file}",
+        f"报告目录: {report_dir}",
+    ])
+    result["stdout"] = "\n".join(part for part in [result.get("stdout"), artifact_summary, _read_text_sample(result_file)] if part)
+    result["stderr"] = "\n".join(part for part in [result.get("stderr"), _read_text_sample(log_file)] if part)
+    return result
+
+
+def _run_runtime_script_via_ssh(
+    content: str,
+    script_format: str,
+    timeout: int,
+    requested_framework: str,
+    execution_code: str,
+    runtime_config: Dict[str, Any],
+) -> Dict[str, Any]:
+    suffix = _script_suffix_for_format(script_format)
+    remote_dir = str(runtime_config.get("runner_workdir") or f"/tmp/test-runs/{execution_code}").strip()
+    remote_script = f"{remote_dir}/{execution_code}{suffix}"
+    remote_result = f"{remote_dir}/{execution_code}-result.xml"
+    remote_report = str(runtime_config.get("report_directory") or f"{remote_dir}/report").strip()
+    if not remote_report.startswith("/"):
+        remote_report = f"{remote_dir}/{remote_report}"
+    remote_log = f"{remote_dir}/execution.log"
+
+    with tempfile.TemporaryDirectory(prefix=f"runtime-ssh-{execution_code}-") as temp_dir:
+        local_dir = FilePath(temp_dir)
+        local_script = local_dir / f"{execution_code}{suffix}"
+        local_result = local_dir / f"{execution_code}-result.xml"
+        local_report = local_dir / "report"
+        local_script.write_text(content or "", encoding="utf-8")
+
+        mkdir_result = _run_command([*_ssh_base_command(runtime_config), f"mkdir -p {shlex.quote(remote_dir)} {shlex.quote(remote_report)}"], timeout)
+        if mkdir_result["status"] != "PASSED":
+            return mkdir_result
+        upload_result = _run_command([*_scp_base_command(runtime_config), str(local_script), f"{_ssh_target(runtime_config)}:{remote_script}"], timeout)
+        if upload_result["status"] != "PASSED":
+            return upload_result
+
+        template = str(runtime_config.get("command_template") or _default_command_template_for_format(script_format, requested_framework)).strip()
+        command_text = _render_command_template(template, _build_runtime_values(remote_script, remote_result, remote_report, remote_log))
+        result = _run_configured_command(command_text, timeout, type("_ExecutionShim", (), {
+            "id": "",
+            "execution_code": execution_code,
+            "test_case_id": "",
+            "test_environment": runtime_config.get("environment") or "",
+        })(), {**runtime_config, "runner_workdir": remote_dir})
+
+        download_result = _run_command([*_scp_base_command(runtime_config), f"{_ssh_target(runtime_config)}:{remote_result}", str(local_result)], max(10, min(timeout, 300)))
+        report_result = _run_command([*_scp_base_command(runtime_config), "-r", f"{_ssh_target(runtime_config)}:{remote_report}", str(local_report)], max(10, min(timeout, 300)))
+        collection_summary = "\n".join([
+            "结果文件已下载" if download_result["status"] == "PASSED" else f"结果文件下载失败: {download_result.get('stderr') or download_result.get('stdout')}",
+            "报告目录已下载" if report_result["status"] == "PASSED" else f"报告目录下载失败: {report_result.get('stderr') or report_result.get('stdout')}",
+        ])
+        result["stdout"] = "\n".join(part for part in [result.get("stdout"), collection_summary, _read_text_sample(local_result)] if part)
+        if download_result["status"] != "PASSED" and result["status"] == "PASSED":
+            result["status"] = "FAILED"
+        return result
+
+
+def _run_runtime_script_content(
+    content: str,
+    script_format: str,
+    timeout: int,
+    requested_framework: str,
+    execution_code: str,
+    runtime_config: Dict[str, Any],
+) -> Dict[str, Any]:
+    runner_type = str(runtime_config.get("runner_type") or "local").lower()
+    if runner_type == "ssh":
+        return _run_runtime_script_via_ssh(content, script_format, timeout, requested_framework, execution_code, runtime_config)
+
+    suffix = _script_suffix_for_format(script_format)
+    with tempfile.TemporaryDirectory(prefix=f"runtime-{execution_code}-") as temp_dir:
+        base_path = FilePath(runtime_config.get("working_directory") or temp_dir).expanduser()
+        base_path.mkdir(parents=True, exist_ok=True)
+        script_path = base_path / f"{execution_code}{suffix}"
+        result_file = base_path / f"{execution_code}-result.xml"
+        report_dir = base_path / str(runtime_config.get("report_directory") or "report")
+        log_file = base_path / "execution.log"
+        script_path.write_text(content or "", encoding="utf-8")
+        if report_dir.exists():
+            shutil.rmtree(report_dir)
+        report_dir.mkdir(parents=True, exist_ok=True)
+
+        template = str(runtime_config.get("command_template") or _default_command_template_for_format(script_format, requested_framework)).strip()
+        if runner_type == "docker":
+            values = _build_runtime_values(
+                f"/workspace/{script_path.name}",
+                f"/workspace/{result_file.name}",
+                f"/workspace/{report_dir.name}",
+                f"/workspace/{log_file.name}",
+            )
+        else:
+            values = _build_runtime_values(str(script_path), str(result_file), str(report_dir), str(log_file))
+        command_text = _render_command_template(template, values)
+        result = _run_configured_command(command_text, timeout, type("_ExecutionShim", (), {
+            "id": "",
+            "execution_code": execution_code,
+            "test_case_id": "",
+            "test_environment": runtime_config.get("environment") or "",
+        })(), {**runtime_config, "working_directory": str(base_path)})
+        return _append_runtime_artifact_summary(result, result_file, report_dir, log_file)
 
 
 def _run_har_script(content: str, timeout: int) -> Dict[str, Any]:
@@ -407,7 +777,7 @@ def _run_har_script(content: str, timeout: int) -> Dict[str, Any]:
     }
 
 
-def _run_imported_script(test_case: TestCase, timeout: int, requested_framework: str, execution_code: str) -> Dict[str, Any]:
+def _run_imported_script(test_case: TestCase, timeout: int, requested_framework: str, execution_code: str, runtime_config: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     script_info = _get_imported_script(test_case)
     if not script_info:
         raise RuntimeError("该测试用例没有导入脚本内容，也没有维护自动化脚本")
@@ -415,7 +785,14 @@ def _run_imported_script(test_case: TestCase, timeout: int, requested_framework:
     script_format = _infer_imported_script_format(script_info)
     content = script_info.get("content") or ""
     if script_format == "jmeter":
-        return _run_jmeter_script(content, timeout, execution_code)
+        return _run_jmeter_script(content, timeout, execution_code, runtime_config)
+    runtime_config = runtime_config or {}
+    runner_type = str(runtime_config.get("runner_type") or "local").lower()
+    if runtime_config.get("command_template") or runner_type in {"ssh", "docker"}:
+        if script_format == "curl":
+            content = _curl_to_python(content)
+            script_format = "python"
+        return _run_runtime_script_content(content, script_format, timeout, requested_framework, execution_code, runtime_config)
     if script_format == "har":
         return _run_har_script(content, timeout)
     if script_format == "curl":
@@ -441,6 +818,119 @@ sys.exit(completed.returncode)
 """
 
 
+def _run_configured_command(
+    command: str,
+    timeout: int,
+    execution: TestExecution,
+    runtime_config: Dict[str, Any],
+) -> Dict[str, Any]:
+    command_text = (command or "").strip()
+    if not command_text:
+        raise RuntimeError("测试执行配置未提供执行命令")
+
+    if str(runtime_config.get("runner_type") or "local").lower() == "docker":
+        docker_image = str(runtime_config.get("docker_image") or "").strip()
+        if not docker_image:
+            raise RuntimeError("Docker 执行节点未配置镜像")
+        cwd = runtime_config.get("working_directory")
+        cwd_path = FilePath(str(cwd)).expanduser() if cwd else FilePath.cwd()
+        if not cwd_path.exists() or not cwd_path.is_dir():
+            raise RuntimeError(f"Docker 挂载目录不存在: {cwd_path}")
+
+        docker_command = ["docker", "run", "--rm", "-v", f"{str(cwd_path.resolve())}:/workspace", "-w", "/workspace"]
+        docker_network = str(runtime_config.get("docker_network") or "").strip()
+        if docker_network:
+            docker_command.extend(["--network", docker_network])
+        configured_env = runtime_config.get("environment_variables")
+        if isinstance(configured_env, dict):
+            for key, value in configured_env.items():
+                docker_command.extend(["-e", f"{key}={value}"])
+        for line in str(runtime_config.get("docker_volumes") or "").splitlines():
+            volume = line.strip()
+            if volume:
+                docker_command.extend(["-v", volume])
+        for line in str(runtime_config.get("docker_args") or "").splitlines():
+            extra_args = line.strip()
+            if extra_args:
+                docker_command.extend(shlex.split(extra_args, posix=os.name != "nt"))
+        docker_command.extend([docker_image, "sh", "-lc", command_text])
+        return _run_command(docker_command, timeout, cwd=str(cwd_path))
+
+    if str(runtime_config.get("runner_type") or "local").lower() == "ssh":
+        remote_workdir = str(runtime_config.get("runner_workdir") or runtime_config.get("working_directory") or "").strip()
+        remote_parts = []
+        if remote_workdir:
+            remote_parts.append(f"cd {shlex.quote(remote_workdir)}")
+        pre_command = str(runtime_config.get("pre_command") or "").strip()
+        post_command = str(runtime_config.get("post_command") or "").strip()
+        if pre_command:
+            remote_parts.append(pre_command)
+        remote_parts.append(command_text)
+        if post_command:
+            remote_parts.append(post_command)
+
+        started = time.perf_counter()
+        completed = subprocess.run(
+            [*_ssh_base_command(runtime_config), " && ".join(remote_parts)],
+            capture_output=True,
+            text=True,
+            timeout=max(1, timeout),
+            encoding="utf-8",
+            errors="replace",
+        )
+        duration = int(time.perf_counter() - started)
+        return {
+            "status": "PASSED" if completed.returncode == 0 else "FAILED",
+            "stdout": completed.stdout or "",
+            "stderr": completed.stderr or "",
+            "return_code": completed.returncode,
+            "duration": duration,
+            "command": command_text,
+        }
+
+    cwd = runtime_config.get("working_directory")
+    if cwd:
+        cwd_path = FilePath(str(cwd)).expanduser()
+        if not cwd_path.exists() or not cwd_path.is_dir():
+            raise RuntimeError(f"执行工作目录不存在: {cwd}")
+        cwd = str(cwd_path.resolve())
+    else:
+        cwd = str(FilePath.cwd())
+
+    env = os.environ.copy()
+    configured_env = runtime_config.get("environment_variables")
+    if isinstance(configured_env, dict):
+        env.update({str(key): str(value) for key, value in configured_env.items()})
+    env.update({
+        "TEST_EXECUTION_ID": str(execution.id or ""),
+        "TEST_EXECUTION_CODE": execution.execution_code or "",
+        "TEST_CASE_ID": str(execution.test_case_id or ""),
+        "TEST_ENVIRONMENT": execution.test_environment or "",
+    })
+
+    started = time.perf_counter()
+    completed = subprocess.run(
+        command_text,
+        capture_output=True,
+        text=True,
+        timeout=max(1, timeout),
+        cwd=cwd,
+        env=env,
+        shell=True,
+        encoding="utf-8",
+        errors="replace",
+    )
+    duration = int(time.perf_counter() - started)
+    return {
+        "status": "PASSED" if completed.returncode == 0 else "FAILED",
+        "stdout": completed.stdout or "",
+        "stderr": completed.stderr or "",
+        "return_code": completed.returncode,
+        "duration": duration,
+        "command": command_text,
+    }
+
+
 def _execute_automation_batch(batch_id: str) -> None:
     db = SessionLocal()
     try:
@@ -460,10 +950,47 @@ def _execute_automation_batch(batch_id: str) -> None:
                 config = json.loads(execution.execution_notes or "{}")
             except Exception:
                 config = {}
-            timeout = int(config.get("timeout") or 300)
-            framework = config.get("framework") or execution.os_info or "playwright"
+            runtime_config = config.get("execution_config") if isinstance(config.get("execution_config"), dict) else {}
+            timeout = int(runtime_config.get("timeout") or config.get("timeout") or 300)
+            framework = runtime_config.get("framework") or config.get("framework") or execution.os_info or "playwright"
+            configured_command = runtime_config.get("command")
 
             try:
+                if configured_command:
+                    _append_execution_log(execution, "INFO", f"使用测试执行配置命令: {runtime_config.get('config_name') or framework}")
+                    result = _run_configured_command(str(configured_command), timeout, execution, runtime_config)
+                    completed_at = datetime.utcnow()
+                    execution.execution_status = (
+                        ModelExecutionStatus.PASSED
+                        if result["status"] == "PASSED"
+                        else ModelExecutionStatus.FAILED
+                    )
+                    execution.actual_result = (result.get("stdout") or "")[:60000] or "测试执行配置命令已执行完成"
+                    failure_text = "\n".join(
+                        part for part in [result.get("stderr"), f"退出码: {result.get('return_code')}"] if part
+                    )
+                    execution.failure_reason = failure_text[:60000] if result["status"] == "FAILED" else None
+                    execution.duration = max(0, result.get("duration") or int((completed_at - started_at).total_seconds()))
+                    _append_execution_log(
+                        execution,
+                        "INFO" if result["status"] == "PASSED" else "ERROR",
+                        "测试执行配置命令执行通过" if result["status"] == "PASSED" else "测试执行配置命令执行失败",
+                    )
+                    output_summary = (result.get("stdout") or result.get("stderr") or "").strip()
+                    if output_summary:
+                        _append_execution_log(execution, "INFO", output_summary[:1000])
+                    execution.completed_at = completed_at
+                    execution.updated_at = completed_at
+                    _sync_test_case_execution_state(
+                        execution.test_case,
+                        execution.execution_status,
+                        occurred_at=completed_at,
+                        count_completed=True,
+                        duration=execution.duration,
+                    )
+                    db.commit()
+                    db.refresh(execution)
+                    continue
                 _append_execution_log(execution, "INFO", "开始执行自动化脚本")
                 script = _find_automation_script(db, execution.test_case_id, framework)
                 if script:
@@ -484,7 +1011,7 @@ def _execute_automation_batch(batch_id: str) -> None:
                         raise RuntimeError("该测试用例未配置可执行的自动化脚本，也没有导入可执行脚本文件")
                     script_format = _infer_imported_script_format(imported_script)
                     _append_execution_log(execution, "INFO", f"使用导入脚本执行，格式: {script_format}")
-                    result = _run_imported_script(execution.test_case, timeout, framework, execution.execution_code)
+                    result = _run_imported_script(execution.test_case, timeout, framework, execution.execution_code, runtime_config)
                 completed_at = datetime.utcnow()
                 execution.execution_status = (
                     ModelExecutionStatus.PASSED

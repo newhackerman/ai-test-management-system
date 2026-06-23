@@ -3,7 +3,7 @@
 """
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Query, Form, Path, status
 from fastapi.responses import Response, StreamingResponse
-from typing import List, Optional
+from typing import Any, List, Optional
 import logging
 from io import BytesIO
 
@@ -16,6 +16,21 @@ from ..models.config import Environment
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/import-export", tags=["配置导入导出"])
+
+
+def get_current_user_id(current_user: Any) -> int:
+    if isinstance(current_user, dict):
+        user_id = current_user.get("id") or current_user.get("user_id") or current_user.get("sub")
+    else:
+        user_id = getattr(current_user, "id", None)
+
+    if user_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="无法识别当前用户"
+        )
+
+    return int(user_id)
 
 
 @router.get("/formats", response_model=ApiResponse[dict])
@@ -137,7 +152,7 @@ async def preview_import(
             file_content=file_content,
             format_type=format_type,
             environment=environment.value,
-            user_id=current_user.id,
+            user_id=get_current_user_id(current_user),
             group_id=group_id,
             overwrite_existing=False,
             dry_run=True  # 试运行
@@ -200,7 +215,7 @@ async def import_configs(
             file_content=file_content,
             format_type=format_type,
             environment=environment.value,
-            user_id=current_user.id,
+            user_id=get_current_user_id(current_user),
             group_id=group_id,
             overwrite_existing=overwrite_existing,
             dry_run=False
@@ -263,7 +278,7 @@ async def force_import_configs(
             file_content=file_content,
             format_type=format_type,
             environment=environment.value,
-            user_id=current_user.id,
+            user_id=get_current_user_id(current_user),
             group_id=group_id,
             overwrite_existing=True,  # 强制覆盖
             dry_run=False

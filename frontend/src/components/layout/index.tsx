@@ -49,21 +49,13 @@ const navGroups = [
       { label: '执行管理', path: '/test-manager/executions', icon: PlayCircle, module: 'testing' },
       { label: '缺陷管理', path: '/test-manager/defects', icon: AlertTriangle, module: 'defects' },
       { label: '测试报告', path: '/test-manager/reports', icon: FileSpreadsheet, module: 'reports' },
+      { label: '报告管理', path: '/reports', icon: FileSpreadsheet, module: 'reports' },
       { label: '性能测试', path: '/test-manager/performance', icon: BarChart3, module: 'testing' },
       { label: '安全测试', path: '/test-manager/security', icon: Shield, module: 'testing' },
     ],
   },
   {
-    title: '报告与恢复',
-    items: [
-      { label: 'Allure', path: '/allure-reports', icon: FileSpreadsheet, module: 'reports' },
-      { label: '报告管理', path: '/reports', icon: FileSpreadsheet, module: 'reports' },
-      { label: '自动恢复', path: '/auto-recovery', icon: PlayCircle, module: 'testing' },
-      { label: '数据统计', path: '/statistics', icon: BarChart3, module: 'reports' },
-    ],
-  },
-  {
-    title: '配置管理',
+    title: '系统管理',
     items: [
       { label: '用户管理', path: '/users', icon: Users, module: 'users' },
       { label: '角色管理', path: '/roles', icon: Shield, module: 'roles' },
@@ -71,6 +63,8 @@ const navGroups = [
       { label: '配置项', path: '/config', icon: Settings, module: 'settings' },
       { label: '配置分组', path: '/config/groups', icon: FolderOpen, module: 'settings' },
       { label: '审计日志', path: '/config/audits', icon: ClipboardList, module: 'settings' },
+      { label: '自动恢复', path: '/auto-recovery', icon: PlayCircle, module: 'testing' },
+      { label: '数据统计', path: '/statistics', icon: BarChart3, module: 'reports' },
     ],
   },
 ]

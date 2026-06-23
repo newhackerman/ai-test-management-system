@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { Link, Navigate, useLocation } from 'react-router-dom'
 import { AlertCircle, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
 import { Label } from '@/components/ui/Label'
 import { useAuth } from '@/stores/auth'
@@ -137,7 +137,6 @@ const Login: React.FC = () => {
           <Card className="border-0 shadow-none sm:border sm:shadow-sm">
             <CardHeader className="pb-2">
               <CardTitle className="text-center text-xl">欢迎回来</CardTitle>
-              <CardDescription className="text-center">请输入您的账号信息登录系统</CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-4">

@@ -1137,30 +1137,18 @@ const AIAssistant: React.FC = () => {
             </CardHeader>
             <CardContent className="space-y-2 p-4 pt-0">
               {promptTemplates.map((template) => (
-                <div
+                <button
                   key={template.title}
-                  className="rounded-md border border-gray-200 px-3 py-2 hover:border-blue-300 hover:bg-blue-50 dark:border-slate-700 dark:hover:border-slate-500 dark:hover:bg-slate-800/70 dark:bg-blue-900/20"
+                  type="button"
+                  onClick={() => setInput(template.prompt)}
+                  className="w-full rounded-md border border-gray-200 px-3 py-2 text-left transition hover:border-blue-300 hover:bg-blue-50 dark:border-slate-700 dark:hover:border-slate-500 dark:hover:bg-slate-800/70 dark:bg-blue-900/20"
                 >
-                  <button type="button" onClick={() => setInput(template.prompt)} className="w-full text-left">
-                    <div className="flex items-center gap-2 text-sm font-medium text-gray-900 dark:text-slate-100">
-                      <FileText className="h-4 w-4 text-sky-600 dark:text-sky-300" />
-                      {template.title}
-                    </div>
-                    <div className="mt-1 text-xs text-gray-500 dark:text-slate-400">{template.description}</div>
-                  </button>
-                  <div className="mt-2 flex justify-end">
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      onClick={() => sendMessage(template.prompt)}
-                      disabled={loading}
-                    >
-                      <Send className="mr-2 h-3.5 w-3.5" />
-                      立即发送
-                    </Button>
+                  <div className="flex items-center gap-2 text-sm font-medium text-gray-900 dark:text-slate-100">
+                    <FileText className="h-4 w-4 text-sky-600 dark:text-sky-300" />
+                    {template.title}
                   </div>
-                </div>
+                  <div className="mt-1 text-xs text-gray-500 dark:text-slate-400">{template.description}</div>
+                </button>
               ))}
             </CardContent>
           </Card>

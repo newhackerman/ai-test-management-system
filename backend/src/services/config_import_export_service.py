@@ -14,6 +14,12 @@ from io import StringIO
 import re
 
 from ..models.config import SystemConfig, ConfigType, Environment
+from ..schemas.config import (
+    ConfigCreateRequest,
+    ConfigUpdateRequest,
+    ConfigType as SchemaConfigType,
+    Environment as SchemaEnvironment,
+)
 from ..services.config import config_service
 from ..core.database import get_db
 from sqlalchemy.orm import Session
@@ -205,21 +211,22 @@ class ConfigImportExportService:
                         'new_value': parsed_configs[existing.config_key]['value']
                     })
             
-            if conflicts and not overwrite_existing:
-                return False, "存在配置冲突，请选择是否覆盖", {
-                    'conflicts': conflicts,
-                    'total_configs': len(parsed_configs)
-                }
-            
-            # 如果是试运行，返回预览结果
             if dry_run:
                 return True, None, {
                     'preview': True,
                     'total_configs': len(parsed_configs),
                     'conflicts': conflicts,
-                    'new_configs': [key for key in parsed_configs.keys() 
-                                  if key not in [c['key'] for c in conflicts]],
+                    'new_configs': [
+                        key for key in parsed_configs.keys()
+                        if key not in [conflict['key'] for conflict in conflicts]
+                    ],
                     'configs': parsed_configs
+                }
+
+            if conflicts and not overwrite_existing:
+                return False, "存在配置冲突，请选择是否覆盖", {
+                    'conflicts': conflicts,
+                    'total_configs': len(parsed_configs)
                 }
             
             # 执行导入
@@ -344,7 +351,7 @@ class ConfigImportExportService:
         configs = {}
         
         for line in content.split('\n'):
-            line = line.strip()
+            line = line.strip().lstrip('\ufeff')
             if not line or line.startswith('#'):
                 continue
             
@@ -372,23 +379,17 @@ class ConfigImportExportService:
         """解析 JSON 文件"""
         try:
             data = json.loads(content)
+            if not isinstance(data, dict):
+                raise ValueError("JSON content must be an object")
             
             # 如果是标准格式
             if 'configs' in data:
-                return data['configs']
+                return self._normalize_import_configs(data['configs'])
             
             # 如果是简单的键值对格式
             configs = {}
             for key, value in data.items():
-                if isinstance(value, dict) and 'value' in value:
-                    configs[key] = value
-                else:
-                    configs[key] = {
-                        'value': value,
-                        'type': self._infer_config_type(value),
-                        'description': '',
-                        'is_sensitive': False
-                    }
+                configs[str(key).strip()] = self._normalize_import_config(value)
             
             return configs
             
@@ -399,23 +400,19 @@ class ConfigImportExportService:
         """解析 YAML 文件"""
         try:
             data = yaml.safe_load(content)
+            if data is None:
+                return {}
+            if not isinstance(data, dict):
+                raise ValueError("YAML content must be an object")
             
             # 如果是标准格式
             if isinstance(data, dict) and 'configs' in data:
-                return data['configs']
+                return self._normalize_import_configs(data['configs'])
             
             # 如果是简单的键值对格式
             configs = {}
             for key, value in data.items():
-                if isinstance(value, dict) and 'value' in value:
-                    configs[key] = value
-                else:
-                    configs[key] = {
-                        'value': value,
-                        'type': self._infer_config_type(value),
-                        'description': '',
-                        'is_sensitive': False
-                    }
+                configs[str(key).strip()] = self._normalize_import_config(value)
             
             return configs
             
@@ -483,6 +480,33 @@ class ConfigImportExportService:
         
         return configs
 
+    def _normalize_import_config(self, value: Any) -> Dict:
+        if isinstance(value, dict) and 'value' in value:
+            normalized = dict(value)
+            normalized.setdefault('type', self._infer_config_type(normalized.get('value')))
+            normalized.setdefault('description', '')
+            if 'is_sensitive' not in normalized:
+                normalized['is_sensitive'] = bool(normalized.pop('is_encrypted', False))
+            return normalized
+
+        return {
+            'value': value,
+            'type': self._infer_config_type(value),
+            'description': '',
+            'is_sensitive': False
+        }
+
+    def _normalize_import_configs(self, configs: Any) -> Dict:
+        if not isinstance(configs, dict):
+            raise ValueError("configs must be an object")
+
+        normalized_configs = {}
+        for key, value in configs.items():
+            normalized_key = str(key).strip()
+            if normalized_key:
+                normalized_configs[normalized_key] = self._normalize_import_config(value)
+        return normalized_configs
+
     def _infer_config_type(self, value: Any) -> str:
         """推断配置类型"""
         if isinstance(value, bool):
@@ -544,14 +568,25 @@ class ConfigImportExportService:
     async def _validate_import_configs(self, configs: Dict) -> Dict:
         """验证导入的配置"""
         errors = []
+
+        if not isinstance(configs, dict):
+            return {
+                'valid': False,
+                'errors': ['configs must be an object']
+            }
         
         for key, config in configs.items():
+            if not isinstance(config, dict):
+                config = self._normalize_import_config(config)
+                configs[key] = config
+
             # 验证配置键名
-            if not re.match(r'^[a-zA-Z][a-zA-Z0-9_.]*$', key):
+            if not re.match(r'^[a-zA-Z0-9._-]+$', key):
                 errors.append(f"配置键 '{key}' 格式不正确")
             
             # 验证配置类型
-            config_type = config.get('type', 'STRING')
+            config_type = str(config.get('type', 'STRING')).upper()
+            config['type'] = config_type
             if config_type not in [t.value for t in ConfigType]:
                 errors.append(f"配置 '{key}' 的类型 '{config_type}' 不支持")
             
@@ -578,11 +613,13 @@ class ConfigImportExportService:
         success_count = 0
         error_count = 0
         errors = []
+        model_environment = Environment(environment)
+        schema_environment = SchemaEnvironment(environment)
         
         for key, config in configs.items():
             try:
                 # 检查配置是否已存在
-                existing = await config_service.get_config(key, environment)
+                existing = await config_service.get_config(key, model_environment)
                 
                 if existing and not overwrite_existing:
                     error_count += 1
@@ -590,22 +627,37 @@ class ConfigImportExportService:
                     continue
                 
                 # 创建或更新配置
-                config_data = {
-                    'config_key': key,
-                    'config_value': str(config['value']),
-                    'config_type': ConfigType(config.get('type', 'STRING')),
-                    'environment': Environment(environment),
-                    'description': config.get('description', ''),
-                    'group_id': group_id,
-                    'is_encrypted': config.get('is_sensitive', False),
-                    'created_by': user_id,
-                    'updated_by': user_id
-                }
-                
+                config_type = SchemaConfigType(config.get('type', 'STRING'))
+                config_value = str(config.get('value', ''))
+
                 if existing:
-                    await config_service.update_config(key, config_data)
+                    update_data = ConfigUpdateRequest(
+                        config_value=config_value,
+                        config_type=config_type,
+                        description=config.get('description', ''),
+                        is_encrypted=bool(config.get('is_sensitive', False)),
+                        change_reason="配置导入更新",
+                    )
+                    success, error_msg, _ = await config_service.update_config(
+                        key,
+                        update_data,
+                        user_id,
+                        model_environment,
+                    )
                 else:
-                    await config_service.create_config(config_data)
+                    create_data = ConfigCreateRequest(
+                        config_key=key,
+                        config_value=config_value,
+                        config_type=config_type,
+                        environment=schema_environment,
+                        description=config.get('description', ''),
+                        group_id=group_id,
+                        is_encrypted=bool(config.get('is_sensitive', False)),
+                    )
+                    success, error_msg, _ = await config_service.create_config(create_data, user_id)
+
+                if not success:
+                    raise RuntimeError(error_msg or "配置保存失败")
                 
                 success_count += 1
                 

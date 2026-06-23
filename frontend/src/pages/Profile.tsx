@@ -14,7 +14,6 @@ interface ProfileState {
   bio: string
   language: string
   timezone: string
-  theme: string
   emailNotifications: boolean
   smsNotifications: boolean
   pushNotifications: boolean
@@ -35,7 +34,6 @@ const defaultProfile: ProfileState = {
   bio: '',
   language: 'zh-CN',
   timezone: 'Asia/Shanghai',
-  theme: 'light',
   emailNotifications: true,
   smsNotifications: false,
   pushNotifications: true,
@@ -65,7 +63,6 @@ const normalizeProfile = (payload: any): ProfileState => {
     bio: info.bio || '',
     language: info.language || 'zh-CN',
     timezone: info.timezone || 'Asia/Shanghai',
-    theme: info.theme || localStorage.getItem('theme') || 'light',
     emailNotifications: info.email_notifications ?? info.emailNotifications ?? true,
     smsNotifications: info.sms_notifications ?? info.smsNotifications ?? false,
     pushNotifications: info.push_notifications ?? info.pushNotifications ?? true,
@@ -93,13 +90,6 @@ const resolveAssetUrl = (url?: string) => {
   return url
 }
 
-const applyTheme = (theme: string) => {
-  localStorage.setItem('theme', theme)
-  const prefersDark = window.matchMedia?.('(prefers-color-scheme: dark)').matches
-  const useDark = theme === 'dark' || (theme === 'auto' && prefersDark)
-  document.documentElement.classList.toggle('dark', useDark)
-}
-
 const Profile: React.FC = () => {
   const { user, updateUser } = useAuthStore()
   const [activeTab, setActiveTab] = useState<TabKey>('basic')
@@ -120,7 +110,6 @@ const Profile: React.FC = () => {
         const response = await apiClient.get('/auth/profile')
         const nextProfile = normalizeProfile(response.data)
         setProfile(nextProfile)
-        applyTheme(nextProfile.theme)
       } catch (error) {
         console.error('Failed to load profile:', error)
         toast.error('加载个人资料失败')
@@ -132,10 +121,6 @@ const Profile: React.FC = () => {
     loadProfile()
   }, [])
 
-  useEffect(() => {
-    applyTheme(profile.theme)
-  }, [profile.theme])
-
   const profilePayload = useMemo(
     () => ({
       email: profile.email,
@@ -145,7 +130,6 @@ const Profile: React.FC = () => {
       bio: profile.bio,
       language: profile.language,
       timezone: profile.timezone,
-      theme: profile.theme,
       email_notifications: profile.emailNotifications,
       sms_notifications: profile.smsNotifications,
       push_notifications: profile.pushNotifications,
@@ -157,7 +141,6 @@ const Profile: React.FC = () => {
     const response = await apiClient.get('/auth/profile')
     const nextProfile = normalizeProfile(response.data)
     setProfile(nextProfile)
-    applyTheme(nextProfile.theme)
     return nextProfile
   }
 
@@ -167,7 +150,6 @@ const Profile: React.FC = () => {
       const response = await apiClient.put('/auth/profile', profilePayload)
       const savedProfile = normalizeProfile(response.data)
       setProfile(savedProfile)
-      applyTheme(savedProfile.theme)
 
       if (user) {
         updateUser({
@@ -179,7 +161,6 @@ const Profile: React.FC = () => {
           avatar: savedProfile.avatar || user.avatar,
           language: savedProfile.language,
           timezone: savedProfile.timezone,
-          theme: savedProfile.theme,
           email_notifications: savedProfile.emailNotifications,
           sms_notifications: savedProfile.smsNotifications,
           push_notifications: savedProfile.pushNotifications,
@@ -364,13 +345,6 @@ const Profile: React.FC = () => {
                     <option value="Asia/Tokyo">东京时间 (UTC+9)</option>
                     <option value="America/New_York">纽约时间 (UTC-5)</option>
                     <option value="Europe/London">伦敦时间 (UTC+0)</option>
-                  </select>
-                </Field>
-                <Field label="主题">
-                  <select value={profile.theme} onChange={(e) => setProfile({ ...profile, theme: e.target.value })} className={inputClass}>
-                    <option value="light">浅色主题</option>
-                    <option value="dark">深色主题</option>
-                    <option value="auto">跟随系统</option>
                   </select>
                 </Field>
               </div>

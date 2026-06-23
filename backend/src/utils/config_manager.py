@@ -125,6 +125,18 @@ class ConfigManager:
         origins = self.get_config("CORS_ORIGINS", "http://localhost:3000")
         if isinstance(origins, str):
             origins = [origin.strip() for origin in origins.split(',')]
+        else:
+            origins = list(origins or [])
+
+        dev_origins = [
+            "http://localhost:5173",
+            "http://127.0.0.1:5173",
+            "http://localhost:5174",
+            "http://127.0.0.1:5174",
+            "http://localhost:5175",
+            "http://127.0.0.1:5175",
+        ]
+        origins = list(dict.fromkeys([origin for origin in origins + dev_origins if origin]))
         
         return {
             "origins": origins,

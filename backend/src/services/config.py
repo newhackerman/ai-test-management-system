@@ -5,7 +5,7 @@ import json
 from typing import Any, Dict, List, Optional, Tuple, Union
 from datetime import datetime
 from sqlalchemy.orm import Session
-from sqlalchemy import and_, or_, desc, asc
+from sqlalchemy import and_, or_, desc, asc, cast, String
 from sqlalchemy.exc import IntegrityError
 
 from ..core.database import get_db
@@ -24,6 +24,47 @@ from ..schemas.config import (
 import logging
 
 logger = logging.getLogger(__name__)
+
+CONFIG_TYPE_SEARCH_ALIASES = {
+    "字符串": ConfigType.STRING,
+    "文本": ConfigType.TEXT,
+    "长文本": ConfigType.TEXT,
+    "整数": ConfigType.INTEGER,
+    "数字": ConfigType.INTEGER,
+    "浮点": ConfigType.FLOAT,
+    "浮点数": ConfigType.FLOAT,
+    "布尔": ConfigType.BOOLEAN,
+    "布尔值": ConfigType.BOOLEAN,
+    "开关": ConfigType.BOOLEAN,
+    "数组": ConfigType.ARRAY,
+    "邮箱": ConfigType.EMAIL,
+    "邮件": ConfigType.EMAIL,
+    "链接": ConfigType.URL,
+    "地址": ConfigType.URL,
+    "枚举": ConfigType.ENUM,
+    "密码": ConfigType.PASSWORD,
+    "文件": ConfigType.FILE,
+    "颜色": ConfigType.COLOR,
+    "日期": ConfigType.DATE,
+    "时间": ConfigType.TIME,
+}
+
+ENVIRONMENT_SEARCH_ALIASES = {
+    "开发": Environment.DEV,
+    "开发环境": Environment.DEV,
+    "测试": Environment.TEST,
+    "测试环境": Environment.TEST,
+    "预发": Environment.STAGING,
+    "预发环境": Environment.STAGING,
+    "生产": Environment.PROD,
+    "生产环境": Environment.PROD,
+    "演示": Environment.DEMO,
+    "演示环境": Environment.DEMO,
+    "性能": Environment.PERF,
+    "性能环境": Environment.PERF,
+    "性能测试": Environment.PERF,
+    "性能测试环境": Environment.PERF,
+}
 
 
 class ConfigService:
@@ -109,10 +150,6 @@ class ConfigService:
             配置列表响应
         """
         try:
-            # 尝试从缓存获取
-            cache_key = f"{environment.value}:{group_id}:{page}:{size}:{search}:{config_type}:{is_core}"
-            cached_result = self.cache_service.get_config_list(environment, group_id, page, size)
-            
             db = next(get_db())
             try:
                 # 构建查询
@@ -127,13 +164,46 @@ class ConfigService:
                 if group_id:
                     query = query.filter(SystemConfig.group_id == group_id)
                 
-                # 搜索过滤
-                if search:
-                    search_filter = or_(
-                        SystemConfig.config_key.contains(search),
-                        SystemConfig.description.contains(search)
-                    )
-                    query = query.filter(search_filter)
+                # 搜索过滤：按用户在页面能看到或自然会输入的内容做宽匹配。
+                search_terms = [term.strip() for term in (search or "").split() if term.strip()]
+                if search_terms:
+                    query = query.outerjoin(ConfigGroup, SystemConfig.group_id == ConfigGroup.id)
+                    for term in search_terms:
+                        like_term = f"%{term}%"
+                        term_filters = [
+                            SystemConfig.config_key.ilike(like_term),
+                            SystemConfig.config_value.ilike(like_term),
+                            SystemConfig.description.ilike(like_term),
+                            SystemConfig.default_value.ilike(like_term),
+                            SystemConfig.example_value.ilike(like_term),
+                            cast(SystemConfig.validation_rule, String).ilike(like_term),
+                            cast(SystemConfig.tags, String).ilike(like_term),
+                            cast(SystemConfig.config_type, String).ilike(like_term),
+                            cast(SystemConfig.environment, String).ilike(like_term),
+                            ConfigGroup.group_name.ilike(like_term),
+                            ConfigGroup.group_code.ilike(like_term),
+                            ConfigGroup.description.ilike(like_term),
+                        ]
+                        normalized_term = term.strip().lower()
+                        type_alias = CONFIG_TYPE_SEARCH_ALIASES.get(term.strip())
+                        environment_alias = ENVIRONMENT_SEARCH_ALIASES.get(term.strip())
+
+                        if type_alias:
+                            term_filters.append(SystemConfig.config_type == type_alias)
+                        if environment_alias:
+                            term_filters.append(SystemConfig.environment == environment_alias)
+                        if normalized_term in {"启用", "已启用", "enable", "enabled", "true"}:
+                            term_filters.append(SystemConfig.is_enabled == True)
+                        if normalized_term in {"禁用", "已禁用", "disable", "disabled", "false"}:
+                            term_filters.append(SystemConfig.is_enabled == False)
+                        if normalized_term in {"核心", "核心配置", "core"}:
+                            term_filters.append(SystemConfig.is_core == True)
+                        if normalized_term in {"加密", "已加密", "encrypted"}:
+                            term_filters.append(SystemConfig.is_encrypted == True)
+                        if normalized_term in {"必填", "必填项", "required"}:
+                            term_filters.append(SystemConfig.is_required == True)
+
+                        query = query.filter(or_(*term_filters))
                 
                 # 类型过滤
                 if config_type:
@@ -164,8 +234,9 @@ class ConfigService:
                     pages=(total + size - 1) // size
                 )
                 
-                # 缓存结果
-                self.cache_service.set_config_list(result.dict(), environment, group_id, page, size)
+                # 只缓存无搜索/筛选的普通列表，避免筛选结果污染相同分页的列表缓存。
+                if not search_terms and not config_type and is_core is None:
+                    self.cache_service.set_config_list(result.dict(), environment, group_id, page, size)
                 
                 return result
                 

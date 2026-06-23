@@ -48,6 +48,19 @@ const clearAuth = () => {
   window.dispatchEvent(new Event('auth:logout'))
 }
 
+const getErrorMessage = (data: any, fallback = '请求失败') => {
+  const detail = data?.message ?? data?.detail ?? data?.error ?? fallback
+
+  if (typeof detail === 'string') return detail
+  if (Array.isArray(detail)) {
+    return detail
+      .map((item) => (typeof item === 'string' ? item : item?.msg || item?.message || JSON.stringify(item)))
+      .join('; ')
+  }
+  if (detail && typeof detail === 'object') return detail.msg || detail.message || JSON.stringify(detail)
+  return String(detail)
+}
+
 const api = axios.create({
   baseURL: normalizeBaseURL(import.meta.env.VITE_API_BASE_URL),
   timeout: 30000,
@@ -60,6 +73,11 @@ api.interceptors.request.use(
   (config) => {
     config.url = normalizeEndpoint(config.url)
     const token = getPersistedAuthToken()
+
+    if (config.data instanceof FormData) {
+      delete (config.headers as any)['Content-Type']
+      delete (config.headers as any)['content-type']
+    }
 
     if (token) {
       ;(config.headers as any).Authorization = `Bearer ${token}`
@@ -87,7 +105,7 @@ api.interceptors.response.use(
       } else if (status >= 500) {
         message.error('服务器内部错误')
       } else {
-        message.error(data?.message || data?.detail || '请求失败')
+        message.error(getErrorMessage(data))
       }
     } else if (error.request) {
       message.error('网络错误，请检查网络连接')
