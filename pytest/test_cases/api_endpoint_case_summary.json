@@ -1,0 +1,18 @@
+{
+  "base_url": "http://127.0.0.1:8000",
+  "path_count": 637,
+  "operation_count": 740,
+  "method_counts": {
+    "DELETE": 51,
+    "GET": 338,
+    "PATCH": 6,
+    "POST": 305,
+    "PUT": 40
+  },
+  "case_type_counts": {
+    "anonymous_guard_and_live_get_smoke": 333,
+    "anonymous_guard_then_data_factory_happy_path": 395,
+    "public_contract_or_validation": 12
+  },
+  "catalog": "D:\\pythonTtest\\pytest\\test_cases\\api_endpoint_case_catalog.csv"
+}

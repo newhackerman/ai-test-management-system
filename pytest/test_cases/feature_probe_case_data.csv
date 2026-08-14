@@ -1,0 +1,59 @@
+case_id,feature,case_type,method,path,auth_required,params_json,body_json,expected_status,description,covered_tags
+auth_login_success,auth,normal,POST,/api/v1/auth/login,false,{},"{""username"": ""{{dedicated_username}}"", ""password"": ""{{dedicated_password}}""}",200,Dedicated CSV test user can log in,认证管理;认证权限
+auth_login_bad_credentials,auth,abnormal,POST,/api/v1/auth/login,false,{},"{""username"": ""not_exist_{{unique}}"", ""password"": ""Wrong_{{unique}}!""}",4xx,Invalid login is rejected,认证管理;认证权限
+users_list,users,normal,GET,/api/v1/users,true,"{""page"": 1, ""size"": 10}",{},2xx,Users list is available,用户管理
+users_bad_id,users,abnormal,GET,/api/v1/users/not-an-int,true,{},{},4xx,Invalid user id is rejected,用户管理
+roles_list,roles,normal,GET,/api/v1/roles,true,"{""page"": 1, ""size"": 10}",{},2xx,Roles list is available,角色管理
+roles_bad_id,roles,abnormal,GET,/api/v1/roles/not-an-int,true,{},{},4xx,Invalid role id is rejected,角色管理
+permissions_list,permissions,normal,GET,/api/v1/permissions,true,"{""page"": 1, ""size"": 10}",{},2xx,Permissions list is available,权限管理
+permissions_bad_id,permissions,abnormal,GET,/api/v1/permissions/not-an-int,true,{},{},4xx,Invalid permission id is rejected,权限管理
+user_role_management_roles,user_role_management,normal,GET,/api/v1/user-role-management/roles,true,"{""page"": 1, ""size"": 10}",{},2xx,User role management roles are available,用户角色权限管理
+user_role_management_bad_payload,user_role_management,abnormal,POST,/api/v1/user-role-management/check-role,true,{},{},4xx,Invalid role check payload is rejected,用户角色权限管理
+projects_list,projects,normal,GET,/api/v1/projects,true,"{""page"": 1, ""size"": 10}",{},2xx,Projects list is available,项目管理;团队管理
+projects_bad_id,projects,abnormal,GET,/api/v1/projects/not-an-int,true,{},{},4xx,Invalid project id is rejected,项目管理;团队管理
+requirements_list,requirements,normal,GET,/api/v1/requirements/,true,"{""page"": 1, ""size"": 10}",{},2xx,Requirements list is available,需求管理
+requirements_bad_id,requirements,abnormal,GET,/api/v1/requirements/not-an-int,true,{},{},4xx,Invalid requirement id is rejected,需求管理
+requirement_changes_search,requirement_changes,normal,GET,/api/v1/requirement-changes/search,true,"{""page"": 1, ""size"": 10}",{},2xx,Requirement change search is available,需求变更;需求变更管理
+requirement_changes_bad_id,requirement_changes,abnormal,GET,/api/v1/requirement-changes/not-an-int,true,{},{},4xx,Invalid requirement change id is rejected,需求变更;需求变更管理
+requirement_reviews_list,requirement_reviews,normal,GET,/api/v1/requirement-reviews/,true,"{""skip"": 0, ""limit"": 10}",{},2xx,Requirement reviews list is available,需求评审
+requirement_reviews_bad_payload,requirement_reviews,abnormal,POST,/api/v1/requirement-reviews/,true,{},{},4xx,Invalid requirement review payload is rejected,需求评审
+traceability_links,traceability,normal,GET,/api/v1/requirement-traceability/links,true,"{""skip"": 0, ""limit"": 10}",{},2xx,Requirement traceability links are available,需求追溯;需求追溯分析
+traceability_bad_id,traceability,abnormal,GET,/api/v1/requirement-traceability/links/not-an-int,true,{},{},4xx,Invalid traceability link id is rejected,需求追溯;需求追溯分析
+test_requirement_health,test_requirement_integration,normal,GET,/api/v1/test-requirement-integration/health,true,{},{},2xx,Test requirement integration health is available,测试需求集成
+test_requirement_bad_id,test_requirement_integration,abnormal,POST,/api/v1/test-requirement-integration/requirements/not-an-int/create-test-case,true,{},{},4xx,Invalid integration requirement id is rejected,测试需求集成
+test_plans_list,test_plans,normal,GET,/api/v1/test-plans/,true,"{""page"": 1, ""size"": 10}",{},2xx,Test plans list is available,测试计划;测试计划管理
+test_plans_bad_id,test_plans,abnormal,GET,/api/v1/test-plans/not-an-int,true,{},{},4xx,Invalid test plan id is rejected,测试计划;测试计划管理
+test_cases_list,test_cases,normal,GET,/api/v1/test-cases/,true,"{""page"": 1, ""size"": 10}",{},2xx,Test cases list is available,测试用例;测试用例管理
+test_cases_bad_id,test_cases,abnormal,GET,/api/v1/test-cases/not-an-int,true,{},{},4xx,Invalid test case id is rejected,测试用例;测试用例管理
+test_executions_list,test_executions,normal,GET,/api/v1/test-executions/,true,"{""page"": 1, ""size"": 10}",{},2xx,Test executions list is available,测试执行;测试执行管理
+test_executions_bad_id,test_executions,abnormal,GET,/api/v1/test-executions/not-an-int,true,{},{},4xx,Invalid test execution id is rejected,测试执行;测试执行管理
+test_reports_list,test_reports,normal,GET,/api/v1/test-reports/,true,"{""page"": 1, ""size"": 10}",{},2xx,Test reports list is available,测试报告;测试报告管理;测试报告订阅;reports;报告导出
+test_reports_bad_id,test_reports,abnormal,GET,/api/v1/test-reports/not-an-int,true,{},{},4xx,Invalid test report id is rejected,测试报告;测试报告管理;测试报告订阅;reports;报告导出
+defects_list,defects,normal,GET,/api/v1/defects/,true,"{""page"": 1, ""size"": 10}",{},2xx,Defects list is available,缺陷管理
+defects_bad_id,defects,abnormal,GET,/api/v1/defects/not-an-int,true,{},{},4xx,Invalid defect id is rejected,缺陷管理
+risks_list,risks,normal,GET,/api/v1/risks/,true,"{""page"": 1, ""size"": 10}",{},2xx,Risks list is available,风险管理
+risks_bad_id,risks,abnormal,GET,/api/v1/risks/not-an-int,true,{},{},4xx,Invalid risk id is rejected,风险管理
+tasks_list,tasks,normal,GET,/api/v1/tasks,true,"{""page"": 1, ""size"": 10}",{},2xx,Tasks list is available,任务管理
+tasks_bad_id,tasks,abnormal,GET,/api/v1/tasks/not-an-int,true,{},{},4xx,Invalid task id is rejected,任务管理
+progress_detail,progress,normal,GET,/api/v1/progress/1,true,{},{},2xx,Project progress is available,未分类;进度跟踪
+progress_bad_id,progress,abnormal,GET,/api/v1/progress/not-an-int,true,{},{},4xx,Invalid progress project id is rejected,未分类;进度跟踪
+milestones_list,milestones,normal,GET,/api/v1/milestones/1,true,"{""page"": 1, ""size"": 10}",{},2xx,Milestones list is available,里程碑管理
+milestones_bad_id,milestones,abnormal,GET,/api/v1/milestones/detail/not-an-int,true,{},{},4xx,Invalid milestone id is rejected,里程碑管理
+meetings_list,meetings,normal,GET,/api/v1/meetings/,true,"{""page"": 1, ""size"": 10}",{},2xx,Meetings list is available,会议管理;项目集成;会议项目集成;协作功能;录制管理;AI分析;参与者管理;会议控制;WebRTC信令
+meetings_bad_id,meetings,abnormal,GET,/api/v1/meetings/not-an-int,true,{},{},4xx,Invalid meeting id is rejected,会议管理;项目集成;会议项目集成;协作功能;录制管理;AI分析;参与者管理;会议控制;WebRTC信令
+prompt_templates_list,prompt_templates,normal,GET,/api/v1/prompt-templates/,true,"{""page"": 1, ""size"": 10}",{},2xx,Prompt templates list is available,提示词模板
+prompt_templates_bad_id,prompt_templates,abnormal,GET,/api/v1/prompt-templates/not-an-int,true,{},{},4xx,Invalid prompt template id is rejected,提示词模板
+ai_assistant_status,ai_assistant,normal,GET,/api/v1/ai-assistant/status,true,{},{},2xx,AI assistant status is available,AI助手;需求AI分析;AI WebSocket连接;流式响应
+ai_assistant_bad_payload,ai_assistant,abnormal,POST,/api/v1/ai-assistant/query,true,{},{},4xx,Invalid AI assistant query is rejected,AI助手;需求AI分析;AI WebSocket连接;流式响应
+ai_model_config_stats,ai_platform,normal,GET,/api/v1/ai-model-config/stats,true,{},{},2xx,AI model config stats are available,AI建议;AI告警配置;AI请求队列;AI操作日志;AI权限管理;AI模型配置
+ai_model_config_bad_id,ai_platform,abnormal,GET,/api/v1/ai-model-config/not-an-int,true,{},{},4xx,Invalid AI model config id is rejected,AI建议;AI告警配置;AI请求队列;AI操作日志;AI权限管理;AI模型配置
+baidu_models,ai_providers,normal,GET,/api/v1/baidu-wenxin/models,true,{},{},2xx,Baidu Wenxin models are available,百度文心一言;阿里通义千问;中文内容优化路由;多语言响应处理
+baidu_bad_payload,ai_providers,abnormal,POST,/api/v1/baidu-wenxin/test,true,{},{},4xx,Invalid Baidu Wenxin test payload is rejected,百度文心一言;阿里通义千问;中文内容优化路由;多语言响应处理
+dashboard_summary,dashboards,normal,GET,/api/v1/dashboard/summary,true,{},{},2xx,Dashboard summary is available,仪表板管理;仪表板配置;仪表板数据;仪表盘;组件管理;配色方案;实时推送
+dashboard_bad_metric,dashboards,abnormal,GET,/api/v1/dashboards/data/metrics/not_a_metric,true,{},{},4xx,Invalid dashboard metric is rejected,仪表板管理;仪表板配置;仪表板数据;仪表盘;组件管理;配色方案;实时推送
+configs_list,configs,normal,GET,/api/v1/configs/configs,true,"{""page"": 1, ""size"": 10}",{},2xx,Configs list is available,配置管理;配置审核;高级权限管理;配置导入导出;配置验证规则
+configs_bad_key,configs,abnormal,GET,/api/v1/configs/configs/{{missing_key}},true,"{""environment"": ""test"", ""decrypt"": false}",{},4xx,Missing config key returns controlled error,配置管理;配置审核;高级权限管理;配置导入导出;配置验证规则
+quality_health,quality_performance_security,normal,GET,/api/v1/quality-metrics/health-check,true,{},{},2xx,Quality metrics health is available,质量指标;质量度量;性能测试;鎬ц兘娴嬭瘯绠＄悊;安全测试;安全测试管理
+quality_bad_payload,quality_performance_security,abnormal,POST,/api/v1/quality-metrics/calculate,true,{},{},4xx,Invalid quality metric payload is rejected,质量指标;质量度量;性能测试;鎬ц兘娴嬭瘯绠＄悊;安全测试;安全测试管理
+settings_read,system_ops,normal,GET,/api/v1/settings,true,{},{},2xx,System settings are available,成本控制;自动恢复服务;缓存预热管理;系统设置;健康监控WebSocket;站内通知
+settings_bad_payload,system_ops,abnormal,PUT,/api/v1/settings,true,{},{},4xx,Invalid settings payload is rejected,成本控制;自动恢复服务;缓存预热管理;系统设置;健康监控WebSocket;站内通知

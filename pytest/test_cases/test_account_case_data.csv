@@ -1,0 +1,5 @@
+case_id,operation,method,path,auth_context,params_json,body_json,expected_status,description
+admin_login_success,login,POST,/api/v1/auth/login,anonymous,{},"{""username"": ""admin"", ""password"": ""Admin123!""}",200,Admin login credentials used to bootstrap CSV-managed live tests
+dedicated_user_create,create_user,POST,/api/v1/users,admin,{},"{""username"": ""pytest_auto_dedicated_{{unique}}"", ""email"": ""pytest_auto_dedicated_{{unique}}@example.com"", ""password"": ""Pytest123!"", ""nickname"": ""CSV dedicated SUPER_ADMIN test account"", ""is_active"": true, ""is_superuser"": true, ""role_ids"": [3]}",201,Create dedicated SUPER_ADMIN test account used by CSV-managed feature and CRUD tests
+dedicated_user_assign_role,assign_role,POST,/api/v1/users/{{dedicated_user_id}}/roles,admin,{},"{""role_ids"": [3]}",2xx,Assign the highest-privilege SUPER_ADMIN role to the dedicated test account
+dedicated_user_login_success,login,POST,/api/v1/auth/login,anonymous,{},"{""username"": ""{{dedicated_username}}"", ""password"": ""{{dedicated_password}}""}",200,Dedicated test account can log in
