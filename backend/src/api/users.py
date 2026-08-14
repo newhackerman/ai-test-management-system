@@ -168,7 +168,12 @@ async def get_user(
         user = await user_service.get_user_by_id(user_id)
         if not user:
             raise not_found_error("用户不存在")
-        
+
+        # 软删除用户对普通查询不可见
+        from ..models.user import UserStatus
+        if user.status == UserStatus.DELETED:
+            raise not_found_error("用户不存在")
+
         return UserResponse.from_orm(user)
         
     except HTTPException:
@@ -412,126 +417,6 @@ async def remove_role_from_user(
     except Exception as e:
         logger.error(f"移除角色失败: {e}")
         raise internal_server_error("移除角色失败", str(e))
-
-@router.post("/batch", response_model=BatchOperationResponse)
-async def batch_update_users(
-    operation: BatchUserOperation,
-    current_user: User = Depends(get_current_user),
-    user_service: UserService = Depends(get_user_service)
-):
-    """批量操作用户"""
-    try:
-        # 检查权限
-        # TODO: 添加权限检查逻辑
-        
-        result = await user_service.batch_operation(
-            user_ids=operation.user_ids,
-            action=operation.action,
-            role_id=operation.role_id,
-            reason=operation.reason
-        )
-        
-        return BatchOperationResponse(**result)
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"批量操作失败: {e}")
-        raise internal_server_error("批量操作失败", str(e))
-
-@router.get("/export")
-async def export_users(
-    search: Optional[str] = Query(None, description="搜索关键词"),
-    status: Optional[str] = Query(None, description="用户状态"),
-    role: Optional[str] = Query(None, description="角色筛选"),
-    current_user: User = Depends(get_current_user),
-    user_service: UserService = Depends(get_user_service)
-):
-    """导出用户数据"""
-    try:
-        # 检查权限
-        # TODO: 添加权限检查逻辑
-        
-        users = await user_service.export_users(
-            search=search,
-            status=status,
-            role=role
-        )
-        
-        # 创建CSV内容
-        output = io.StringIO()
-        writer = csv.writer(output)
-        
-        # 写入标题行
-        writer.writerow([
-            'ID', '用户名', '邮箱', '昵称', '手机号', '状态', 
-            '是否激活', '是否超级用户', '创建时间', '最后登录时间'
-        ])
-        
-        # 写入数据行
-        for user in users:
-            writer.writerow([
-                user.id,
-                user.username,
-                user.email,
-                user.nickname or '',
-                user.phone or '',
-                user.status.value if user.status else '',
-                '是' if user.is_active else '否',
-                '是' if user.is_superuser else '否',
-                user.created_at.strftime('%Y-%m-%d %H:%M:%S') if user.created_at else '',
-                user.last_login_at.strftime('%Y-%m-%d %H:%M:%S') if user.last_login_at else ''
-            ])
-        
-        # 创建响应
-        output.seek(0)
-        content = output.getvalue().encode('utf-8-sig')  # 使用BOM以支持Excel
-        
-        return StreamingResponse(
-            io.BytesIO(content),
-            media_type="text/csv",
-            headers={
-                "Content-Disposition": f"attachment; filename=users_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
-            }
-        )
-        
-    except Exception as e:
-        logger.error(f"导出用户数据失败: {e}")
-        raise internal_server_error("导出用户数据失败", str(e))
-
-@router.post("/import")
-async def import_users(
-    file: UploadFile = File(...),
-    current_user: User = Depends(get_current_user),
-    user_service: UserService = Depends(get_user_service)
-):
-    """导入用户数据"""
-    try:
-        # 检查权限
-        # TODO: 添加权限检查逻辑
-        
-        # 检查文件类型
-        if not file.filename.endswith(('.csv', '.xlsx')):
-            raise bad_request_error("只支持CSV和Excel文件")
-        
-        # 读取文件内容
-        content = await file.read()
-        
-        result = await user_service.import_users(content, file.filename)
-        
-        return {
-            "message": "用户导入完成",
-            "success_count": result.get("success_count", 0),
-            "failed_count": result.get("failed_count", 0),
-            "total_count": result.get("total_count", 0),
-            "failed_users": result.get("failed_users", [])
-        }
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"导入用户数据失败: {e}")
-        raise internal_server_error("导入用户数据失败", str(e))
 
 # 高级用户管理功能
 

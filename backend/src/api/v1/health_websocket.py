@@ -9,7 +9,7 @@ from datetime import datetime
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ...core.database import get_db
+from ...core.database import get_async_session
 from ...decorators.permission import get_current_user_from_token
 from ...services.simple_health_check_service import EnhancedHealthCheckService
 
@@ -101,7 +101,7 @@ health_ws_manager = HealthWebSocketManager()
 async def health_monitor_websocket(
     websocket: WebSocket,
     token: str,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_async_session)
 ):
     """健康监控WebSocket端点"""
     try:
@@ -186,7 +186,7 @@ async def health_monitor_websocket(
 async def trigger_health_check(
     config_id: int,
     current_user = Depends(get_current_user_from_token),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_async_session)
 ):
     """手动触发健康检查"""
     try:
@@ -216,7 +216,7 @@ async def trigger_health_check(
 async def get_health_status(
     config_id: int,
     current_user = Depends(get_current_user_from_token),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_async_session)
 ):
     """获取指定配置的健康状态"""
     try:
