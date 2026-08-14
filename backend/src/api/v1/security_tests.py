@@ -365,6 +365,8 @@ async def execute_security_test(
             data=response_data
         )
         
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"执行安全测试失败: {str(e)}")
         raise HTTPException(status_code=500, detail="内部服务器错误")
@@ -424,6 +426,8 @@ async def get_security_test_results(
             data=response_data
         )
         
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"获取安全测试结果失败: {str(e)}")
         raise HTTPException(status_code=500, detail="内部服务器错误")

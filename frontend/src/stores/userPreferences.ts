@@ -108,7 +108,7 @@ interface UserPreferencesActions {
 }
 
 const defaultThemeConfig: ThemeConfig = {
-  primaryColor: '#1890ff',
+  primaryColor: '#2563eb',
   borderRadius: 6,
   componentSize: 'middle',
   wireframe: false

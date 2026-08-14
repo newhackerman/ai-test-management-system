@@ -336,13 +336,13 @@ async def download_export_file(
 
 @router.get("/jobs", response_model=List[ExportJob])
 async def get_user_export_jobs(
-    status: Optional[ExportStatus] = Query(None, description="状态过滤"),
+    status_filter: Optional[ExportStatus] = Query(None, alias="status", description="状态过滤"),
     limit: int = Query(20, ge=1, le=100, description="限制数量"),
     current_user: User = Depends(get_current_user)
 ):
     """
     获取用户的导出任务列表
-    
+
     - **status**: 状态过滤 (可选)
     - **limit**: 限制数量
     """
@@ -351,10 +351,10 @@ async def get_user_export_jobs(
             job for job in export_jobs.values()
             if job.user_id == current_user.id
         ]
-        
+
         # 状态过滤
-        if status:
-            user_jobs = [job for job in user_jobs if job.status == status]
+        if status_filter:
+            user_jobs = [job for job in user_jobs if job.status == status_filter]
         
         # 按创建时间排序
         user_jobs.sort(key=lambda x: x.created_at, reverse=True)

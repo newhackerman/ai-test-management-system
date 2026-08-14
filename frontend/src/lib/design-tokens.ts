@@ -58,6 +58,17 @@ export const colors = {
     DEFAULT: 'hsl(199.89 89.47% 49.8%)',
     foreground: 'hsl(210 40% 98%)',
   },
+
+  // 紫色
+  purple: {
+    50: 'hsl(263.4 70% 95%)',
+    100: 'hsl(263.4 70% 88%)',
+    500: 'hsl(263.4 70% 50.4%)',
+    600: 'hsl(263.4 70% 42%)',
+    700: 'hsl(263.4 70% 35%)',
+    DEFAULT: 'hsl(263.4 70% 50.4%)',
+    foreground: 'hsl(0 0% 100%)',
+  },
 } as const
 
 export const spacing = {

@@ -72,13 +72,20 @@ class QualityMetricsSnapshot(BaseModel):
     
 class QualityTrend(BaseModel):
     """质量趋势"""
-    metric_name: str
-    trend_direction: TrendDirection
-    growth_rate: float
-    confidence: float
+    # 下列字段大部分由服务层 _calculate_metric_trend 提供；为兼容历史
+    # 服务实现（仅返回 trend_direction/growth_rate/data_points/slope），
+    # 将 schema 上缺失的字段设为可选，避免 Pydantic 校验失败导致 500。
+    metric_name: Optional[str] = None
+    trend_direction: Optional[TrendDirection] = None
+    growth_rate: Optional[float] = 0.0
+    confidence: Optional[float] = 0.7
+    slope: Optional[float] = None
     data_points: List[Dict[str, Any]] = Field(default_factory=list)
-    analysis_period: Dict[str, datetime]
+    analysis_period: Optional[Dict[str, Any]] = None
     predictions: Optional[Dict[str, Any]] = None
+
+    class Config:
+        extra = "allow"
 
 class QualityAlert(BaseModel):
     """质量告警"""

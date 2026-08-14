@@ -13,10 +13,10 @@ from typing import List, Optional, Dict, Any, Tuple
 from decimal import Decimal
 
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_, or_, func, desc, asc, text, update
+from sqlalchemy import select, and_, or_, func, desc, asc, text, update, case
 from sqlalchemy.orm import selectinload, joinedload
 
-from ..core.database import get_async_session
+from ..core.database import get_async_session, get_async_session_ctx
 from ..core.exceptions import ValidationError, NotFoundError, PermissionError
 from ..models.project import Project, Task, ProjectMember
 from ..models.requirement import Requirement, RequirementStatus, RequirementTraceabilityLink, TraceabilityLinkType
@@ -421,14 +421,14 @@ class ProjectRequirementIntegrationService:
         result = await self.db.execute(
             select(
                 func.count(Requirement.id).label('total'),
-                func.sum(func.case([(Requirement.status.in_([
+                func.sum(case([(Requirement.status.in_([
                     RequirementStatus.COMPLETED, 
                     RequirementStatus.DEPLOYED, 
                     RequirementStatus.CLOSED
                 ]), 1)], else_=0)).label('completed'),
-                func.sum(func.case([(Requirement.status == RequirementStatus.IN_DEVELOPMENT, 1)], else_=0)).label('in_development'),
-                func.sum(func.case([(Requirement.status == RequirementStatus.TESTING, 1)], else_=0)).label('testing'),
-                func.sum(func.case([(Requirement.status == RequirementStatus.PAUSED, 1)], else_=0)).label('blocked')
+                func.sum(case([(Requirement.status == RequirementStatus.IN_DEVELOPMENT, 1)], else_=0)).label('in_development'),
+                func.sum(case([(Requirement.status == RequirementStatus.TESTING, 1)], else_=0)).label('testing'),
+                func.sum(case([(Requirement.status == RequirementStatus.PAUSED, 1)], else_=0)).label('blocked')
             ).where(Requirement.project_id == project_id)
         )
         stats = result.first()
@@ -446,9 +446,9 @@ class ProjectRequirementIntegrationService:
         result = await self.db.execute(
             select(
                 func.count(Task.id).label('total'),
-                func.sum(func.case([(Task.status == 'COMPLETED', 1)], else_=0)).label('completed'),
-                func.sum(func.case([(Task.status == 'IN_PROGRESS', 1)], else_=0)).label('in_progress'),
-                func.sum(func.case([(Task.status == 'BLOCKED', 1)], else_=0)).label('blocked')
+                func.sum(case([(Task.status == 'COMPLETED', 1)], else_=0)).label('completed'),
+                func.sum(case([(Task.status == 'IN_PROGRESS', 1)], else_=0)).label('in_progress'),
+                func.sum(case([(Task.status == 'BLOCKED', 1)], else_=0)).label('blocked')
             ).where(Task.project_id == project_id)
         )
         stats = result.first()
@@ -592,6 +592,6 @@ class ProjectRequirementIntegrationService:
 async def get_project_requirement_integration_service(db: AsyncSession = None) -> ProjectRequirementIntegrationService:
     """获取项目需求集成服务实例"""
     if db is None:
-        async with get_async_session() as session:
+        async with get_async_session_ctx() as session:
             return ProjectRequirementIntegrationService(session)
     return ProjectRequirementIntegrationService(db)

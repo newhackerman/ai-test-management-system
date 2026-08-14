@@ -8,6 +8,7 @@
 - 交互式图表和仪表板数据生成
 """
 import logging
+from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import List, Optional, Dict, Any, Tuple
 from collections import defaultdict, Counter
@@ -27,12 +28,144 @@ from ..utils.redis_client import RedisClient
 
 logger = logging.getLogger(__name__)
 
+
+@dataclass
+class ReportAnalytics:
+    """测试报告分析结果"""
+    total_reports: int
+    reports_by_type: Dict[str, int]
+    reports_by_status: Dict[str, int]
+    generation_time_avg: Optional[float]
+    most_viewed_reports: List[Dict[str, Any]]
+    most_downloaded_reports: List[Dict[str, Any]]
+    report_trends: List[Dict[str, Any]]
+
+
 class TestDataAnalysisService:
     """测试数据分析和可视化服务"""
     
-    def __init__(self, db: Session, redis_client: RedisClient):
+    def __init__(self, db: Session, redis_client: Optional[RedisClient] = None):
         self.db = db
         self.redis = redis_client
+    
+    async def get_report_analytics(self, filters: Optional[Dict[str, Any]] = None) -> ReportAnalytics:
+        """获取测试报告分析数据
+
+        Args:
+            filters: 可选的过滤条件，支持 project_id / start_date / end_date
+
+        Returns:
+            ReportAnalytics 分析结果对象
+        """
+        from ..models.test_report import TestReportRecord
+
+        filters = filters or {}
+
+        query = self.db.query(TestReportRecord)
+
+        project_id = filters.get('project_id')
+        if project_id:
+            query = query.filter(TestReportRecord.project_id == project_id)
+
+        start_date = filters.get('start_date')
+        if start_date:
+            query = query.filter(TestReportRecord.created_at >= start_date)
+
+        end_date = filters.get('end_date')
+        if end_date:
+            query = query.filter(TestReportRecord.created_at <= end_date)
+
+        try:
+            reports = query.all()
+        except Exception as e:
+            logger.error(f"获取报告分析数据失败: {str(e)}")
+            reports = []
+
+        total_reports = len(reports)
+
+        # 按类型分布
+        reports_by_type: Dict[str, int] = defaultdict(int)
+        # 按状态分布
+        reports_by_status: Dict[str, int] = defaultdict(int)
+
+        generation_times = []
+        for report in reports:
+            report_type = getattr(report, 'report_type', None) or 'unknown'
+            report_status = getattr(report, 'status', None) or 'unknown'
+            reports_by_type[str(report_type)] += 1
+            reports_by_status[str(report_status)] += 1
+            gen_time = getattr(report, 'generation_time', None)
+            if gen_time is not None:
+                try:
+                    generation_times.append(float(gen_time))
+                except (TypeError, ValueError):
+                    pass
+
+        generation_time_avg = (
+            sum(generation_times) / len(generation_times) if generation_times else None
+        )
+
+        # 最多查看的报告（按 view_count 排序，最多10条）
+        def _to_summary(report: TestReportRecord) -> Dict[str, Any]:
+            return {
+                'id': getattr(report, 'id', None),
+                'name': getattr(report, 'name', None),
+                'report_type': getattr(report, 'report_type', None),
+                'status': getattr(report, 'status', None),
+                'project_id': getattr(report, 'project_id', None),
+                'view_count': getattr(report, 'view_count', 0) or 0,
+                'download_count': getattr(report, 'download_count', 0) or 0,
+                'created_at': getattr(report, 'created_at', None).isoformat()
+                if getattr(report, 'created_at', None) else None,
+            }
+
+        sorted_reports = sorted(
+            reports,
+            key=lambda r: (getattr(r, 'view_count', None) or 0, getattr(r, 'download_count', None) or 0),
+            reverse=True
+        )
+        most_viewed_reports = [_to_summary(r) for r in sorted_reports[:10]]
+
+        # 最多下载的报告（按 download_count 排序，最多10条）
+        sorted_by_downloads = sorted(
+            reports,
+            key=lambda r: getattr(r, 'download_count', None) or 0,
+            reverse=True
+        )
+        most_downloaded_reports = [_to_summary(r) for r in sorted_by_downloads[:10]]
+
+        # 报告趋势（按天聚合，最近30天）
+        trends_map: Dict[str, int] = defaultdict(int)
+        for report in reports:
+            created_at = getattr(report, 'created_at', None)
+            if created_at is None:
+                continue
+            try:
+                day_key = created_at.strftime('%Y-%m-%d')
+            except (AttributeError, ValueError):
+                continue
+            trends_map[day_key] += 1
+
+        # 补全最近30天的日期，确保趋势数据连续
+        report_trends: List[Dict[str, Any]] = []
+        today = datetime.utcnow().date()
+        for i in range(29, -1, -1):
+            day = today - timedelta(days=i)
+            day_key = day.strftime('%Y-%m-%d')
+            report_trends.append({
+                'date': day_key,
+                'count': trends_map.get(day_key, 0)
+            })
+
+        return ReportAnalytics(
+            total_reports=total_reports,
+            reports_by_type=dict(reports_by_type),
+            reports_by_status=dict(reports_by_status),
+            generation_time_avg=generation_time_avg,
+            most_viewed_reports=most_viewed_reports,
+            most_downloaded_reports=most_downloaded_reports,
+            report_trends=report_trends
+        )
     
     async def get_comprehensive_statistics(self, project_id: Optional[int] = None,
                                          date_range: Optional[Dict[str, datetime]] = None) -> TestMetrics:

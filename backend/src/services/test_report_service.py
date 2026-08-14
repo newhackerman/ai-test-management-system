@@ -15,13 +15,31 @@ from pathlib import Path
 from typing import Dict, List, Optional, Any, Tuple
 from dataclasses import dataclass, asdict
 import sqlite3
-import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
+# 重量级绘图/数据科学库（pandas/matplotlib/seaborn/plotly）改为惰性导入：
+# 顶层 import 会让模块加载在 pytest fixture setup 的 10s 超时窗口内无法完成
+# （seaborn→matplotlib→plotly 链路过长），导致测试 run 整体卡死。
+# 这些库只在报告生成方法内部使用，延迟到首次调用时再加载即可。
 from jinja2 import Template
-import plotly.graph_objects as go
-import plotly.express as px
-from plotly.subplots import make_subplots
+
+
+def _lazy_imports():
+    """惰性加载重量级绘图库，仅在首次生成报告时调用一次。"""
+    g = globals()
+    if 'plt' not in g:
+        import pandas as pd
+        import matplotlib
+        matplotlib.use('Agg')  # 无显示环境后端
+        import matplotlib.pyplot as plt
+        import seaborn as sns
+        import plotly.graph_objects as go
+        import plotly.express as px
+        from plotly.subplots import make_subplots
+        g['pd'] = pd
+        g['plt'] = plt
+        g['sns'] = sns
+        g['go'] = go
+        g['px'] = px
+        g['make_subplots'] = make_subplots
 
 logger = logging.getLogger(__name__)
 
@@ -116,7 +134,8 @@ class TestReportService:
         self.db_path = self.reports_dir / "test_reports.db"
         self._init_database()
         
-        # 配置可视化样式
+        # 配置可视化样式（惰性加载重量级绘图库）
+        _lazy_imports()
         plt.style.use('seaborn-v0_8')
         sns.set_palette("husl")
 
@@ -259,6 +278,48 @@ class TestReportService:
             report.download_count = (report.download_count or 0) + 1
             self._require_db().commit()
         return report
+
+    async def get_report_templates(self, filters: Dict[str, Any], page: int = 1, page_size: int = 20):
+        """获取报告模板列表（查询 test_report_templates 表，支持分页与过滤）。"""
+        from sqlalchemy import text
+
+        db = self._require_db()
+        self._ensure_record_tables()
+
+        where_clauses = []
+        params: Dict[str, Any] = {}
+        template_type = filters.get("template_type") if filters else None
+        is_active = filters.get("is_active") if filters else None
+        if template_type:
+            where_clauses.append("template_type = :template_type")
+            params["template_type"] = template_type
+        if is_active is not None:
+            where_clauses.append("is_active = :is_active")
+            params["is_active"] = bool(is_active)
+        where_sql = (" WHERE " + " AND ".join(where_clauses)) if where_clauses else ""
+
+        total_row = db.execute(text(f"SELECT COUNT(*) FROM test_report_templates{where_sql}"), params).fetchone()
+        total = int(total_row[0]) if total_row else 0
+
+        offset = (page - 1) * page_size
+        rows = db.execute(
+            text(f"SELECT * FROM test_report_templates{where_sql} ORDER BY created_at DESC LIMIT :limit OFFSET :offset"),
+            {**params, "limit": page_size, "offset": offset}
+        ).fetchall()
+
+        templates = []
+        for row in rows:
+            templates.append(type("ReportTemplate", (), {
+                "id": row[0], "name": row[1], "description": row[2],
+                "template_type": row[3], "template_content": row[4],
+                "default_config": row[5], "is_active": row[6],
+                "created_by": row[7], "created_at": row[8], "updated_at": row[9],
+            }))
+        return templates, total
+
+    async def get_report_schedules(self, filters: Dict[str, Any], page: int = 1, page_size: int = 20):
+        """获取报告计划列表（当前无独立计划表，返回空列表）。"""
+        return [], 0
 
     async def delete_report(self, report_id: int, user_id: int):
         from ..core.exceptions import NotFoundError, PermissionError
@@ -624,10 +685,11 @@ class TestReportService:
         
         return trends
     
-    def _generate_recommendations(self, suite_metrics: List[TestSuiteMetrics], 
-                                coverage: CoverageMetrics, 
+    def _generate_recommendations(self, suite_metrics: List[TestSuiteMetrics],
+                                coverage: CoverageMetrics,
                                 trends: List[QualityTrend]) -> List[str]:
         """生成改进建议"""
+        _lazy_imports()
         recommendations = []
         
         if not suite_metrics:
@@ -758,6 +820,7 @@ class TestReportService:
     
     async def _generate_html_report(self, report: TestReport):
         """生成HTML报告"""
+        _lazy_imports()
         html_template = """
         <!DOCTYPE html>
         <html lang="zh-CN">
@@ -1010,6 +1073,7 @@ class TestReportService:
     
     def _prepare_trends_chart_data(self, trends: List[QualityTrend]) -> dict:
         """准备趋势图表数据"""
+        _lazy_imports()
         if not trends:
             return {"data": [], "layout": {}}
         
@@ -1048,6 +1112,7 @@ class TestReportService:
     async def _generate_charts(self, report: TestReport):
         """生成图表"""
         try:
+            _lazy_imports()
             # 设置中文字体
             plt.rcParams['font.sans-serif'] = ['SimHei', 'DejaVu Sans']
             plt.rcParams['axes.unicode_minus'] = False

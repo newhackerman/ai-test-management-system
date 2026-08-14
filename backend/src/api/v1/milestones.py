@@ -11,12 +11,15 @@ import logging
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Path
+from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError as SAIntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...core.database import get_async_session
 from ...core.auth import get_current_user
 from ...core.exceptions import ValidationError, NotFoundError, PermissionError
 from ...models.user import User
+from ...models.project import Project
 from ...services.milestone_service import MilestoneService
 from ...schemas.milestone import (
     CreateMilestoneRequest, UpdateMilestoneRequest, MilestoneQueryParams,
@@ -60,8 +63,13 @@ async def create_milestone(
         raise HTTPException(status_code=400, detail=str(e))
     except PermissionError as e:
         raise HTTPException(status_code=403, detail=str(e))
+    except SAIntegrityError as e:
+        logger.warning(f"创建里程碑外键/约束失败: {e}")
+        raise HTTPException(status_code=400, detail="创建里程碑失败：引用的用户或关联数据不存在")
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error(f"创建里程碑失败: {str(e)}")
+        logger.error(f"创建里程碑失败: {type(e).__name__}: {str(e)}")
         raise HTTPException(status_code=500, detail="创建里程碑失败")
 
 
@@ -119,6 +127,8 @@ async def list_milestones(
         
     except ValidationError as e:
         raise HTTPException(status_code=400, detail=str(e))
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"获取里程碑列表失败: {str(e)}")
         raise HTTPException(status_code=500, detail="获取里程碑列表失败")
@@ -148,6 +158,8 @@ async def get_milestone(
         logger.info(f"用户 {current_user.id} 查询里程碑 {milestone_id} 详情")
         return milestone
         
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"获取里程碑详情失败: {str(e)}")
         raise HTTPException(status_code=500, detail="获取里程碑详情失败")
@@ -183,6 +195,8 @@ async def update_milestone(
         raise HTTPException(status_code=400, detail=str(e))
     except PermissionError as e:
         raise HTTPException(status_code=403, detail=str(e))
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"更新里程碑失败: {str(e)}")
         raise HTTPException(status_code=500, detail="更新里程碑失败")
@@ -216,6 +230,8 @@ async def delete_milestone(
         raise HTTPException(status_code=400, detail=str(e))
     except PermissionError as e:
         raise HTTPException(status_code=403, detail=str(e))
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"删除里程碑失败: {str(e)}")
         raise HTTPException(status_code=500, detail="删除里程碑失败")
@@ -244,6 +260,8 @@ async def analyze_milestone_dependencies(
         
     except NotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"分析里程碑依赖关系失败: {str(e)}")
         raise HTTPException(status_code=500, detail="分析里程碑依赖关系失败")
@@ -274,6 +292,8 @@ async def analyze_milestone_impact(
         
     except NotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"分析里程碑影响失败: {str(e)}")
         raise HTTPException(status_code=500, detail="分析里程碑影响失败")
@@ -291,6 +311,10 @@ async def get_milestone_statistics(
     获取指定项目的里程碑统计信息，包括完成率、逾期情况等。
     """
     try:
+        # 校验项目是否存在
+        proj = (await session.execute(select(Project).where(Project.id == project_id, Project.deleted_at.is_(None)))).scalar_one_or_none()
+        if not proj:
+            raise HTTPException(status_code=404, detail="项目不存在")
         milestone_service = MilestoneService()
         result = await milestone_service.get_milestone_statistics(
             project_id=project_id,
@@ -300,6 +324,8 @@ async def get_milestone_statistics(
         logger.info(f"用户 {current_user.id} 查询项目 {project_id} 里程碑统计")
         return result
         
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"获取里程碑统计失败: {str(e)}")
         raise HTTPException(status_code=500, detail="获取里程碑统计失败")
@@ -317,6 +343,10 @@ async def get_milestone_timeline(
     获取指定项目的里程碑时间轴，包括关键路径和时间安排。
     """
     try:
+        # 校验项目是否存在
+        proj = (await session.execute(select(Project).where(Project.id == project_id, Project.deleted_at.is_(None)))).scalar_one_or_none()
+        if not proj:
+            raise HTTPException(status_code=404, detail="项目不存在")
         milestone_service = MilestoneService()
         result = await milestone_service.get_milestone_timeline(
             project_id=project_id,
@@ -326,6 +356,8 @@ async def get_milestone_timeline(
         logger.info(f"用户 {current_user.id} 查询项目 {project_id} 里程碑时间轴")
         return result
         
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"获取里程碑时间轴失败: {str(e)}")
         raise HTTPException(status_code=500, detail="获取里程碑时间轴失败")
@@ -369,6 +401,8 @@ async def complete_milestone(
         raise HTTPException(status_code=404, detail=str(e))
     except ValidationError as e:
         raise HTTPException(status_code=400, detail=str(e))
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"完成里程碑失败: {str(e)}")
         raise HTTPException(status_code=500, detail="完成里程碑失败")
@@ -411,6 +445,8 @@ async def reopen_milestone(
         raise HTTPException(status_code=404, detail=str(e))
     except ValidationError as e:
         raise HTTPException(status_code=400, detail=str(e))
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"重新打开里程碑失败: {str(e)}")
         raise HTTPException(status_code=500, detail="重新打开里程碑失败")
@@ -459,6 +495,8 @@ async def get_milestones_summary(
         logger.info(f"用户 {current_user.id} 批量查询 {len(milestone_ids)} 个里程碑摘要")
         return {"summaries": summaries}
         
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"批量获取里程碑摘要失败: {str(e)}")
         raise HTTPException(status_code=500, detail="批量获取里程碑摘要失败")

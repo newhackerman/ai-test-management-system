@@ -13,8 +13,8 @@
 
 from datetime import datetime
 from typing import List, Dict, Any, Optional, Set, Tuple
-from sqlalchemy.orm import Session
-from sqlalchemy import and_, or_, func, text
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import and_, or_, func, text, select
 from collections import defaultdict, deque
 
 from ..models.requirement import (
@@ -23,6 +23,7 @@ from ..models.requirement import (
 )
 from ..models.project import Project
 from ..core.database import get_db
+from ..core.exceptions import NotFoundError
 import logging
 
 logger = logging.getLogger(__name__)
@@ -51,32 +52,46 @@ class TraceabilityMatrix:
 class RequirementTraceabilityService:
     """需求追溯管理服务"""
     
-    def __init__(self, db: Session):
+    def __init__(self, db: AsyncSession):
         self.db = db
         
     async def create_traceability_link(
         self,
-        source_type: str,
-        source_id: int,
-        target_type: str,
-        target_id: int,
-        link_type: TraceabilityLinkType,
-        description: str = None,
-        creator_id: int = None
+        link_data: dict = None,
+        creator_id: int = None,
+        source_type: str = None,
+        source_id: int = None,
+        target_type: str = None,
+        target_id: int = None,
+        link_type: TraceabilityLinkType = None,
+        description: str = None
     ) -> RequirementTraceabilityLink:
         """创建追溯链接"""
         try:
+            # 兼容 link_data 字典调用与关键字参数调用
+            if link_data:
+                source_type = link_data.get("source_type", source_type)
+                source_id = link_data.get("source_id", source_id)
+                target_type = link_data.get("target_type", target_type)
+                target_id = link_data.get("target_id", target_id)
+                link_type = link_data.get("link_type", link_type)
+                description = link_data.get("description", description)
+                if creator_id is None:
+                    creator_id = link_data.get("creator_id")
+
             # 1. 验证链接数据
             await self._validate_link_data(source_type, source_id, target_type, target_id, link_type)
             
             # 2. 检查是否已存在相同链接
-            existing_link = self.db.query(RequirementTraceabilityLink).filter(
-                RequirementTraceabilityLink.source_type == source_type,
-                RequirementTraceabilityLink.source_id == source_id,
-                RequirementTraceabilityLink.target_type == target_type,
-                RequirementTraceabilityLink.target_id == target_id,
-                RequirementTraceabilityLink.link_type == link_type
-            ).first()
+            existing_link = (await self.db.execute(
+                select(RequirementTraceabilityLink).where(
+                    RequirementTraceabilityLink.source_type == source_type,
+                    RequirementTraceabilityLink.source_id == source_id,
+                    RequirementTraceabilityLink.target_type == target_type,
+                    RequirementTraceabilityLink.target_id == target_id,
+                    RequirementTraceabilityLink.link_type == link_type
+                )
+            )).scalars().first()
             
             if existing_link:
                 raise ValueError("追溯链接已存在")
@@ -97,35 +112,37 @@ class RequirementTraceabilityService:
             )
             
             self.db.add(link)
-            self.db.commit()
-            self.db.refresh(link)
+            await self.db.commit()
+            await self.db.refresh(link)
             
             logger.info(f"创建追溯链接成功: {source_type}:{source_id} -> {target_type}:{target_id}")
             return link
             
         except Exception as e:
-            self.db.rollback()
+            await self.db.rollback()
             logger.error(f"创建追溯链接失败: {str(e)}")
             raise
     
     async def delete_traceability_link(self, link_id: int, user_id: int) -> bool:
         """删除追溯链接"""
         try:
-            link = self.db.query(RequirementTraceabilityLink).filter(
-                RequirementTraceabilityLink.id == link_id
-            ).first()
+            link = (await self.db.execute(
+                select(RequirementTraceabilityLink).where(
+                    RequirementTraceabilityLink.id == link_id
+                )
+            )).scalars().first()
             
             if not link:
                 raise ValueError("追溯链接不存在")
             
-            self.db.delete(link)
-            self.db.commit()
+            await self.db.delete(link)
+            await self.db.commit()
             
             logger.info(f"删除追溯链接成功: {link_id}")
             return True
             
         except Exception as e:
-            self.db.rollback()
+            await self.db.rollback()
             logger.error(f"删除追溯链接失败: {str(e)}")
             raise
     
@@ -137,12 +154,14 @@ class RequirementTraceabilityService:
     ) -> Dict[str, Any]:
         """获取需求追溯关系"""
         try:
-            requirement = self.db.query(Requirement).filter(
-                Requirement.id == requirement_id
-            ).first()
+            requirement = (await self.db.execute(
+                select(Requirement).where(
+                    Requirement.id == requirement_id
+                )
+            )).scalars().first()
             
             if not requirement:
-                raise ValueError("需求不存在")
+                raise NotFoundError("需求不存在")
             
             # 获取上游追溯（需求来源）
             upstream_links = []
@@ -224,19 +243,186 @@ class RequirementTraceabilityService:
             logger.error(f"分析变更影响失败: {str(e)}")
             raise
     
+    async def get_traceability_link_by_id(self, link_id: int) -> Optional[RequirementTraceabilityLink]:
+        """根据ID获取追溯链接
+        
+        路由层使用 TraceabilityLinkResponse.from_orm(link) 处理返回值，
+        因此这里直接返回 RequirementTraceabilityLink ORM 对象；找不到时返回 None，
+        由路由层负责抛出 404。
+        """
+        try:
+            link = (await self.db.execute(
+                select(RequirementTraceabilityLink).where(
+                    RequirementTraceabilityLink.id == link_id
+                )
+            )).scalars().first()
+            return link
+        except Exception as e:
+            logger.error(f"获取追溯链接失败: {str(e)}")
+            raise
+    
+    async def search_traceability_links(self, search_params: dict) -> Tuple[List[RequirementTraceabilityLink], int]:
+        """搜索追溯链接
+        
+        路由层解包返回值为 (links, total)，因此这里返回一个元组。
+        search_params 可能包含的键：source_type, source_id, target_type, target_id,
+        link_type, project_id, skip, limit。保持简单：按条件过滤并返回 (结果列表, 结果数量)。
+        """
+        try:
+            stmt = select(RequirementTraceabilityLink)
+            
+            if "source_type" in search_params and search_params["source_type"] is not None:
+                stmt = stmt.where(RequirementTraceabilityLink.source_type == search_params["source_type"])
+            if "source_id" in search_params and search_params["source_id"] is not None:
+                stmt = stmt.where(RequirementTraceabilityLink.source_id == search_params["source_id"])
+            if "target_type" in search_params and search_params["target_type"] is not None:
+                stmt = stmt.where(RequirementTraceabilityLink.target_type == search_params["target_type"])
+            if "target_id" in search_params and search_params["target_id"] is not None:
+                stmt = stmt.where(RequirementTraceabilityLink.target_id == search_params["target_id"])
+            if "link_type" in search_params and search_params["link_type"] is not None:
+                stmt = stmt.where(RequirementTraceabilityLink.link_type == search_params["link_type"])
+            
+            # project_id 过滤：通过 join Requirement 限定源需求所属项目
+            if "project_id" in search_params and search_params["project_id"] is not None:
+                stmt = stmt.join(
+                    Requirement,
+                    and_(
+                        RequirementTraceabilityLink.source_type == "requirement",
+                        RequirementTraceabilityLink.source_id == Requirement.id
+                    )
+                ).where(Requirement.project_id == search_params["project_id"])
+            
+            # 排序保证结果稳定
+            stmt = stmt.order_by(RequirementTraceabilityLink.id.desc())
+            
+            # 分页
+            skip = search_params.get("skip", 0) or 0
+            limit = search_params.get("limit", 50) or 50
+            stmt = stmt.offset(skip).limit(limit)
+            
+            links = (await self.db.execute(stmt)).scalars().all()
+            return links, len(links)
+        except Exception as e:
+            logger.error(f"搜索追溯链接失败: {str(e)}")
+            raise
+    
+    async def get_traceability_coverage(self, project_id: int, coverage_type: str = "all") -> Dict[str, Any]:
+        """获取追溯覆盖率
+        
+        路由层将返回值直接放入 coverage_stats 字段返回，因此这里返回一个可序列化的 dict。
+        """
+        try:
+            total_requirements = (await self.db.execute(
+                select(func.count()).select_from(Requirement).where(
+                    Requirement.project_id == project_id
+                )
+            )).scalar() or 0
+            
+            # 有任意追溯链接的需求数量
+            covered_requirements = (await self.db.execute(
+                select(func.count(func.distinct(Requirement.id))).join(
+                    RequirementTraceabilityLink,
+                    or_(
+                        and_(
+                            RequirementTraceabilityLink.source_type == "requirement",
+                            RequirementTraceabilityLink.source_id == Requirement.id
+                        ),
+                        and_(
+                            RequirementTraceabilityLink.target_type == "requirement",
+                            RequirementTraceabilityLink.target_id == Requirement.id
+                        )
+                    )
+                ).where(
+                    Requirement.project_id == project_id
+                )
+            )).scalar() or 0
+            
+            coverage_rate = (
+                covered_requirements / total_requirements
+                if total_requirements and total_requirements > 0
+                else 0.0
+            )
+            
+            # 无追溯链接的需求（孤立需求）
+            uncovered = (await self.db.execute(
+                select(Requirement.id).outerjoin(
+                    RequirementTraceabilityLink,
+                    or_(
+                        and_(
+                            RequirementTraceabilityLink.source_type == "requirement",
+                            RequirementTraceabilityLink.source_id == Requirement.id
+                        ),
+                        and_(
+                            RequirementTraceabilityLink.target_type == "requirement",
+                            RequirementTraceabilityLink.target_id == Requirement.id
+                        )
+                    )
+                ).where(
+                    Requirement.project_id == project_id,
+                    RequirementTraceabilityLink.id.is_(None)
+                )
+            )).scalars().all()
+            
+            return {
+                "project_id": project_id,
+                "coverage_type": coverage_type,
+                "total_requirements": total_requirements,
+                "covered_requirements": covered_requirements,
+                "uncovered_requirements": list(uncovered),
+                "coverage_rate": coverage_rate
+            }
+        except Exception as e:
+            logger.error(f"获取追溯覆盖率失败: {str(e)}")
+            raise
+    
+    async def get_orphaned_requirements(self, project_id: int) -> List[Dict[str, Any]]:
+        """获取孤立需求（没有任何追溯链接的需求）
+        
+        路由层会包裹每一项返回，因此这里返回 dict 列表。找不到时返回 []。
+        """
+        try:
+            orphaned_items = await self._identify_orphaned_items(project_id)
+            return orphaned_items
+        except Exception as e:
+            logger.error(f"获取孤立需求失败: {str(e)}")
+            raise
+    
+    async def check_traceability_consistency(self, project_id: int) -> List[Dict[str, Any]]:
+        """检查追溯一致性
+        
+        路由层将返回值直接放入 consistency_report 字段返回，因此这里返回 dict 列表。
+        找不到时返回 []。
+        """
+        try:
+            return await self._check_traceability_consistency(project_id)
+        except Exception as e:
+            logger.error(f"检查追溯一致性失败: {str(e)}")
+            raise
+    
     async def generate_traceability_matrix(
         self,
         project_id: int,
-        matrix_type: str = "requirement_to_test"
+        matrix_type: str = "requirement_to_test",
+        include_indirect: bool = False
     ) -> TraceabilityMatrix:
-        """生成追溯矩阵"""
+        """生成追溯矩阵
+
+        Args:
+            project_id: 项目ID
+            matrix_type: 矩阵类型 (requirement_to_test / requirement_to_task / requirement_to_design)
+            include_indirect: 是否包含间接追溯（目前仅作标志位，留待未来扩展）
+        """
         try:
+            # include_indirect 暂只作标志位：直接矩阵生成遵循既有行为，
+            # 防止调用方传入未知 kwarg 导致 TypeError → 500。
             matrix = TraceabilityMatrix(project_id, matrix_type)
             
             # 1. 获取项目需求
-            requirements = self.db.query(Requirement).filter(
-                Requirement.project_id == project_id
-            ).all()
+            requirements = (await self.db.execute(
+                select(Requirement).where(
+                    Requirement.project_id == project_id
+                )
+            )).scalars().all()
             matrix.requirements = [req.to_dict() for req in requirements]
             
             # 2. 根据矩阵类型获取目标对象
@@ -306,17 +492,21 @@ class RequirementTraceabilityService:
         """验证链接数据"""
         # 验证源对象存在
         if source_type == "requirement":
-            source_obj = self.db.query(Requirement).filter(
-                Requirement.id == source_id
-            ).first()
+            source_obj = (await self.db.execute(
+                select(Requirement).where(
+                    Requirement.id == source_id
+                )
+            )).scalars().first()
             if not source_obj:
                 raise ValueError("源需求不存在")
         
         # 验证目标对象存在
         if target_type == "requirement":
-            target_obj = self.db.query(Requirement).filter(
-                Requirement.id == target_id
-            ).first()
+            target_obj = (await self.db.execute(
+                select(Requirement).where(
+                    Requirement.id == target_id
+                )
+            )).scalars().first()
             if not target_obj:
                 raise ValueError("目标需求不存在")
         
@@ -358,7 +548,7 @@ class RequirementTraceabilityService:
         visited = set()
         rec_stack = set()
         
-        def dfs(node_id: int) -> bool:
+        async def dfs(node_id: int) -> bool:
             if node_id in rec_stack:
                 return True
             if node_id in visited:
@@ -368,21 +558,23 @@ class RequirementTraceabilityService:
             rec_stack.add(node_id)
             
             # 获取所有下游节点
-            downstream_links = self.db.query(RequirementTraceabilityLink).filter(
-                RequirementTraceabilityLink.source_type == source_type,
-                RequirementTraceabilityLink.source_id == node_id,
-                RequirementTraceabilityLink.target_type == target_type
-            ).all()
+            downstream_links = (await self.db.execute(
+                select(RequirementTraceabilityLink).where(
+                    RequirementTraceabilityLink.source_type == source_type,
+                    RequirementTraceabilityLink.source_id == node_id,
+                    RequirementTraceabilityLink.target_type == target_type
+                )
+            )).scalars().all()
             
             for link in downstream_links:
-                if dfs(link.target_id):
+                if await dfs(link.target_id):
                     return True
             
             rec_stack.remove(node_id)
             return False
         
         # 检查从目标节点是否能到达源节点
-        return dfs(target_id)
+        return await dfs(target_id)
     
     async def _get_upstream_links(
         self,
@@ -404,10 +596,12 @@ class RequirementTraceabilityService:
             visited.add((current_type, current_id))
             
             # 查询指向当前对象的链接
-            upstream_links = self.db.query(RequirementTraceabilityLink).filter(
-                RequirementTraceabilityLink.target_type == current_type,
-                RequirementTraceabilityLink.target_id == current_id
-            ).all()
+            upstream_links = (await self.db.execute(
+                select(RequirementTraceabilityLink).where(
+                    RequirementTraceabilityLink.target_type == current_type,
+                    RequirementTraceabilityLink.target_id == current_id
+                )
+            )).scalars().all()
             
             for link in upstream_links:
                 link_data = link.to_dict()
@@ -439,10 +633,12 @@ class RequirementTraceabilityService:
             visited.add((current_type, current_id))
             
             # 查询从当前对象出发的链接
-            downstream_links = self.db.query(RequirementTraceabilityLink).filter(
-                RequirementTraceabilityLink.source_type == current_type,
-                RequirementTraceabilityLink.source_id == current_id
-            ).all()
+            downstream_links = (await self.db.execute(
+                select(RequirementTraceabilityLink).where(
+                    RequirementTraceabilityLink.source_type == current_type,
+                    RequirementTraceabilityLink.source_id == current_id
+                )
+            )).scalars().all()
             
             for link in downstream_links:
                 link_data = link.to_dict()
@@ -497,9 +693,11 @@ class RequirementTraceabilityService:
     async def _calculate_traceability_coverage(self, requirement_id: int) -> Dict[str, Any]:
         """计算追溯覆盖率"""
         # 获取需求信息
-        requirement = self.db.query(Requirement).filter(
-            Requirement.id == requirement_id
-        ).first()
+        requirement = (await self.db.execute(
+            select(Requirement).where(
+                Requirement.id == requirement_id
+            )
+        )).scalars().first()
         
         if not requirement:
             return {}
@@ -515,36 +713,44 @@ class RequirementTraceabilityService:
         }
         
         # 计算设计追溯覆盖率
-        design_links = self.db.query(RequirementTraceabilityLink).filter(
-            RequirementTraceabilityLink.source_type == "requirement",
-            RequirementTraceabilityLink.source_id == requirement_id,
-            RequirementTraceabilityLink.target_type == "design"
-        ).count()
-        coverage["to_design"] = 1.0 if design_links > 0 else 0.0
+        design_links = (await self.db.execute(
+            select(func.count()).select_from(RequirementTraceabilityLink).where(
+                RequirementTraceabilityLink.source_type == "requirement",
+                RequirementTraceabilityLink.source_id == requirement_id,
+                RequirementTraceabilityLink.target_type == "design"
+            )
+        )).scalar()
+        coverage["to_design"] = 1.0 if design_links and design_links > 0 else 0.0
         
         # 计算任务追溯覆盖率
-        task_links = self.db.query(RequirementTraceabilityLink).filter(
-            RequirementTraceabilityLink.source_type == "requirement",
-            RequirementTraceabilityLink.source_id == requirement_id,
-            RequirementTraceabilityLink.target_type == "task"
-        ).count()
-        coverage["to_task"] = 1.0 if task_links > 0 else 0.0
+        task_links = (await self.db.execute(
+            select(func.count()).select_from(RequirementTraceabilityLink).where(
+                RequirementTraceabilityLink.source_type == "requirement",
+                RequirementTraceabilityLink.source_id == requirement_id,
+                RequirementTraceabilityLink.target_type == "task"
+            )
+        )).scalar()
+        coverage["to_task"] = 1.0 if task_links and task_links > 0 else 0.0
         
         # 计算测试追溯覆盖率
-        test_links = self.db.query(RequirementTraceabilityLink).filter(
-            RequirementTraceabilityLink.source_type == "requirement",
-            RequirementTraceabilityLink.source_id == requirement_id,
-            RequirementTraceabilityLink.target_type == "test_case"
-        ).count()
-        coverage["to_test"] = 1.0 if test_links > 0 else 0.0
+        test_links = (await self.db.execute(
+            select(func.count()).select_from(RequirementTraceabilityLink).where(
+                RequirementTraceabilityLink.source_type == "requirement",
+                RequirementTraceabilityLink.source_id == requirement_id,
+                RequirementTraceabilityLink.target_type == "test_case"
+            )
+        )).scalar()
+        coverage["to_test"] = 1.0 if test_links and test_links > 0 else 0.0
         
         # 计算业务需求追溯覆盖率
-        business_links = self.db.query(RequirementTraceabilityLink).filter(
-            RequirementTraceabilityLink.target_type == "requirement",
-            RequirementTraceabilityLink.target_id == requirement_id,
-            RequirementTraceabilityLink.source_type == "business_requirement"
-        ).count()
-        coverage["from_business"] = 1.0 if business_links > 0 else 0.0
+        business_links = (await self.db.execute(
+            select(func.count()).select_from(RequirementTraceabilityLink).where(
+                RequirementTraceabilityLink.target_type == "requirement",
+                RequirementTraceabilityLink.target_id == requirement_id,
+                RequirementTraceabilityLink.source_type == "business_requirement"
+            )
+        )).scalar()
+        coverage["from_business"] = 1.0 if business_links and business_links > 0 else 0.0
         
         # 计算总体覆盖率
         coverage["overall"] = (
@@ -559,10 +765,12 @@ class RequirementTraceabilityService:
         impacts = []
         
         # 获取直接下游链接
-        direct_links = self.db.query(RequirementTraceabilityLink).filter(
-            RequirementTraceabilityLink.source_type == "requirement",
-            RequirementTraceabilityLink.source_id == requirement_id
-        ).all()
+        direct_links = (await self.db.execute(
+            select(RequirementTraceabilityLink).where(
+                RequirementTraceabilityLink.source_type == "requirement",
+                RequirementTraceabilityLink.source_id == requirement_id
+            )
+        )).scalars().all()
         
         for link in direct_links:
             impact = {
@@ -680,46 +888,52 @@ class RequirementTraceabilityService:
     
     async def _get_requirement_to_test_links(self, project_id: int) -> List[Dict[str, Any]]:
         """获取需求到测试用例的链接"""
-        links = self.db.query(RequirementTraceabilityLink).join(
-            Requirement,
-            and_(
-                RequirementTraceabilityLink.source_type == "requirement",
-                RequirementTraceabilityLink.source_id == Requirement.id
+        links = (await self.db.execute(
+            select(RequirementTraceabilityLink).join(
+                Requirement,
+                and_(
+                    RequirementTraceabilityLink.source_type == "requirement",
+                    RequirementTraceabilityLink.source_id == Requirement.id
+                )
+            ).where(
+                Requirement.project_id == project_id,
+                RequirementTraceabilityLink.target_type == "test_case"
             )
-        ).filter(
-            Requirement.project_id == project_id,
-            RequirementTraceabilityLink.target_type == "test_case"
-        ).all()
+        )).scalars().all()
         
         return [link.to_dict() for link in links]
     
     async def _get_requirement_to_task_links(self, project_id: int) -> List[Dict[str, Any]]:
         """获取需求到任务的链接"""
-        links = self.db.query(RequirementTraceabilityLink).join(
-            Requirement,
-            and_(
-                RequirementTraceabilityLink.source_type == "requirement",
-                RequirementTraceabilityLink.source_id == Requirement.id
+        links = (await self.db.execute(
+            select(RequirementTraceabilityLink).join(
+                Requirement,
+                and_(
+                    RequirementTraceabilityLink.source_type == "requirement",
+                    RequirementTraceabilityLink.source_id == Requirement.id
+                )
+            ).where(
+                Requirement.project_id == project_id,
+                RequirementTraceabilityLink.target_type == "task"
             )
-        ).filter(
-            Requirement.project_id == project_id,
-            RequirementTraceabilityLink.target_type == "task"
-        ).all()
+        )).scalars().all()
         
         return [link.to_dict() for link in links]
     
     async def _get_requirement_to_design_links(self, project_id: int) -> List[Dict[str, Any]]:
         """获取需求到设计的链接"""
-        links = self.db.query(RequirementTraceabilityLink).join(
-            Requirement,
-            and_(
-                RequirementTraceabilityLink.source_type == "requirement",
-                RequirementTraceabilityLink.source_id == Requirement.id
+        links = (await self.db.execute(
+            select(RequirementTraceabilityLink).join(
+                Requirement,
+                and_(
+                    RequirementTraceabilityLink.source_type == "requirement",
+                    RequirementTraceabilityLink.source_id == Requirement.id
+                )
+            ).where(
+                Requirement.project_id == project_id,
+                RequirementTraceabilityLink.target_type == "design"
             )
-        ).filter(
-            Requirement.project_id == project_id,
-            RequirementTraceabilityLink.target_type == "design"
-        ).all()
+        )).scalars().all()
         
         return [link.to_dict() for link in links]
     
@@ -773,50 +987,58 @@ class RequirementTraceabilityService:
     async def _calculate_project_coverage_rate(self, project_id: int) -> float:
         """计算项目追溯覆盖率"""
         # 获取项目所有需求
-        total_requirements = self.db.query(Requirement).filter(
-            Requirement.project_id == project_id
-        ).count()
+        total_requirements = (await self.db.execute(
+            select(func.count()).select_from(Requirement).where(
+                Requirement.project_id == project_id
+            )
+        )).scalar()
         
-        if total_requirements == 0:
+        if not total_requirements or total_requirements == 0:
             return 0.0
         
         # 获取有追溯链接的需求数量
-        covered_requirements = self.db.query(Requirement.id).filter(
-            Requirement.project_id == project_id
-        ).join(
-            RequirementTraceabilityLink,
-            or_(
-                and_(
-                    RequirementTraceabilityLink.source_type == "requirement",
-                    RequirementTraceabilityLink.source_id == Requirement.id
-                ),
-                and_(
-                    RequirementTraceabilityLink.target_type == "requirement",
-                    RequirementTraceabilityLink.target_id == Requirement.id
+        covered_requirements = (await self.db.execute(
+            select(func.count(func.distinct(Requirement.id))).join(
+                RequirementTraceabilityLink,
+                or_(
+                    and_(
+                        RequirementTraceabilityLink.source_type == "requirement",
+                        RequirementTraceabilityLink.source_id == Requirement.id
+                    ),
+                    and_(
+                        RequirementTraceabilityLink.target_type == "requirement",
+                        RequirementTraceabilityLink.target_id == Requirement.id
+                    )
                 )
+            ).where(
+                Requirement.project_id == project_id
             )
-        ).distinct().count()
+        )).scalar()
         
-        return covered_requirements / total_requirements
+        return (covered_requirements or 0) / total_requirements
     
     async def _identify_missing_links(self, project_id: int) -> List[Dict[str, Any]]:
         """识别缺失的追溯链接"""
         missing_links = []
         
         # 获取项目需求
-        requirements = self.db.query(Requirement).filter(
-            Requirement.project_id == project_id
-        ).all()
+        requirements = (await self.db.execute(
+            select(Requirement).where(
+                Requirement.project_id == project_id
+            )
+        )).scalars().all()
         
         for req in requirements:
             # 检查是否缺少测试追溯
-            test_links = self.db.query(RequirementTraceabilityLink).filter(
-                RequirementTraceabilityLink.source_type == "requirement",
-                RequirementTraceabilityLink.source_id == req.id,
-                RequirementTraceabilityLink.target_type == "test_case"
-            ).count()
+            test_links = (await self.db.execute(
+                select(func.count()).select_from(RequirementTraceabilityLink).where(
+                    RequirementTraceabilityLink.source_type == "requirement",
+                    RequirementTraceabilityLink.source_id == req.id,
+                    RequirementTraceabilityLink.target_type == "test_case"
+                )
+            )).scalar()
             
-            if test_links == 0:
+            if not test_links or test_links == 0:
                 missing_links.append({
                     "requirement_id": req.id,
                     "requirement_title": req.title,
@@ -825,13 +1047,15 @@ class RequirementTraceabilityService:
                 })
             
             # 检查是否缺少任务追溯
-            task_links = self.db.query(RequirementTraceabilityLink).filter(
-                RequirementTraceabilityLink.source_type == "requirement",
-                RequirementTraceabilityLink.source_id == req.id,
-                RequirementTraceabilityLink.target_type == "task"
-            ).count()
+            task_links = (await self.db.execute(
+                select(func.count()).select_from(RequirementTraceabilityLink).where(
+                    RequirementTraceabilityLink.source_type == "requirement",
+                    RequirementTraceabilityLink.source_id == req.id,
+                    RequirementTraceabilityLink.target_type == "task"
+                )
+            )).scalar()
             
-            if task_links == 0:
+            if not task_links or task_links == 0:
                 missing_links.append({
                     "requirement_id": req.id,
                     "requirement_title": req.title,
@@ -846,23 +1070,24 @@ class RequirementTraceabilityService:
         orphaned_items = []
         
         # 识别孤立的需求（没有任何追溯链接）
-        orphaned_requirements = self.db.query(Requirement).filter(
-            Requirement.project_id == project_id
-        ).outerjoin(
-            RequirementTraceabilityLink,
-            or_(
-                and_(
-                    RequirementTraceabilityLink.source_type == "requirement",
-                    RequirementTraceabilityLink.source_id == Requirement.id
-                ),
-                and_(
-                    RequirementTraceabilityLink.target_type == "requirement",
-                    RequirementTraceabilityLink.target_id == Requirement.id
+        orphaned_requirements = (await self.db.execute(
+            select(Requirement).outerjoin(
+                RequirementTraceabilityLink,
+                or_(
+                    and_(
+                        RequirementTraceabilityLink.source_type == "requirement",
+                        RequirementTraceabilityLink.source_id == Requirement.id
+                    ),
+                    and_(
+                        RequirementTraceabilityLink.target_type == "requirement",
+                        RequirementTraceabilityLink.target_id == Requirement.id
+                    )
                 )
+            ).where(
+                Requirement.project_id == project_id,
+                RequirementTraceabilityLink.id.is_(None)
             )
-        ).filter(
-            RequirementTraceabilityLink.id.is_(None)
-        ).all()
+        )).scalars().all()
         
         for req in orphaned_requirements:
             orphaned_items.append({
@@ -879,16 +1104,18 @@ class RequirementTraceabilityService:
         circular_refs = []
         
         # 获取项目内的所有需求追溯链接
-        links = self.db.query(RequirementTraceabilityLink).join(
-            Requirement,
-            and_(
-                RequirementTraceabilityLink.source_type == "requirement",
-                RequirementTraceabilityLink.source_id == Requirement.id
+        links = (await self.db.execute(
+            select(RequirementTraceabilityLink).join(
+                Requirement,
+                and_(
+                    RequirementTraceabilityLink.source_type == "requirement",
+                    RequirementTraceabilityLink.source_id == Requirement.id
+                )
+            ).where(
+                Requirement.project_id == project_id,
+                RequirementTraceabilityLink.target_type == "requirement"
             )
-        ).filter(
-            Requirement.project_id == project_id,
-            RequirementTraceabilityLink.target_type == "requirement"
-        ).all()
+        )).scalars().all()
         
         # 构建图
         graph = defaultdict(list)
@@ -932,24 +1159,28 @@ class RequirementTraceabilityService:
         inconsistent_links = []
         
         # 检查双向链接的一致性
-        links = self.db.query(RequirementTraceabilityLink).join(
-            Requirement,
-            and_(
-                RequirementTraceabilityLink.source_type == "requirement",
-                RequirementTraceabilityLink.source_id == Requirement.id
+        links = (await self.db.execute(
+            select(RequirementTraceabilityLink).join(
+                Requirement,
+                and_(
+                    RequirementTraceabilityLink.source_type == "requirement",
+                    RequirementTraceabilityLink.source_id == Requirement.id
+                )
+            ).where(
+                Requirement.project_id == project_id
             )
-        ).filter(
-            Requirement.project_id == project_id
-        ).all()
+        )).scalars().all()
         
         for link in links:
             # 检查是否存在对应的反向链接
-            reverse_link = self.db.query(RequirementTraceabilityLink).filter(
-                RequirementTraceabilityLink.source_type == link.target_type,
-                RequirementTraceabilityLink.source_id == link.target_id,
-                RequirementTraceabilityLink.target_type == link.source_type,
-                RequirementTraceabilityLink.target_id == link.source_id
-            ).first()
+            reverse_link = (await self.db.execute(
+                select(RequirementTraceabilityLink).where(
+                    RequirementTraceabilityLink.source_type == link.target_type,
+                    RequirementTraceabilityLink.source_id == link.target_id,
+                    RequirementTraceabilityLink.target_type == link.source_type,
+                    RequirementTraceabilityLink.target_id == link.source_id
+                )
+            )).scalars().first()
             
             if not reverse_link and link.link_type in [
                 TraceabilityLinkType.DERIVES_FROM,

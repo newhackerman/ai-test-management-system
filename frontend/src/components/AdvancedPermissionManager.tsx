@@ -547,7 +547,7 @@ const AdvancedPermissionManager: React.FC<AdvancedPermissionManagerProps> = ({
             >
               <Badge
                 count={Array.isArray(permissions) ? permissions.length : 0}
-                style={{ backgroundColor: '#52c41a' }}
+                style={{ backgroundColor: '#16a34a' }}
               >
                 <div style={{ minHeight: 60 }}>
                   {Array.isArray(permissions) && permissions.length > 0 ? (
@@ -633,9 +633,9 @@ const AdvancedPermissionManager: React.FC<AdvancedPermissionManagerProps> = ({
             key: 'is_allowed',
             render: (allowed: boolean) => (
               allowed ? (
-                <CheckCircleOutlined style={{ color: '#52c41a' }} />
+                <CheckCircleOutlined style={{ color: '#16a34a' }} />
               ) : (
-                <CloseCircleOutlined style={{ color: '#ff4d4f' }} />
+                <CloseCircleOutlined style={{ color: '#f87171' }} />
               )
             )
           },

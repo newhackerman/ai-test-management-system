@@ -7,7 +7,10 @@ import logging
 import time
 import json
 import os
-import psutil
+try:
+    import psutil  # type: ignore
+except ImportError:  # psutil 是可选依赖，缺失时降级：监控不报系统资源，但服务可正常启动
+    psutil = None  # type: ignore
 import aiohttp
 from typing import Dict, Any, List, Optional, Callable
 from datetime import datetime, timedelta
@@ -189,7 +192,11 @@ class AutoRecoveryService:
     async def _check_system_resources(self) -> List[Dict[str, Any]]:
         """检测系统资源"""
         failures = []
-        
+
+        if psutil is None:
+            # psutil 未安装时跳过系统资源检测，不影响其他故障检测
+            return failures
+
         try:
             # 检测CPU使用率
             cpu_percent = psutil.cpu_percent(interval=1)
@@ -402,7 +409,15 @@ class AutoRecoveryService:
     async def _recover_high_cpu_usage(self, failure_details: Dict[str, Any]) -> Dict[str, Any]:
         """恢复高CPU使用率"""
         try:
+            if psutil is None:
+                return {
+                    "status": RecoveryStatus.SKIPPED,
+                    "message": "psutil 未安装，无法分析高 CPU 使用率",
+                    "actions_taken": ["跳过 CPU 进程分析（缺少 psutil）"]
+                }
+
             actions_taken = []
+
             
             # 查找CPU使用率最高的进程
             processes = []
@@ -520,16 +535,19 @@ class AutoRecoveryService:
         """恢复服务不可用"""
         try:
             actions_taken = []
-            
+
+            if psutil is None:
+                actions_taken.append("psutil 未安装，跳过当前进程状态检查")
+                return {
+                    "status": RecoveryStatus.SUCCESS,
+                    "message": "服务状态已检查",
+                    "actions_taken": actions_taken
+                }
+
             # 检查服务进程
             current_process = psutil.Process()
             actions_taken.append(f"当前进程状态: {current_process.status()}")
-            
-            return {
-                "status": RecoveryStatus.SUCCESS,
-                "message": "服务状态已检查",
-                "actions_taken": actions_taken
-            }
+
             
         except Exception as e:
             return {

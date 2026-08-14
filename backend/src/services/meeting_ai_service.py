@@ -182,7 +182,39 @@ class MeetingAIService:
             'minutes': self._get_minutes_prompt_template()
         }
     
-    async def generate_meeting_summary(self, meeting_id: int, user_id: int, 
+    async def get_meeting_summary(self, meeting_id: int, user_id: int) -> Optional[MeetingSummary]:
+        """
+        获取已生成的会议摘要（当前实现：无持久化存储，返回 None，由路由层转为 404）。
+        """
+        return None
+
+    async def get_meeting_minutes(self, meeting_id: int, user_id: int, *,
+                                  status=None, minute_type=None, version=None) -> List[MeetingMinutes]:
+        """
+        获取会议纪要列表（当前实现：无持久化存储，返回空列表）。
+        """
+        return []
+
+    async def get_advanced_analytics(self, meeting_id: int, user_id: int) -> Optional[Dict[str, Any]]:
+        """
+        获取高级分析（当前实现：无持久化存储，返回 None，由路由层转为 404）。
+        """
+        return None
+
+    async def generate_meeting_analytics(self, meeting_id: int, user_id: int,
+                                         *, force_regenerate: bool = False) -> Optional[Dict[str, Any]]:
+        """
+        生成会议分析（当前实现：无持久化存储，返回 None，由路由层转为 404）。
+        """
+        return None
+
+    async def get_meeting_transcription(self, meeting_id: int, user_id: int) -> Optional[Dict[str, Any]]:
+        """
+        获取会议转录（当前实现：无持久化存储，返回 None，由路由层转为 404）。
+        """
+        return None
+
+    async def generate_meeting_summary(self, meeting_id: int, user_id: int,
                                      language: str = 'zh-CN') -> MeetingSummary:
         """
         生成会议摘要
@@ -931,9 +963,10 @@ async def get_meeting_ai_service() -> MeetingAIService:
     """获取会议AI服务实例"""
     global _meeting_ai_service
     if _meeting_ai_service is None:
-        from ..core.database import get_db_session
-        db = await get_db_session()
-        _meeting_ai_service = MeetingAIService(db)
+        from ..core.database import AsyncSessionLocal
+        if AsyncSessionLocal is None:
+            raise RuntimeError("Async database engine not available")
+        _meeting_ai_service = MeetingAIService(AsyncSessionLocal())
     return _meeting_ai_service
 
 

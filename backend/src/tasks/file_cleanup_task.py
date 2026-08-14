@@ -8,7 +8,7 @@ from typing import List
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, or_
 
-from ..core.database import get_async_session
+from ..core.database import get_async_session, get_async_session_ctx
 from ..models.ai_file_storage import AIFileStorage, FileStatus
 from ..core.file_storage_config import file_storage_settings
 from ..utils.logger import logger
@@ -25,7 +25,7 @@ class FileCleanupTask:
         cleaned_count = 0
         
         try:
-            async with get_async_session() as db:
+            async with get_async_session_ctx() as db:
                 # 查询过期文件
                 now = datetime.utcnow()
                 query = select(AIFileStorage).where(
@@ -70,7 +70,7 @@ class FileCleanupTask:
         cleaned_count = 0
         
         try:
-            async with get_async_session() as db:
+            async with get_async_session_ctx() as db:
                 # 查询超过保留期的临时文件
                 retention_hours = file_storage_settings.TEMP_FILE_RETENTION_HOURS
                 cutoff_time = datetime.utcnow() - timedelta(hours=retention_hours)
@@ -118,7 +118,7 @@ class FileCleanupTask:
         cleaned_count = 0
         
         try:
-            async with get_async_session() as db:
+            async with get_async_session_ctx() as db:
                 # 查询超过保留期的已删除文件
                 retention_days = file_storage_settings.DELETED_FILE_RETENTION_DAYS
                 cutoff_time = datetime.utcnow() - timedelta(days=retention_days)
@@ -168,7 +168,7 @@ class FileCleanupTask:
             if not storage_root.exists():
                 return 0
             
-            async with get_async_session() as db:
+            async with get_async_session_ctx() as db:
                 # 获取所有数据库中的文件路径
                 query = select(AIFileStorage.file_path).where(
                     AIFileStorage.status != FileStatus.DELETED

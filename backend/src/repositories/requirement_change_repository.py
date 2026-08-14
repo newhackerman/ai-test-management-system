@@ -23,7 +23,9 @@ class RequirementChangeRepository(BaseRepository[RequirementChangeRequest]):
     """需求变更请求仓储"""
     
     def __init__(self, session: AsyncSession):
-        super().__init__(RequirementChangeRequest, session)
+        super().__init__(session, RequirementChangeRequest)
+        # 子类历史代码使用 self.session，与基类的 self.db 保持一致
+        self.session = session
     
     async def create_change_request(
         self,

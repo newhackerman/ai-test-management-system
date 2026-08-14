@@ -6,7 +6,7 @@ from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, Query, BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ...core.database import get_db
+from ...core.database import get_async_session
 from ...decorators.permission import get_current_user, require_permission
 from ...services.ai_alert_config_service import AIAlertConfigService
 from ...schemas.ai_alert_config import (
@@ -37,7 +37,7 @@ def get_alert_config_service() -> AIAlertConfigService:
 @router.post("/", response_model=AlertConfigResponse)
 async def create_alert_config(
     config_data: AlertConfigCreate,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_async_session),
     current_user: dict = Depends(require_permission("ai_config_manage")),
     service: AIAlertConfigService = Depends(get_alert_config_service)
 ):
@@ -62,7 +62,7 @@ async def get_alert_configs(
     created_by: Optional[int] = Query(None, description="创建者筛选"),
     skip: int = Query(0, ge=0, description="跳过数量"),
     limit: int = Query(100, ge=1, le=1000, description="限制数量"),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_async_session),
     current_user: dict = Depends(require_permission("ai_config_view")),
     service: AIAlertConfigService = Depends(get_alert_config_service)
 ):
@@ -87,7 +87,7 @@ async def get_alert_configs(
 
 @router.get("/stats", response_model=AlertStatsResponse)
 async def get_alert_stats(
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_async_session),
     current_user: dict = Depends(require_permission("ai_config_view")),
     service: AIAlertConfigService = Depends(get_alert_config_service)
 ):
@@ -124,7 +124,7 @@ async def get_alert_template(
 @router.get("/{config_id}", response_model=AlertConfigResponse)
 async def get_alert_config(
     config_id: int,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_async_session),
     current_user: dict = Depends(require_permission("ai_config_view")),
     service: AIAlertConfigService = Depends(get_alert_config_service)
 ):
@@ -145,7 +145,7 @@ async def get_alert_config(
 async def update_alert_config(
     config_id: int,
     update_data: AlertConfigUpdate,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_async_session),
     current_user: dict = Depends(require_permission("ai_config_manage")),
     service: AIAlertConfigService = Depends(get_alert_config_service)
 ):
@@ -167,7 +167,7 @@ async def update_alert_config(
 @router.delete("/{config_id}")
 async def delete_alert_config(
     config_id: int,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_async_session),
     current_user: dict = Depends(require_permission("ai_config_manage")),
     service: AIAlertConfigService = Depends(get_alert_config_service)
 ):
@@ -189,7 +189,7 @@ async def delete_alert_config(
 async def test_alert_config(
     config_id: int,
     test_request: AlertTestRequest,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_async_session),
     current_user: dict = Depends(require_permission("ai_config_manage")),
     service: AIAlertConfigService = Depends(get_alert_config_service)
 ):
@@ -209,7 +209,7 @@ async def test_alert_config(
 @router.post("/{config_id}/toggle", response_model=AlertConfigResponse)
 async def toggle_alert_config(
     config_id: int,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_async_session),
     current_user: dict = Depends(require_permission("ai_config_manage")),
     service: AIAlertConfigService = Depends(get_alert_config_service)
 ):
@@ -237,7 +237,7 @@ async def get_alert_history(
     end_date: Optional[datetime] = Query(None, description="结束时间"),
     skip: int = Query(0, ge=0, description="跳过数量"),
     limit: int = Query(100, ge=1, le=1000, description="限制数量"),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_async_session),
     current_user: dict = Depends(require_permission("ai_config_view")),
     service: AIAlertConfigService = Depends(get_alert_config_service)
 ):
@@ -269,7 +269,7 @@ async def get_all_alert_history(
     end_date: Optional[datetime] = Query(None, description="结束时间"),
     skip: int = Query(0, ge=0, description="跳过数量"),
     limit: int = Query(100, ge=1, le=1000, description="限制数量"),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_async_session),
     current_user: dict = Depends(require_permission("ai_config_view")),
     service: AIAlertConfigService = Depends(get_alert_config_service)
 ):
@@ -297,7 +297,7 @@ async def get_all_alert_history(
 async def resolve_alert(
     history_id: int,
     resolution_note: Optional[str] = None,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_async_session),
     current_user: dict = Depends(require_permission("ai_config_manage")),
     service: AIAlertConfigService = Depends(get_alert_config_service)
 ):
@@ -324,7 +324,7 @@ async def resolve_alert(
 @router.post("/suppressions", response_model=AlertSuppressionResponse)
 async def suppress_alert(
     suppression_data: AlertSuppressionCreate,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_async_session),
     current_user: dict = Depends(require_permission("ai_config_manage")),
     service: AIAlertConfigService = Depends(get_alert_config_service)
 ):
@@ -347,7 +347,7 @@ async def suppress_alert(
 async def batch_toggle_alert_configs(
     config_ids: List[int],
     target_status: AlertStatus,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_async_session),
     current_user: dict = Depends(require_permission("ai_config_manage")),
     service: AIAlertConfigService = Depends(get_alert_config_service)
 ):
@@ -397,7 +397,7 @@ async def batch_toggle_alert_configs(
 @router.post("/batch-delete")
 async def batch_delete_alert_configs(
     config_ids: List[int],
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_async_session),
     current_user: dict = Depends(require_permission("ai_config_manage")),
     service: AIAlertConfigService = Depends(get_alert_config_service)
 ):
@@ -434,7 +434,7 @@ async def batch_delete_alert_configs(
 async def export_alert_configs(
     alert_type: Optional[AlertType] = Query(None, description="告警类型筛选"),
     status: Optional[AlertStatus] = Query(None, description="状态筛选"),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_async_session),
     current_user: dict = Depends(require_permission("ai_config_manage")),
     service: AIAlertConfigService = Depends(get_alert_config_service)
 ):

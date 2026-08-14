@@ -131,13 +131,10 @@ async def get_permission(
 ):
     """获取权限详情"""
     try:
-        # TODO: 实现获取单个权限的方法
-        # permission = await permission_service.get_permission_by_id(permission_id)
-        # if not permission:
-        #     raise not_found_error("权限不存在")
-        # return PermissionResponse.from_orm(permission)
-        
-        raise not_found_error("功能暂未实现")
+        permission = await permission_service.get_permission_by_id(permission_id)
+        if not permission:
+            raise not_found_error("权限不存在")
+        return PermissionResponse.from_orm(permission)
         
     except HTTPException:
         raise

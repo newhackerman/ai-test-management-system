@@ -653,11 +653,13 @@ class AuthService:
         error_message: Optional[str] = None
     ) -> None:
         """记录登录尝试日志"""
+        # resource_id 列有长度限制，超长用户名需截断以避免 DataError
+        safe_resource_id = (username or "")[:100]
         audit_log = AuditLog(
             user_id=user_id,
             action=AuditAction.LOGIN,
             resource_type="user",
-            resource_id=username,
+            resource_id=safe_resource_id,
             ip_address=ip_address,
             user_agent=user_agent,
             result=result,

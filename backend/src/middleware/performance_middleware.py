@@ -737,22 +737,22 @@ def setup_performance_monitoring(app: FastAPI, monitor: PerformanceMonitor = Non
     app.add_middleware(PerformanceMiddleware, monitor=monitor)
     
     # 添加性能监控API端点
-    @app.get("/api/v1/performance/stats")
+    @app.get("/api/v1/performance/stats", tags=["性能监控"])
     async def get_performance_stats():
         """获取性能统计"""
         return monitor.get_current_stats()
-    
-    @app.get("/api/v1/performance/report")
+
+    @app.get("/api/v1/performance/report", tags=["性能监控"])
     async def get_performance_report():
         """获取性能报告"""
         return monitor.get_performance_report()
-    
-    @app.get("/api/v1/performance/alerts")
+
+    @app.get("/api/v1/performance/alerts", tags=["性能监控"])
     async def get_performance_alerts(hours: int = 24):
         """获取性能告警"""
         return monitor.get_recent_alerts(hours)
-    
-    @app.get("/api/v1/performance/paths")
+
+    @app.get("/api/v1/performance/paths", tags=["性能监控"])
     async def get_path_performance(path: str = None):
         """获取路径性能统计"""
         return monitor.get_path_stats(path)

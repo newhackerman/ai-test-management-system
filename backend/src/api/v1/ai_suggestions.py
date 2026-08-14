@@ -18,7 +18,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, BackgroundTasks
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ...core.database import get_db
+from ...core.database import get_async_session
 from ...core.auth import get_current_user
 from ...models.user import User
 from ...models.ai_suggestion import AISuggestion, SuggestionStatus, SuggestionType, SuggestionPriority
@@ -51,7 +51,7 @@ router = APIRouter()
 async def generate_suggestions(
     request: GenerateSuggestionsRequestSchema,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_async_session)
 ):
     """
     生成智能建议
@@ -133,7 +133,7 @@ async def generate_suggestions(
 async def analyze_requirements(
     request: RequirementsAnalysisRequestSchema,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_async_session)
 ):
     """
     分析需求质量
@@ -209,7 +209,7 @@ async def analyze_requirements(
 async def analyze_requirements_clarity_detailed(
     request: RequirementsAnalysisRequestSchema,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_async_session)
 ):
     """
     详细需求清晰度分析
@@ -273,7 +273,7 @@ async def analyze_requirements_clarity_detailed(
 async def generate_test_suggestions(
     request: TestSuggestionsRequestSchema,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_async_session)
 ):
     """
     生成测试建议
@@ -354,7 +354,7 @@ async def generate_test_suggestions(
 async def analyze_project_status(
     request: GenerateSuggestionsRequestSchema,  # 复用现有的请求模式
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_async_session)
 ):
     """
     项目状况分析API
@@ -431,7 +431,7 @@ async def analyze_project_status(
 async def generate_optimization_suggestions(
     request: OptimizationSuggestionsRequestSchema,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_async_session)
 ):
     """
     生成优化建议
@@ -502,7 +502,7 @@ async def generate_optimization_suggestions(
 async def create_suggestion(
     suggestion_data: SuggestionCreateSchema,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_async_session)
 ):
     """
     创建建议
@@ -542,7 +542,7 @@ async def get_suggestions(
     page: int = Query(1, ge=1, description="页码"),
     size: int = Query(20, ge=1, le=100, description="每页大小"),
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_async_session)
 ):
     """
     获取建议列表
@@ -587,7 +587,7 @@ async def get_suggestions(
 async def get_suggestion(
     suggestion_id: int,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_async_session)
 ):
     """
     获取单个建议详情
@@ -620,7 +620,7 @@ async def update_suggestion(
     suggestion_id: int,
     update_data: SuggestionUpdateSchema,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_async_session)
 ):
     """
     更新建议
@@ -671,7 +671,7 @@ async def update_suggestion(
 async def delete_suggestion(
     suggestion_id: int,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_async_session)
 ):
     """
     删除建议
@@ -710,7 +710,7 @@ async def delete_suggestion(
 async def bulk_update_suggestions(
     update_request: BulkSuggestionUpdateSchema,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_async_session)
 ):
     """
     批量更新建议
@@ -764,7 +764,7 @@ async def bulk_update_suggestions(
 @router.get("/stats/summary", response_model=SuggestionStatsSchema)
 async def get_suggestion_stats(
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_async_session)
 ):
     """
     获取建议统计信息
@@ -854,7 +854,7 @@ async def accept_suggestion(
     suggestion_id: int,
     feedback: Optional[str] = None,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_async_session)
 ):
     """
     接受建议
@@ -889,7 +889,7 @@ async def reject_suggestion(
     suggestion_id: int,
     feedback: Optional[str] = None,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_async_session)
 ):
     """
     拒绝建议
@@ -924,7 +924,7 @@ async def implement_suggestion(
     suggestion_id: int,
     implementation_notes: Optional[str] = None,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_async_session)
 ):
     """
     标记建议为已实施

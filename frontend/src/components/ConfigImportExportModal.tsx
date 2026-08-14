@@ -566,13 +566,13 @@ export default function ConfigImportExportModal({
           <Card title="导入预览" className="mb-4">
             <Row gutter={16}>
               <Col span={6}><Statistic title="总配置数" value={previewData.total_configs} /></Col>
-              <Col span={6}><Statistic title="新增配置" value={previewData.new_configs.length} valueStyle={{ color: '#52c41a' }} /></Col>
-              <Col span={6}><Statistic title="冲突配置" value={previewData.conflicts.length} valueStyle={{ color: '#faad14' }} /></Col>
+              <Col span={6}><Statistic title="新增配置" value={previewData.new_configs.length} valueStyle={{ color: '#16a34a' }} /></Col>
+              <Col span={6}><Statistic title="冲突配置" value={previewData.conflicts.length} valueStyle={{ color: '#fbbf24' }} /></Col>
               <Col span={6}>
                 <Statistic
                   title="更新配置"
                   value={previewData.total_configs - previewData.new_configs.length - previewData.conflicts.length}
-                  valueStyle={{ color: '#1890ff' }}
+                  valueStyle={{ color: '#2563eb' }}
                 />
               </Col>
             </Row>

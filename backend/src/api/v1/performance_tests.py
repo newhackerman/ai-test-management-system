@@ -39,6 +39,8 @@ def _load_store() -> Dict[str, Any]:
         return {"tests": [], "executions": []}
     try:
         return json.loads(STORE_PATH.read_text(encoding="utf-8"))
+    except HTTPException:
+        raise
     except Exception:
         return {"tests": [], "executions": []}
 
@@ -61,6 +63,8 @@ def _probe_url(url: str) -> Dict[str, Any]:
             status_code = response.status
         elapsed_ms = round((time.perf_counter() - started) * 1000, 2)
         return {"success": True, "status_code": status_code, "response_time_ms": elapsed_ms, "error": None}
+    except HTTPException:
+        raise
     except Exception as exc:
         elapsed_ms = round((time.perf_counter() - started) * 1000, 2)
         return {"success": False, "status_code": None, "response_time_ms": elapsed_ms, "error": str(exc)}
@@ -231,6 +235,8 @@ async def create_performance_test(
         raise HTTPException(status_code=400, detail=str(e))
     except PermissionError as e:
         raise HTTPException(status_code=403, detail=str(e))
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"创建性能测试失败: {str(e)}")
         raise HTTPException(status_code=500, detail="内部服务器错误")
@@ -260,6 +266,8 @@ async def get_performance_test(
             data=response_data
         )
         
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"获取性能测试失败: {str(e)}")
         raise HTTPException(status_code=500, detail="内部服务器错误")
@@ -294,6 +302,8 @@ async def update_performance_test(
             data=response_data
         )
         
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"更新性能测试失败: {str(e)}")
         raise HTTPException(status_code=500, detail="内部服务器错误")
@@ -359,6 +369,8 @@ async def execute_performance_test(
             data=response_data
         )
         
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"执行性能测试失败: {str(e)}")
         raise HTTPException(status_code=500, detail="内部服务器错误")
@@ -388,6 +400,8 @@ async def get_performance_test_execution_status(
             data=response_data
         )
         
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"获取性能测试执行状态失败: {str(e)}")
         raise HTTPException(status_code=500, detail="内部服务器错误")
@@ -444,6 +458,8 @@ async def get_performance_test_results(
             data=response_data
         )
         
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"获取性能测试结果失败: {str(e)}")
         raise HTTPException(status_code=500, detail="内部服务器错误")
@@ -475,6 +491,8 @@ async def stop_performance_test_execution(
             data=True
         )
         
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"停止性能测试执行失败: {str(e)}")
         raise HTTPException(status_code=500, detail="内部服务器错误")
@@ -527,6 +545,8 @@ async def list_performance_tests(
             page_size=page_size
         )
         
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"获取性能测试列表失败: {str(e)}")
         raise HTTPException(status_code=500, detail="内部服务器错误")
@@ -558,6 +578,8 @@ async def delete_performance_test(
             data=True
         )
         
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"删除性能测试失败: {str(e)}")
         raise HTTPException(status_code=500, detail="内部服务器错误")
@@ -590,6 +612,8 @@ async def create_performance_test_scenario(
             data=scenario
         )
         
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"创建性能测试场景失败: {str(e)}")
         raise HTTPException(status_code=500, detail="内部服务器错误")
@@ -609,36 +633,73 @@ async def generate_performance_test_report(
     生成性能测试执行的详细报告。
     """
     try:
-        service = TestToolsIntegrationService(db)
-        
-        # 生成报告
-        report = await service.generate_performance_test_report(
-            execution_id,
-            report_type,
-            report_format,
-            current_user.id
-        )
-        
-        # 构建响应
+        store = _load_store()
+        execution = next((item for item in store["executions"] if item["execution_id"] == execution_id), None)
+        if not execution:
+            raise HTTPException(status_code=404, detail="性能测试执行不存在")
+        test = next((item for item in store["tests"] if int(item["id"]) == int(execution["test_id"])), {})
+
+        report_id = f"perf_report_{uuid.uuid4().hex[:12]}"
+        status = execution.get("status")
+        is_completed = status == "COMPLETED"
+
+        # 构建报告内容
+        if report_format.upper() == "HTML":
+            report_content = (
+                f"<html><head><title>性能测试报告 - {execution_id}</title></head><body>"
+                f"<h1>性能测试报告</h1>"
+                f"<p><strong>执行ID:</strong> {execution_id}</p>"
+                f"<p><strong>测试名称:</strong> {test.get('test_name', '性能测试')}</p>"
+                f"<p><strong>目标URL:</strong> {test.get('target_url', '')}</p>"
+                f"<p><strong>执行状态:</strong> {status}</p>"
+                f"<p><strong>总请求数:</strong> {execution.get('total_requests', 0)}</p>"
+                f"<p><strong>成功请求数:</strong> {execution.get('successful_requests', 0)}</p>"
+                f"<p><strong>失败请求数:</strong> {execution.get('failed_requests', 0)}</p>"
+                f"<p><strong>平均响应时间(ms):</strong> {execution.get('average_response_time')}</p>"
+                f"<p><strong>吞吐量(请求/秒):</strong> {execution.get('throughput')}</p>"
+                f"<p><strong>错误率(%):</strong> {execution.get('error_rate')}</p>"
+                f"</body></html>"
+            )
+        else:
+            report_content = None
+
+        charts = [
+            {
+                "type": "summary",
+                "title": "执行概览",
+                "data": {
+                    "status": status,
+                    "total_requests": execution.get("total_requests", 0),
+                    "successful_requests": execution.get("successful_requests", 0),
+                    "failed_requests": execution.get("failed_requests", 0),
+                    "average_response_time": execution.get("average_response_time"),
+                    "throughput": execution.get("throughput"),
+                    "error_rate": execution.get("error_rate")
+                }
+            }
+        ]
+
         response_data = PerformanceTestReportResponse(
-            report_id=report.report_id,
-            test_id=report.test_id,
-            execution_id=report.execution_id,
-            report_type=report.report_type,
-            report_format=report.report_format,
-            report_content=report.report_content,
-            file_path=report.file_path,
-            file_size=report.file_size,
-            charts=report.charts,
-            generated_at=report.generated_at
+            report_id=report_id,
+            test_id=execution["test_id"],
+            execution_id=execution_id,
+            report_type=report_type,
+            report_format=report_format.upper(),
+            report_content=report_content,
+            file_path=None,
+            file_size=None,
+            charts=charts,
+            generated_at=datetime.utcnow()
         )
-        
+
         return BaseResponse(
             success=True,
             message="性能测试报告生成成功",
             data=response_data
         )
-        
+
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"生成性能测试报告失败: {str(e)}")
         raise HTTPException(status_code=500, detail="内部服务器错误")

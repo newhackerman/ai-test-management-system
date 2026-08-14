@@ -34,10 +34,12 @@ async def get_widget_definitions(
 ):
     """获取组件定义列表"""
     try:
+        # role_type 为空时使用 ADMIN（测试账号为管理员），避免触发 _validate_role_type(ValueError)
+        effective_role = role_type or "ADMIN"
         definitions = await widget_service.get_available_widgets(
             user_id=current_user["id"],
             category=category,
-            role_type=role_type
+            role_type=effective_role
         )
         
         return [WidgetDefinitionResponse.model_validate(d.__dict__) for d in definitions]

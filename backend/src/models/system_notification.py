@@ -24,6 +24,8 @@ class SystemNotification(BaseModel):
     payload = Column(JSON, nullable=True, comment="附加数据")
     is_read = Column(Boolean, default=False, nullable=False, index=True, comment="是否已读")
     read_at = Column(DateTime, nullable=True, comment="已读时间")
+    is_deleted = Column(Boolean, default=False, nullable=False, index=True, comment="是否逻辑删除")
+    deleted_at = Column(DateTime, nullable=True, comment="删除时间")
 
     __table_args__ = (
         Index("idx_system_notifications_user_read", "user_id", "is_read", "created_at"),

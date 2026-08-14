@@ -282,7 +282,7 @@ async def get_meeting_status(
         logger.error(f"获取会议状态失败: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="获取会议状态失败"
+            detail=f"获取会议状态失败: {type(e).__name__}: {str(e)}"
         )
 
 

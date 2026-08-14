@@ -255,7 +255,7 @@ class MeetingStatusResponse(BaseModel):
     is_recording: bool = Field(..., description="是否正在录制")
     start_time: Optional[datetime] = Field(None, description="开始时间")
     duration_minutes: int = Field(..., description="已进行时长(分钟)")
-    network_quality: Optional[Dict[str, Any]] = Field(None, description="网络质量")
+    network_quality: Optional[str] = Field(None, description="网络质量")
 
     class Config:
         from_attributes = True

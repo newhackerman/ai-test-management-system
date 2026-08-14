@@ -18,7 +18,7 @@ from sqlalchemy import text, select, func, and_, or_
 from sqlalchemy.engine import Result
 from sqlalchemy.pool import QueuePool
 
-from ..core.database import get_async_session
+from ..core.database import get_async_session, get_async_session_ctx
 from ..utils.database_optimization import (
     DatabaseOptimizer, QueryOptimizer, DatabaseHealthChecker,
     ConnectionPoolManager, query_monitor, cache_manager
@@ -870,6 +870,6 @@ class DatabasePerformanceService:
 async def get_database_performance_service(db: AsyncSession = None) -> DatabasePerformanceService:
     """获取数据库性能服务实例"""
     if db is None:
-        async with get_async_session() as session:
+        async with get_async_session_ctx() as session:
             return DatabasePerformanceService(session)
     return DatabasePerformanceService(db)

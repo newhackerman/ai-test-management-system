@@ -349,7 +349,8 @@ class Milestone(ProjectBaseModel):
     # 审计字段
     created_by = Column(Integer, nullable=False, comment='创建人ID')
     updated_by = Column(Integer, comment='更新人ID')
-    
+    deleted_at = Column(DateTime, nullable=True, comment='软删除时间')
+
     # 关联关系
     project = relationship("Project", back_populates="milestones")
     

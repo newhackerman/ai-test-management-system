@@ -354,7 +354,7 @@ export const MemberInvitation: React.FC<MemberInvitationProps> = ({
                             <ExclamationCircleOutlined />
                         }
                         style={{
-                          backgroundColor: result.status === 'success' ? '#52c41a' : '#ff4d4f'
+                          backgroundColor: result.status === 'success' ? '#16a34a' : '#f87171'
                         }}
                       />
                     }

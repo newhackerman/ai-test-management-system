@@ -362,7 +362,7 @@ const ReportGenerate: React.FC = () => {
           报告类型: reportTypes.find((item) => item.value === config.report_type)?.label || config.report_type,
           用例总数: reportMetrics.totalCases,
           已执行: reportMetrics.executed,
-          通过率: `${reportMetrics.passRate}%`,
+          通过率: reportMetrics.passRate,
           未关闭缺陷: reportMetrics.openDefects,
           正文字数: effectiveContent.length,
           生成时间: new Date().toLocaleString('zh-CN', { hour12: false }),

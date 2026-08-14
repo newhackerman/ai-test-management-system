@@ -5,62 +5,6 @@
 @tailwind components;
 @tailwind utilities;
 
-@layer base {
-  :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 221.2 83.2% 53.3%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96%;
-    --secondary-foreground: 222.2 84% 4.9%;
-    --muted: 210 40% 96%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96%;
-    --accent-foreground: 222.2 84% 4.9%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 221.2 83.2% 53.3%;
-    --radius: 0.5rem;
-  }
-
-  .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 217.2 91.2% 59.8%;
-    --primary-foreground: 222.2 84% 4.9%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 224.3 76.3% 94.1%;
-  }
-}
-
-@layer base {
-  * {
-    @apply border-border;
-  }
-  body {
-    @apply bg-background text-foreground;
-  }
-}
-
 @layer components {
   .ant-btn {
     box-shadow: none;
@@ -250,6 +194,117 @@
   }
 }
 
+/* antd Dropdown 菜单深色模式覆盖 —— 必须放在 @layer 之外（unlayered），
+   否则会被 antd 通过 CSS-in-JS 注入的 .ant-dropdown-menu-light（unlayered）样式覆盖。
+   默认文字色加 !important：antd 运行时注入的菜单项 color 规则与本处特异性相同（0,2,0），
+   但注入更晚、同特异性下后者胜，故需 !important 才能压过（仓库内按钮 disabled 亦用此模式）。 */
+.dark .ant-dropdown-menu,
+.dark .ant-dropdown-menu-light,
+.dark .ant-dropdown-menu-dark {
+  border-color: #1e293b !important;
+  background: #020617 !important;
+  color: #e2e8f0 !important;
+}
+
+.dark .ant-dropdown-menu-item,
+.dark .ant-dropdown-menu-submenu-title {
+  color: #e2e8f0 !important;
+}
+
+.dark .ant-dropdown-menu-item:hover,
+.dark .ant-dropdown-menu-item-active,
+.dark .ant-dropdown-menu-item-selected,
+.dark .ant-dropdown-menu-submenu-title:hover,
+.dark .ant-dropdown-menu-submenu-title-active {
+  background: #1e293b !important;
+  color: #f8fafc !important;
+}
+
+.dark .ant-dropdown-menu-item-disabled,
+.dark .ant-dropdown-menu-submenu-title-disabled {
+  color: #475569 !important;
+}
+
+.dark .ant-dropdown-menu-item-danger,
+.dark .ant-dropdown-menu-item-danger:hover,
+.dark .ant-dropdown-menu-item-danger-active {
+  color: #f87171 !important;
+}
+
+.dark .ant-dropdown-menu-item-divider,
+.dark .ant-dropdown-menu-item-divider:hover {
+  background: #1e293b !important;
+}
+
+/* Descriptions（角色详情弹窗等）深色模式 —— unlayered + !important 覆盖 antd 运行时注入。 */
+.dark .ant-descriptions-bordered .ant-descriptions-view {
+  border-color: #1e293b !important;
+}
+
+.dark .ant-descriptions-bordered .ant-descriptions-row {
+  border-bottom-color: #1e293b !important;
+}
+
+.dark .ant-descriptions-bordered .ant-descriptions-item-label,
+.dark .ant-descriptions-bordered .ant-descriptions-item-content {
+  border-inline-end-color: #1e293b !important;
+  background: #0f172a !important;
+  color: #e2e8f0 !important;
+}
+
+.dark .ant-descriptions-bordered .ant-descriptions-item-label {
+  background: #111827 !important;
+  color: #cbd5e1 !important;
+  font-weight: 600;
+}
+
+.dark .ant-descriptions-title,
+.dark .ant-descriptions-item-label,
+.dark .ant-descriptions-item-content {
+  color: #e2e8f0 !important;
+}
+
+/* 内嵌 Table（详情弹窗内的权限表）深色模式 */
+.dark .ant-table-wrapper .ant-table {
+  background: transparent !important;
+}
+
+.dark .ant-table-wrapper .ant-table-thead > tr > th {
+  background: #0f172a !important;
+  border-bottom-color: #1e293b !important;
+  color: #cbd5e1 !important;
+}
+
+.dark .ant-table-wrapper .ant-table-tbody > tr > td {
+  border-bottom-color: #1e293b !important;
+  color: #e2e8f0 !important;
+}
+
+.dark .ant-table-wrapper .ant-table-tbody > tr:hover > td {
+  background: #1e293b !important;
+}
+
+.dark .ant-table-wrapper .ant-table-tbody > tr.ant-table-placeholder > td {
+  background: #020617 !important;
+}
+
+.dark .ant-empty-description {
+  color: #64748b !important;
+}
+
+/* Badge 文字与 Checkbox 文字深色模式 */
+.dark .ant-badge-status-text {
+  color: #e2e8f0 !important;
+}
+
+.dark .ant-checkbox-wrapper {
+  color: #e2e8f0 !important;
+}
+
+.dark .ant-checkbox-disabled + span {
+  color: #475569 !important;
+}
+
 @layer base {
   :root {
     /* 主色调 - 蓝色系 */
@@ -312,6 +367,15 @@
     --info-500: 199.89 89.47% 49.8%;
     --info-600: 199.89 89.47% 42%;
     --info-700: 199.89 89.47% 35%;
+
+    /* 紫色 - 锁定/高级功能 */
+    --purple: 263.4 70% 50.4%;
+    --purple-foreground: 0 0% 100%;
+    --purple-50: 263.4 70% 95%;
+    --purple-100: 263.4 70% 88%;
+    --purple-500: 263.4 70% 50.4%;
+    --purple-600: 263.4 70% 42%;
+    --purple-700: 263.4 70% 35%;
     
     /* 中性色 */
     --background: 0 0% 100%;
@@ -419,7 +483,21 @@
     --accent-foreground: 210 40% 98%;
     --secondary: 217.2 32.6% 17.5%;
     --secondary-foreground: 210 40% 98%;
-    
+
+    /* 暗色主题主色 */
+    --primary: 217.2 91.2% 59.8%;
+    --primary-foreground: 222.2 84% 4.9%;
+    --ring: 224.3 76.3% 94.1%;
+
+    /* 暗色主题语义色 */
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --success: 142.1 70% 45%;
+    --warning: 47.9 90% 55%;
+    --error: 0 72% 55%;
+    --info: 199.89 85% 55%;
+    --purple: 263 70% 60%;
+
     /* 暗色主题阴影 */
     --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
     --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.4), 0 1px 2px -1px rgb(0 0 0 / 0.4);

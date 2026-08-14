@@ -119,7 +119,7 @@ class PromptTemplateResponse(BaseModel):
     subcategory: Optional[str] = Field(None, description="子分类")
     
     content: str = Field(..., description="模板内容")
-    variables: Optional[List[TemplateVariable]] = Field(None, description="模板变量定义")
+    variables: Optional[Any] = Field(None, description="模板变量定义")
     default_values: Optional[Dict[str, Any]] = Field(None, description="默认值")
     example_context: Optional[Dict[str, Any]] = Field(None, description="示例上下文")
     

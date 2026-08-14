@@ -176,10 +176,10 @@ export const MemberList: React.FC<MemberListProps> = ({ projectId, editable = fa
   }
 
   const getWorkloadColor = (allocation: number) => {
-    if (allocation >= 100) return '#ff4d4f'
-    if (allocation >= 80) return '#faad14'
-    if (allocation >= 60) return '#52c41a'
-    return '#1890ff'
+    if (allocation >= 100) return '#f87171'
+    if (allocation >= 80) return '#fbbf24'
+    if (allocation >= 60) return '#16a34a'
+    return '#2563eb'
   }
 
   const columns: any[] = [

@@ -150,9 +150,10 @@ class AIModelConfigService:
         """删除AI模型配置"""
         config = await self._get_config_by_id(db, config_id)
         
-        # 检查是否有使用记录
+        # 检查是否有使用记录（AIUsageStats 没有 model_config_id 外键，按 provider+model 匹配）
         usage_query = select(func.count(AIUsageStats.id)).where(
-            AIUsageStats.model_config_id == config_id
+            AIUsageStats.ai_provider == config.provider,
+            AIUsageStats.ai_model == config.model_name
         )
         usage_result = await db.execute(usage_query)
         usage_count = usage_result.scalar()
@@ -194,7 +195,10 @@ class AIModelConfigService:
             func.sum(AIUsageStats.total_cost).label('total_cost'),
             func.avg(AIUsageStats.avg_response_time).label('avg_response_time')
         ).select_from(
-            AIUsageStats.__table__.join(AIModelConfig.__table__)
+            AIUsageStats.__table__.join(
+                AIModelConfig.__table__,
+                AIUsageStats.ai_provider == AIModelConfig.provider
+            )
         ).where(
             AIUsageStats.created_at >= thirty_days_ago
         ).group_by(AIModelConfig.provider)

@@ -71,44 +71,31 @@ async def get_current_user_profile(
     获取当前用户的详细信息，包括权限
     """
     try:
-        from ..services.user import UserService
-        
-        user_service = UserService(db)
         permission_service = PermissionService(db)
-        
+
         user_id = current_user.id
-        
-        # 获取用户详细信息
-        user = user_service.get_user_by_id(user_id)
-        if not user:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="用户不存在"
-            )
-        
+
         # 获取用户角色和权限
         user_roles = permission_service.get_user_roles(user_id)
         user_permissions = permission_service.get_user_permissions(user_id)
-        
-        # 构造用户信息
+
+        # 构造用户信息（直接使用依赖注入的 current_user 对象，避免再次查询）
         user_info = {
-            "id": str(user.id),
-            "username": user.username,
-            "email": user.email,
-            "first_name": user.first_name,
-            "last_name": user.last_name,
-            "full_name": user.full_name,
-            "phone": user.phone,
-            "avatar_url": user.avatar_url,
-            "status": user.status.value,
-            "is_active": user.is_active,
-            "is_superuser": user.is_superuser,
-            "is_email_verified": user.is_email_verified,
-            "is_phone_verified": user.is_phone_verified,
-            "mfa_enabled": user.mfa_enabled,
-            "last_login_at": user.last_login_at.isoformat() if user.last_login_at else None,
-            "created_at": user.created_at.isoformat() if user.created_at else None,
-            "updated_at": user.updated_at.isoformat() if user.updated_at else None,
+            "id": str(current_user.id),
+            "username": current_user.username,
+            "email": current_user.email,
+            "nickname": current_user.nickname,
+            "phone": current_user.phone,
+            "avatar_url": current_user.avatar,
+            "status": current_user.status.value if hasattr(current_user.status, "value") else str(current_user.status),
+            "is_active": current_user.is_active,
+            "is_superuser": current_user.is_superuser,
+            "is_email_verified": current_user.is_email_verified,
+            "is_phone_verified": current_user.is_phone_verified,
+            "mfa_enabled": current_user.mfa_enabled,
+            "last_login_at": current_user.last_login_at.isoformat() if current_user.last_login_at else None,
+            "created_at": current_user.created_at.isoformat() if current_user.created_at else None,
+            "updated_at": current_user.updated_at.isoformat() if current_user.updated_at else None,
         }
         
         # 构造角色信息

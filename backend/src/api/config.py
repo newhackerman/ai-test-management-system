@@ -637,6 +637,14 @@ async def create_config_group(
         
         db = next(get_db())
         try:
+            # 校验必填字段
+            missing = [f for f in ("group_name", "group_code") if not group_data.get(f)]
+            if missing:
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail=f"缺少必填字段: {', '.join(missing)}"
+                )
+
             # 检查分组代码是否已存在
             existing = db.query(ConfigGroup).filter(
                 ConfigGroup.group_code == group_data["group_code"]

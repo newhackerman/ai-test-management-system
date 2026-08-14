@@ -104,7 +104,10 @@ class SystemNotificationService:
         limit: int = 20,
         offset: int = 0,
     ) -> List[SystemNotification]:
-        query = select(SystemNotification).where(SystemNotification.user_id == user_id)
+        query = select(SystemNotification).where(
+            SystemNotification.user_id == user_id,
+            SystemNotification.is_deleted.is_(False),
+        )
         if unread_only:
             query = query.where(SystemNotification.is_read.is_(False))
         query = query.order_by(desc(SystemNotification.created_at)).offset(offset).limit(limit)
@@ -116,6 +119,7 @@ class SystemNotificationService:
             select(func.count(SystemNotification.id)).where(
                 SystemNotification.user_id == user_id,
                 SystemNotification.is_read.is_(False),
+                SystemNotification.is_deleted.is_(False),
             )
         )
         return int(result.scalar() or 0)
@@ -125,6 +129,7 @@ class SystemNotificationService:
             select(SystemNotification).where(
                 SystemNotification.id == notification_id,
                 SystemNotification.user_id == user_id,
+                SystemNotification.is_deleted.is_(False),
             )
         )
         notification = result.scalar_one_or_none()
@@ -140,8 +145,29 @@ class SystemNotificationService:
     async def mark_all_read(self, user_id: int) -> int:
         result = await self.db.execute(
             update(SystemNotification)
-            .where(SystemNotification.user_id == user_id, SystemNotification.is_read.is_(False))
+            .where(
+                SystemNotification.user_id == user_id,
+                SystemNotification.is_read.is_(False),
+                SystemNotification.is_deleted.is_(False),
+            )
             .values(is_read=True, read_at=datetime.utcnow())
         )
         await self.db.commit()
         return int(result.rowcount or 0)
+
+    async def delete_notification(self, user_id: int, notification_id: int) -> bool:
+        """Soft-delete a notification owned by the given user."""
+        result = await self.db.execute(
+            select(SystemNotification).where(
+                SystemNotification.id == notification_id,
+                SystemNotification.user_id == user_id,
+                SystemNotification.is_deleted.is_(False),
+            )
+        )
+        notification = result.scalar_one_or_none()
+        if not notification:
+            return False
+        notification.is_deleted = True
+        notification.deleted_at = datetime.utcnow()
+        await self.db.commit()
+        return True

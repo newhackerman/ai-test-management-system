@@ -381,7 +381,7 @@ async def get_template_share_analytics(
 @router.get("/my-shares", response_model=TemplateShareListResponse)
 async def get_my_shares(
     share_type: Optional[str] = Query(None, description="分享类型筛选"),
-    status: Optional[str] = Query(None, description="状态筛选"),
+    status_filter: Optional[str] = Query(None, alias="status", description="状态筛选"),
     template_id: Optional[int] = Query(None, description="模板ID筛选"),
     page: int = Query(1, description="页码", ge=1),
     size: int = Query(20, description="每页大小", ge=1, le=100),
@@ -393,7 +393,7 @@ async def get_my_shares(
         # 构建搜索请求
         search_request = TemplateShareSearchRequest(
             share_type=share_type,
-            status=status,
+            status=status_filter,
             owner_id=current_user.id,
             template_id=template_id,
             page=page,

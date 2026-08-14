@@ -441,7 +441,11 @@ class QualityMetricsService:
         if not test_executions:
             return 0.0
         
-        passed_executions = len([exec for exec in test_executions if exec.result == 'PASSED'])
+        passed_executions = len([
+            exec for exec in test_executions
+            if str(getattr(exec, "execution_status", "")).replace("ExecutionStatus.", "").upper() == "PASSED"
+            or getattr(exec, "result", None) == "PASSED"
+        ])
         total_executions = len(test_executions)
         
         return passed_executions / total_executions if total_executions > 0 else 0.0
@@ -649,7 +653,7 @@ class QualityMetricsService:
         y = np.array(values)
         
         # 简单线性回归
-        slope = np.polyfit(x, y, 1)[0]
+        slope = float(np.polyfit(x, y, 1)[0])
         
         # 确定趋势方向
         if abs(slope) < 0.01:
@@ -661,9 +665,9 @@ class QualityMetricsService:
         
         return {
             'trend_direction': trend_direction,
-            'growth_rate': slope,
+            'growth_rate': float(slope),
             'data_points': trend_data,
-            'slope': slope
+            'slope': float(slope)
         }
     
     async def _generate_trend_predictions(self, trends: Dict[str, Any], days: int = 7) -> Dict[str, Any]:

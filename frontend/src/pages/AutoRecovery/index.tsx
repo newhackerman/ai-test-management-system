@@ -240,8 +240,8 @@ const AutoRecoveryPage: React.FC = () => {
               value={monitoringStatus?.is_monitoring ? '监控中' : '未启动'}
               prefix={
                 monitoringStatus?.is_monitoring
-                  ? <CheckCircleOutlined style={{ color: '#52c41a' }} />
-                  : <WarningOutlined style={{ color: '#faad14' }} />
+                  ? <CheckCircleOutlined style={{ color: '#16a34a' }} />
+                  : <WarningOutlined style={{ color: '#fbbf24' }} />
               }
             />
           </Col>
@@ -250,7 +250,7 @@ const AutoRecoveryPage: React.FC = () => {
               title="检测到的故障"
               value={failureDetection?.failures_detected || 0}
               suffix="个"
-              valueStyle={{ color: failureDetection?.failures_detected ? '#cf1322' : '#52c41a' }}
+              valueStyle={{ color: failureDetection?.failures_detected ? '#dc2626' : '#16a34a' }}
             />
           </Col>
           <Col xs={24} sm={12} lg={6}>
@@ -262,7 +262,7 @@ const AutoRecoveryPage: React.FC = () => {
               value={recoveryStatistics?.success_rate || 0}
               suffix="%"
               precision={1}
-              valueStyle={{ color: (recoveryStatistics?.success_rate || 0) >= 90 ? '#52c41a' : '#faad14' }}
+              valueStyle={{ color: (recoveryStatistics?.success_rate || 0) >= 90 ? '#16a34a' : '#fbbf24' }}
             />
           </Col>
         </Row>

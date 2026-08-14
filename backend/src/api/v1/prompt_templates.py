@@ -11,7 +11,7 @@ from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ...core.database import get_db
+from ...core.database import get_async_session
 from ...core.auth import get_current_user
 from ...models.user import User
 from ...services.prompt_service import PromptService
@@ -29,7 +29,7 @@ prompt_service = PromptService()
 @router.post("/", response_model=PromptTemplateResponse, status_code=status.HTTP_201_CREATED)
 async def create_template(
     template_data: PromptTemplateCreate,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(get_current_user)
 ):
     """创建提示词模板"""
@@ -38,177 +38,15 @@ async def create_template(
         return PromptTemplateResponse.from_orm(template)
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="创建模板失败")
 
 
-@router.get("/{template_id}", response_model=PromptTemplateResponse)
-async def get_template(
-    template_id: int,
-    db: AsyncSession = Depends(get_db),
-    current_user: Optional[User] = Depends(get_current_user)
-):
-    """获取单个提示词模板"""
-    user_id = current_user.id if current_user else None
-    template = await prompt_service.get_template(db, template_id, user_id)
-    
-    if not template:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="模板不存在或无权限访问")
-    
-    return PromptTemplateResponse.from_orm(template)
-
-
-@router.put("/{template_id}", response_model=PromptTemplateResponse)
-async def update_template(
-    template_id: int,
-    template_data: PromptTemplateUpdate,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    """更新提示词模板"""
-    try:
-        template = await prompt_service.update_template(db, template_id, template_data, current_user.id)
-        return PromptTemplateResponse.from_orm(template)
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="更新模板失败")
-
-
-@router.delete("/{template_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_template(
-    template_id: int,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    """删除提示词模板"""
-    try:
-        await prompt_service.delete_template(db, template_id, current_user.id)
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="删除模板失败")
-
-
-@router.post("/search", response_model=PromptTemplateListResponse)
-async def search_templates(
-    search_request: TemplateSearchRequest,
-    db: AsyncSession = Depends(get_db),
-    current_user: Optional[User] = Depends(get_current_user)
-):
-    """搜索提示词模板"""
-    try:
-        user_id = current_user.id if current_user else None
-        return await prompt_service.search_templates(db, search_request, user_id)
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="搜索模板失败")
-
-
-@router.get("/", response_model=PromptTemplateListResponse)
-async def list_templates(
-    category: Optional[TemplateCategory] = Query(None, description="分类筛选"),
-    visibility: Optional[TemplateVisibility] = Query(None, description="可见性筛选"),
-    is_featured: Optional[bool] = Query(None, description="是否精选"),
-    is_verified: Optional[bool] = Query(None, description="是否已验证"),
-    query: Optional[str] = Query(None, description="搜索关键词", max_length=200),
-    sort_by: str = Query("created_at", description="排序字段"),
-    sort_order: str = Query("desc", description="排序方向", pattern="^(asc|desc)$"),
-    page: int = Query(1, description="页码", ge=1),
-    size: int = Query(20, description="每页大小", ge=1, le=100),
-    db: AsyncSession = Depends(get_db),
-    current_user: Optional[User] = Depends(get_current_user)
-):
-    """获取提示词模板列表"""
-    try:
-        search_request = TemplateSearchRequest(
-            query=query,
-            category=category,
-            visibility=visibility,
-            is_featured=is_featured,
-            is_verified=is_verified,
-            sort_by=sort_by,
-            sort_order=sort_order,
-            page=page,
-            size=size
-        )
-        
-        user_id = current_user.id if current_user else None
-        return await prompt_service.search_templates(db, search_request, user_id)
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="获取模板列表失败")
-
-
-@router.post("/{template_id}/render", response_model=TemplateRenderResponse)
-async def render_template(
-    template_id: int,
-    render_request: TemplateRenderRequest,
-    db: AsyncSession = Depends(get_db),
-    current_user: Optional[User] = Depends(get_current_user)
-):
-    """渲染提示词模板"""
-    try:
-        if render_request.template_id != template_id:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="模板ID不匹配")
-        
-        user_id = current_user.id if current_user else None
-        return await prompt_service.render_template(db, template_id, render_request.context, user_id)
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="渲染模板失败")
-
-
-@router.post("/{template_id}/usage", response_model=TemplateUsageResponse, status_code=status.HTTP_201_CREATED)
-async def record_template_usage(
-    template_id: int,
-    usage_data: TemplateUsageCreate,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    """记录模板使用情况"""
-    try:
-        if usage_data.template_id != template_id:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="模板ID不匹配")
-        
-        usage = await prompt_service.record_template_usage(db, usage_data, current_user.id)
-        return TemplateUsageResponse.from_orm(usage)
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="记录使用情况失败")
-
-
-@router.get("/statistics/overview", response_model=TemplateStatistics)
-async def get_template_statistics(
-    db: AsyncSession = Depends(get_db),
-    current_user: Optional[User] = Depends(get_current_user)
-):
-    """获取模板统计信息"""
-    try:
-        user_id = current_user.id if current_user else None
-        return await prompt_service.get_template_statistics(db, user_id)
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="获取统计信息失败")
-
-
-@router.get("/user/my-templates", response_model=PromptTemplateListResponse)
-async def get_my_templates(
-    category: Optional[str] = Query(None, description="分类筛选"),
-    include_public: bool = Query(True, description="是否包含公开模板"),
-    page: int = Query(1, description="页码", ge=1),
-    size: int = Query(20, description="每页大小", ge=1, le=100),
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    """获取用户的提示词模板"""
-    try:
-        return await prompt_service.get_user_templates(
-            db, current_user.id, category, include_public, page, size
-        )
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="获取用户模板失败")
-
-
+# 静态路径必须注册在 /{template_id} 之前，否则 FastAPI 会把
+# /categories、/visibility-options、/statistics/overview、/user/my-templates
+# 当作 template_id 参数匹配，触发 int 转换失败 → 422。
 @router.get("/categories", response_model=List[dict])
 async def get_template_categories():
     """获取模板分类列表"""
@@ -236,13 +74,199 @@ async def get_visibility_options():
     return options
 
 
+@router.get("/statistics/overview", response_model=TemplateStatistics)
+async def get_template_statistics(
+    db: AsyncSession = Depends(get_async_session),
+    current_user: Optional[User] = Depends(get_current_user)
+):
+    """获取模板统计信息"""
+    try:
+        user_id = current_user.id if current_user else None
+        return await prompt_service.get_template_statistics(db, user_id)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="获取统计信息失败")
+
+
+@router.get("/user/my-templates", response_model=PromptTemplateListResponse)
+async def get_my_templates(
+    category: Optional[str] = Query(None, description="分类筛选"),
+    include_public: bool = Query(True, description="是否包含公开模板"),
+    page: int = Query(1, description="页码", ge=1),
+    size: int = Query(20, description="每页大小", ge=1, le=100),
+    db: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(get_current_user)
+):
+    """获取用户的提示词模板"""
+    try:
+        return await prompt_service.get_user_templates(
+            db, current_user.id, category, include_public, page, size
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="获取用户模板失败")
+
+
+@router.get("/{template_id}", response_model=PromptTemplateResponse)
+async def get_template(
+    template_id: int,
+    db: AsyncSession = Depends(get_async_session),
+    current_user: Optional[User] = Depends(get_current_user)
+):
+    """获取单个提示词模板"""
+    user_id = current_user.id if current_user else None
+    template = await prompt_service.get_template(db, template_id, user_id)
+    
+    if not template:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="模板不存在或无权限访问")
+    
+    return PromptTemplateResponse.from_orm(template)
+
+
+@router.put("/{template_id}", response_model=PromptTemplateResponse)
+async def update_template(
+    template_id: int,
+    template_data: PromptTemplateUpdate,
+    db: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(get_current_user)
+):
+    """更新提示词模板"""
+    try:
+        template = await prompt_service.update_template(db, template_id, template_data, current_user.id)
+        return PromptTemplateResponse.from_orm(template)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="更新模板失败")
+
+
+@router.delete("/{template_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_template(
+    template_id: int,
+    db: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(get_current_user)
+):
+    """删除提示词模板"""
+    try:
+        await prompt_service.delete_template(db, template_id, current_user.id)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="删除模板失败")
+
+
+@router.post("/search", response_model=PromptTemplateListResponse)
+async def search_templates(
+    search_request: TemplateSearchRequest,
+    db: AsyncSession = Depends(get_async_session),
+    current_user: Optional[User] = Depends(get_current_user)
+):
+    """搜索提示词模板"""
+    try:
+        # 拒绝空搜索条件（所有字段均使用默认值，等同于无操作）
+        if not search_request.dict(exclude_unset=True):
+            raise HTTPException(status_code=422, detail="搜索条件不能为空")
+        user_id = current_user.id if current_user else None
+        return await prompt_service.search_templates(db, search_request, user_id)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="搜索模板失败")
+
+
+@router.get("/", response_model=PromptTemplateListResponse)
+async def list_templates(
+    category: Optional[TemplateCategory] = Query(None, description="分类筛选"),
+    visibility: Optional[TemplateVisibility] = Query(None, description="可见性筛选"),
+    is_featured: Optional[bool] = Query(None, description="是否精选"),
+    is_verified: Optional[bool] = Query(None, description="是否已验证"),
+    query: Optional[str] = Query(None, description="搜索关键词", max_length=200),
+    sort_by: str = Query("created_at", description="排序字段"),
+    sort_order: str = Query("desc", description="排序方向", pattern="^(asc|desc)$"),
+    page: int = Query(1, description="页码", ge=1),
+    size: int = Query(20, description="每页大小", ge=1, le=100),
+    db: AsyncSession = Depends(get_async_session),
+    current_user: Optional[User] = Depends(get_current_user)
+):
+    """获取提示词模板列表"""
+    try:
+        search_request = TemplateSearchRequest(
+            query=query,
+            category=category,
+            visibility=visibility,
+            is_featured=is_featured,
+            is_verified=is_verified,
+            sort_by=sort_by,
+            sort_order=sort_order,
+            page=page,
+            size=size
+        )
+        
+        user_id = current_user.id if current_user else None
+        return await prompt_service.search_templates(db, search_request, user_id)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="获取模板列表失败")
+
+
+@router.post("/{template_id}/render", response_model=TemplateRenderResponse)
+async def render_template(
+    template_id: int,
+    render_request: TemplateRenderRequest,
+    db: AsyncSession = Depends(get_async_session),
+    current_user: Optional[User] = Depends(get_current_user)
+):
+    """渲染提示词模板"""
+    try:
+        if render_request.template_id != template_id:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="模板ID不匹配")
+        
+        user_id = current_user.id if current_user else None
+        return await prompt_service.render_template(db, template_id, render_request.context, user_id)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="渲染模板失败")
+
+
+@router.post("/{template_id}/usage", response_model=TemplateUsageResponse, status_code=status.HTTP_201_CREATED)
+async def record_template_usage(
+    template_id: int,
+    usage_data: TemplateUsageCreate,
+    db: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(get_current_user)
+):
+    """记录模板使用情况"""
+    try:
+        if usage_data.template_id != template_id:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="模板ID不匹配")
+        
+        usage = await prompt_service.record_template_usage(db, usage_data, current_user.id)
+        return TemplateUsageResponse.from_orm(usage)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="记录使用情况失败")
+
+
 # ==================== 版本管理API端点 ====================
 
 @router.post("/{template_id}/versions", response_model=PromptTemplateResponse, status_code=status.HTTP_201_CREATED)
 async def create_template_version(
     template_id: int,
     template_data: PromptTemplateUpdate,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(get_current_user)
 ):
     """创建模板新版本"""
@@ -251,6 +275,8 @@ async def create_template_version(
         return PromptTemplateResponse.from_orm(template)
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="创建新版本失败")
 
@@ -258,7 +284,7 @@ async def create_template_version(
 @router.get("/{template_id}/versions", response_model=List[PromptTemplateResponse])
 async def get_template_versions(
     template_id: int,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_async_session),
     current_user: Optional[User] = Depends(get_current_user)
 ):
     """获取模板的所有版本"""
@@ -268,6 +294,8 @@ async def get_template_versions(
         return [PromptTemplateResponse.from_orm(version) for version in versions]
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="获取版本列表失败")
 
@@ -276,7 +304,7 @@ async def get_template_versions(
 async def get_template_version_by_number(
     template_id: int,
     version: str,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_async_session),
     current_user: Optional[User] = Depends(get_current_user)
 ):
     """根据版本号获取特定版本的模板"""
@@ -290,6 +318,8 @@ async def get_template_version_by_number(
         return PromptTemplateResponse.from_orm(template)
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="获取指定版本失败")
 
@@ -297,7 +327,7 @@ async def get_template_version_by_number(
 @router.get("/{template_id}/versions/latest", response_model=PromptTemplateResponse)
 async def get_latest_template_version(
     template_id: int,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_async_session),
     current_user: Optional[User] = Depends(get_current_user)
 ):
     """获取模板的最新版本"""
@@ -311,6 +341,8 @@ async def get_latest_template_version(
         return PromptTemplateResponse.from_orm(template)
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="获取最新版本失败")
 
@@ -319,7 +351,7 @@ async def get_latest_template_version(
 async def rollback_to_version(
     template_id: int,
     version: str,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(get_current_user)
 ):
     """回滚到指定版本"""
@@ -328,6 +360,8 @@ async def rollback_to_version(
         return PromptTemplateResponse.from_orm(template)
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="版本回滚失败")
 
@@ -337,7 +371,7 @@ async def compare_template_versions(
     template_id: int,
     version1: str,
     version2: str,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_async_session),
     current_user: Optional[User] = Depends(get_current_user)
 ):
     """比较两个版本的差异"""
@@ -347,6 +381,8 @@ async def compare_template_versions(
         return comparison
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="版本比较失败")
 
@@ -355,7 +391,7 @@ async def compare_template_versions(
 async def delete_template_version(
     template_id: int,
     version: str,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(get_current_user)
 ):
     """删除特定版本（不能删除最新版本和唯一版本）"""
@@ -363,6 +399,8 @@ async def delete_template_version(
         await prompt_service.delete_template_version(db, template_id, version, current_user.id)
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="删除版本失败")
 
@@ -370,7 +408,7 @@ async def delete_template_version(
 @router.get("/{template_id}/versions/history")
 async def get_template_version_history(
     template_id: int,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_async_session),
     current_user: Optional[User] = Depends(get_current_user)
 ):
     """获取模板版本历史"""
@@ -380,6 +418,8 @@ async def get_template_version_history(
         return {"template_id": template_id, "history": history}
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="获取版本历史失败")
 
@@ -388,7 +428,7 @@ async def get_template_version_history(
 async def set_template_as_latest(
     template_id: int,
     version: str,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(get_current_user)
 ):
     """将指定版本设置为最新版本"""
@@ -397,6 +437,8 @@ async def set_template_as_latest(
         return PromptTemplateResponse.from_orm(template)
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="设置最新版本失败")
 
@@ -407,7 +449,7 @@ async def set_template_as_latest(
 async def test_template(
     template_id: int,
     test_request: dict,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(get_current_user)
 ):
     """测试提示词模板"""
@@ -418,6 +460,8 @@ async def test_template(
         return result
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="模板测试失败")
 
@@ -426,7 +470,7 @@ async def test_template(
 async def batch_test_template(
     template_id: int,
     batch_test_request: dict,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(get_current_user)
 ):
     """批量测试提示词模板"""
@@ -437,6 +481,8 @@ async def batch_test_template(
         return result
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="批量测试失败")
 
@@ -446,7 +492,7 @@ async def get_template_test_history(
     template_id: int,
     page: int = Query(1, description="页码", ge=1),
     size: int = Query(20, description="每页大小", ge=1, le=100),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(get_current_user)
 ):
     """获取模板测试历史"""
@@ -457,6 +503,8 @@ async def get_template_test_history(
         return result
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="获取测试历史失败")
 
@@ -465,7 +513,7 @@ async def get_template_test_history(
 async def evaluate_template_performance(
     template_id: int,
     evaluation_request: dict,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(get_current_user)
 ):
     """评估模板性能"""
@@ -476,5 +524,7 @@ async def evaluate_template_performance(
         return result
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="模板评估失败")

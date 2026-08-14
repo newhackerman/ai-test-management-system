@@ -114,7 +114,7 @@ async def get_tasks(
     page: int = Query(1, ge=1, description="页码"),
     size: int = Query(20, ge=1, le=100, description="每页大小"),
     project_id: Optional[int] = Query(None, description="项目ID过滤"),
-    status: Optional[List[TaskStatus]] = Query(None, description="状态过滤"),
+    status_filter: Optional[List[TaskStatus]] = Query(None, alias="status", description="状态过滤"),
     task_type: Optional[List[TaskType]] = Query(None, description="类型过滤"),
     priority: Optional[List[TaskPriority]] = Query(None, description="优先级过滤"),
     assignee_id: Optional[int] = Query(None, description="执行人过滤"),
@@ -152,7 +152,7 @@ async def get_tasks(
             page=page,
             size=size,
             project_id=project_id,
-            status=status,
+            status=status_filter,
             task_type=task_type,
             priority=priority,
             assignee_id=assignee_id,
@@ -237,6 +237,8 @@ async def get_task(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=str(e)
         )
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"获取任务详情失败: {e}")
         raise HTTPException(
@@ -798,6 +800,8 @@ async def validate_task_dependencies(
             "has_circular_dependency": "循环依赖" in str(e),
             "message": str(e)
         }
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"验证任务依赖失败: {e}")
         raise HTTPException(

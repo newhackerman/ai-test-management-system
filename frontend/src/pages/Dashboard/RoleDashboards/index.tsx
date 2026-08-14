@@ -1,9 +1,0 @@
-export { default as AdminDashboard } from './AdminDashboard';
-export { default as ProjectManagerDashboard } from './ProjectManagerDashboard';
-export { default as RequirementManagerDashboard } from './RequirementManagerDashboard';
-export { default as DesignerDashboard } from './DesignerDashboard';
-export { default as ArchitectDashboard } from './ArchitectDashboard';
-export { default as DeveloperDashboard } from './DeveloperDashboard';
-export { default as TesterDashboard } from './TesterDashboard';
-export { default as DevOpsDashboard } from './DevOpsDashboard';
-export { default as ThirdPartyDashboard } from './ThirdPartyDashboard';

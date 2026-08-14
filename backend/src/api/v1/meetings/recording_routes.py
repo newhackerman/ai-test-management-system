@@ -176,7 +176,7 @@ async def get_recordings(
     page: int = Query(1, ge=1, description="页码"),
     page_size: int = Query(20, ge=1, le=100, description="每页数量"),
     recording_type: Optional[RecordingTypeEnum] = Query(None, description="录制类型筛选"),
-    status: Optional[RecordingStatusEnum] = Query(None, description="录制状态筛选"),
+    status_filter: Optional[RecordingStatusEnum] = Query(None, alias="status", description="录制状态筛选"),
     file_format: Optional[FileFormatEnum] = Query(None, description="文件格式筛选"),
     start_date: Optional[datetime] = Query(None, description="开始日期筛选"),
     end_date: Optional[datetime] = Query(None, description="结束日期筛选"),
@@ -212,7 +212,7 @@ async def get_recordings(
             page=page,
             page_size=page_size,
             recording_type=recording_type,
-            status=status,
+            status=status_filter,
             file_format=file_format,
             start_date=start_date,
             end_date=end_date,
@@ -250,6 +250,8 @@ async def get_recordings(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=str(e)
         )
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"获取录制列表失败: {e}")
         raise HTTPException(
@@ -303,6 +305,8 @@ async def get_recording(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=str(e)
         )
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"获取录制详情失败: {e}")
         raise HTTPException(
@@ -354,6 +358,8 @@ async def get_playback_info(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=str(e)
         )
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"获取播放信息失败: {e}")
         raise HTTPException(

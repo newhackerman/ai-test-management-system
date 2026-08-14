@@ -193,12 +193,12 @@ export const ProjectNotifications: React.FC<ProjectNotificationsProps> = ({ proj
 
   const getNotificationIcon = (type: Notification['type']) => {
     const icons = {
-      message: <MessageOutlined style={{ color: '#1890ff' }} />,
-      task: <FileTextOutlined style={{ color: '#52c41a' }} />,
-      document: <FileTextOutlined style={{ color: '#faad14' }} />,
-      milestone: <CalendarOutlined style={{ color: '#722ed1' }} />,
+      message: <MessageOutlined style={{ color: '#2563eb' }} />,
+      task: <FileTextOutlined style={{ color: '#16a34a' }} />,
+      document: <FileTextOutlined style={{ color: '#fbbf24' }} />,
+      milestone: <CalendarOutlined style={{ color: '#7c3aed' }} />,
       member: <TeamOutlined style={{ color: '#13c2c2' }} />,
-      system: <AlertOutlined style={{ color: '#ff4d4f' }} />,
+      system: <AlertOutlined style={{ color: '#f87171' }} />,
     };
     return icons[type] || icons.system;
   };

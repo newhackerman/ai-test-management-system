@@ -202,10 +202,10 @@ class ProjectResponse(BaseModel):
     
     # 预算管理
     budget: Optional[Decimal]
-    actual_cost: Decimal
-    
+    actual_cost: Optional[Decimal]
+
     # 进度管理
-    progress_percentage: Decimal
+    progress_percentage: Optional[Decimal]
     task_count: int
     completed_task_count: int
     

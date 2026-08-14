@@ -233,6 +233,6 @@ api_router.include_router(reports_router)
 from .v1.auto_recovery import router as auto_recovery_router
 api_router.include_router(auto_recovery_router)
 
-@api_router.get("/health")
+@api_router.get("/health", tags=["系统"])
 async def health_check():
     return {"status": "ok", "message": "API服务正常运行"}

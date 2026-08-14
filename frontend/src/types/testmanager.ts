@@ -478,14 +478,19 @@ export interface AutomationConfig {
 }
 
 export interface AutomationScript {
-  id: number
+  id?: number
+  script_id?: number
   test_case_id: number
+  script_name?: string
   framework: string
   language: string
   script_content: string
   script_path?: string
+  browser?: string
   dependencies?: string[]
-  created_by: number
-  created_at: string
-  updated_at: string
+  environment_config?: Record<string, unknown>
+  is_active?: boolean
+  created_by?: number
+  created_at?: string
+  updated_at?: string
 }

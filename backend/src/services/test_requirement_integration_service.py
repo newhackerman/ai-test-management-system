@@ -13,7 +13,7 @@ from typing import List, Optional, Dict, Any, Tuple
 from decimal import Decimal
 
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_, or_, func, desc, asc, text, update
+from sqlalchemy import select, and_, or_, func, desc, asc, text, update, case
 from sqlalchemy.orm import selectinload, joinedload
 from fastapi import Depends
 
@@ -235,6 +235,11 @@ class TestRequirementIntegrationService:
         Returns:
             测试覆盖率对象
         """
+        # 0. 验证项目是否存在
+        project = await self.db.get(Project, project_id)
+        if not project:
+            raise NotFoundError(f"项目 {project_id} 不存在")
+
         # 1. 获取测试用例统计
         test_case_stats = await self._get_test_case_statistics(project_id, requirement_id)
         
@@ -389,12 +394,18 @@ class TestRequirementIntegrationService:
             raise NotFoundError(f"项目 {project_id} 不存在")
         
         # 获取项目今日测试用例数量
+        # TestCase 没有 project_id 字段，通过 requirement_id 关联 Requirement，
+        # 再由 Requirement.project_id 过滤到指定项目
         today = datetime.now().strftime("%Y%m%d")
         result = await self.db.execute(
-            select(func.count(TestCase.id)).where(
+            select(func.count(TestCase.id)).select_from(
+                TestCase
+            ).outerjoin(
+                Requirement, TestCase.requirement_id == Requirement.id
+            ).where(
                 and_(
-                    TestCase.project_id == project_id,
-                    TestCase.test_case_code.like(f"TC-{project.project_code}-{today}-%")
+                    Requirement.project_id == project_id,
+                    TestCase.case_code.like(f"TC-{project.project_code}-{today}-%")
                 )
             )
         )
@@ -414,11 +425,17 @@ class TestRequirementIntegrationService:
             raise NotFoundError(f"项目 {project_id} 不存在")
         
         # 获取项目今日缺陷数量
+        # Defect 没有 project_id 字段，通过 requirement_id 关联 Requirement，
+        # 再由 Requirement.project_id 过滤到指定项目
         today = datetime.now().strftime("%Y%m%d")
         result = await self.db.execute(
-            select(func.count(Defect.id)).where(
+            select(func.count(Defect.id)).select_from(
+                Defect
+            ).outerjoin(
+                Requirement, Defect.requirement_id == Requirement.id
+            ).where(
                 and_(
-                    Defect.project_id == project_id,
+                    Requirement.project_id == project_id,
                     Defect.defect_code.like(f"BUG-{project.project_code}-{today}-%")
                 )
             )
@@ -536,7 +553,7 @@ class TestRequirementIntegrationService:
         result = await self.db.execute(
             select(
                 func.count(TestCase.id).label('total'),
-                func.sum(func.case([(TestCase.last_execution_status == ExecutionStatus.PASSED, 1)], else_=0)).label('passed')
+                func.sum(case(*[(TestCase.last_execution_status == ExecutionStatus.PASSED, 1)], else_=0)).label('passed')
             ).where(TestCase.requirement_id == requirement_id)
         )
         stats = result.first()
@@ -550,20 +567,29 @@ class TestRequirementIntegrationService:
                 )
     
     async def _get_test_case_statistics(self, project_id: int, requirement_id: Optional[int] = None) -> Dict[str, int]:
-        """获取测试用例统计"""
+        """获取测试用例统计
+
+        TestCase 模型本身没有 project_id 字段，它通过 requirement_id 关联到
+        Requirement，再由 Requirement.project_id 关联到项目。因此这里通过 join
+        Requirement 来按 project_id 过滤。
+        """
         query = select(
             func.count(TestCase.id).label('total'),
-            func.sum(func.case([(TestCase.execution_count > 0, 1)], else_=0)).label('executed'),
-            func.sum(func.case([(TestCase.last_execution_status == ExecutionStatus.PASSED, 1)], else_=0)).label('passed'),
-            func.sum(func.case([(TestCase.last_execution_status == ExecutionStatus.FAILED, 1)], else_=0)).label('failed')
-        ).where(TestCase.project_id == project_id)
-        
+            func.sum(case(*[(TestCase.execution_count > 0, 1)], else_=0)).label('executed'),
+            func.sum(case(*[(TestCase.last_execution_status == ExecutionStatus.PASSED, 1)], else_=0)).label('passed'),
+            func.sum(case(*[(TestCase.last_execution_status == ExecutionStatus.FAILED, 1)], else_=0)).label('failed')
+        ).select_from(
+            TestCase
+        ).outerjoin(
+            Requirement, TestCase.requirement_id == Requirement.id
+        ).where(Requirement.project_id == project_id)
+
         if requirement_id:
             query = query.where(TestCase.requirement_id == requirement_id)
-        
+
         result = await self.db.execute(query)
         stats = result.first()
-        
+
         return {
             'total': stats.total or 0,
             'executed': stats.executed or 0,
@@ -584,10 +610,16 @@ class TestRequirementIntegrationService:
         total = total_result.scalar() or 0
         
         # 有测试用例覆盖的需求数
+        # TestCase 没有 project_id 字段，通过 requirement_id 关联 Requirement，
+        # 再由 Requirement.project_id 过滤到指定项目
         covered_result = await self.db.execute(
-            select(func.count(func.distinct(TestCase.requirement_id))).where(
+            select(func.count(func.distinct(TestCase.requirement_id))).select_from(
+                TestCase
+            ).outerjoin(
+                Requirement, TestCase.requirement_id == Requirement.id
+            ).where(
                 and_(
-                    TestCase.project_id == project_id,
+                    Requirement.project_id == project_id,
                     TestCase.requirement_id.isnot(None)
                 )
             )
@@ -615,9 +647,9 @@ class TestRequirementIntegrationService:
         result = await self.db.execute(
             select(
                 func.count(TestExecution.id).label('total_executions'),
-                func.sum(func.case([(TestExecution.execution_status == ExecutionStatus.PASSED, 1)], else_=0)).label('passed'),
-                func.sum(func.case([(TestExecution.execution_status == ExecutionStatus.FAILED, 1)], else_=0)).label('failed'),
-                func.sum(func.case([(TestExecution.execution_status == ExecutionStatus.BLOCKED, 1)], else_=0)).label('blocked')
+                func.sum(case(*[(TestExecution.execution_status == ExecutionStatus.PASSED, 1)], else_=0)).label('passed'),
+                func.sum(case(*[(TestExecution.execution_status == ExecutionStatus.FAILED, 1)], else_=0)).label('failed'),
+                func.sum(case(*[(TestExecution.execution_status == ExecutionStatus.BLOCKED, 1)], else_=0)).label('blocked')
             ).select_from(
                 TestExecution.join(TestCase, TestExecution.test_case_id == TestCase.id)
             ).where(TestCase.requirement_id == requirement_id)

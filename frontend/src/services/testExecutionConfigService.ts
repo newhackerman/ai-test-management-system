@@ -55,6 +55,7 @@ export interface TestExecutionConfig {
   jmeter_properties?: string
   distributed_hosts?: string
   environment_variables?: Record<string, string>
+  allow_local_debug?: boolean
   description?: string
   enabled: boolean
   created_at?: string
@@ -309,6 +310,7 @@ export const normalizeConfig = (config: Partial<TestExecutionConfig>, environmen
     jmeter_properties: normalizeString(config.jmeter_properties),
     distributed_hosts: normalizeString(config.distributed_hosts),
     environment_variables: normalizeEnvironmentVariables(config.environment_variables),
+    allow_local_debug: config.allow_local_debug === true,
     description: normalizeString(config.description),
     enabled: config.enabled !== false,
     created_at: config.created_at || now,

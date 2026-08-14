@@ -18,7 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, or_, func, desc, asc, text
 from sqlalchemy.orm import selectinload, joinedload
 
-from ..core.database import get_async_session
+from ..core.database import get_async_session, get_async_session_ctx
 from ..core.exceptions import ValidationError, NotFoundError, PermissionError
 from ..models.project import Project, ProjectMember
 from ..models.user import User
@@ -64,6 +64,10 @@ class ProjectService:
         
         # 4. 验证项目经理权限
         await self._validate_manager_permission(request.project_manager_id)
+
+        # 4.1 验证测试经理存在性（避免外键约束违反导致 500）
+        if request.test_manager_id:
+            await self._validate_manager_permission(request.test_manager_id)
         
         # 5. 生成项目编码
         project_code = await self._generate_project_code()
@@ -93,8 +97,8 @@ class ProjectService:
         # 8. 自动添加项目经理为项目成员
         await self._add_project_manager_as_member(project.id, request.project_manager_id)
         
-        # 9. 如果指定了测试经理，也添加为项目成员
-        if request.test_manager_id:
+        # 9. 如果指定了测试经理，也添加为项目成员（跳过与项目经理相同的用户，避免唯一约束冲突）
+        if request.test_manager_id and request.test_manager_id != request.project_manager_id:
             await self._add_test_manager_as_member(project.id, request.test_manager_id)
         
         # 10. 提交事务
@@ -481,6 +485,11 @@ class ProjectService:
     
     async def _validate_update_permission(self, project: Project, user_id: int):
         """验证更新权限"""
+        # 超级用户绕过项目经理校验
+        user_result = await self.db.execute(select(User).where(User.id == user_id))
+        user = user_result.scalar_one_or_none()
+        if user and user.is_superuser:
+            return
         # 只有项目经理可以更新项目
         if project.project_manager_id != user_id:
             raise PermissionError("只有项目经理可以更新项目")
@@ -513,6 +522,11 @@ class ProjectService:
     
     async def _validate_delete_permission(self, project: Project, user_id: int):
         """验证删除权限"""
+        # 超级用户绕过项目经理校验
+        user_result = await self.db.execute(select(User).where(User.id == user_id))
+        user = user_result.scalar_one_or_none()
+        if user and user.is_superuser:
+            return
         # 只有项目经理可以删除项目
         if project.project_manager_id != user_id:
             raise PermissionError("只有项目经理可以删除项目")
@@ -531,6 +545,6 @@ class ProjectService:
 async def get_project_service(db: AsyncSession = None) -> ProjectService:
     """获取项目服务实例"""
     if db is None:
-        async with get_async_session() as session:
+        async with get_async_session_ctx() as session:
             return ProjectService(session)
     return ProjectService(db)

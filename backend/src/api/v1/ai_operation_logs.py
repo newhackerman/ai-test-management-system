@@ -16,7 +16,9 @@ import io
 import json
 
 from ...core.security import get_current_user
+from ...core.database import get_async_session
 from ...models.user import User
+from sqlalchemy.ext.asyncio import AsyncSession
 from ...models.ai_operation_log import AIOperationType, AIOperationResult, AIOperationPriority
 from ...services.ai_operation_log_service import get_ai_operation_log_service
 from ...services.ai_permission_service import AIPermissionService
@@ -49,7 +51,8 @@ async def get_operation_logs(
     page_size: int = Query(20, ge=1, le=100, description="页大小"),
     order_by: str = Query("created_at", description="排序字段"),
     order_desc: bool = Query(True, description="是否降序"),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_session)
 ):
     """
     查询AI操作日志
@@ -62,7 +65,7 @@ async def get_operation_logs(
     """
     try:
         # 权限检查
-        permission_service = AIPermissionService()
+        permission_service = AIPermissionService(db)
         
         # 检查是否有查看日志的权限
         has_permission, message = await permission_service.check_ai_operation_permission(
@@ -152,13 +155,14 @@ async def get_operation_logs(
         
         # 构建分页响应
         paginated_response = PaginatedResponse(
-            items=logs,
+            success=True,
+            message="查询操作日志成功",
+            data=logs,
             total=total,
             page=page,
-            page_size=page_size,
-            pages=(total + page_size - 1) // page_size
+            page_size=page_size
         )
-        
+
         return ApiResponse(
             success=True,
             data=paginated_response,
@@ -187,7 +191,8 @@ async def get_operation_statistics(
     start_date: Optional[str] = Query(None, description="开始日期 (YYYY-MM-DD)"),
     end_date: Optional[str] = Query(None, description="结束日期 (YYYY-MM-DD)"),
     group_by: str = Query("operation_type", description="分组字段"),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_session)
 ):
     """
     获取AI操作统计信息
@@ -200,7 +205,7 @@ async def get_operation_statistics(
     """
     try:
         # 权限检查
-        permission_service = AIPermissionService()
+        permission_service = AIPermissionService(db)
         
         has_permission, _ = await permission_service.check_ai_operation_permission(
             current_user.id, "log_view"
@@ -282,7 +287,8 @@ async def export_operation_logs(
     start_date: Optional[str] = Query(None, description="开始日期 (YYYY-MM-DD)"),
     end_date: Optional[str] = Query(None, description="结束日期 (YYYY-MM-DD)"),
     operation_type: Optional[str] = Query(None, description="操作类型"),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_session)
 ):
     """
     导出AI操作日志
@@ -293,7 +299,7 @@ async def export_operation_logs(
     """
     try:
         # 权限检查
-        permission_service = AIPermissionService()
+        permission_service = AIPermissionService(db)
         
         has_permission, _ = await permission_service.check_ai_operation_permission(
             current_user.id, "log_export"
@@ -422,7 +428,8 @@ async def get_operation_types():
 )
 async def cleanup_old_logs(
     days_to_keep: int = Query(90, ge=7, le=365, description="保留天数"),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_session)
 ):
     """
     清理旧的操作日志
@@ -431,7 +438,7 @@ async def cleanup_old_logs(
     """
     try:
         # 权限检查 - 只有管理员可以清理日志
-        permission_service = AIPermissionService()
+        permission_service = AIPermissionService(db)
         
         has_permission, _ = await permission_service.check_ai_operation_permission(
             current_user.id, "log_admin"
@@ -473,7 +480,8 @@ async def cleanup_old_logs(
 )
 async def generate_log_summary(
     target_date: Optional[str] = Query(None, description="目标日期 (YYYY-MM-DD)，默认为昨天"),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_session)
 ):
     """
     生成日志汇总
@@ -482,7 +490,7 @@ async def generate_log_summary(
     """
     try:
         # 权限检查
-        permission_service = AIPermissionService()
+        permission_service = AIPermissionService(db)
         
         has_permission, _ = await permission_service.check_ai_operation_permission(
             current_user.id, "log_admin"

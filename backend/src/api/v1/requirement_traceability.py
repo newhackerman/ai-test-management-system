@@ -11,6 +11,7 @@ import logging
 from datetime import datetime
 from typing import Optional, List, Dict, Any
 from fastapi import APIRouter, Depends, HTTPException, Query, Path, status
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...core.database import get_async_session
@@ -19,6 +20,7 @@ from ...services.requirement_traceability_service import RequirementTraceability
 from ...services.auth import get_current_user
 from ...schemas.base import BaseResponse
 from ...models.user import User
+from ...models.project import Project
 
 logger = logging.getLogger(__name__)
 
@@ -78,7 +80,7 @@ class TraceabilityMatrixResponse(BaseModel):
     matrix_type: str
     requirements: List[Dict[str, Any]]
     targets: List[Dict[str, Any]]
-    matrix_data: List[List[bool]]
+    matrix_data: Dict[str, Any]
     coverage_stats: Dict[str, Any]
     generated_at: datetime
 
@@ -156,6 +158,8 @@ async def create_traceability_link(
         raise HTTPException(status_code=400, detail=str(e))
     except BusinessLogicError as e:
         raise HTTPException(status_code=422, detail=str(e))
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"创建追溯链接失败: {str(e)}")
         raise HTTPException(status_code=500, detail="创建追溯链接失败")
@@ -175,6 +179,10 @@ async def get_traceability_link(
         
         return TraceabilityLinkResponse.from_orm(link)
     
+    except NotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"获取追溯链接失败: {str(e)}")
         raise HTTPException(status_code=500, detail="获取追溯链接失败")
@@ -189,11 +197,16 @@ async def delete_traceability_link(
     """删除追溯链接"""
     try:
         await service.delete_traceability_link(link_id, current_user.id)
-    
+
     except NotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except ValueError as e:
+        # 服务层对不存在的链接抛出 ValueError，这里转为 404
         raise HTTPException(status_code=404, detail=str(e))
     except BusinessLogicError as e:
         raise HTTPException(status_code=422, detail=str(e))
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"删除追溯链接失败: {str(e)}")
         raise HTTPException(status_code=500, detail="删除追溯链接失败")
@@ -215,17 +228,21 @@ async def get_requirement_traceability(
     """
     try:
         traceability = await service.get_requirement_traceability(requirement_id, direction)
+        if traceability is None:
+            raise HTTPException(status_code=404, detail="需求追溯关系不存在")
         
         return RequirementTraceabilityResponse(
             requirement_id=requirement_id,
-            upstream_links=[TraceabilityLinkResponse.from_orm(link) for link in traceability.upstream_links],
-            downstream_links=[TraceabilityLinkResponse.from_orm(link) for link in traceability.downstream_links],
-            coverage_analysis=traceability.coverage_analysis,
-            generated_at=traceability.generated_at
+            upstream_links=[TraceabilityLinkResponse.from_orm(link) for link in traceability["upstream_links"]],
+            downstream_links=[TraceabilityLinkResponse.from_orm(link) for link in traceability["downstream_links"]],
+            coverage_analysis=traceability["coverage_analysis"],
+            generated_at=traceability["generated_at"]
         )
     
     except NotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"获取需求追溯关系失败: {str(e)}")
         raise HTTPException(status_code=500, detail="获取需求追溯关系失败")
@@ -265,6 +282,8 @@ async def generate_traceability_matrix(
     
     except ValidationError as e:
         raise HTTPException(status_code=400, detail=str(e))
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"生成追溯矩阵失败: {str(e)}")
         raise HTTPException(status_code=500, detail="生成追溯矩阵失败")
@@ -327,6 +346,8 @@ async def analyze_change_impact(
         raise HTTPException(status_code=404, detail=str(e))
     except ValidationError as e:
         raise HTTPException(status_code=400, detail=str(e))
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"变更影响分析失败: {str(e)}")
         raise HTTPException(status_code=500, detail="变更影响分析失败")
@@ -337,7 +358,8 @@ async def get_traceability_coverage(
     project_id: int = Path(..., description="项目ID"),
     coverage_type: str = Query("all", description="覆盖率类型"),
     current_user: User = Depends(get_current_user),
-    service: RequirementTraceabilityService = Depends(get_traceability_service)
+    service: RequirementTraceabilityService = Depends(get_traceability_service),
+    db: AsyncSession = Depends(get_async_session)
 ):
     """
     获取追溯覆盖率
@@ -345,7 +367,13 @@ async def get_traceability_coverage(
     获取项目的追溯覆盖率统计。
     """
     try:
+        # 校验项目是否存在
+        proj = (await db.execute(select(Project).where(Project.id == project_id, Project.deleted_at.is_(None)))).scalar_one_or_none()
+        if not proj:
+            raise HTTPException(status_code=404, detail="项目不存在")
         coverage = await service.get_traceability_coverage(project_id, coverage_type)
+        if coverage is None:
+            raise HTTPException(status_code=404, detail="追溯覆盖率不存在")
         
         return {
             "project_id": project_id,
@@ -354,6 +382,10 @@ async def get_traceability_coverage(
             "generated_at": datetime.utcnow()
         }
     
+    except NotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"获取追溯覆盖率失败: {str(e)}")
         raise HTTPException(status_code=500, detail="获取追溯覆盖率失败")
@@ -363,7 +395,8 @@ async def get_traceability_coverage(
 async def get_orphaned_requirements(
     project_id: int = Path(..., description="项目ID"),
     current_user: User = Depends(get_current_user),
-    service: RequirementTraceabilityService = Depends(get_traceability_service)
+    service: RequirementTraceabilityService = Depends(get_traceability_service),
+    db: AsyncSession = Depends(get_async_session)
 ):
     """
     获取孤立需求
@@ -371,7 +404,13 @@ async def get_orphaned_requirements(
     获取没有下游实现的孤立需求。
     """
     try:
+        # 校验项目是否存在
+        proj = (await db.execute(select(Project).where(Project.id == project_id, Project.deleted_at.is_(None)))).scalar_one_or_none()
+        if not proj:
+            raise HTTPException(status_code=404, detail="项目不存在")
         orphaned = await service.get_orphaned_requirements(project_id)
+        if orphaned is None:
+            orphaned = []
         
         return {
             "project_id": project_id,
@@ -380,6 +419,10 @@ async def get_orphaned_requirements(
             "generated_at": datetime.utcnow()
         }
     
+    except NotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"获取孤立需求失败: {str(e)}")
         raise HTTPException(status_code=500, detail="获取孤立需求失败")
@@ -389,7 +432,8 @@ async def get_orphaned_requirements(
 async def check_traceability_consistency(
     project_id: int = Path(..., description="项目ID"),
     current_user: User = Depends(get_current_user),
-    service: RequirementTraceabilityService = Depends(get_traceability_service)
+    service: RequirementTraceabilityService = Depends(get_traceability_service),
+    db: AsyncSession = Depends(get_async_session)
 ):
     """
     检查追溯一致性
@@ -397,7 +441,13 @@ async def check_traceability_consistency(
     检查项目追溯关系的一致性。
     """
     try:
+        # 校验项目是否存在
+        proj = (await db.execute(select(Project).where(Project.id == project_id, Project.deleted_at.is_(None)))).scalar_one_or_none()
+        if not proj:
+            raise HTTPException(status_code=404, detail="项目不存在")
         consistency = await service.check_traceability_consistency(project_id)
+        if consistency is None:
+            consistency = []
         
         return {
             "project_id": project_id,
@@ -405,6 +455,10 @@ async def check_traceability_consistency(
             "generated_at": datetime.utcnow()
         }
     
+    except NotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"检查追溯一致性失败: {str(e)}")
         raise HTTPException(status_code=500, detail="检查追溯一致性失败")
@@ -452,6 +506,8 @@ async def search_traceability_links(
             "limit": limit
         }
     
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"搜索追溯链接失败: {str(e)}")
         raise HTTPException(status_code=500, detail="搜索追溯链接失败")

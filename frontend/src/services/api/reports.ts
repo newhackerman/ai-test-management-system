@@ -21,6 +21,7 @@ export interface UnifiedReportsParams {
   page?: number;
   page_size?: number;
   report_type?: string;
+  source_filter?: string;
   format_filter?: string;
   test_plan_id?: number;
   search?: string;
@@ -40,59 +41,47 @@ export interface TestResultsParams {
 }
 
 export const reportsApi = {
-  // 生成报告
   generateReport: (data: GenerateReportRequest) =>
-    apiClient.post('/reports/generate', data).then(response => response.data),
+    apiClient.post('/reports/generate', data).then((response) => response.data),
 
-  // 导入报告
   importReport: (formData: FormData) =>
     apiClient.post('/reports/import', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
-    }).then(response => response.data),
+    }).then((response) => response.data),
 
-  // 获取统一报告列表
   getUnifiedReports: (params: UnifiedReportsParams) =>
-    apiClient.get('/reports/unified', { params }).then(response => response.data),
+    apiClient.get('/reports/unified', { params }).then((response) => response.data),
 
-  // 获取导入报告列表
   getImportedReports: (params: ImportedReportsParams) =>
-    apiClient.get('/reports/imported', { params }).then(response => response.data),
+    apiClient.get('/reports/imported', { params }).then((response) => response.data),
 
-  // 获取导入报告详情
   getImportedReportDetails: (importId: string) =>
-    apiClient.get(`/reports/imported/${importId}`).then(response => response.data),
+    apiClient.get(`/reports/imported/${importId}`).then((response) => response.data),
 
-  // 获取导入报告的测试结果
   getImportedReportTestResults: (importId: string, params: TestResultsParams) =>
-    apiClient.get(`/reports/imported/${importId}/test-results`, { params }).then(response => response.data),
+    apiClient.get(`/reports/imported/${importId}/test-results`, { params }).then((response) => response.data),
 
-  // 下载报告
   downloadReport: (reportId: string, format: string) =>
     apiClient.get(`/reports/download/${reportId}/${format}`, {
       responseType: 'blob',
-    }).then(response => response.data),
+    }).then((response) => response.data),
 
-  // 预览生成报告
   previewReport: (reportId: string, format: string) =>
-    apiClient.get(`/reports/view/${reportId}/${format}`, {
+    apiClient.get(`/reports/preview/${reportId}/${format}`, {
       responseType: 'text',
-    }).then(response => response.data),
+    }).then((response) => response.data),
 
-  // 删除生成报告
   deleteGeneratedReport: (reportId: string) =>
-    apiClient.delete(`/reports/generated/${reportId}`).then(response => response.data),
+    apiClient.delete(`/reports/generated/${reportId}`).then((response) => response.data),
 
-  // 删除导入的报告
   deleteImportedReport: (importId: string) =>
-    apiClient.delete(`/reports/imported/${importId}`).then(response => response.data),
+    apiClient.delete(`/reports/imported/${importId}`).then((response) => response.data),
 
-  // 获取支持的格式
   getSupportedFormats: () =>
-    apiClient.get('/reports/formats').then(response => response.data),
+    apiClient.get('/reports/formats').then((response) => response.data),
 
-  // 获取分析数据
   getAnalytics: (days: number = 30) =>
-    apiClient.get('/reports/analytics', { params: { days } }).then(response => response.data),
+    apiClient.get('/reports/analytics', { params: { days } }).then((response) => response.data),
 };

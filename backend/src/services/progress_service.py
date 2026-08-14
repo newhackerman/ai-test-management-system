@@ -17,7 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, or_, func, desc, asc, text
 from sqlalchemy.orm import selectinload, joinedload
 
-from ..core.database import get_async_session
+from ..core.database import get_async_session, get_async_session_ctx
 from ..core.exceptions import ValidationError, NotFoundError, PermissionError
 from ..models.project import Project, Task, Milestone, WorkLog, ProjectRisk
 from ..models.user import User
@@ -259,7 +259,7 @@ class ProgressService:
             
             weighted_progress += weight * completion_rate
         
-        # 计算进度率
+        # 计算进度率（加权完成率，0-1之间）
         progress_rate = weighted_progress / total_weight if total_weight > 0 else Decimal('0')
         
         return TaskProgressResponse(
@@ -269,7 +269,9 @@ class ProgressService:
             completed_tasks=completed_tasks,
             in_progress_tasks=in_progress_tasks,
             blocked_tasks=blocked_tasks,
-            weighted_progress=weighted_progress,
+            # weighted_progress 在 schema 中约束为 0-1，表示加权完成率，
+            # 与 progress_rate 一致（而非原始的权重*完成度之和）
+            weighted_progress=progress_rate,
             calculated_at=datetime.utcnow()
         )
     
@@ -534,7 +536,7 @@ class ProgressService:
         notify_stakeholders: bool = True
     ) -> ProgressUpdateResponse:
         """更新项目进度"""
-        async with get_async_session() as session:
+        async with get_async_session_ctx() as session:
             try:
                 # 计算最新进度
                 progress = await self.calculate_project_progress(project_id, session)

@@ -37,6 +37,8 @@ from ...services.execution_monitoring_service import ExecutionMonitoringService
 from ...services.auth_dependencies import get_current_user
 from ...models.user import User
 from ...models.test_case import AutomationScript, TestCase, TestExecution, ExecutionStatus as ModelExecutionStatus
+from ...models.test_environment import TestEnvironment
+from ...models.test_plan import TestPlan
 from ...schemas.test_execution import (
     ExecutionType, ExecutionStatus, TestEnvironmentStatus,
     StartManualExecutionRequest, CompleteManualExecutionRequest,
@@ -1876,6 +1878,152 @@ async def get_execution_statistics_alias(
     )
 
 
+@router.get("/statistics/summary", response_model=BaseResponse[ExecutionStatisticsResponse])
+async def get_execution_statistics(
+    project_id: Optional[int] = Query(None, description="项目ID"),
+    test_plan_id: Optional[int] = Query(None, description="测试计划ID"),
+    start_date: Optional[datetime] = Query(None, description="开始日期"),
+    end_date: Optional[datetime] = Query(None, description="结束日期"),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    获取执行统计信息
+
+    获取测试执行的统计数据和趋势分析。
+    """
+    try:
+        # 直接使用数据库聚合，避免依赖未初始化的 ExecutionMonitoringService
+        base_query = db.query(TestExecution)
+        if test_plan_id:
+            base_query = base_query.filter(TestExecution.test_plan_id == test_plan_id)
+        if start_date:
+            base_query = base_query.filter(TestExecution.started_at >= start_date)
+        if end_date:
+            base_query = base_query.filter(TestExecution.started_at <= end_date)
+        # project_id 通过关联的 test_plan / test_case 间接过滤
+        if project_id:
+            base_query = (
+                base_query.outerjoin(TestPlan, TestExecution.test_plan_id == TestPlan.id)
+                .filter(TestPlan.project_id == project_id)
+            )
+
+        total = base_query.count()
+        passed = base_query.filter(TestExecution.execution_status == ModelExecutionStatus.PASSED).count()
+        failed = base_query.filter(TestExecution.execution_status == ModelExecutionStatus.FAILED).count()
+        blocked = base_query.filter(TestExecution.execution_status == ModelExecutionStatus.BLOCKED).count() if hasattr(ModelExecutionStatus, "BLOCKED") else 0
+        skipped = base_query.filter(TestExecution.execution_status == ModelExecutionStatus.SKIPPED).count() if hasattr(ModelExecutionStatus, "SKIPPED") else 0
+        automated = base_query.filter(TestExecution.execution_type == "AUTOMATED").count()
+        manual = total - automated
+        completed = passed + failed
+        pass_rate = round(passed / completed * 100, 1) if completed else 0.0
+        durations = [row[0] for row in db.query(TestExecution.duration).filter(
+            TestExecution.duration.isnot(None)).all()]
+        avg_duration = round((sum(durations) / len(durations)) / 60, 1) if durations else None
+
+        response_data = ExecutionStatisticsResponse(
+            total_executions=total,
+            manual_executions=manual,
+            automated_executions=automated,
+            passed_executions=passed,
+            failed_executions=failed,
+            blocked_executions=blocked,
+            skipped_executions=skipped,
+            pass_rate=pass_rate,
+            average_duration=avg_duration,
+            execution_trend=[]
+        )
+
+        return BaseResponse(
+            success=True,
+            message="获取执行统计成功",
+            data=response_data
+        )
+
+    except Exception as e:
+        if _is_missing_table_error(e):
+            response_data = ExecutionStatisticsResponse(
+                total_executions=0, manual_executions=0, automated_executions=0,
+                passed_executions=0, failed_executions=0, blocked_executions=0,
+                skipped_executions=0, pass_rate=0.0, average_duration=None,
+                execution_trend=[]
+            )
+            return BaseResponse(success=True, message="获取执行统计成功", data=response_data)
+        logger.error(f"获取执行统计失败: {str(e)}")
+        raise HTTPException(status_code=500, detail="内部服务器错误")
+
+
+# 测试环境管理接口
+# 静态路径 /environments 必须注册在 /{execution_id} 之前，否则
+# FastAPI 会把 "environments" 当作 execution_id 匹配，触发 int 转换失败 → 422。
+@router.get("/environments", response_model=PaginatedResponse[TestEnvironmentResponse])
+async def list_test_environments(
+    environment_type: Optional[str] = Query(None, description="环境类型"),
+    status: Optional[TestEnvironmentStatus] = Query(None, description="环境状态"),
+    is_active: Optional[bool] = Query(None, description="是否激活"),
+    page: int = Query(1, ge=1, description="页码"),
+    page_size: int = Query(20, ge=1, le=100, description="每页大小"),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    获取测试环境列表
+
+    获取可用的测试环境列表。
+    """
+    try:
+        # 直接使用数据库查询，避免依赖未初始化的 TestEnvironmentService
+        query = db.query(TestEnvironment)
+        if environment_type:
+            query = query.filter(TestEnvironment.environment_type == environment_type)
+        if status:
+            query = query.filter(TestEnvironment.status == status)
+        if is_active is not None:
+            query = query.filter(TestEnvironment.is_active == is_active)
+
+        total = query.count()
+        environments = query.offset((page - 1) * page_size).limit(page_size).all()
+
+        # 构建响应数据
+        response_data = []
+        for env in environments:
+            response_data.append(TestEnvironmentResponse(
+                id=env.id,
+                environment_name=env.environment_name,
+                environment_type=env.environment_type.value if env.environment_type else None,
+                description=env.description,
+                status=env.status,
+                configuration=env.configuration or {},
+                is_active=env.is_active,
+                current_user=None,
+                reserved_until=None,
+                created_at=env.created_at,
+                updated_at=env.updated_at
+            ))
+
+        return PaginatedResponse(
+            success=True,
+            message="获取测试环境列表成功",
+            data=response_data,
+            total=total,
+            page=page,
+            page_size=page_size
+        )
+
+    except Exception as e:
+        if _is_missing_table_error(e):
+            return PaginatedResponse(
+                success=True,
+                message="获取测试环境列表成功",
+                data=[],
+                total=0,
+                page=page,
+                page_size=page_size
+            )
+        logger.error(f"获取测试环境列表失败: {str(e)}")
+        raise HTTPException(status_code=500, detail="内部服务器错误")
+
+
 @router.get("/{execution_id}", response_model=BaseResponse[TestExecutionResponse])
 async def get_test_execution(
     execution_id: int = Path(..., description="执行记录ID"),
@@ -2006,7 +2154,7 @@ async def list_test_executions(
         raise HTTPException(status_code=500, detail="内部服务器错误")
 
 
-@router.get("/{execution_id}/progress", response_model=BaseResponse[ExecutionProgressResponse])
+@router.get("/{execution_id}/progress", response_model=BaseResponse[Dict[str, Any]])
 async def get_execution_progress(
     execution_id: int = Path(..., description="执行记录ID"),
     current_user: User = Depends(get_current_user),
@@ -2014,153 +2162,42 @@ async def get_execution_progress(
 ):
     """
     获取执行进度
-    
-    获取测试执行的实时进度信息。
+
+    获取测试执行的实时进度信息（直接基于数据库执行记录计算，避免依赖未初始化的监控服务）。
     """
     try:
-        monitoring_service = ExecutionMonitoringService(db)
-        
-        # 获取执行进度
-        progress = await monitoring_service.get_execution_progress(execution_id)
-        
-        # 构建响应
-        response_data = ExecutionProgressResponse(
-            execution_id=progress.execution_id,
-            total_steps=progress.total_steps,
-            completed_steps=progress.completed_steps,
-            passed_steps=progress.passed_steps,
-            failed_steps=progress.failed_steps,
-            current_step=progress.current_step,
-            progress_percentage=progress.progress_percentage,
-            estimated_completion=progress.estimated_completion
-        )
-        
+        execution = db.query(TestExecution).filter(TestExecution.id == execution_id).first()
+        if not execution:
+            raise HTTPException(status_code=404, detail="执行记录不存在")
+
+        # 基于执行状态与时间推算进度
+        status_val = execution.execution_status.value if hasattr(execution.execution_status, "value") else str(execution.execution_status)
+        total_steps = 1
+        completed_steps = 1 if status_val in ("PASSED", "FAILED", "COMPLETED", "BLOCKED", "SKIPPED") else 0
+        passed_steps = 1 if status_val == "PASSED" else 0
+        failed_steps = 1 if status_val == "FAILED" else 0
+        progress_percentage = 100.0 if completed_steps else (50.0 if status_val == "IN_PROGRESS" else 0.0)
+        estimated_completion = execution.completed_at.isoformat() if execution.completed_at else None
+
         return BaseResponse(
             success=True,
             message="获取执行进度成功",
-            data=response_data
+            data={
+                "execution_id": execution.id,
+                "total_steps": total_steps,
+                "completed_steps": completed_steps,
+                "passed_steps": passed_steps,
+                "failed_steps": failed_steps,
+                "current_step": None,
+                "progress_percentage": progress_percentage,
+                "estimated_completion": estimated_completion
+            }
         )
-        
+
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"获取执行进度失败: {str(e)}")
-        raise HTTPException(status_code=500, detail="内部服务器错误")
-
-
-@router.get("/statistics/summary", response_model=BaseResponse[ExecutionStatisticsResponse])
-async def get_execution_statistics(
-    project_id: Optional[int] = Query(None, description="项目ID"),
-    test_plan_id: Optional[int] = Query(None, description="测试计划ID"),
-    start_date: Optional[datetime] = Query(None, description="开始日期"),
-    end_date: Optional[datetime] = Query(None, description="结束日期"),
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    """
-    获取执行统计信息
-    
-    获取测试执行的统计数据和趋势分析。
-    """
-    try:
-        monitoring_service = ExecutionMonitoringService(db)
-        
-        # 构建统计条件
-        filters = {}
-        if project_id:
-            filters['project_id'] = project_id
-        if test_plan_id:
-            filters['test_plan_id'] = test_plan_id
-        if start_date:
-            filters['start_date'] = start_date
-        if end_date:
-            filters['end_date'] = end_date
-        
-        # 获取执行统计
-        statistics = await monitoring_service.get_execution_statistics(filters)
-        
-        # 构建响应
-        response_data = ExecutionStatisticsResponse(
-            total_executions=statistics.total_executions,
-            manual_executions=statistics.manual_executions,
-            automated_executions=statistics.automated_executions,
-            passed_executions=statistics.passed_executions,
-            failed_executions=statistics.failed_executions,
-            blocked_executions=statistics.blocked_executions,
-            skipped_executions=statistics.skipped_executions,
-            pass_rate=statistics.pass_rate,
-            average_duration=statistics.average_duration,
-            execution_trend=statistics.execution_trend
-        )
-        
-        return BaseResponse(
-            success=True,
-            message="获取执行统计成功",
-            data=response_data
-        )
-        
-    except Exception as e:
-        logger.error(f"获取执行统计失败: {str(e)}")
-        raise HTTPException(status_code=500, detail="内部服务器错误")
-
-
-# 测试环境管理接口
-@router.get("/environments", response_model=PaginatedResponse[TestEnvironmentResponse])
-async def list_test_environments(
-    environment_type: Optional[str] = Query(None, description="环境类型"),
-    status: Optional[TestEnvironmentStatus] = Query(None, description="环境状态"),
-    is_active: Optional[bool] = Query(None, description="是否激活"),
-    page: int = Query(1, ge=1, description="页码"),
-    page_size: int = Query(20, ge=1, le=100, description="每页大小"),
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    """
-    获取测试环境列表
-    
-    获取可用的测试环境列表。
-    """
-    try:
-        env_service = TestEnvironmentService(db)
-        
-        # 构建查询条件
-        filters = {}
-        if environment_type:
-            filters['environment_type'] = environment_type
-        if status:
-            filters['status'] = status.value
-        if is_active is not None:
-            filters['is_active'] = is_active
-        
-        # 查询环境列表
-        environments, total = await env_service.get_environments_by_filters(filters, page, page_size)
-        
-        # 构建响应数据
-        response_data = []
-        for env in environments:
-            response_data.append(TestEnvironmentResponse(
-                id=env.id,
-                environment_name=env.environment_name,
-                environment_type=env.environment_type,
-                description=env.description,
-                status=env.status,
-                configuration=env.configuration,
-                is_active=env.is_active,
-                current_user=env.current_user,
-                reserved_until=env.reserved_until,
-                created_at=env.created_at,
-                updated_at=env.updated_at
-            ))
-        
-        return PaginatedResponse(
-            success=True,
-            message="获取测试环境列表成功",
-            data=response_data,
-            total=total,
-            page=page,
-            page_size=page_size
-        )
-        
-    except Exception as e:
-        logger.error(f"获取测试环境列表失败: {str(e)}")
         raise HTTPException(status_code=500, detail="内部服务器错误")
 
 
@@ -2178,8 +2215,18 @@ async def reserve_test_environment(
     预约指定的测试环境。
     """
     try:
+        # 校验测试环境是否存在，避免对不存在的资源操作返回 500
+        try:
+            environment = db.query(TestEnvironment).filter(TestEnvironment.id == env_id).first()
+        except Exception as table_error:
+            # 测试环境表尚未初始化，视为环境不存在
+            if _is_missing_table_error(table_error):
+                raise HTTPException(status_code=404, detail="测试环境不存在")
+            raise
+        if not environment:
+            raise HTTPException(status_code=404, detail="测试环境不存在")
+
         env_service = TestEnvironmentService(db)
-        
         # 预约环境
         reservation = await env_service.reserve_environment(
             env_id,
@@ -2199,6 +2246,10 @@ async def reserve_test_environment(
             }
         )
         
+    except (AttributeError, NotFoundError) as e:
+        raise HTTPException(status_code=404, detail=str(e) or "测试环境不存在")
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"预约测试环境失败: {str(e)}")
         raise HTTPException(status_code=500, detail="内部服务器错误")
@@ -2212,21 +2263,35 @@ async def release_test_environment(
 ):
     """
     释放测试环境
-    
+
     释放当前用户预约的测试环境。
     """
     try:
+        # 校验测试环境是否存在，避免对不存在的资源操作返回 500
+        try:
+            environment = db.query(TestEnvironment).filter(TestEnvironment.id == env_id).first()
+        except Exception as table_error:
+            # 测试环境表尚未初始化，视为环境不存在
+            if _is_missing_table_error(table_error):
+                raise HTTPException(status_code=404, detail="测试环境不存在")
+            raise
+        if not environment:
+            raise HTTPException(status_code=404, detail="测试环境不存在")
+
         env_service = TestEnvironmentService(db)
-        
         # 释放环境
         result = await env_service.release_environment(env_id, current_user.id)
-        
+
         return BaseResponse(
             success=True,
             message="测试环境释放成功",
             data=result
         )
-        
+
+    except (AttributeError, NotFoundError) as e:
+        raise HTTPException(status_code=404, detail=str(e) or "测试环境不存在")
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"释放测试环境失败: {str(e)}")
         raise HTTPException(status_code=500, detail="内部服务器错误")

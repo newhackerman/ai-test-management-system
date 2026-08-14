@@ -252,6 +252,10 @@ async def calculate_test_coverage(
             requirement_coverage=float(coverage.requirement_coverage),
             coverage_date=coverage.coverage_date.isoformat()
         )
+    except NotFoundError:
+        raise HTTPException(status_code=404, detail=f"项目 {project_id} 不存在")
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"计算测试覆盖率失败: {str(e)}")
 
@@ -314,7 +318,7 @@ async def get_project_test_metrics(
     try:
         # 计算项目整体覆盖率
         coverage = await service.calculate_test_coverage(project_id)
-        
+
         return {
             "project_id": project_id,
             "test_coverage": {
@@ -326,6 +330,10 @@ async def get_project_test_metrics(
             },
             "generated_at": coverage.coverage_date.isoformat()
         }
+    except NotFoundError:
+        raise HTTPException(status_code=404, detail=f"项目 {project_id} 不存在")
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"获取测试指标失败: {str(e)}")
 

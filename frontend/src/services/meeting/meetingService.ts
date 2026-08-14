@@ -32,7 +32,7 @@ export class MeetingService {
 
   // 会议CRUD操作
   async createMeeting(data: CreateMeetingRequest): Promise<Meeting> {
-    const response = await apiClient.post(this.baseUrl, this.toApiMeetingPayload(data))
+    const response = await apiClient.post(`${this.baseUrl}/`, this.toApiMeetingPayload(data))
     return this.unwrap<Meeting>(response)
   }
 
@@ -75,7 +75,7 @@ export class MeetingService {
       sort_by: params?.sort_by,
       sort_order: params?.sort_order,
     }
-    const response = await apiClient.get(this.baseUrl, { params: apiParams })
+    const response = await apiClient.get(`${this.baseUrl}/`, { params: apiParams })
     const payload: any = response.data || response
     return {
       meetings: payload.meetings || [],

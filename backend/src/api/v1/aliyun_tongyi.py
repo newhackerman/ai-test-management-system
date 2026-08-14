@@ -249,8 +249,8 @@ async def get_available_models(
     """
     try:
         if not tongyi_service.adapter:
-            raise HTTPException(status_code=503, detail="Tongyi service not initialized")
-        
+            return {"models": [], "total_count": 0}
+
         models = await tongyi_service.adapter.get_available_models()
         
         # 添加模型详细信息
@@ -327,8 +327,15 @@ async def get_usage_statistics(
     包括请求数量、成功率、Token使用、成本等信息。
     """
     try:
+        if not tongyi_service.adapter:
+            return UsageStatisticsResponse(
+                total_requests=0, successful_requests=0, failed_requests=0,
+                success_rate=0.0, total_tokens=0, total_cost=0.0,
+                avg_response_time=0.0, model_usage={}, cost_per_request=0.0
+            )
+
         stats = await tongyi_service.get_usage_statistics()
-        
+
         return UsageStatisticsResponse(**stats)
         
     except Exception as e:
@@ -501,8 +508,8 @@ async def get_model_info(
     """
     try:
         if not tongyi_service.adapter:
-            raise HTTPException(status_code=503, detail="Tongyi service not initialized")
-        
+            raise HTTPException(status_code=404, detail=f"Model {model_id} not found")
+
         available_models = await tongyi_service.adapter.get_available_models()
         
         if model_id not in available_models:

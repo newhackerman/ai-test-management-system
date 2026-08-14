@@ -52,6 +52,8 @@ async def get_overview_data(
             "role_type": role_type.upper()
         }
     
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"获取概览数据失败: {str(e)}")
 
@@ -105,6 +107,8 @@ async def get_metrics_data(
     
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"获取指标数据失败: {str(e)}")
 
@@ -170,6 +174,8 @@ async def get_real_time_data(
             "is_real_time": True
         }
     
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"获取实时数据失败: {str(e)}")
 
@@ -218,6 +224,8 @@ async def get_trend_data(
     
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"获取趋势数据失败: {str(e)}")
 
@@ -247,6 +255,8 @@ async def get_statistics_summary(
             "generated_for": current_user["id"]
         }
     
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"获取统计摘要失败: {str(e)}")
 

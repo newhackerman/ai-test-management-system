@@ -22,6 +22,8 @@ from typing import Dict, List, Optional, Any, Tuple
 from dataclasses import dataclass
 from enum import Enum
 
+from fastapi import HTTPException
+
 from ..adapters.baidu_adapter import BaiduAdapter, BaiduWenxinError
 from ..adapters.base import (
     AIRequest, AIResponse, ChatMessage, MessageRole, 
@@ -644,18 +646,27 @@ class BaiduWenxinService:
 _wenxin_service = None
 
 async def get_wenxin_service() -> BaiduWenxinService:
-    """获取文心一言服务实例"""
+    """获取文心一言服务实例，未初始化时返回一个未配置的实例而非抛异常，
+    让路由层自行处理（health 端点返回 healthy=false，其他端点返回空列表）。"""
     global _wenxin_service
-    
+
     if _wenxin_service is None:
-        _wenxin_service = BaiduWenxinService()
-    
+        _wenxin_service = BaiduWenxinService.__new__(BaiduWenxinService)
+        _wenxin_service.adapter = None
+        _wenxin_service.chinese_optimization = {}
+        _wenxin_service.model_configs = {}
+
     return _wenxin_service
 
 
 async def initialize_wenxin_service(api_key: str, secret_key: str, 
                                   api_endpoint: Optional[str] = None):
     """初始化文心一言服务"""
-    service = await get_wenxin_service()
-    await service.initialize(api_key, secret_key, api_endpoint)
-    return service
+    global _wenxin_service
+
+    # 直接创建服务实例，不通过 get_wenxin_service()（后者在服务未初始化时会抛 503）
+    if _wenxin_service is None:
+        _wenxin_service = BaiduWenxinService()
+
+    await _wenxin_service.initialize(api_key, secret_key, api_endpoint)
+    return _wenxin_service

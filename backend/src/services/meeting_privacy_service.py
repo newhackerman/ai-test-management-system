@@ -17,7 +17,7 @@ from sqlalchemy.orm import Session
 
 from ..models.base import BaseModel
 from ..models.meeting import Meeting, MeetingParticipant, MeetingRecording, MeetingMinutes, MeetingChat, MeetingFile
-from ..core.database import get_async_session
+from ..core.database import get_async_session, get_async_session_ctx
 from ..utils.security_utils import SecurityUtils
 from ..core.config import get_settings
 
@@ -236,7 +236,7 @@ class MeetingPrivacyService:
             隐私设置记录
         """
         try:
-            async with get_async_session() as db:
+            async with get_async_session_ctx() as db:
                 # 计算自动删除日期
                 auto_delete_date = None
                 if retention_policy != DataRetentionPolicy.PERMANENT:
@@ -281,7 +281,7 @@ class MeetingPrivacyService:
             更新后的隐私设置
         """
         try:
-            async with get_async_session() as db:
+            async with get_async_session_ctx() as db:
                 from sqlalchemy import select
                 
                 # 查询现有设置
@@ -347,7 +347,7 @@ class MeetingPrivacyService:
             同意记录
         """
         try:
-            async with get_async_session() as db:
+            async with get_async_session_ctx() as db:
                 # 创建同意记录
                 consent = UserConsent(
                     user_id=user_id,
@@ -391,7 +391,7 @@ class MeetingPrivacyService:
             是否成功撤销
         """
         try:
-            async with get_async_session() as db:
+            async with get_async_session_ctx() as db:
                 from sqlalchemy import select, and_
                 
                 # 查询同意记录
@@ -441,7 +441,7 @@ class MeetingPrivacyService:
             是否已同意
         """
         try:
-            async with get_async_session() as db:
+            async with get_async_session_ctx() as db:
                 from sqlalchemy import select, and_
                 
                 query = select(UserConsent).where(
@@ -484,7 +484,7 @@ class MeetingPrivacyService:
             删除请求记录
         """
         try:
-            async with get_async_session() as db:
+            async with get_async_session_ctx() as db:
                 # 生成验证令牌
                 verification_token = self.security_utils.generate_secure_token(32)
                 
@@ -524,7 +524,7 @@ class MeetingPrivacyService:
             是否处理成功
         """
         try:
-            async with get_async_session() as db:
+            async with get_async_session_ctx() as db:
                 from sqlalchemy import select
                 
                 # 查询删除请求
@@ -566,7 +566,7 @@ class MeetingPrivacyService:
             
             # 更新失败状态
             try:
-                async with get_async_session() as db:
+                async with get_async_session_ctx() as db:
                     from sqlalchemy import select
                     query = select(DataDeletionRequest).where(DataDeletionRequest.id == request_id)
                     result = await db.execute(query)
@@ -585,7 +585,7 @@ class MeetingPrivacyService:
         completion_details = {'deleted_items': []}
         
         try:
-            async with get_async_session() as db:
+            async with get_async_session_ctx() as db:
                 from sqlalchemy import delete
                 
                 # 删除用户参与记录
@@ -629,7 +629,7 @@ class MeetingPrivacyService:
             return completion_details
         
         try:
-            async with get_async_session() as db:
+            async with get_async_session_ctx() as db:
                 from sqlalchemy import delete, and_
                 
                 for meeting_id in meeting_ids:
@@ -683,7 +683,7 @@ class MeetingPrivacyService:
             匿名化结果
         """
         try:
-            async with get_async_session() as db:
+            async with get_async_session_ctx() as db:
                 from sqlalchemy import select, and_, update
                 
                 anonymization_results = {'anonymized_items': []}
@@ -721,7 +721,7 @@ class MeetingPrivacyService:
             执行结果
         """
         try:
-            async with get_async_session() as db:
+            async with get_async_session_ctx() as db:
                 from sqlalchemy import select, and_, delete
                 
                 execution_results = {'processed_meetings': 0, 'deleted_items': []}
@@ -762,7 +762,7 @@ class MeetingPrivacyService:
         deletion_result = {'deleted_items': []}
         
         try:
-            async with get_async_session() as db:
+            async with get_async_session_ctx() as db:
                 from sqlalchemy import delete
                 
                 # 删除会议相关的所有数据
@@ -812,7 +812,7 @@ class MeetingPrivacyService:
                 'recommendations': []
             }
             
-            async with get_async_session() as db:
+            async with get_async_session_ctx() as db:
                 from sqlalchemy import select
                 
                 # 检查隐私设置
@@ -875,7 +875,7 @@ class MeetingPrivacyService:
             隐私报告
         """
         try:
-            async with get_async_session() as db:
+            async with get_async_session_ctx() as db:
                 from sqlalchemy import select, and_, func
                 
                 report = {

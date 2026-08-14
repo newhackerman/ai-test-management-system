@@ -399,7 +399,7 @@ async def upload_file(
 async def get_files(
     meeting_id: int = Path(..., description="会议ID"),
     file_type: Optional[str] = Query(None, description="文件类型筛选"),
-    status: Optional[FileShareStatusEnum] = Query(None, description="文件状态筛选"),
+    status_filter: Optional[FileShareStatusEnum] = Query(None, alias="status", description="文件状态筛选"),
     uploader_id: Optional[int] = Query(None, description="上传者ID筛选"),
     start_date: Optional[datetime] = Query(None, description="开始日期筛选"),
     end_date: Optional[datetime] = Query(None, description="结束日期筛选"),
@@ -427,7 +427,7 @@ async def get_files(
         # 构建查询参数
         query_params = FileQueryParams(
             file_type=file_type,
-            status=status,
+            status=status_filter,
             uploader_id=uploader_id,
             start_date=start_date,
             end_date=end_date,
@@ -456,6 +456,8 @@ async def get_files(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=str(e)
         )
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"获取文件列表失败: {e}")
         raise HTTPException(
@@ -559,6 +561,8 @@ async def get_whiteboard_state(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=str(e)
         )
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"获取白板状态失败: {e}")
         raise HTTPException(

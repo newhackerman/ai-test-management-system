@@ -3,6 +3,7 @@
 """
 import datetime
 import inspect
+import logging
 from typing import Optional, List, Dict, Any, Set
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, or_, func, text, bindparam
@@ -15,6 +16,7 @@ from ..models.permission import Permission, UserPermission, PermissionType, Perm
 from ..core.config import get_settings
 
 settings = get_settings()
+logger = logging.getLogger(__name__)
 
 
 class PermissionService:
@@ -329,6 +331,12 @@ class PermissionService:
         
         return permission
     
+    async def get_permission_by_id(self, permission_id: int) -> Optional[Permission]:
+        """根据ID获取权限详情"""
+        query = select(Permission).where(Permission.id == permission_id)
+        result = await self.db.execute(query)
+        return result.scalar_one_or_none()
+    
     async def update_permission(self, permission_id: int, permission_data: Dict[str, Any]) -> Optional[Permission]:
         """更新权限"""
         query = select(Permission).where(Permission.id == permission_id)
@@ -477,3 +485,262 @@ class PermissionService:
             "module_statistics": module_stats,
             "type_statistics": type_stats
         }
+
+    async def get_permissions(
+        self,
+        page: int = 1,
+        size: int = 20,
+        search: Optional[str] = None,
+        module: Optional[str] = None
+    ) -> tuple:
+        """获取权限列表（分页）。
+
+        Returns:
+            Tuple[List[Permission], int]: 权限列表和总数
+        """
+        conditions = []
+        if search:
+            conditions.append(
+                or_(
+                    Permission.code.ilike(f"%{search}%"),
+                    Permission.name.ilike(f"%{search}%"),
+                    Permission.description.ilike(f"%{search}%"),
+                )
+            )
+        if module:
+            conditions.append(Permission.module == module)
+
+        count_stmt = select(func.count(Permission.id))
+        if conditions:
+            count_stmt = count_stmt.where(and_(*conditions))
+        total_result = await self.db.execute(count_stmt)
+        total = total_result.scalar() or 0
+
+        query = (
+            select(Permission)
+            .order_by(Permission.module, Permission.sort_order)
+        )
+        if conditions:
+            query = query.where(and_(*conditions))
+        offset = (page - 1) * size
+        query = query.offset(offset).limit(size)
+
+        result = await self.db.execute(query)
+        permissions = result.scalars().all()
+
+        return permissions, total
+
+    async def get_permission_modules(self) -> List[str]:
+        """获取所有权限模块列表。"""
+        query = select(Permission.module).distinct().order_by(Permission.module)
+        result = await self.db.execute(query)
+        return [row[0] for row in result.all() if row[0] is not None]
+
+    async def get_roles(
+        self,
+        page: int = 1,
+        size: int = 20,
+        search: Optional[str] = None,
+        is_system_role: Optional[bool] = None,
+        is_active: Optional[bool] = None
+    ) -> tuple:
+        """获取角色列表（分页）。
+
+        Returns:
+            Tuple[List[Role], int]: 角色列表和总数
+        """
+        conditions = []
+        if search:
+            conditions.append(
+                or_(
+                    Role.code.ilike(f"%{search}%"),
+                    Role.name.ilike(f"%{search}%"),
+                    Role.description.ilike(f"%{search}%"),
+                )
+            )
+        if is_system_role is not None:
+            conditions.append(Role.is_system_role == is_system_role)
+        if is_active is not None:
+            conditions.append(Role.is_active == is_active)
+
+        count_stmt = select(func.count(Role.id))
+        if conditions:
+            count_stmt = count_stmt.where(and_(*conditions))
+        total_result = await self.db.execute(count_stmt)
+        total = total_result.scalar() or 0
+
+        query = select(Role).order_by(Role.sort_order, Role.id)
+        if conditions:
+            query = query.where(and_(*conditions))
+        offset = (page - 1) * size
+        query = query.offset(offset).limit(size)
+
+        result = await self.db.execute(query)
+        roles = result.scalars().all()
+
+        return roles, total
+
+    async def create_role(
+        self,
+        name: str,
+        code: str,
+        description: Optional[str] = None,
+        is_system_role: bool = False,
+        priority: int = 0,
+        permission_ids: Optional[List[int]] = None,
+        created_by: Optional[int] = None,
+        parent_id: Optional[int] = None,
+        data_scope: Optional[str] = None,
+        data_scope_config: Optional[Dict[str, Any]] = None,
+        max_users: Optional[int] = None,
+    ) -> tuple:
+        """创建角色。
+
+        Returns:
+            Tuple[Optional[Role], Optional[str]]: (角色, 错误信息)
+        """
+        try:
+            # 检查角色代码是否已存在
+            exists_query = select(func.count(Role.id)).where(Role.code == code)
+            exists_result = await self.db.execute(exists_query)
+            if (exists_result.scalar() or 0) > 0:
+                return None, f"角色代码已存在: {code}"
+
+            role = Role(
+                name=name,
+                code=code,
+                description=description,
+                is_system_role=is_system_role,
+                priority=priority,
+                parent_id=parent_id,
+                data_scope=data_scope or "all",
+                data_scope_config=data_scope_config,
+                max_users=max_users,
+                created_by=created_by,
+                updated_by=created_by,
+            )
+            self.db.add(role)
+            await self.db.flush()
+
+            # 分配权限
+            if permission_ids:
+                for permission_id in permission_ids:
+                    role_permission = RolePermission(
+                        role_id=role.id,
+                        permission_id=permission_id,
+                        effect=PermissionEffect.ALLOW,
+                        granted_by=created_by,
+                        granted_at=datetime.datetime.utcnow().isoformat(),
+                    )
+                    self.db.add(role_permission)
+
+            await self.db.commit()
+            await self.db.refresh(role)
+            return role, None
+        except Exception as e:
+            await self.db.rollback()
+            return None, str(e)
+
+    async def update_role(
+        self,
+        role_id: int,
+        name: Optional[str] = None,
+        code: Optional[str] = None,
+        description: Optional[str] = None,
+        is_active: Optional[bool] = None,
+        priority: Optional[int] = None,
+        permission_ids: Optional[List[int]] = None,
+        updated_by: Optional[int] = None,
+        data_scope: Optional[str] = None,
+        data_scope_config: Optional[Dict[str, Any]] = None,
+        max_users: Optional[int] = None,
+    ) -> tuple:
+        """更新角色。
+
+        Returns:
+            Tuple[Optional[Role], Optional[str]]: (角色, 错误信息)
+        """
+        try:
+            query = select(Role).where(Role.id == role_id)
+            result = await self.db.execute(query)
+            role = result.scalar_one_or_none()
+
+            if not role:
+                return None, f"角色不存在: {role_id}"
+
+            if role.is_system_role and is_active is False:
+                return None, "不能停用系统角色"
+
+            if code is not None and code != role.code:
+                dup_query = select(func.count(Role.id)).where(
+                    and_(Role.code == code, Role.id != role_id)
+                )
+                dup_result = await self.db.execute(dup_query)
+                if (dup_result.scalar() or 0) > 0:
+                    return None, f"角色代码已存在: {code}"
+                role.code = code
+
+            if name is not None:
+                role.name = name
+            if description is not None:
+                role.description = description
+            if is_active is not None:
+                role.is_active = is_active
+            if priority is not None:
+                role.priority = priority
+            if data_scope is not None:
+                role.data_scope = data_scope
+            if data_scope_config is not None:
+                role.data_scope_config = data_scope_config
+            if max_users is not None:
+                role.max_users = max_users
+            role.updated_by = updated_by
+
+            await self.db.flush()
+
+            # 重新分配权限
+            if permission_ids is not None:
+                delete_query = select(RolePermission).where(RolePermission.role_id == role_id)
+                delete_result = await self.db.execute(delete_query)
+                for rp in delete_result.scalars().all():
+                    await self.db.delete(rp)
+
+                for permission_id in permission_ids:
+                    role_permission = RolePermission(
+                        role_id=role_id,
+                        permission_id=permission_id,
+                        effect=PermissionEffect.ALLOW,
+                        granted_by=updated_by,
+                        granted_at=datetime.datetime.utcnow().isoformat(),
+                    )
+                    self.db.add(role_permission)
+
+            await self.db.commit()
+            await self.db.refresh(role)
+            return role, None
+        except Exception as e:
+            await self.db.rollback()
+            return None, str(e)
+
+    async def delete_role(self, role_id: int, deleted_by: Optional[int] = None) -> bool:
+        """删除角色（系统角色不允许删除）。"""
+        try:
+            query = select(Role).where(Role.id == role_id)
+            result = await self.db.execute(query)
+            role = result.scalar_one_or_none()
+
+            if not role:
+                return False
+
+            if role.is_system_role:
+                raise ValueError("不能删除系统角色")
+
+            await self.db.delete(role)
+            await self.db.commit()
+            return True
+        except ValueError:
+            raise
+        except Exception as e:
+            await self.db.rollback()
+            logger.error(f"删除角色失败: {e}")
+            return False

@@ -12,12 +12,14 @@ from typing import List, Optional
 from datetime import date
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Path
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...core.database import get_async_session
 from ...core.auth import get_current_user
 from ...core.exceptions import ValidationError, NotFoundError, PermissionError
 from ...models.user import User
+from ...models.project import Project
 from ...services.progress_service import ProgressService
 from ...schemas.progress import (
     ProgressResponse, ProgressUpdateRequest, ProgressUpdateResponse,
@@ -57,6 +59,8 @@ async def get_project_progress(
         raise HTTPException(status_code=404, detail=str(e))
     except PermissionError as e:
         raise HTTPException(status_code=403, detail=str(e))
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"获取项目 {project_id} 进度失败: {str(e)}")
         raise HTTPException(status_code=500, detail="获取项目进度失败")
@@ -89,6 +93,8 @@ async def update_project_progress(
         raise HTTPException(status_code=404, detail=str(e))
     except PermissionError as e:
         raise HTTPException(status_code=403, detail=str(e))
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"更新项目 {project_id} 进度失败: {str(e)}")
         raise HTTPException(status_code=500, detail="更新项目进度失败")
@@ -147,6 +153,8 @@ async def get_project_alerts(
         
     except NotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"获取项目 {project_id} 预警失败: {str(e)}")
         raise HTTPException(status_code=500, detail="获取项目预警失败")
@@ -165,6 +173,10 @@ async def acknowledge_alert(
     标记指定预警为已确认状态。
     """
     try:
+        # 校验项目是否存在
+        proj = (await session.execute(select(Project).where(Project.id == project_id, Project.deleted_at.is_(None)))).scalar_one_or_none()
+        if not proj:
+            raise HTTPException(status_code=404, detail="项目不存在")
         # TODO: 实现预警确认逻辑
         # 这里需要实现预警的持久化存储和状态管理
         
@@ -173,6 +185,8 @@ async def acknowledge_alert(
         
     except NotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"确认预警失败: {str(e)}")
         raise HTTPException(status_code=500, detail="确认预警失败")
@@ -192,6 +206,10 @@ async def resolve_alert(
     标记指定预警为已解决状态。
     """
     try:
+        # 校验项目是否存在
+        proj = (await session.execute(select(Project).where(Project.id == project_id, Project.deleted_at.is_(None)))).scalar_one_or_none()
+        if not proj:
+            raise HTTPException(status_code=404, detail="项目不存在")
         # TODO: 实现预警解决逻辑
         # 这里需要实现预警的持久化存储和状态管理
         
@@ -200,6 +218,8 @@ async def resolve_alert(
         
     except NotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"解决预警失败: {str(e)}")
         raise HTTPException(status_code=500, detail="解决预警失败")
@@ -218,6 +238,10 @@ async def get_progress_trend(
     分析指定项目在指定时间范围内的进度趋势，提供预测和建议。
     """
     try:
+        # 校验项目是否存在
+        proj = (await session.execute(select(Project).where(Project.id == project_id, Project.deleted_at.is_(None)))).scalar_one_or_none()
+        if not proj:
+            raise HTTPException(status_code=404, detail="项目不存在")
         # TODO: 实现进度趋势分析
         # 这里需要实现历史进度数据的存储和趋势分析算法
         
@@ -233,14 +257,14 @@ async def get_progress_trend(
         for i in range(days):
             current_date = base_date + timedelta(days=i)
             progress_value = min(Decimal(str(i / days)), Decimal('1'))
-            
+
             trend_data.append({
-                "date": current_date,
+                "trend_date": current_date,
                 "overall_progress": progress_value,
-                "time_progress": progress_value * Decimal('1.1'),
-                "task_progress": progress_value * Decimal('0.9'),
-                "quality_progress": progress_value * Decimal('0.8'),
-                "milestone_progress": progress_value * Decimal('1.2')
+                "time_progress": progress_value,
+                "task_progress": progress_value,
+                "quality_progress": progress_value,
+                "milestone_progress": progress_value
             })
         
         result = ProgressTrendAnalysis(
@@ -259,6 +283,8 @@ async def get_progress_trend(
         
     except NotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"获取项目 {project_id} 进度趋势失败: {str(e)}")
         raise HTTPException(status_code=500, detail="获取进度趋势失败")
@@ -347,6 +373,8 @@ async def generate_progress_report(
         
     except NotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"生成项目 {project_id} 进度报告失败: {str(e)}")
         raise HTTPException(status_code=500, detail="生成进度报告失败")
@@ -377,6 +405,8 @@ async def get_projects_progress_summary(
                     "risk_level": progress.risk_level,
                     "calculated_at": progress.calculated_at
                 })
+            except HTTPException:
+                raise
             except Exception as e:
                 logger.warning(f"获取项目 {project_id} 进度摘要失败: {str(e)}")
                 summaries.append({
@@ -390,6 +420,8 @@ async def get_projects_progress_summary(
         logger.info(f"用户 {current_user.id} 批量查询 {len(project_ids)} 个项目进度摘要")
         return {"summaries": summaries}
         
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"批量获取项目进度摘要失败: {str(e)}")
         raise HTTPException(status_code=500, detail="批量获取进度摘要失败")

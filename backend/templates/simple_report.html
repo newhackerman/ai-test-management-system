@@ -1,61 +1,175 @@
-
 <!DOCTYPE html>
-<html>
+<html lang="zh-CN">
 <head>
+    <meta charset="UTF-8">
     <title>{{ title }}</title>
     <style>
-        body { font-family: Arial, sans-serif; margin: 20px; }
-        .header { background: #f0f0f0; padding: 10px; margin-bottom: 20px; }
-        .summary { margin-bottom: 20px; }
-        .section { margin-bottom: 15px; }
-        table { border-collapse: collapse; width: 100%; }
-        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-        th { background-color: #f2f2f2; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            font-size: 14px;
+            line-height: 1.6;
+            color: #1f2937;
+            background: #f9fafb;
+            padding: 32px 20px;
+        }
+        .page {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: #fff;
+            border-radius: 8px;
+            border: 1px solid #e5e7eb;
+            overflow: hidden;
+        }
+        .header {
+            background: #fff;
+            padding: 24px 32px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .header h1 {
+            font-size: 22px;
+            font-weight: 600;
+            color: #111827;
+            letter-spacing: -0.01em;
+        }
+        .header p {
+            margin-top: 6px;
+            font-size: 12px;
+            color: #6b7280;
+        }
+        .body { padding: 32px; }
+        .summary {
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 20px 24px;
+            margin-bottom: 28px;
+        }
+        .summary h2 {
+            font-size: 14px;
+            font-weight: 600;
+            color: #374151;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 14px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 12px;
+        }
+        .summary-item {
+            background: #fff;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            padding: 12px 14px;
+        }
+        .summary-item strong {
+            display: block;
+            font-size: 11px;
+            font-weight: 500;
+            color: #6b7280;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            margin-bottom: 4px;
+        }
+        .summary-item span {
+            font-size: 18px;
+            font-weight: 600;
+            color: #111827;
+            font-variant-numeric: tabular-nums;
+        }
+        .section { margin-bottom: 28px; }
+        .section h2 {
+            font-size: 16px;
+            font-weight: 600;
+            color: #111827;
+            margin-bottom: 14px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            overflow: hidden;
+        }
+        th, td {
+            padding: 10px 14px;
+            text-align: left;
+            font-size: 13px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        th {
+            background: #f9fafb;
+            font-weight: 600;
+            color: #374151;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        tr:last-child td { border-bottom: none; }
+        tr:hover td { background: #f9fafb; }
+        p { margin: 6px 0; color: #374151; }
     </style>
 </head>
 <body>
-    <div class="header">
-        <h1>{{ title }}</h1>
-        <p>生成时间: {{ generation_time.strftime('%Y-%m-%d %H:%M:%S') }}</p>
-    </div>
-    
-    <div class="summary">
-        <h2>摘要信息</h2>
-        {% for key, value in summary.items() %}
-        <p><strong>{{ key }}:</strong> {{ value }}</p>
-        {% endfor %}
-    </div>
-    
-    {% for section in sections %}
-    <div class="section">
-        <h2>{{ section.title }}</h2>
-        {% if section.data %}
-        <table>
-            {% if section.data[0] is mapping %}
-            <thead>
-                <tr>
-                    {% for key in section.data[0].keys() %}
-                    <th>{{ key }}</th>
+    <div class="page">
+        <div class="header">
+            <h1>{{ title }}</h1>
+            <p>生成时间: {{ generation_time|datetime_format }}</p>
+        </div>
+
+        <div class="body">
+            {% if summary %}
+            <div class="summary">
+                <h2>摘要信息</h2>
+                <div class="summary-grid">
+                    {% for key, value in summary.items() %}
+                    <div class="summary-item">
+                        <strong>{{ key }}</strong>
+                        <span>{{ value }}</span>
+                    </div>
                     {% endfor %}
-                </tr>
-            </thead>
-            <tbody>
-                {% for item in section.data %}
-                <tr>
-                    {% for value in item.values() %}
-                    <td>{{ value }}</td>
-                    {% endfor %}
-                </tr>
-                {% endfor %}
-            </tbody>
-            {% else %}
-            {% for item in section.data %}
-            <p>{{ item }}</p>
-            {% endfor %}
+                </div>
+            </div>
             {% endif %}
-        </table>
-        {% endif %}
+
+            {% for section in sections %}
+            <div class="section">
+                <h2>{{ section.title }}</h2>
+                {% if section.data %}
+                    {% if section.data is iterable and section.data is not string and section.data[0] is mapping %}
+                    <table>
+                        <thead>
+                            <tr>
+                                {% for key in section.data[0].keys() %}
+                                <th>{{ key }}</th>
+                                {% endfor %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in section.data %}
+                            <tr>
+                                {% for value in item.values() %}
+                                <td>{{ value }}</td>
+                                {% endfor %}
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    {% else %}
+                        {% for item in section.data %}
+                        <p>{{ item }}</p>
+                        {% endfor %}
+                    {% endif %}
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
     </div>
-    {% endfor %}
 </body>
 </html>

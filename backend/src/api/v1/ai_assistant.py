@@ -507,16 +507,17 @@ async def check_service_health(
 
 
 @router.get("/services/info", summary="获取服务信息")
-@with_services(AIAssistantService, AIRouterService)
-async def get_services_info(services: dict):
+async def get_services_info(request: Request):
     """
     获取服务信息
     
-    演示如何使用@with_services装饰器同时注入多个服务。
+    演示如何使用DI容器同时获取多个服务。
     """
     try:
-        ai_service = services[AIAssistantService]
-        router_service = services[AIRouterService]
+        from ...core.fastapi_integration import get_di_container
+        container = get_di_container(request)
+        ai_service = await container.get_service_async(AIAssistantService)
+        router_service = await container.get_service_async(AIRouterService)
         
         # 收集服务信息
         services_info = {

@@ -129,6 +129,8 @@ async def get_requirement(
         
         return RequirementResponse.from_orm(requirement)
     
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"获取需求详情失败: {str(e)}")
         raise HTTPException(status_code=500, detail="获取需求详情失败")
@@ -233,7 +235,7 @@ async def search_requirements(
     project_id: Optional[int] = Query(None, description="项目ID"),
     parent_id: Optional[int] = Query(None, description="父需求ID"),
     requirement_type: Optional[RequirementTypeEnum] = Query(None, description="需求类型"),
-    status: Optional[List[RequirementStatusEnum]] = Query(None, description="状态过滤"),
+    status_filter: Optional[List[RequirementStatusEnum]] = Query(None, alias="status", description="状态过滤"),
     priority: Optional[List[PriorityEnum]] = Query(None, description="优先级过滤"),
     business_value: Optional[List[BusinessValueEnum]] = Query(None, description="业务价值过滤"),
     complexity: Optional[List[ComplexityEnum]] = Query(None, description="复杂度过滤"),
@@ -269,7 +271,7 @@ async def search_requirements(
             "project_id": project_id,
             "parent_id": parent_id,
             "requirement_type": requirement_type.value if requirement_type else None,
-            "status": [s.value for s in status] if status else None,
+            "status": [s.value for s in status_filter] if status_filter else None,
             "priority": [p.value for p in priority] if priority else None,
             "business_value": [bv.value for bv in business_value] if business_value else None,
             "complexity": [c.value for c in complexity] if complexity else None,
@@ -371,40 +373,11 @@ async def get_requirement_with_history(
             status_history=[]
         )
     
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"获取需求历史失败: {str(e)}")
         raise HTTPException(status_code=500, detail="获取需求历史失败")
-
-
-@router.get("/statistics", response_model=RequirementStatisticsResponse)
-async def get_requirements_statistics(
-    project_id: Optional[int] = Query(None, description="项目ID"),
-    current_user: User = Depends(get_current_user),
-    service: RequirementService = Depends(get_requirement_service)
-):
-    """
-    获取需求统计信息
-    
-    获取需求的统计数据和分析。
-    """
-    try:
-        statistics = await service.get_requirements_statistics(project_id)
-        
-        return RequirementStatisticsResponse(
-            total_requirements=statistics.get('total_count', 0),
-            status_distribution=statistics.get('status_distribution', {}),
-            priority_distribution=statistics.get('priority_distribution', {}),
-            type_distribution=statistics.get('type_distribution', {}),
-            complexity_distribution=statistics.get('complexity_distribution', {}),
-            business_value_distribution=statistics.get('business_value_distribution', {}),
-            average_quality_score=statistics.get('average_quality_score'),
-            average_completeness_score=statistics.get('average_completeness_score'),
-            generated_at=datetime.utcnow()
-        )
-    
-    except Exception as e:
-        logger.error(f"获取需求统计失败: {str(e)}")
-        raise HTTPException(status_code=500, detail="获取需求统计失败")
 
 
 @router.post("/validate", response_model=Dict[str, Any])
@@ -609,6 +582,8 @@ async def get_requirement_by_code(
         
         return RequirementResponse.from_orm(requirement)
     
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"根据编码获取需求失败: {str(e)}")
         raise HTTPException(status_code=500, detail="根据编码获取需求失败")

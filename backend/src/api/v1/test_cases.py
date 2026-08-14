@@ -313,6 +313,8 @@ def _parse_import_steps(raw_steps: str, expected_result: str) -> List[Dict[str, 
                         "expected_result": expected_result,
                     })
             return [step for step in steps if step["action"]]
+    except HTTPException:
+        raise
     except Exception:
         pass
 
@@ -413,6 +415,8 @@ def _build_import_case_data(
         try:
             parsed_data = json.loads(test_data_text)
             test_data["imported_data"] = parsed_data
+        except HTTPException:
+            raise
         except Exception:
             test_data["imported_data"] = test_data_text
     if script_content:
@@ -843,6 +847,8 @@ async def create_test_case(
         raise HTTPException(status_code=400, detail=str(e))
     except PermissionError as e:
         raise HTTPException(status_code=403, detail=str(e))
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"创建测试用例失败: {str(e)}")
         raise HTTPException(status_code=500, detail="内部服务器错误")
@@ -867,6 +873,10 @@ async def copy_test_case_compat(
             db.commit()
             db.refresh(new_case)
         return BaseResponse(success=True, message="测试用例复制成功", data=_build_test_case_response(new_case))
+    except NotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"复制测试用例失败: {str(e)}")
         raise HTTPException(status_code=500, detail="内部服务器错误")
@@ -907,6 +917,8 @@ async def batch_update_test_cases_compat(
             message=f"批量更新测试用例成功，共更新{len(updated_cases)}个用例",
             data=[_build_test_case_response(case) for case in updated_cases]
         )
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"批量更新测试用例失败: {str(e)}")
         raise HTTPException(status_code=500, detail="内部服务器错误")
@@ -925,6 +937,8 @@ async def batch_delete_test_cases(
         for case_id in ids:
             await service.delete_test_case(case_id, current_user.id)
         return BaseResponse(success=True, message=f"批量删除成功，共处理{len(ids)}个用例", data=True)
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"批量删除测试用例失败: {str(e)}")
         raise HTTPException(status_code=500, detail="内部服务器错误")
@@ -1025,6 +1039,8 @@ async def import_test_cases(
                     db.commit()
                     script_count += 1
                 success_count += 1
+            except HTTPException:
+                raise
             except Exception as row_error:
                 db.rollback()
                 failed_count += 1
@@ -1051,6 +1067,8 @@ async def import_test_cases(
         )
     except BusinessLogicError as e:
         raise HTTPException(status_code=422, detail=str(e))
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Import test cases failed: {str(e)}")
         raise HTTPException(status_code=500, detail="Import test cases failed")
@@ -1089,6 +1107,8 @@ async def generate_test_cases_persisted(
     except BusinessLogicError as e:
         status_code = 504 if "超时" in str(e) else 422
         raise HTTPException(status_code=status_code, detail=str(e))
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"AI generate persisted test cases failed: {str(e)}")
         raise HTTPException(status_code=500, detail="AI生成测试用例失败")
@@ -1124,6 +1144,8 @@ async def generate_test_cases_compat(
             for case in generated_cases
         ]
         return BaseResponse(success=True, message=f"AI生成测试用例成功，共生成{len(response_data)}个用例", data=response_data)
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"AI生成测试用例失败: {str(e)}")
         raise HTTPException(status_code=500, detail="内部服务器错误")
@@ -1143,70 +1165,8 @@ async def get_test_case_real(
         return BaseResponse(success=True, message="获取测试用例成功", data=_build_test_case_response(test_case))
     except HTTPException:
         raise
-    except Exception as e:
-        logger.error(f"获取测试用例失败: {str(e)}")
-        raise HTTPException(status_code=500, detail="内部服务器错误")
-
-
-@router.get("/{case_id}", response_model=BaseResponse[TestCaseResponse])
-async def get_test_case(
-    case_id: int = Path(..., description="测试用例ID"),
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    """
-    获取测试用例详情
-    
-    根据测试用例ID获取详细信息。
-    """
-    try:
-        service = TestCaseService(db)
-        
-        # 获取测试用例
-        test_case = await service.get_test_case_by_id(case_id)
-        if not test_case:
-            raise HTTPException(status_code=404, detail="测试用例不存在")
-        
-        # 构建响应
-        response_data = TestCaseResponse(
-            id=test_case.id,
-            case_code=test_case.case_code,
-            test_plan_id=test_case.test_plan_id,
-            requirement_id=test_case.requirement_id,
-            case_title=test_case.case_title,
-            case_description=test_case.case_description,
-            case_type=test_case.case_type,
-            module=test_case.module,
-            priority=test_case.priority,
-            complexity=test_case.complexity,
-            automation_level=test_case.automation_level,
-            preconditions=test_case.preconditions,
-            test_steps=test_case.test_steps,
-            expected_result=test_case.expected_result,
-            test_data=test_case.test_data,
-            status=test_case.status,
-            creator_id=test_case.creator_id,
-            assignee_id=test_case.assignee_id,
-            reviewer_id=test_case.reviewer_id,
-            execution_count=test_case.execution_count,
-            pass_count=test_case.pass_count,
-            fail_count=test_case.fail_count,
-            last_execution_date=test_case.last_execution_date,
-            last_execution_status=_enum_value(test_case.last_execution_status) if test_case.last_execution_status else None,
-            estimated_execution_time=test_case.estimated_execution_time,
-            actual_execution_time=test_case.actual_execution_time,
-            tags=test_case.tags,
-            version=test_case.version,
-            created_at=test_case.created_at,
-            updated_at=test_case.updated_at
-        )
-        
-        return BaseResponse(
-            success=True,
-            message="获取测试用例成功",
-            data=response_data
-        )
-        
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"获取测试用例失败: {str(e)}")
         raise HTTPException(status_code=500, detail="内部服务器错误")
@@ -1281,6 +1241,8 @@ async def update_test_case(
         raise HTTPException(status_code=404, detail=str(e))
     except BusinessLogicError as e:
         raise HTTPException(status_code=422, detail=str(e))
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"更新测试用例失败: {str(e)}")
         raise HTTPException(status_code=500, detail="内部服务器错误")
@@ -1315,6 +1277,8 @@ async def delete_test_case(
         raise HTTPException(status_code=404, detail=str(e))
     except BusinessLogicError as e:
         raise HTTPException(status_code=422, detail=str(e))
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"删除测试用例失败: {str(e)}")
         raise HTTPException(status_code=500, detail="内部服务器错误")
@@ -1407,6 +1371,8 @@ async def list_test_cases(
             page_size=page_size
         )
         
+    except HTTPException:
+        raise
     except Exception as e:
         if _is_missing_table_error(e):
             return PaginatedResponse(
@@ -1418,144 +1384,6 @@ async def list_test_cases(
                 page_size=page_size
             )
         logger.error(f"获取测试用例列表失败: {str(e)}")
-        raise HTTPException(status_code=500, detail="内部服务器错误")
-
-
-@router.post("/copy", response_model=BaseResponse[TestCaseResponse])
-async def copy_test_case(
-    request: CopyTestCaseRequest,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    """
-    复制测试用例
-    
-    复制现有测试用例到指定测试计划。
-    """
-    try:
-        service = TestCaseService(db)
-        
-        # 复制测试用例
-        new_case = await service.copy_test_case(
-            request.source_case_id,
-            request.target_plan_id,
-            current_user.id
-        )
-        
-        # 如果指定了新标题，更新标题
-        if request.case_title:
-            update_data = {'case_title': request.case_title}
-            new_case = await service.update_test_case(new_case.id, update_data, current_user.id)
-        
-        # 构建响应
-        response_data = TestCaseResponse(
-            id=new_case.id,
-            case_code=new_case.case_code,
-            test_plan_id=new_case.test_plan_id,
-            requirement_id=new_case.requirement_id,
-            case_title=new_case.case_title,
-            case_description=new_case.case_description,
-            case_type=new_case.case_type,
-            module=new_case.module,
-            priority=new_case.priority,
-            complexity=new_case.complexity,
-            automation_level=new_case.automation_level,
-            preconditions=new_case.preconditions,
-            test_steps=new_case.test_steps,
-            expected_result=new_case.expected_result,
-            test_data=new_case.test_data,
-            status=new_case.status,
-            creator_id=new_case.creator_id,
-            assignee_id=new_case.assignee_id,
-            reviewer_id=new_case.reviewer_id,
-            execution_count=new_case.execution_count,
-            pass_count=new_case.pass_count,
-            fail_count=new_case.fail_count,
-            last_execution_date=new_case.last_execution_date,
-            last_execution_status=_enum_value(new_case.last_execution_status) if new_case.last_execution_status else None,
-            estimated_execution_time=new_case.estimated_execution_time,
-            actual_execution_time=new_case.actual_execution_time,
-            tags=new_case.tags,
-            version=new_case.version,
-            created_at=new_case.created_at,
-            updated_at=new_case.updated_at
-        )
-        
-        return BaseResponse(
-            success=True,
-            message="测试用例复制成功",
-            data=response_data
-        )
-        
-    except Exception as e:
-        logger.error(f"复制测试用例失败: {str(e)}")
-        raise HTTPException(status_code=500, detail="内部服务器错误")
-
-
-@router.post("/batch-update", response_model=BaseResponse[List[TestCaseResponse]])
-async def batch_update_test_cases(
-    request: BatchUpdateTestCasesRequest,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    """
-    批量更新测试用例
-    
-    批量更新多个测试用例的信息。
-    """
-    try:
-        service = TestCaseService(db)
-        
-        # 转换更新数据
-        update_data = {k: v for k, v in request.update_data.dict().items() if v is not None}
-        
-        # 批量更新测试用例
-        updated_cases = await service.batch_update_cases(request.case_ids, update_data, current_user.id)
-        
-        # 构建响应数据
-        response_data = []
-        for case in updated_cases:
-            response_data.append(TestCaseResponse(
-                id=case.id,
-                case_code=case.case_code,
-                test_plan_id=case.test_plan_id,
-                requirement_id=case.requirement_id,
-                case_title=case.case_title,
-                case_description=case.case_description,
-                case_type=case.case_type,
-                module=case.module,
-                priority=case.priority,
-                complexity=case.complexity,
-                automation_level=case.automation_level,
-                preconditions=case.preconditions,
-                test_steps=case.test_steps,
-                expected_result=case.expected_result,
-                test_data=case.test_data,
-                status=case.status,
-                creator_id=case.creator_id,
-                assignee_id=case.assignee_id,
-                reviewer_id=case.reviewer_id,
-                execution_count=case.execution_count,
-                pass_count=case.pass_count,
-                fail_count=case.fail_count,
-                last_execution_date=case.last_execution_date,
-                last_execution_status=_enum_value(case.last_execution_status) if case.last_execution_status else None,
-                estimated_execution_time=case.estimated_execution_time,
-                actual_execution_time=case.actual_execution_time,
-                tags=case.tags,
-                version=case.version,
-                created_at=case.created_at,
-                updated_at=case.updated_at
-            ))
-        
-        return BaseResponse(
-            success=True,
-            message=f"批量更新测试用例成功，共更新{len(response_data)}个用例",
-            data=response_data
-        )
-        
-    except Exception as e:
-        logger.error(f"批量更新测试用例失败: {str(e)}")
         raise HTTPException(status_code=500, detail="内部服务器错误")
 
 
@@ -1602,6 +1430,8 @@ async def generate_test_cases(
             data=response_data
         )
         
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"AI生成测试用例失败: {str(e)}")
         raise HTTPException(status_code=500, detail="内部服务器错误")
@@ -1666,6 +1496,8 @@ async def generate_automation_script(
             data=response_data
         )
         
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"生成自动化脚本失败: {str(e)}")
         raise HTTPException(status_code=500, detail="内部服务器错误")
@@ -1699,6 +1531,8 @@ async def get_test_case_coverage(
         
     except NotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"获取测试用例覆盖率失败: {str(e)}")
         raise HTTPException(status_code=500, detail="内部服务器错误")
@@ -1737,6 +1571,8 @@ async def get_test_case_executions(
             page_size=page_size
         )
         
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"获取测试用例执行历史失败: {str(e)}")
         raise HTTPException(status_code=500, detail="内部服务器错误")

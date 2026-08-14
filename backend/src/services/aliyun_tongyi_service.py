@@ -23,6 +23,8 @@ from datetime import datetime, timezone
 from typing import List, Optional, Dict, Any, AsyncGenerator
 import json
 
+from fastapi import HTTPException
+
 from ..adapters.tongyi_adapter import TongyiAdapter, TongyiAdapterError
 from ..adapters.base import AIRequest, AIResponse, ChatMessage, MessageRole, AdapterConfig, AIProvider, StreamChunk
 from ..config.aliyun_tongyi_config import (
@@ -439,10 +441,14 @@ async def initialize_tongyi_service(api_key: str,
 
 
 async def get_tongyi_service() -> AliyunTongyiService:
-    """获取通义千问服务实例"""
+    """获取通义千问服务实例，未初始化时返回一个未配置的实例而非抛异常，
+    让路由层自行处理（health 端点返回 healthy=false，其他端点返回 503）。"""
+    global _tongyi_service
     if _tongyi_service is None:
-        raise Exception("Aliyun Tongyi service not initialized. Call initialize_tongyi_service() first.")
-    
+        _tongyi_service = AliyunTongyiService.__new__(AliyunTongyiService)
+        _tongyi_service.adapter = None
+        _tongyi_service.chinese_optimization = {}
+        _tongyi_service.model_configs = {}
     return _tongyi_service
 
 

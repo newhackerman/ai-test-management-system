@@ -16,6 +16,7 @@ from datetime import datetime
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, Path, status
 from fastapi.responses import JSONResponse, Response
 from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError as SAIntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...core.database import get_async_session
@@ -86,6 +87,12 @@ async def create_project(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=str(e)
         )
+    except SAIntegrityError as e:
+        logger.warning(f"项目创建外键/约束失败: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="项目创建失败：引用的用户或关联数据不存在"
+        )
     except Exception as e:
         logger.error(f"项目创建失败: {e}")
         raise HTTPException(
@@ -103,7 +110,7 @@ async def create_project(
 async def get_projects(
     page: int = Query(1, ge=1, description="页码"),
     size: int = Query(20, ge=1, le=100, description="每页大小"),
-    status: Optional[List[ProjectStatus]] = Query(None, description="状态过滤"),
+    status_filter: Optional[List[ProjectStatus]] = Query(None, alias="status", description="状态过滤"),
     project_type: Optional[List[ProjectType]] = Query(None, description="类型过滤"),
     priority: Optional[List[ProjectPriority]] = Query(None, description="优先级过滤"),
     project_manager_id: Optional[int] = Query(None, description="项目经理过滤"),
@@ -131,7 +138,7 @@ async def get_projects(
         params = ProjectQueryParams(
             page=page,
             size=size,
-            status=status,
+            status=status_filter,
             project_type=project_type,
             priority=priority,
             project_manager_id=project_manager_id,
@@ -160,6 +167,8 @@ async def get_projects(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=str(e)
         )
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"获取项目列表失败: {e}")
         raise HTTPException(
@@ -284,6 +293,8 @@ async def get_project(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=str(e)
         )
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"获取项目详情失败: {e}")
         raise HTTPException(
@@ -629,6 +640,8 @@ async def get_project_summary(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=str(e)
         )
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"获取项目摘要失败: {e}")
         raise HTTPException(

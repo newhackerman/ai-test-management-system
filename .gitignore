@@ -36,3 +36,10 @@ tmp-*.log
 # OS files
 .DS_Store
 Thumbs.db
+
+# Local tooling and IDE state
+.zcode/
+
+# Local diagnostic scratch files
+_*.py
+_dash_out*.txt

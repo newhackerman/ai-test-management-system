@@ -15,6 +15,13 @@ class PermissionType(PyEnum):
     API = "api"            # API权限
     DATA = "data"          # 数据权限
     FIELD = "field"        # 字段权限
+    FUNCTION = "function"        # 功能权限
+    OPERATION = "operation"      # 操作权限
+    MODULE = "module"            # 模块权限
+    CONFIG = "config"            # 配置权限
+    GROUP = "group"              # 分组权限
+    ENVIRONMENT = "environment"  # 环境权限
+    GLOBAL = "global"            # 全局权限
 
 
 class PermissionEffect(PyEnum):
@@ -36,7 +43,7 @@ class Permission(BaseModel):
     module = Column(String(50), nullable=False, comment="所属模块")
     action = Column(String(50), nullable=False, comment="操作类型")
     resource = Column(String(100), nullable=True, comment="资源标识")
-    permission_type = Column(Enum(PermissionType), default=PermissionType.API, comment="权限类型")
+    permission_type = Column(Enum(PermissionType, values_callable=lambda e: [v.value for v in e]), default=PermissionType.API, comment="权限类型")
     
     # 层级结构
     parent_id = Column(Integer, ForeignKey("permissions.id"), nullable=True, comment="父权限ID")
@@ -45,7 +52,7 @@ class Permission(BaseModel):
     path = Column(String(500), nullable=True, comment="权限路径")
     
     # 权限配置
-    effect = Column(Enum(PermissionEffect), default=PermissionEffect.ALLOW, comment="权限效果")
+    effect = Column(Enum(PermissionEffect, values_callable=lambda e: [v.value for v in e]), default=PermissionEffect.ALLOW, comment="权限效果")
     conditions = Column(JSON, nullable=True, comment="权限条件")
     is_system_permission = Column(Boolean, default=False, nullable=False, comment="是否系统权限")
     is_active = Column(Boolean, default=True, nullable=False, comment="是否激活")
@@ -64,7 +71,7 @@ class RolePermission(BaseModel):
     permission_id = Column(Integer, ForeignKey("permissions.id", ondelete="CASCADE"), nullable=False, comment="权限ID")
     
     # 权限配置
-    effect = Column(Enum(PermissionEffect), default=PermissionEffect.ALLOW, comment="权限效果")
+    effect = Column(Enum(PermissionEffect, values_callable=lambda e: [v.value for v in e]), default=PermissionEffect.ALLOW, comment="权限效果")
     conditions = Column(JSON, nullable=True, comment="权限条件")
     granted_by = Column(Integer, ForeignKey("users.id"), nullable=True, comment="授权人")
     granted_at = Column(String(50), nullable=True, comment="授权时间")
@@ -84,7 +91,7 @@ class UserPermission(BaseModel):
     permission_id = Column(Integer, ForeignKey("permissions.id", ondelete="CASCADE"), nullable=False, comment="权限ID")
     
     # 权限配置
-    effect = Column(Enum(PermissionEffect), default=PermissionEffect.ALLOW, comment="权限效果")
+    effect = Column(Enum(PermissionEffect, values_callable=lambda e: [v.value for v in e]), default=PermissionEffect.ALLOW, comment="权限效果")
     conditions = Column(JSON, nullable=True, comment="权限条件")
     granted_by = Column(Integer, ForeignKey("users.id"), nullable=True, comment="授权人")
     granted_at = Column(String(50), nullable=True, comment="授权时间")

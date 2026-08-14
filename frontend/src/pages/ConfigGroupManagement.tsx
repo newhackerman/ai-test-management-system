@@ -50,7 +50,7 @@ export default function ConfigGroupManagement() {
       key: 'group_name',
       render: (text: string, record: ConfigGroup) => (
         <div className="flex items-center space-x-2">
-          <FolderOutlined style={{ color: record.color || '#1890ff' }} />
+          <FolderOutlined style={{ color: record.color || '#2563eb' }} />
           <span className="font-medium">{text}</span>
           {record.is_system && <Tag color="red">系统</Tag>}
         </div>
@@ -284,7 +284,7 @@ export default function ConfigGroupManagement() {
               name="color"
               label="颜色"
             >
-              <Input placeholder="#1890ff" />
+              <Input placeholder="#2563eb" />
             </Form.Item>
           </div>
 

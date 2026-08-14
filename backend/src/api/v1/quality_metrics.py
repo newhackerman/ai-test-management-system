@@ -23,13 +23,64 @@ from ...schemas.quality_metrics import (
     TargetManagementRequest, TargetManagementResponse,
     BenchmarkAnalysisRequest, BenchmarkAnalysisResponse,
     QualityReportRequest, QualityReportResponse,
-    QualityDashboard, QualityHealthCheck
+    QualityDashboard, QualityHealthCheck,
+    QualityAlert as DashboardQualityAlert, AlertLevel,
+    QualityBenchmark
 )
 from ...utils.redis_client import get_redis_client
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/quality-metrics", tags=["质量度量"])
+
+# 告警严重程度 -> 仪表板告警级别映射
+# 服务层使用 test_analysis.AlertSeverity (LOW/MEDIUM/HIGH/CRITICAL)，
+# 仪表板 schema 使用 quality_metrics.AlertLevel (INFO/WARNING/CRITICAL/EMERGENCY)，
+# 在路由层做一次转换以消除 schema 不匹配导致的 503。
+_SEVERITY_TO_LEVEL = {
+    "low": AlertLevel.INFO,
+    "medium": AlertLevel.WARNING,
+    "high": AlertLevel.CRITICAL,
+    "critical": AlertLevel.EMERGENCY,
+}
+
+
+def _convert_alert_to_dashboard(alert) -> DashboardQualityAlert:
+    """将服务层返回的 QualityAlert(test_analysis) 转为仪表板期望的 QualityAlert(quality_metrics)。"""
+    severity = getattr(alert, "severity", None)
+    level = _SEVERITY_TO_LEVEL.get(
+        severity.value if severity is not None else "medium",
+        AlertLevel.WARNING,
+    )
+    return DashboardQualityAlert(
+        alert_id=getattr(alert, "id", None) or f"alert_{id(alert)}",
+        metric_name=getattr(alert, "metric_name", ""),
+        alert_level=level,
+        message=getattr(alert, "message", ""),
+        current_value=getattr(alert, "current_value", 0.0),
+        threshold_value=getattr(alert, "threshold_value", 0.0),
+        project_id=getattr(alert, "project_id", None),
+        triggered_at=getattr(alert, "created_at", None) or datetime.utcnow(),
+        acknowledged=getattr(alert, "acknowledged", False),
+    )
+
+
+def _normalize_improvement(item: Dict[str, Any]) -> Dict[str, Any]:
+    """补全服务层改进建议 dict 缺失的 improvement_id/impact_level/effort_level 字段。"""
+    return {
+        "improvement_id": item.get("improvement_id") or f"imp_{hash(item.get('title', '')) & 0xFFFFFFFF}",
+        "category": item.get("category", "general"),
+        "title": item.get("title", ""),
+        "description": item.get("description", ""),
+        "priority_score": item.get("priority_score", 0.0),
+        "impact_level": item.get("impact_level", "medium"),
+        "effort_level": item.get("effort_level", "medium"),
+        "actions": item.get("actions", []),
+        "expected_impact": item.get("expected_impact", ""),
+        "timeline": item.get("timeline"),
+        "responsible_role": item.get("responsible_role"),
+    }
+
 
 @router.post("/calculate", response_model=CalculateMetricsResponse)
 async def calculate_quality_metrics(
@@ -40,6 +91,8 @@ async def calculate_quality_metrics(
 ):
     """计算质量指标"""
     try:
+        if not request.project_id:
+            raise HTTPException(status_code=422, detail="project_id 为必填项")
         logger.info(f"用户{current_user.id}请求计算质量指标: 项目{request.project_id}")
         
         service = QualityMetricsService(db, redis_client)
@@ -97,6 +150,8 @@ async def calculate_quality_metrics(
     except ValidationError as e:
         logger.error(f"计算质量指标验证失败: {str(e)}")
         raise HTTPException(status_code=400, detail=str(e))
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"计算质量指标失败: {str(e)}")
         raise HTTPException(status_code=500, detail="计算质量指标失败")
@@ -111,19 +166,23 @@ async def monitor_quality_metrics(
 ):
     """监控质量指标"""
     try:
+        if not request.project_id:
+            raise HTTPException(status_code=422, detail="project_id 为必填项")
         logger.info(f"用户{current_user.id}请求监控质量指标: 项目{request.project_id}")
         
         service = QualityMetricsService(db, redis_client)
         
         # 执行监控
-        alerts = await service.monitor_quality_metrics(request.project_id)
+        raw_alerts = await service.monitor_quality_metrics(request.project_id)
+        # 将服务层返回的 QualityAlert(test_analysis) 转为仪表板期望的 QualityAlert(quality_metrics)
+        alerts = [_convert_alert_to_dashboard(a) for a in raw_alerts]
         
         # 构建指标状态
         metrics_status = {}
         for alert in alerts:
-            if alert.alert_level == "critical":
+            if alert.alert_level == AlertLevel.EMERGENCY:
                 metrics_status[alert.metric_name] = "critical"
-            elif alert.alert_level == "warning":
+            elif alert.alert_level == AlertLevel.CRITICAL:
                 if alert.metric_name not in metrics_status:
                     metrics_status[alert.metric_name] = "warning"
             else:
@@ -131,8 +190,8 @@ async def monitor_quality_metrics(
                     metrics_status[alert.metric_name] = "ok"
         
         # 生成监控摘要
-        critical_count = len([a for a in alerts if a.alert_level == "critical"])
-        warning_count = len([a for a in alerts if a.alert_level == "warning"])
+        critical_count = len([a for a in alerts if a.alert_level == AlertLevel.EMERGENCY])
+        warning_count = len([a for a in alerts if a.alert_level == AlertLevel.CRITICAL])
         
         if critical_count > 0:
             monitoring_summary = f"发现{critical_count}个严重问题，{warning_count}个警告"
@@ -161,6 +220,8 @@ async def monitor_quality_metrics(
     except ValidationError as e:
         logger.error(f"监控质量指标验证失败: {str(e)}")
         raise HTTPException(status_code=400, detail=str(e))
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"监控质量指标失败: {str(e)}")
         raise HTTPException(status_code=500, detail="监控质量指标失败")
@@ -174,6 +235,8 @@ async def analyze_quality_trends(
 ):
     """分析质量趋势"""
     try:
+        if not request.project_id:
+            raise HTTPException(status_code=422, detail="project_id 为必填项")
         logger.info(f"用户{current_user.id}请求分析质量趋势: 项目{request.project_id}")
         
         service = QualityMetricsService(db, redis_client)
@@ -210,6 +273,8 @@ async def analyze_quality_trends(
     except ValidationError as e:
         logger.error(f"分析质量趋势验证失败: {str(e)}")
         raise HTTPException(status_code=400, detail=str(e))
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"分析质量趋势失败: {str(e)}")
         raise HTTPException(status_code=500, detail="分析质量趋势失败")
@@ -223,12 +288,16 @@ async def suggest_quality_improvements(
 ):
     """生成质量改进建议"""
     try:
+        if not request.project_id:
+            raise HTTPException(status_code=422, detail="project_id 为必填项")
         logger.info(f"用户{current_user.id}请求生成改进建议: 项目{request.project_id}")
         
         service = QualityMetricsService(db, redis_client)
         
         # 生成改进建议
         suggestions = await service.generate_improvement_suggestions(request.project_id)
+        # 补全服务层返回的 dict 缺失的 improvement_id/impact_level/effort_level 字段
+        suggestions = [_normalize_improvement(s) for s in suggestions]
         
         # 按优先级过滤
         if request.priority_level and request.priority_level != "all":
@@ -280,6 +349,8 @@ async def suggest_quality_improvements(
     except ValidationError as e:
         logger.error(f"生成改进建议验证失败: {str(e)}")
         raise HTTPException(status_code=400, detail=str(e))
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"生成改进建议失败: {str(e)}")
         raise HTTPException(status_code=500, detail="生成改进建议失败")
@@ -320,6 +391,8 @@ async def manage_quality_baselines(
     except ValidationError as e:
         logger.error(f"管理质量基线验证失败: {str(e)}")
         raise HTTPException(status_code=400, detail=str(e))
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"管理质量基线失败: {str(e)}")
         raise HTTPException(status_code=500, detail="管理质量基线失败")
@@ -379,6 +452,8 @@ async def manage_quality_targets(
     except ValidationError as e:
         logger.error(f"管理质量目标验证失败: {str(e)}")
         raise HTTPException(status_code=400, detail=str(e))
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"管理质量目标失败: {str(e)}")
         raise HTTPException(status_code=500, detail="管理质量目标失败")
@@ -392,12 +467,27 @@ async def analyze_quality_benchmarks(
 ):
     """基准对比分析"""
     try:
+        if not request.project_id:
+            raise HTTPException(status_code=422, detail="project_id 为必填项")
         logger.info(f"用户{current_user.id}请求基准对比分析: 项目{request.project_id}")
         
         service = QualityMetricsService(db, redis_client)
         
         # 执行基准分析
         analysis = await service.benchmark_quality_metrics(request.project_id)
+        # 将服务层返回的 BenchmarkData(test_analysis) 转为 QualityBenchmark(quality_metrics)
+        benchmarks = [
+            QualityBenchmark(
+                metric_name=getattr(b, "metric_name", ""),
+                current_value=getattr(b, "current_value", 0.0),
+                industry_average=getattr(b, "industry_average", None),
+                best_practice=getattr(b, "best_practice", None),
+                percentile_rank=getattr(b, "percentile_rank", None),
+                comparison_result=getattr(b, "comparison_result", "needs_improvement"),
+                gap_analysis=getattr(b, "gap_analysis", None),
+            )
+            for b in (analysis.benchmarks or [])
+        ]
         
         response = BenchmarkAnalysisResponse(
             overall_score=analysis.overall_score,
@@ -405,7 +495,7 @@ async def analyze_quality_benchmarks(
                   "B" if analysis.overall_score >= 80 else
                   "C" if analysis.overall_score >= 70 else
                   "D" if analysis.overall_score >= 60 else "F",
-            benchmarks=analysis.benchmarks,
+            benchmarks=benchmarks,
             strengths=analysis.strengths,
             improvement_areas=analysis.improvement_areas
         )
@@ -413,8 +503,10 @@ async def analyze_quality_benchmarks(
         # 生成差距分析
         if request.include_gap_analysis:
             gap_analysis = {}
-            for benchmark in analysis.benchmarks:
-                if benchmark.comparison_result in ["below_average", "needs_improvement"]:
+            for benchmark in benchmarks:
+                cr = benchmark.comparison_result
+                cr_val = cr.value if hasattr(cr, "value") else cr
+                if cr_val in ["below_average", "needs_improvement"]:
                     gap = benchmark.best_practice - benchmark.current_value if benchmark.best_practice else 0
                     gap_analysis[benchmark.metric_name] = f"需要提升{gap:.2%}以达到最佳实践水平"
             response.gap_analysis = gap_analysis
@@ -431,6 +523,8 @@ async def analyze_quality_benchmarks(
     except ValidationError as e:
         logger.error(f"基准对比分析验证失败: {str(e)}")
         raise HTTPException(status_code=400, detail=str(e))
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"基准对比分析失败: {str(e)}")
         raise HTTPException(status_code=500, detail="基准对比分析失败")
@@ -460,7 +554,9 @@ async def get_quality_dashboard(
         
         # 获取改进建议
         improvements = await service.generate_improvement_suggestions(project_id)
-        recent_improvements = improvements[:3]  # 取前3个建议
+        # 服务层返回的改进建议 dict 缺少 improvement_id/impact_level/effort_level，
+        # 在路由层补全以匹配 QualityImprovement schema。
+        recent_improvements = [_normalize_improvement(imp) for imp in improvements[:3]]
         
         # 生成关键洞察
         key_insights = []
@@ -480,11 +576,15 @@ async def get_quality_dashboard(
             if hasattr(trend, 'trend_direction') and trend.trend_direction == 'improving':
                 key_insights.append(f"{metric_name}呈改善趋势，继续保持")
         
+        # 服务层返回的 QualityAlert 来自 test_analysis.py，与仪表板 schema
+        # (quality_metrics.py) 字段名不一致，在路由层转换为仪表板期望的格式。
+        dashboard_alerts = [_convert_alert_to_dashboard(a) for a in alerts]
+        
         dashboard = QualityDashboard(
             project_id=project_id,
             current_metrics=current_metrics,
             trends=trends,
-            alerts=alerts,
+            alerts=dashboard_alerts,
             recent_improvements=recent_improvements,
             key_insights=key_insights
         )
@@ -495,6 +595,8 @@ async def get_quality_dashboard(
     except ValidationError as e:
         logger.error(f"获取质量仪表板验证失败: {str(e)}")
         raise HTTPException(status_code=400, detail=str(e))
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"获取质量仪表板失败: {str(e)}")
         raise HTTPException(status_code=500, detail="获取质量仪表板失败")
@@ -608,6 +710,8 @@ async def quality_health_check(
     except ValidationError as e:
         logger.error(f"质量健康检查验证失败: {str(e)}")
         raise HTTPException(status_code=400, detail=str(e))
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"质量健康检查失败: {str(e)}")
         raise HTTPException(status_code=500, detail="质量健康检查失败")
@@ -624,5 +728,7 @@ async def send_quality_alerts(alerts: List, user_id: int):
             # 模拟发送通知
             logger.info(f"发送告警通知: {alert.message}")
             
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"发送质量告警通知失败: {str(e)}")

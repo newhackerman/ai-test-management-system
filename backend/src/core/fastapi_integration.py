@@ -297,7 +297,7 @@ def setup_dependency_injection(app, container: Optional[ServiceContainer] = None
     
     # 添加健康检查端点
     health_check_func = create_health_check_endpoint()
-    app.get("/health/di")(health_check_func)
+    app.get("/health/di", tags=["系统"])(health_check_func)
     
     logger.info("Dependency injection setup completed for FastAPI application")
 

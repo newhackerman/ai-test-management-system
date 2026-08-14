@@ -159,7 +159,7 @@ export default function ConfigManagement() {
       notification.info({
         message: '配置变更通知',
         description: `配置 "${config_key}" 已被${changeTypeMap[change_type] || change_type}`,
-        icon: <WifiOutlined style={{ color: '#1890ff' }} />,
+        icon: <WifiOutlined style={{ color: '#2563eb' }} />,
         duration: 4
       })
       
@@ -176,7 +176,7 @@ export default function ConfigManagement() {
       notification.info({
         message: '审核状态变更',
         description: '配置审核状态已更新，请刷新页面查看最新状态',
-        icon: <SettingOutlined style={{ color: '#52c41a' }} />,
+        icon: <SettingOutlined style={{ color: '#16a34a' }} />,
         duration: 3
       })
     })
@@ -1165,14 +1165,14 @@ export default function ConfigManagement() {
                   <span>加密占比</span>
                   <span>{getStatsPercent(statsEncrypted)}%</span>
                 </div>
-                <Progress percent={getStatsPercent(statsEncrypted)} size="small" strokeColor="#722ed1" />
+                <Progress percent={getStatsPercent(statsEncrypted)} size="small" strokeColor="#7c3aed" />
               </Col>
               <Col span={12}>
                 <div className="mb-1 flex items-center justify-between text-sm">
                   <span>核心配置</span>
                   <span>{statsCore} 个</span>
                 </div>
-                <Progress percent={getStatsPercent(statsCore)} size="small" strokeColor="#cf1322" />
+                <Progress percent={getStatsPercent(statsCore)} size="small" strokeColor="#dc2626" />
               </Col>
               <Col span={12}>
                 <div className="mb-1 flex items-center justify-between text-sm">

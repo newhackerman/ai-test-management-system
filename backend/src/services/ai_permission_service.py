@@ -500,3 +500,17 @@ class AIPermissionService:
         has_permission, message = await check_func()
         if not has_permission:
             raise PermissionError(f"AI操作权限不足: {message}")
+
+    async def check_ai_operation_permission(self, user_id: int, operation: str) -> Tuple[bool, str]:
+        """检查用户是否有指定的AI操作权限。
+
+        将 `log_view` / `log_export` / `log_statistics` / `log_admin` 等操作日志相关
+        的权限统一映射到 `ai_admin_monitor` 权限；其余操作按 operation_code 直接查询权限表。
+        """
+        operation = (operation or "").strip()
+        # 操作日志类权限统一映射到管理员监控权限
+        log_operations = {"log_view", "log_export", "log_statistics", "log_admin"}
+        if operation in log_operations:
+            return await self.check_user_ai_permission(user_id, "ai_admin_monitor")
+        # 其它操作直接按 operation_code 查权限表
+        return await self.check_user_ai_permission(user_id, operation)

@@ -323,11 +323,10 @@ class MeetingNotificationService:
                 "meeting_url": f"/meetings/{meeting.meeting_code}/join"
             }
             
-            # 为每个参与者发送邀请
+            # 为每个参与者发送邀请通知（含组织者，组织者作为参与人也需要收到通知）
             for participant in participants:
-                if participant.invitation_status == InvitationStatus.PENDING:
-                    user = await self._get_user_by_id(participant.user_id)
-                    if user:
+                user = await self._get_user_by_id(participant.user_id)
+                if user:
                         participant_data = {
                             **notification_data,
                             "participant_name": user.username,

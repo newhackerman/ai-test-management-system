@@ -93,14 +93,14 @@ const EightRoleManagement: React.FC = () => {
   const getRoleIcon = (roleCode: string) => {
     const iconMap: Record<string, React.ReactNode> = {
       SUPER_ADMIN: <CrownOutlined style={{ color: '#f50' }} />,
-      SYSTEM_ADMIN: <SafetyOutlined style={{ color: '#fa8c16' }} />,
-      CONFIG_ADMIN: <SettingOutlined style={{ color: '#722ed1' }} />,
-      PROJECT_MANAGER: <TeamOutlined style={{ color: '#1890ff' }} />,
-      DEVELOPER: <CodeOutlined style={{ color: '#52c41a' }} />,
+      SYSTEM_ADMIN: <SafetyOutlined style={{ color: '#f59e0b' }} />,
+      CONFIG_ADMIN: <SettingOutlined style={{ color: '#7c3aed' }} />,
+      PROJECT_MANAGER: <TeamOutlined style={{ color: '#2563eb' }} />,
+      DEVELOPER: <CodeOutlined style={{ color: '#16a34a' }} />,
       TESTER: <ExperimentOutlined style={{ color: '#13c2c2' }} />,
       DEVOPS: <DeploymentUnitOutlined style={{ color: '#eb2f96' }} />,
       READONLY_USER: <EyeOutlined style={{ color: '#8c8c8c' }} />,
-      admin: <SafetyOutlined style={{ color: '#fa8c16' }} />,
+      admin: <SafetyOutlined style={{ color: '#f59e0b' }} />,
       user: <UserOutlined style={{ color: '#8c8c8c' }} />,
     };
     return iconMap[roleCode] || <UserOutlined />;

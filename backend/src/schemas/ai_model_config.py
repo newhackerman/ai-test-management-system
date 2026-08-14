@@ -42,7 +42,7 @@ class AIModelConfigBase(BaseModel):
     headers: Optional[Dict[str, Any]] = Field(None, description="请求头配置")
     
     # 模型参数
-    max_tokens: int = Field(4000, ge=1, le=100000, description="最大Token数")
+    max_tokens: int = Field(4000, ge=1, le=1000000, description="最大Token数")
     temperature: float = Field(0.7, ge=0.0, le=2.0, description="温度参数")
     top_p: float = Field(1.0, ge=0.0, le=1.0, description="Top-p参数")
     frequency_penalty: float = Field(0.0, ge=-2.0, le=2.0, description="频率惩罚")
@@ -91,7 +91,7 @@ class AIModelConfigUpdate(BaseModel):
     headers: Optional[Dict[str, Any]] = Field(None, description="请求头配置")
     
     # 模型参数
-    max_tokens: Optional[int] = Field(None, ge=1, le=100000, description="最大Token数")
+    max_tokens: Optional[int] = Field(None, ge=1, le=1000000, description="最大Token数")
     temperature: Optional[float] = Field(None, ge=0.0, le=2.0, description="温度参数")
     top_p: Optional[float] = Field(None, ge=0.0, le=1.0, description="Top-p参数")
     frequency_penalty: Optional[float] = Field(None, ge=-2.0, le=2.0, description="频率惩罚")
@@ -125,6 +125,8 @@ class AIModelConfigUpdate(BaseModel):
 class AIModelConfigResponse(AIModelConfigBase):
     """AI模型配置响应"""
     id: int
+    # 覆盖父类的 provider 字段，使用 str 类型以容忍数据库中不在枚举内的值
+    provider: str = Field(..., description="AI服务提供商")
     
     # 性能指标
     avg_response_time: Optional[float] = Field(None, description="平均响应时间（秒）")

@@ -24,7 +24,7 @@ from sqlalchemy import select, and_, or_, func, text
 from sqlalchemy.orm import selectinload, joinedload
 
 from ..core.config import get_settings
-from ..core.database import get_async_session
+from ..core.database import get_async_session, get_async_session_ctx
 from ..models.project import Project, ProjectMetrics
 from ..models.test_case import TestCase, Defect
 from ..models.requirement import Requirement
@@ -196,7 +196,7 @@ class ProjectDataSyncService:
     async def _periodic_sync_check(self):
         """定期同步检查"""
         try:
-            async with get_async_session() as session:
+            async with get_async_session_ctx() as session:
                 # 获取所有活跃项目
                 result = await session.execute(
                     select(Project.id).where(Project.status.in_(['PLANNING', 'ACTIVE']))
@@ -256,7 +256,7 @@ class ProjectDataSyncService:
     async def _load_project_context(self, project_id: int) -> Optional[ProjectContext]:
         """从数据库加载项目上下文"""
         try:
-            async with get_async_session() as session:
+            async with get_async_session_ctx() as session:
                 # 加载项目基本信息
                 project_result = await session.execute(
                     select(Project).where(Project.id == project_id)
@@ -447,7 +447,7 @@ class ProjectDataSyncService:
     async def get_projects_list(self, user_id: Optional[int] = None, status_filter: Optional[List[str]] = None) -> List[Dict[str, Any]]:
         """获取项目列表"""
         try:
-            async with get_async_session() as session:
+            async with get_async_session_ctx() as session:
                 query = select(Project)
                 
                 # 状态过滤
@@ -504,7 +504,7 @@ class ProjectDataSyncService:
             defect_density = defects_total / requirements_total if requirements_total > 0 else 0
             
             # 保存指标到数据库
-            async with get_async_session() as session:
+            async with get_async_session_ctx() as session:
                 metrics = ProjectMetrics(
                     project_id=project_id,
                     metric_date=datetime.utcnow(),

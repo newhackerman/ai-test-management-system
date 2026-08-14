@@ -74,24 +74,6 @@ export {
   type ReportGenerationStatus
 } from './meeting/analyticsStore'
 
-// WebSocket状态管理
-export {
-  useWebSocketStore,
-  selectConnectionState,
-  selectIsConnected as selectWebSocketConnected,
-  selectIsConnecting,
-  selectIsReconnecting,
-  selectReconnectAttempts,
-  selectLastError,
-  selectStats,
-  selectMessageHistory,
-  selectConfig as selectWebSocketConfig,
-  subscribeToConnectionState,
-  subscribeToMessages as subscribeToWebSocketMessages,
-  getWebSocketState,
-  webSocketUtils
-} from './websocket-store'
-
 // 查询客户端和工具
 export { queryClient, queryKeys } from '@/lib/query-client'
 

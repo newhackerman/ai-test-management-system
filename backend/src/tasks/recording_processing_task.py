@@ -18,7 +18,7 @@ from pathlib import Path
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, or_, func
 
-from ..core.database import get_async_session
+from ..core.database import get_async_session, get_async_session_ctx
 from ..models.meeting import MeetingRecording, RecordingStatus
 from ..services.recording_service import RecordingService
 from ..utils.redis_client import RedisClient
@@ -38,7 +38,7 @@ class RecordingProcessingTask:
         processed_count = 0
         
         try:
-            async with get_async_session() as db:
+            async with get_async_session_ctx() as db:
                 recording_service = RecordingService(db, self.redis_client)
                 
                 # 查询待处理的录制
@@ -77,7 +77,7 @@ class RecordingProcessingTask:
         cleaned_count = 0
         
         try:
-            async with get_async_session() as db:
+            async with get_async_session_ctx() as db:
                 # 查询超过24小时的失败录制
                 cutoff_time = datetime.utcnow() - timedelta(hours=24)
                 
@@ -117,7 +117,7 @@ class RecordingProcessingTask:
         cleaned_count = 0
         
         try:
-            async with get_async_session() as db:
+            async with get_async_session_ctx() as db:
                 # 查询超过保留期的录制（默认90天）
                 retention_days = 90  # 可以从配置中读取
                 cutoff_time = datetime.utcnow() - timedelta(days=retention_days)
@@ -169,7 +169,7 @@ class RecordingProcessingTask:
         monitored_count = 0
         
         try:
-            async with get_async_session() as db:
+            async with get_async_session_ctx() as db:
                 # 查询正在录制的记录
                 query = select(MeetingRecording).where(
                     MeetingRecording.recording_status == RecordingStatus.RECORDING
@@ -205,7 +205,7 @@ class RecordingProcessingTask:
     async def generate_recording_statistics(self) -> Dict[str, int]:
         """生成录制统计信息"""
         try:
-            async with get_async_session() as db:
+            async with get_async_session_ctx() as db:
                 # 统计各状态的录制数量
                 stats = {}
                 

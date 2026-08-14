@@ -249,8 +249,8 @@ async def get_available_models(
     """
     try:
         if not wenxin_service.adapter:
-            raise HTTPException(status_code=503, detail="Wenxin service not initialized")
-        
+            return {"models": [], "total_count": 0}
+
         models = await wenxin_service.adapter.get_available_models()
         
         # 添加模型详细信息
@@ -286,6 +286,8 @@ class TestConnectionRequest(BaseModel):
     """测试连接请求模型"""
     api_key: Optional[str] = Field(None, description="API密钥")
     secret_key: Optional[str] = Field(None, description="Secret密钥")
+    test_message: Optional[str] = Field("你好，请做一个简短的自我介绍。", description="测试消息")
+    model: Optional[str] = Field(None, description="模型名称")
 
 @router.post("/models/recommend", response_model=List[ModelRecommendationResponse], summary="模型推荐")
 async def recommend_models(
@@ -328,8 +330,15 @@ async def get_usage_statistics(
     包括请求数量、成功率、Token使用、成本等信息。
     """
     try:
+        if not wenxin_service.adapter:
+            return UsageStatisticsResponse(
+                total_requests=0, successful_requests=0, failed_requests=0,
+                success_rate=0.0, total_tokens=0, total_cost=0.0,
+                avg_response_time=0.0, model_usage={}, cost_per_request=0.0
+            )
+
         stats = await wenxin_service.get_usage_statistics()
-        
+
         return UsageStatisticsResponse(**stats)
         
     except Exception as e:
@@ -375,8 +384,17 @@ async def test_connection(
     发送测试消息验证服务是否正常工作。
     """
     try:
+        # 校验请求体非空：至少需提供 api_key 或 secret_key 之一（或服务已预配置）
+        if not request.api_key and not request.secret_key and not request.model:
+            # 允许无凭证调用，但仅当服务已初始化时；否则返回 4xx 提示缺少配置
+            if not getattr(wenxin_service, "adapter", None):
+                raise HTTPException(
+                    status_code=400,
+                    detail="请提供 api_key 或 secret_key，或先完成服务配置"
+                )
+
         messages = [ChatMessage(role=MessageRole.USER, content=request.test_message)]
-        
+
         response = await wenxin_service.chat_completion(
             messages=messages,
             user_id=current_user.id,
@@ -395,15 +413,15 @@ async def test_connection(
             "test_message": request.test_message,
             "timestamp": datetime.utcnow().isoformat()
         }
-        
+
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Test connection error: {e}")
-        return {
-            "success": False,
-            "error": str(e),
-            "test_message": request.test_message,
-            "timestamp": datetime.utcnow().isoformat()
-        }
+        raise HTTPException(
+            status_code=503,
+            detail=f"连接测试失败: {str(e)}"
+        )
 
 
 @router.get("/config", summary="获取配置信息")

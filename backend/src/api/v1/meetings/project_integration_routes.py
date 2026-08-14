@@ -14,6 +14,7 @@ from pydantic import BaseModel, Field
 
 from ....core.database import get_async_session
 from ....core.auth import get_current_user
+from ....core.exceptions import NotFoundError
 from ....services.meeting_project_integration_service import MeetingProjectIntegrationService
 from ....models.user import User
 from ....models.meeting import MeetingType
@@ -190,7 +191,7 @@ async def get_project_meetings(
     except PermissionError as e:
         raise HTTPException(status_code=403, detail=str(e))
     except Exception as e:
-        raise HTTPException(status_code=500, detail="获取项目会议列表失败")
+        raise HTTPException(status_code=500, detail=f"获取项目会议列表失败: {type(e).__name__}: {str(e)}")
 
 
 @router.post("/{project_id}/meetings/{meeting_id}/sync-team", response_model=TeamSyncResult)
@@ -216,11 +217,15 @@ async def sync_project_team_to_meeting(
             success=True,
             message=f"成功添加 {result['added_participants']} 名团队成员到会议"
         )
-    
+
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+    except (AttributeError, NotFoundError) as e:
+        raise HTTPException(status_code=404, detail=str(e))
     except PermissionError as e:
         raise HTTPException(status_code=403, detail=str(e))
+    except HTTPException:
+        raise
     except Exception as e:
         await db.rollback()
         raise HTTPException(status_code=500, detail="同步团队成员失败")
@@ -245,13 +250,17 @@ async def create_milestone_review_meeting(
         )
         
         await db.commit()
-        
+
         return MeetingResponse.from_orm(meeting)
-    
+
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+    except (AttributeError, NotFoundError) as e:
+        raise HTTPException(status_code=404, detail=str(e))
     except PermissionError as e:
         raise HTTPException(status_code=403, detail=str(e))
+    except HTTPException:
+        raise
     except Exception as e:
         await db.rollback()
         raise HTTPException(status_code=500, detail="创建里程碑评审会议失败")
@@ -286,6 +295,8 @@ async def generate_project_meeting_schedule(
     
     except PermissionError as e:
         raise HTTPException(status_code=403, detail=str(e))
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail="生成会议计划失败")
 
@@ -514,8 +525,12 @@ async def get_meeting_related_tasks(
     
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+    except NotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
     except PermissionError as e:
         raise HTTPException(status_code=403, detail=str(e))
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail="获取会议任务失败")
 
@@ -543,11 +558,15 @@ async def sync_meeting_tasks_with_project(
             'success': True,
             'message': f"任务同步完成，已关联 {sync_result['linked_tasks']} 个任务"
         }
-    
+
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+    except (AttributeError, NotFoundError) as e:
+        raise HTTPException(status_code=404, detail=str(e))
     except PermissionError as e:
         raise HTTPException(status_code=403, detail=str(e))
+    except HTTPException:
+        raise
     except Exception as e:
         await db.rollback()
         raise HTTPException(status_code=500, detail="同步任务失败")
@@ -583,11 +602,15 @@ async def link_existing_task_to_meeting(
                 'status': task.status
             }
         }
-    
+
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+    except (AttributeError, NotFoundError) as e:
+        raise HTTPException(status_code=404, detail=str(e))
     except PermissionError as e:
         raise HTTPException(status_code=403, detail=str(e))
+    except HTTPException:
+        raise
     except Exception as e:
         await db.rollback()
         raise HTTPException(status_code=500, detail="关联任务失败")
@@ -613,8 +636,12 @@ async def get_meeting_task_progress_summary(
     
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+    except NotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
     except PermissionError as e:
         raise HTTPException(status_code=403, detail=str(e))
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail="获取任务进度失败")
 

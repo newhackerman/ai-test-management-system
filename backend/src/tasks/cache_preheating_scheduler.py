@@ -356,7 +356,7 @@ class CachePreheatingScheduler:
             from ..models.ai_chat_session import AIChatSession
             from sqlalchemy import select, func, desc
             
-            async with get_async_session() as session:
+            async with get_async_session_ctx() as session:
                 # 查询最近24小时内有活动的用户
                 result = await session.execute(
                     select(AIChatSession.user_id, func.count(AIChatSession.id).label('session_count'))
@@ -379,7 +379,7 @@ class CachePreheatingScheduler:
             from ..models.ai_suggestion import AISuggestion
             from sqlalchemy import select, func, desc
             
-            async with get_async_session() as session:
+            async with get_async_session_ctx() as session:
                 # 查询最近24小时内有建议活动的项目
                 result = await session.execute(
                     select(AISuggestion.project_id, func.count(AISuggestion.id).label('suggestion_count'))

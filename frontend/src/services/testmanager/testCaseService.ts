@@ -83,6 +83,28 @@ export class TestCaseService {
     return unwrapData<AutomationScript>(response.data)
   }
 
+  async getAutomationScript(testCaseId: number, framework?: string): Promise<AutomationScript | null> {
+    try {
+      const response = await apiClient.get(this.path(`${testCaseId}/automation-script`), {
+        params: framework ? { framework } : undefined,
+        silent404: true,
+      } as any)
+      return unwrapData<AutomationScript | null>(response.data)
+    } catch (error: any) {
+      if (error?.response?.status === 404) return null
+      throw error
+    }
+  }
+
+  async saveAutomationScript(testCaseId: number, data: Partial<AutomationScript> & {
+    framework: string
+    language: string
+    script_content: string
+  }): Promise<AutomationScript> {
+    const response = await apiClient.put(this.path(`${testCaseId}/automation-script`), data)
+    return unwrapData<AutomationScript>(response.data)
+  }
+
   async batchUpdateTestCases(ids: number[], data: Partial<UpdateTestCaseRequest>): Promise<void> {
     await apiClient.post(this.path('batch-update'), { case_ids: ids, update_data: data })
   }

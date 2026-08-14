@@ -11,7 +11,7 @@ import logging
 from datetime import datetime, timedelta
 from typing import Dict, Any, List, Optional, Tuple
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import and_, or_
+from sqlalchemy import and_, or_, select, func
 
 from ..models.requirement import (
     RequirementReview, RequirementReviewComment, Requirement,
@@ -458,14 +458,17 @@ class RequirementReviewService:
             raise BusinessLogicError(f"取消评审失败: {str(e)}")
     
     async def get_review_by_id(self, review_id: int) -> Optional[RequirementReview]:
-        """根据ID获取评审"""
-        return await self._get_review_by_id(review_id)
+        """根据ID获取评审（不存在时返回 None，由路由层转为 404）。"""
+        result = await self.db.execute(
+            select(RequirementReview).where(RequirementReview.id == review_id)
+        )
+        return result.scalar_one_or_none()
     
     async def get_reviews_by_requirement(self, requirement_id: int) -> List[RequirementReview]:
         """获取需求的所有评审"""
         result = await self.db.execute(
-            self.db.query(RequirementReview)
-            .filter(RequirementReview.requirement_id == requirement_id)
+            select(RequirementReview)
+            .where(RequirementReview.requirement_id == requirement_id)
             .order_by(RequirementReview.created_at.desc())
         )
         return result.scalars().all()
@@ -473,15 +476,15 @@ class RequirementReviewService:
     async def get_review_comments(self, review_id: int) -> List[RequirementReviewComment]:
         """获取评审意见列表"""
         result = await self.db.execute(
-            self.db.query(RequirementReviewComment)
-            .filter(RequirementReviewComment.review_id == review_id)
+            select(RequirementReviewComment)
+            .where(RequirementReviewComment.review_id == review_id)
             .order_by(RequirementReviewComment.created_at.asc())
         )
         return result.scalars().all()
     
     async def get_reviewer_reviews(self, reviewer_id: int, status: Optional[ReviewStatus] = None) -> List[RequirementReview]:
         """获取评审人的评审列表"""
-        query = self.db.query(RequirementReview).filter(
+        query = select(RequirementReview).filter(
             or_(
                 RequirementReview.moderator_id == reviewer_id,
                 RequirementReview.reviewers.contains([reviewer_id])
@@ -496,30 +499,38 @@ class RequirementReviewService:
     
     async def get_review_statistics(self, project_id: Optional[int] = None) -> Dict[str, Any]:
         """获取评审统计信息"""
-        # 基础查询
-        base_query = self.db.query(RequirementReview)
-        
+        # 基础查询条件
+        base_conditions = []
         if project_id:
-            base_query = base_query.join(Requirement).filter(Requirement.project_id == project_id)
-        
+            base_conditions.append(Requirement.project_id == project_id)
+
         # 状态统计
         status_stats = {}
         for status in ReviewStatus:
-            count_result = await self.db.execute(
-                base_query.filter(RequirementReview.review_status == status).count()
+            stmt = select(func.count(RequirementReview.id)).where(
+                RequirementReview.review_status == status
             )
+            if base_conditions:
+                stmt = stmt.join(Requirement).where(*base_conditions)
+            count_result = await self.db.execute(stmt)
             status_stats[status.value] = count_result.scalar()
-        
+
         # 决策统计
         decision_stats = {}
         for decision in ReviewDecision:
-            count_result = await self.db.execute(
-                base_query.filter(RequirementReview.decision == decision).count()
+            stmt = select(func.count(RequirementReview.id)).where(
+                RequirementReview.decision == decision
             )
+            if base_conditions:
+                stmt = stmt.join(Requirement).where(*base_conditions)
+            count_result = await self.db.execute(stmt)
             decision_stats[decision.value] = count_result.scalar()
-        
+
         # 总数统计
-        total_result = await self.db.execute(base_query.count())
+        total_stmt = select(func.count(RequirementReview.id))
+        if base_conditions:
+            total_stmt = total_stmt.join(Requirement).where(*base_conditions)
+        total_result = await self.db.execute(total_stmt)
         total_reviews = total_result.scalar()
         
         return {
@@ -534,7 +545,7 @@ class RequirementReviewService:
     async def _get_review_by_id(self, review_id: int) -> RequirementReview:
         """根据ID获取评审"""
         result = await self.db.execute(
-            self.db.query(RequirementReview).filter(RequirementReview.id == review_id)
+            select(RequirementReview).where(RequirementReview.id == review_id)
         )
         review = result.scalar_one_or_none()
         if not review:
@@ -544,7 +555,7 @@ class RequirementReviewService:
     async def _get_comment_by_id(self, comment_id: int) -> RequirementReviewComment:
         """根据ID获取评审意见"""
         result = await self.db.execute(
-            self.db.query(RequirementReviewComment).filter(RequirementReviewComment.id == comment_id)
+            select(RequirementReviewComment).where(RequirementReviewComment.id == comment_id)
         )
         comment = result.scalar_one_or_none()
         if not comment:
@@ -554,8 +565,8 @@ class RequirementReviewService:
     async def _get_active_review_for_requirement(self, requirement_id: int) -> Optional[RequirementReview]:
         """获取需求的活跃评审"""
         result = await self.db.execute(
-            self.db.query(RequirementReview)
-            .filter(
+            select(RequirementReview)
+            .where(
                 and_(
                     RequirementReview.requirement_id == requirement_id,
                     RequirementReview.review_status.in_([ReviewStatus.PENDING, ReviewStatus.IN_PROGRESS])

@@ -425,6 +425,8 @@ async def get_test_plan(
             data=response_data
         )
         
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"获取测试计划失败: {str(e)}")
         raise HTTPException(status_code=500, detail="内部服务器错误")
@@ -777,7 +779,11 @@ async def start_test_plan(
             message="测试计划启动成功",
             data=response_data
         )
-        
+
+    except NotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"启动测试计划失败: {str(e)}")
         raise HTTPException(status_code=500, detail="内部服务器错误")
@@ -837,7 +843,11 @@ async def complete_test_plan(
             message="测试计划完成成功",
             data=response_data
         )
-        
+
+    except NotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"完成测试计划失败: {str(e)}")
         raise HTTPException(status_code=500, detail="内部服务器错误")

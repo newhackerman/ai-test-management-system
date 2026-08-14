@@ -31,6 +31,8 @@ import {
   normalizeSteps,
   readAiDraft,
 } from './testCaseFormUtils'
+import AutomationScriptEditor, { defaultAutomationScriptForm } from './AutomationScriptEditor'
+import { testCaseService } from '../../../services/testmanager/testCaseService'
 
 const defaultForm = {
   test_plan_id: 0,
@@ -59,6 +61,7 @@ const TestCaseCreate: React.FC = () => {
   const [testPlans, setTestPlans] = useState<TestPlan[]>([])
   const [users, setUsers] = useState<User[]>([])
   const [submitError, setSubmitError] = useState('')
+  const [automationScript, setAutomationScript] = useState(defaultAutomationScriptForm)
 
   useEffect(() => {
     if (aiDraft) sessionStorage.removeItem(AI_IMPORT_DRAFT_KEY)
@@ -130,6 +133,11 @@ const TestCaseCreate: React.FC = () => {
       setSubmitError('至少需要填写一个包含操作和预期结果的测试步骤')
       return
     }
+    const hasScript = automationScript.enabled && automationScript.script_content.trim()
+    if (form.automation_level !== AutomationLevel.MANUAL && !hasScript) {
+      setSubmitError('自动化用例需要配置可执行脚本，或将自动化级别改为“手动”')
+      return
+    }
 
     const result = await createTestCase.mutateAsync({
       test_plan_id: Number(form.test_plan_id || 0) || undefined,
@@ -147,6 +155,18 @@ const TestCaseCreate: React.FC = () => {
       test_steps: normalizedSteps,
       tags: cleanText(form.tags_text).split(/[，,\n]/).map((tag) => tag.trim()).filter(Boolean),
     })
+    if (hasScript) {
+      await testCaseService.saveAutomationScript(result.id, {
+        script_name: automationScript.script_name || `${result.case_code}_automation`,
+        framework: automationScript.framework,
+        language: automationScript.language,
+        browser: automationScript.browser,
+        script_path: automationScript.script_path,
+        script_content: automationScript.script_content,
+        dependencies: [],
+        is_active: true,
+      })
+    }
     navigate(`/test-manager/test-cases/${result.id}`)
   }
 
@@ -253,6 +273,8 @@ const TestCaseCreate: React.FC = () => {
             ))}
           </CardContent>
         </Card>
+
+        <AutomationScriptEditor value={automationScript} onChange={setAutomationScript} />
 
         <div className="flex justify-end gap-3">
           <Link to="/test-manager/test-cases"><Button type="button" variant="outline">取消</Button></Link>

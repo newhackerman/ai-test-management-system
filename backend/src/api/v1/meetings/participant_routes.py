@@ -204,8 +204,7 @@ async def get_participants(
         return ParticipantListResponse(
             participants=[ParticipantResponse.from_orm(p) for p in participants],
             total=len(participants),
-            online_count=statistics.get('online_count', 0),
-            roles_summary=statistics.get('roles_summary', {})
+            meeting_id=meeting_id
         )
         
     except NotFoundError as e:
@@ -224,7 +223,7 @@ async def get_participants(
         logger.error(f"获取参与者列表失败: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="获取参与者列表失败"
+            detail=f"获取参与者列表失败: {type(e).__name__}: {str(e)}"
         )
 
 
@@ -453,5 +452,5 @@ async def get_participant_statistics(
         logger.error(f"获取参与者统计失败: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="获取参与者统计失败"
+            detail=f"获取参与者统计失败: {type(e).__name__}: {str(e)}"
         )

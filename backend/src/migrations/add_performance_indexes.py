@@ -10,14 +10,14 @@ import logging
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..core.database import get_async_session
+from ..core.database import get_async_session, get_async_session_ctx
 
 logger = logging.getLogger(__name__)
 
 
 async def upgrade():
     """添加性能优化索引"""
-    async with get_async_session() as db:
+    async with get_async_session_ctx() as db:
         try:
             # 项目表索引
             project_indexes = [
@@ -180,7 +180,7 @@ async def upgrade():
 
 async def downgrade():
     """删除性能优化索引"""
-    async with get_async_session() as db:
+    async with get_async_session_ctx() as db:
         try:
             # 删除索引的SQL语句
             drop_indexes = [

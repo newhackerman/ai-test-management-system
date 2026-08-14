@@ -3,6 +3,7 @@
 提供用户角色分配、权限管理、审计日志等功能
 """
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Body
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional, List, Dict, Any
 import logging
@@ -244,7 +245,7 @@ async def get_roles(
 ):
     """获取角色列表"""
     try:
-        roles, total = permission_service.get_roles(
+        roles, total = await permission_service.get_roles(
             page=page,
             size=size,
             search=search,
@@ -277,6 +278,8 @@ async def get_roles(
             }
         }
         
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"获取角色列表失败: {e}")
         raise HTTPException(
@@ -293,7 +296,7 @@ async def create_role(
 ):
     """创建角色"""
     try:
-        role, error = permission_service.create_role(
+        role, error = await permission_service.create_role(
             name=request.name,
             code=request.code,
             description=request.description,
@@ -334,11 +337,19 @@ async def update_role(
     role_id: int,
     request: RoleUpdateRequest,
     current_user: User = Depends(get_current_active_user),
-    permission_service: PermissionService = Depends(get_permission_service)
+    permission_service: PermissionService = Depends(get_permission_service),
+    db: AsyncSession = Depends(get_async_session)
 ):
     """更新角色"""
     try:
-        role, error = permission_service.update_role(
+        # 校验角色是否存在，避免对不存在的资源操作返回 500
+        role = (await db.execute(
+            select(Role).where(Role.id == role_id)
+        )).scalar_one_or_none()
+        if not role:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="角色不存在")
+
+        role, error = await permission_service.update_role(
             role_id=role_id,
             name=request.name,
             code=request.code,
@@ -348,10 +359,10 @@ async def update_role(
             permission_ids=request.permission_ids,
             updated_by=current_user.id
         )
-        
+
         if not role:
             raise bad_request_error(error or "角色更新失败")
-        
+
         return {
             "success": True,
             "message": "角色更新成功",
@@ -364,7 +375,7 @@ async def update_role(
                 "is_active": role.is_active
             }
         }
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -379,23 +390,31 @@ async def update_role(
 async def delete_role(
     role_id: int,
     current_user: User = Depends(get_current_active_user),
-    permission_service: PermissionService = Depends(get_permission_service)
+    permission_service: PermissionService = Depends(get_permission_service),
+    db: AsyncSession = Depends(get_async_session)
 ):
     """删除角色"""
     try:
-        success = permission_service.delete_role(
+        # 校验角色是否存在，避免对不存在的资源操作返回 500
+        role = (await db.execute(
+            select(Role).where(Role.id == role_id)
+        )).scalar_one_or_none()
+        if not role:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="角色不存在")
+
+        success = await permission_service.delete_role(
             role_id=role_id,
             deleted_by=current_user.id
         )
-        
+
         if not success:
             raise bad_request_error("角色删除失败")
-        
+
         return {
             "success": True,
             "message": "角色删除成功"
         }
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -439,7 +458,7 @@ async def get_permissions(
 ):
     """获取权限列表"""
     try:
-        permissions, total = permission_service.get_permissions(
+        permissions, total = await permission_service.get_permissions(
             page=page,
             size=size,
             search=search,
@@ -471,6 +490,8 @@ async def get_permissions(
             }
         }
         
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"获取权限列表失败: {e}")
         raise HTTPException(
@@ -485,7 +506,7 @@ async def get_permission_modules(
 ):
     """获取权限模块列表"""
     try:
-        modules = permission_service.get_permission_modules()
+        modules = await permission_service.get_permission_modules()
         
         return {
             "success": True,
@@ -495,6 +516,8 @@ async def get_permission_modules(
             }
         }
         
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"获取权限模块失败: {e}")
         raise HTTPException(

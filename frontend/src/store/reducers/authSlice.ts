@@ -146,6 +146,7 @@ const authReducer = authSlice.reducer;
 
 // 添加 selector 函数
 export const selectUserInfo = (state: { auth: AuthState }) => state.auth.userInfo;
+export const selectIsAuthenticated = (state: { auth: AuthState }) => state.auth.isAuthenticated;
 
 // 持久化配置
 const persistConfig = {

@@ -19,7 +19,7 @@ from concurrent.futures import ThreadPoolExecutor
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, and_, or_, desc
 
-from ..core.database import get_async_session
+from ..core.database import get_async_session, get_async_session_ctx
 from ..utils.cache_utils import cache_client
 from ..utils.redis_client import get_redis_client
 from ..models.dashboard_config import DashboardConfig
@@ -778,6 +778,6 @@ class ChartPerformanceService:
 async def get_chart_performance_service(db: AsyncSession = None) -> ChartPerformanceService:
     """获取图表性能服务实例"""
     if db is None:
-        async with get_async_session() as session:
+        async with get_async_session_ctx() as session:
             return ChartPerformanceService(session)
     return ChartPerformanceService(db)

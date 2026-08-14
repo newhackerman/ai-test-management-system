@@ -10,6 +10,7 @@ AI分析和纪要API路由
 """
 import logging
 from typing import Optional, List
+from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Path, status
 from fastapi.responses import JSONResponse
@@ -126,10 +127,21 @@ async def get_meeting_summary(
         summary = await ai_service.get_meeting_summary(meeting_id, current_user.id)
         
         if not summary:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="会议摘要不存在，请先生成摘要"
-            )
+            # 会议尚无已生成的摘要：返回空摘要结构，避免对已存在会议返回 404
+            now = datetime.utcnow()
+            summary = {
+                "meeting_id": meeting_id,
+                "overview": "",
+                "key_points": [],
+                "decisions": [],
+                "action_items": [],
+                "next_steps": [],
+                "participants_summary": {},
+                "meeting_effectiveness": {},
+                "generated_at": now.isoformat(),
+                "generation_method": "pending",
+                "language": "zh-CN",
+            }
         
         return MeetingSummaryResponse(**summary)
         
@@ -145,6 +157,8 @@ async def get_meeting_summary(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=str(e)
         )
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"获取会议摘要失败: {e}")
         raise HTTPException(
@@ -229,7 +243,7 @@ async def generate_meeting_minutes(
 )
 async def get_meeting_minutes(
     meeting_id: int = Path(..., description="会议ID"),
-    status: Optional[MinuteStatusEnum] = Query(None, description="纪要状态筛选"),
+    status_filter: Optional[MinuteStatusEnum] = Query(None, alias="status", description="纪要状态筛选"),
     minute_type: Optional[MinuteTypeEnum] = Query(None, description="纪要类型筛选"),
     version: Optional[str] = Query(None, description="版本筛选"),
     current_user: User = Depends(get_current_user),
@@ -253,7 +267,7 @@ async def get_meeting_minutes(
         minutes_list = await ai_service.get_meeting_minutes(
             meeting_id, 
             current_user.id,
-            status=status,
+            status=status_filter,
             minute_type=minute_type,
             version=version
         )
@@ -305,10 +319,64 @@ async def get_meeting_analytics(
         # 获取会议分析
         analytics = await ai_service.analyze_meeting_effectiveness(meeting_id, current_user.id)
         
+        if not analytics:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="会议分析不存在，请先生成分析"
+            )
+        
+        # 将分析结果转换为响应模型所需的字段结构
+        analytics_data = analytics.to_dict() if hasattr(analytics, "to_dict") else dict(analytics)
+
+        def _to_float(value, default=0.0) -> float:
+            """将数值或包含数值的字典/列表安全转换为 float。"""
+            if value is None:
+                return default
+            if isinstance(value, (int, float)):
+                return float(value)
+            if isinstance(value, dict):
+                for key in ("score", "rate", "value", "overall", "percentage"):
+                    if key in value and isinstance(value[key], (int, float)):
+                        return float(value[key])
+                return default
+            if isinstance(value, list):
+                return default
+            try:
+                return float(value)
+            except (TypeError, ValueError):
+                return default
+
+        analytics_response = {
+            "meeting_id": analytics_data.get("meeting_id", meeting_id),
+            "overall_effectiveness": _to_float(
+                analytics_data.get("overall_effectiveness", analytics_data.get("overall_score"))
+            ),
+            "participation_metrics": (
+                # 响应模型要求 List[ParticipationMetrics]，服务返回的是聚合指标 dict，
+                # 而非按用户拆分的列表，这里统一规范化为列表（聚合指标非逐人记录时返回空列表）。
+                analytics_data.get("participation_metrics")
+                if isinstance(analytics_data.get("participation_metrics"), list)
+                else []
+            ),
+            "agenda_completion_rate": _to_float(
+                analytics_data.get("agenda_completion_rate", analytics_data.get("agenda_completion"))
+            ),
+            "decision_efficiency": _to_float(analytics_data.get("decision_efficiency")),
+            "time_utilization": _to_float(analytics_data.get("time_utilization")),
+            "sentiment_analysis": analytics_data.get("sentiment_analysis") or {},
+            "improvement_suggestions": analytics_data.get("improvement_suggestions") or [],
+            "meeting_quality_score": _to_float(
+                analytics_data.get("meeting_quality_score", analytics_data.get("overall_score"))
+            ),
+            "network_quality_avg": _to_float(analytics_data.get("network_quality_avg")),
+            "technical_issues_count": int(analytics_data.get("technical_issues_count") or 0),
+            "analyzed_at": analytics_data.get("analyzed_at") or datetime.utcnow(),
+        }
+        
         return GetAnalyticsResponse(
             success=True,
             message="会议分析获取成功",
-            data=MeetingAnalyticsResponse(**analytics)
+            data=MeetingAnalyticsResponse(**analytics_response)
         )
         
     except NotFoundError as e:
@@ -323,6 +391,8 @@ async def get_meeting_analytics(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=str(e)
         )
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"获取会议分析失败: {e}")
         raise HTTPException(
@@ -357,11 +427,14 @@ async def generate_meeting_analytics(
         
         # 生成会议分析
         analytics = await ai_service.generate_meeting_analytics(
-            meeting_id, 
+            meeting_id,
             current_user.id,
             force_regenerate=force_regenerate
         )
-        
+
+        if not analytics:
+            raise NotFoundError(f"会议 {meeting_id} 的分析不存在，请先生成分析")
+
         logger.info(f"会议分析生成成功: 会议 {meeting_id}")
         
         return GetAnalyticsResponse(
@@ -441,6 +514,8 @@ async def get_meeting_transcription(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=str(e)
         )
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"获取会议转录失败: {e}")
         raise HTTPException(
@@ -470,10 +545,13 @@ async def get_advanced_analytics(
     """
     try:
         logger.info(f"用户 {current_user.id} 获取高级分析: 会议 {meeting_id}")
-        
+
         # 获取高级分析
         advanced_analytics = await ai_service.get_advanced_analytics(meeting_id, current_user.id)
-        
+
+        if not advanced_analytics:
+            raise NotFoundError(f"会议 {meeting_id} 的高级分析不存在，请先生成分析")
+
         return AdvancedAnalyticsResponse(**advanced_analytics)
         
     except NotFoundError as e:

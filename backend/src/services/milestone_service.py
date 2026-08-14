@@ -74,7 +74,17 @@ class MilestoneService:
                 project_id, milestone_data.dependencies, session
             )
             
-            # 创建里程碑实体
+            # 创建里程碑实体（将 date/datetime 转为 ISO 字符串以兼容 JSON 列）
+            def _json_safe(value):
+                from datetime import date, datetime
+                if isinstance(value, (date, datetime)):
+                    return value.isoformat()
+                if isinstance(value, list):
+                    return [_json_safe(v) for v in value]
+                if isinstance(value, dict):
+                    return {k: _json_safe(v) for k, v in value.items()}
+                return value
+
             milestone = Milestone(
                 project_id=project_id,
                 milestone_name=milestone_data.milestone_name,
@@ -82,9 +92,9 @@ class MilestoneService:
                 milestone_type=milestone_data.milestone_type.value,
                 planned_date=milestone_data.planned_date,
                 owner_id=milestone_data.owner_id,
-                deliverables=[d.dict() for d in milestone_data.deliverables],
+                deliverables=[_json_safe(d.dict()) for d in milestone_data.deliverables],
                 acceptance_criteria=milestone_data.acceptance_criteria,
-                dependency_milestones=[d.dict() for d in milestone_data.dependencies],
+                dependency_milestones=[_json_safe(d.dict()) for d in milestone_data.dependencies],
                 created_by=creator_id
             )
             

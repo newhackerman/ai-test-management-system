@@ -46,6 +46,10 @@ class UserCreate(UserBase):
     roles: Optional[List[str]] = Field(default_factory=list, description="角色列表")
     role_ids: Optional[List[int]] = Field(default_factory=list, description="角色ID列表")
     is_active: bool = Field(True, description="是否激活")
+    # 允许创建用户时直接指定超级管理员标记；默认 False，不影响普通调用。
+    # 之前由于 schema 未声明该字段，调用方传入的 is_superuser=true 会被
+    # Pydantic 静默丢弃，导致依赖超级用户短路逻辑的测试账号拿不到权限。
+    is_superuser: bool = Field(False, description="是否超级管理员")
     
     @validator("password")
     def validate_password(cls, v):

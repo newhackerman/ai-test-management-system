@@ -18,12 +18,12 @@ interface WorkloadData {
 }
 
 const ROLE_COLORS = {
-  ADMIN: '#ff4d4f',
-  PROJECT_MANAGER: '#722ed1',
-  REQUIREMENT_MANAGER: '#1890ff',
+  ADMIN: '#f87171',
+  PROJECT_MANAGER: '#7c3aed',
+  REQUIREMENT_MANAGER: '#2563eb',
   DESIGNER: '#13c2c2',
-  ARCHITECT: '#52c41a',
-  DEVELOPER: '#fa8c16',
+  ARCHITECT: '#16a34a',
+  DEVELOPER: '#f59e0b',
   TESTER: '#fadb14',
   DEVOPS: '#eb2f96',
   THIRD_PARTY: '#d9d9d9',
@@ -79,9 +79,9 @@ export const WorkloadChart: React.FC<WorkloadChartProps> = ({ members, loading =
   }))
 
   const pieData = [
-    { name: '正常负载', value: statistics.normalMembers, color: '#52c41a' },
-    { name: '负载过重', value: statistics.overloadedMembers, color: '#ff4d4f' },
-    { name: '负载不足', value: statistics.underloadedMembers, color: '#faad14' },
+    { name: '正常负载', value: statistics.normalMembers, color: '#16a34a' },
+    { name: '负载过重', value: statistics.overloadedMembers, color: '#f87171' },
+    { name: '负载不足', value: statistics.underloadedMembers, color: '#fbbf24' },
   ].filter((item) => item.value > 0)
 
   const getWorkloadStatus = (workload: number) => {
@@ -119,18 +119,18 @@ export const WorkloadChart: React.FC<WorkloadChartProps> = ({ members, loading =
               value={statistics.avgWorkload}
               precision={1}
               suffix="%"
-              valueStyle={{ color: statistics.avgWorkload > 100 ? '#ff4d4f' : '#3f8600' }}
+              valueStyle={{ color: statistics.avgWorkload > 100 ? '#f87171' : '#15803d' }}
             />
           </Col>
           <Col xs={12} lg={6}>
-            <Statistic title="平均效率" value={statistics.avgEfficiency} precision={1} suffix="%" valueStyle={{ color: '#1890ff' }} />
+            <Statistic title="平均效率" value={statistics.avgEfficiency} precision={1} suffix="%" valueStyle={{ color: '#2563eb' }} />
           </Col>
           <Col xs={12} lg={6}>
             <Statistic
               title="负载异常"
               value={statistics.overloadedMembers + statistics.underloadedMembers}
               suffix="人"
-              valueStyle={{ color: statistics.overloadedMembers + statistics.underloadedMembers > 0 ? '#ff4d4f' : '#3f8600' }}
+              valueStyle={{ color: statistics.overloadedMembers + statistics.underloadedMembers > 0 ? '#f87171' : '#15803d' }}
             />
           </Col>
         </Row>
@@ -147,7 +147,7 @@ export const WorkloadChart: React.FC<WorkloadChartProps> = ({ members, loading =
                 <RechartsTooltip
                   formatter={(value, name) => [`${value}%`, name === 'workload' ? '工作负载' : '工作效率']}
                 />
-                <Bar dataKey="workload" fill="#1890ff" name="workload" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="workload" fill="#2563eb" name="workload" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </Card>
@@ -203,7 +203,7 @@ export const WorkloadChart: React.FC<WorkloadChartProps> = ({ members, loading =
                       </div>
                       <Progress
                         percent={Math.min(workload, 200)}
-                        strokeColor={workload > 120 ? '#ff4d4f' : workload < 60 ? '#faad14' : '#52c41a'}
+                        strokeColor={workload > 120 ? '#f87171' : workload < 60 ? '#fbbf24' : '#16a34a'}
                         size="small"
                       />
                     </div>
@@ -213,7 +213,7 @@ export const WorkloadChart: React.FC<WorkloadChartProps> = ({ members, loading =
                         <span>工作效率</span>
                         <span>{efficiency.toFixed(1)}%</span>
                       </div>
-                      <Progress percent={efficiency} strokeColor="#1890ff" size="small" />
+                      <Progress percent={efficiency} strokeColor="#2563eb" size="small" />
                     </div>
 
                     {member.responsibilities && (

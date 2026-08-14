@@ -21,12 +21,15 @@ import {
   Shield,
   Sun,
   TestTube,
+  Trash2,
   User,
   Users,
   X,
 } from 'lucide-react'
 import { useAuthStore } from '@/stores/auth'
 import { apiClient } from '@/services/api/client'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/Dialog'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 
 const navGroups = [
   {
@@ -49,7 +52,6 @@ const navGroups = [
       { label: '执行管理', path: '/test-manager/executions', icon: PlayCircle, module: 'testing' },
       { label: '缺陷管理', path: '/test-manager/defects', icon: AlertTriangle, module: 'defects' },
       { label: '测试报告', path: '/test-manager/reports', icon: FileSpreadsheet, module: 'reports' },
-      { label: '报告管理', path: '/reports', icon: FileSpreadsheet, module: 'reports' },
       { label: '性能测试', path: '/test-manager/performance', icon: BarChart3, module: 'testing' },
       { label: '安全测试', path: '/test-manager/security', icon: Shield, module: 'testing' },
     ],
@@ -142,6 +144,15 @@ interface SystemNotification {
   created_at?: string
 }
 
+const notificationCategoryLabels: Record<string, string> = {
+  system: '系统通知',
+  task: '任务通知',
+  defect: '缺陷通知',
+  requirement: '需求通知',
+  meeting: '会议通知',
+  report: '报告通知',
+}
+
 const AppLayout: React.FC = () => {
   const navigate = useNavigate()
   const location = useLocation()
@@ -151,8 +162,12 @@ const AppLayout: React.FC = () => {
   const { resolvedTheme, toggleTheme } = useTheme()
   const darkMode = resolvedTheme === 'dark'
   const [notificationOpen, setNotificationOpen] = useState(false)
+  const [messagePanelOpen, setMessagePanelOpen] = useState(false)
   const [notifications, setNotifications] = useState<SystemNotification[]>([])
   const [unreadCount, setUnreadCount] = useState(0)
+  const [selectedNotification, setSelectedNotification] = useState<SystemNotification | null>(null)
+  const [deletingNotification, setDeletingNotification] = useState<SystemNotification | null>(null)
+  const [activeTab, setActiveTab] = useState<'all' | 'unread' | 'read'>('unread')
   const [accessModules, setAccessModules] = useState<Record<string, boolean> | null>(null)
 
   const currentTitle = useMemo(() => {
@@ -211,7 +226,7 @@ const AppLayout: React.FC = () => {
     }
 
     try {
-      const response = await apiClient.get('/notifications', { params: { limit: 10 } })
+      const response = await apiClient.get('/notifications', { params: { limit: 100 } })
       const payload = response.data || {}
       setNotifications(payload.notifications || [])
       setUnreadCount(Number(payload.unread_count || 0))
@@ -243,10 +258,10 @@ const AppLayout: React.FC = () => {
   }, [isAuthenticated])
 
   useEffect(() => {
-    if (notificationOpen) {
+    if (notificationOpen || messagePanelOpen) {
       loadNotifications()
     }
-  }, [notificationOpen])
+  }, [notificationOpen, messagePanelOpen])
 
   const markAllNotificationsRead = async () => {
     try {
@@ -256,6 +271,40 @@ const AppLayout: React.FC = () => {
       // Request interceptor already shows the user-facing error.
     }
   }
+
+  const openNotificationDetail = (notification: SystemNotification) => {
+    setSelectedNotification(notification)
+    setNotificationOpen(false)
+    if (!notification.is_read) {
+      setNotifications((previous) => previous.map((item) => (item.id === notification.id ? { ...item, is_read: true } : item)))
+      setUnreadCount((count) => Math.max(0, count - 1))
+      apiClient
+        .patch(`/notifications/${notification.id}/read`)
+        .then(loadNotifications)
+        .catch(() => {
+          // Request interceptor already shows the user-facing error.
+        })
+    }
+  }
+
+  const deleteNotification = async (notification: SystemNotification) => {
+    try {
+      await apiClient.delete(`/notifications/${notification.id}`)
+      setDeletingNotification(null)
+      if (selectedNotification?.id === notification.id) {
+        setSelectedNotification(null)
+      }
+      await loadNotifications()
+    } catch {
+      // Request interceptor already shows the user-facing error.
+    }
+  }
+
+  const filteredNotifications = useMemo(() => {
+    if (activeTab === 'unread') return notifications.filter((item) => !item.is_read)
+    if (activeTab === 'read') return notifications.filter((item) => item.is_read)
+    return notifications
+  }, [notifications, activeTab])
 
   const visibleNavGroups = useMemo(() => {
     const canViewItem = (item: { module?: string }) => {
@@ -401,8 +450,18 @@ const AppLayout: React.FC = () => {
                           全部已读
                         </button>
                       )}
-                      <button className="text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 dark:text-gray-300" onClick={() => setNotificationOpen(false)}>
-                      关闭
+                      <button
+                        className="text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400"
+                        onClick={() => {
+                          setNotificationOpen(false)
+                          setActiveTab('unread')
+                          setMessagePanelOpen(true)
+                        }}
+                      >
+                        管理
+                      </button>
+                      <button className="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:text-gray-300" onClick={() => setNotificationOpen(false)}>
+                        关闭
                       </button>
                     </div>
                   </div>
@@ -412,11 +471,14 @@ const AppLayout: React.FC = () => {
                   {notifications.length > 0 && (
                     <div className="max-h-80 space-y-2 overflow-y-auto">
                       {notifications.map((notification) => (
-                        <div
+                        <button
                           key={notification.id}
-                          className={`rounded-md border px-3 py-2 text-sm dark:border-slate-700 ${
+                          type="button"
+                          className={`w-full rounded-md border px-3 py-2 text-left text-sm transition-colors hover:border-blue-300 hover:bg-blue-50/60 dark:border-slate-700 dark:hover:border-blue-500/50 dark:hover:bg-slate-700 ${
                             notification.is_read ? 'bg-white dark:bg-slate-900' : 'bg-blue-50 dark:bg-slate-800'
                           }`}
+                          onClick={() => openNotificationDetail(notification)}
+                          title="点击查看消息详情"
                         >
                           <div className="flex items-start justify-between gap-2">
                             <div className="font-medium">{notification.title}</div>
@@ -428,7 +490,7 @@ const AppLayout: React.FC = () => {
                           {notification.created_at && (
                             <div className="mt-1 text-[11px] text-gray-400 dark:text-gray-500">{new Date(notification.created_at).toLocaleString()}</div>
                           )}
-                        </div>
+                        </button>
                       ))}
                     </div>
                   )}
@@ -459,6 +521,153 @@ const AppLayout: React.FC = () => {
           <Outlet />
         </main>
       </div>
+
+      <Dialog open={messagePanelOpen} onOpenChange={(open) => !open && setMessagePanelOpen(false)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <div className="flex items-center justify-between">
+              <DialogTitle className="flex items-center gap-2">
+                消息管理
+                {unreadCount > 0 && (
+                  <span className="rounded-full bg-blue-600 px-2 py-0.5 text-xs font-normal text-white">{unreadCount} 条未读</span>
+                )}
+              </DialogTitle>
+              <div className="flex items-center gap-2">
+                {unreadCount > 0 && (
+                  <button className="text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400" onClick={markAllNotificationsRead}>
+                    全部已读
+                  </button>
+                )}
+                <button
+                  type="button"
+                  className="rounded-md p-1 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+                  onClick={() => setMessagePanelOpen(false)}
+                  aria-label="关闭"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          </DialogHeader>
+
+          <div className="mb-3 flex space-x-1 border-b border-slate-200 dark:border-slate-700">
+            {(([['all', '全部'], ['unread', '未读'], ['read', '已读']] as const).map(([value, label]) => (
+              <button
+                key={value}
+                type="button"
+                className={`-mb-px border-b-2 px-3 py-1.5 text-sm transition-colors ${
+                  activeTab === value
+                    ? 'border-blue-600 font-medium text-blue-600 dark:border-blue-400 dark:text-blue-300'
+                    : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
+                }`}
+                onClick={() => setActiveTab(value)}
+              >
+                {label}
+                {value === 'unread' && unreadCount > 0 ? ` (${unreadCount})` : ''}
+              </button>
+            )))}
+          </div>
+
+          <div className="max-h-[60vh] space-y-2 overflow-y-auto">
+            {filteredNotifications.length === 0 ? (
+              <div className="rounded-md bg-gray-50 px-3 py-8 text-center text-sm text-gray-500 dark:bg-slate-800 dark:text-gray-400">
+                {activeTab === 'unread' ? '暂无未读消息' : activeTab === 'read' ? '暂无已读消息' : '暂无消息'}
+              </div>
+            ) : (
+              filteredNotifications.map((notification) => (
+                <div
+                  key={notification.id}
+                  className={`flex items-start gap-2 rounded-md border px-3 py-2 dark:border-slate-700 ${
+                    notification.is_read ? 'bg-white dark:bg-slate-900' : 'bg-blue-50 dark:bg-slate-800'
+                  }`}
+                >
+                  <button
+                    type="button"
+                    className="min-w-0 flex-1 text-left"
+                    onClick={() => openNotificationDetail(notification)}
+                    title="点击查看消息详情"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="truncate text-sm font-medium">{notification.title}</div>
+                      {!notification.is_read && <span className="rounded bg-blue-50 px-1.5 py-0.5 text-[11px] text-blue-700 dark:bg-blue-500/15 dark:text-blue-200">未读</span>}
+                    </div>
+                    {notification.content && (
+                      <div className="mt-1 line-clamp-2 text-xs text-gray-500 dark:text-gray-400">{notification.content}</div>
+                    )}
+                    {notification.created_at && (
+                      <div className="mt-1 text-[11px] text-gray-400 dark:text-gray-500">{new Date(notification.created_at).toLocaleString()}</div>
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    className="rounded-md p-1.5 text-slate-400 transition hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10 dark:hover:text-red-400"
+                    title="删除消息"
+                    onClick={() => setDeletingNotification(notification)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              ))
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <ConfirmDialog
+        open={deletingNotification !== null}
+        title="删除消息"
+        description={deletingNotification ? `确定要删除消息「${deletingNotification.title}」吗？删除后将不再显示。` : ''}
+        confirmText="删除"
+        cancelText="取消"
+        variant="destructive"
+        onConfirm={() => {
+          if (deletingNotification) deleteNotification(deletingNotification)
+        }}
+        onCancel={() => setDeletingNotification(null)}
+      />
+
+      <Dialog open={selectedNotification !== null} onOpenChange={(open) => !open && setSelectedNotification(null)}>
+        <DialogContent className="max-w-lg">
+          {selectedNotification && (
+            <>
+              <DialogHeader>
+                <div className="flex items-start justify-between gap-3">
+                  <DialogTitle>{selectedNotification.title}</DialogTitle>
+                  <button
+                    type="button"
+                    className="rounded-md p-1 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+                    onClick={() => setSelectedNotification(null)}
+                    aria-label="关闭"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              </DialogHeader>
+              <div className="space-y-3 text-sm">
+                <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+                  <span className="rounded bg-slate-100 px-1.5 py-0.5 dark:bg-slate-800">{notificationCategoryLabels[selectedNotification.category] || selectedNotification.category}</span>
+                  {selectedNotification.created_at && <span>{new Date(selectedNotification.created_at).toLocaleString()}</span>}
+                  <span className={selectedNotification.is_read ? 'text-slate-400 dark:text-slate-500' : 'text-blue-600 dark:text-blue-300'}>
+                    {selectedNotification.is_read ? '已读' : '未读'}
+                  </span>
+                </div>
+                <div className="whitespace-pre-wrap break-words text-slate-700 dark:text-slate-200">
+                  {selectedNotification.content || '该消息没有更多内容。'}
+                </div>
+              </div>
+              <DialogFooter>
+                <button
+                  type="button"
+                  className="rounded-md border px-3 py-1.5 text-sm transition hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800"
+                  onClick={() => setSelectedNotification(null)}
+                >
+                  关闭
+                </button>
+              </DialogFooter>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

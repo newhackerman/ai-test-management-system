@@ -251,6 +251,8 @@ async def get_review(
             statistics=statistics
         )
     
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"获取评审详情失败: {str(e)}")
         raise HTTPException(status_code=500, detail="获取评审详情失败")
@@ -331,6 +333,8 @@ async def get_requirement_reviews(
             limit=len(reviews)
         )
     
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"获取需求评审失败: {str(e)}")
         raise HTTPException(status_code=500, detail="获取需求评审失败")
@@ -351,6 +355,8 @@ async def get_review_comments(
         comments = await review_service.get_review_comments(review_id)
         return [ReviewCommentResponse.from_orm(c) for c in comments]
     
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"获取评审意见失败: {str(e)}")
         raise HTTPException(status_code=500, detail="获取评审意见失败")
@@ -384,6 +390,8 @@ async def get_user_reviews(
             limit=len(reviews)
         )
     
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"获取用户评审失败: {str(e)}")
         raise HTTPException(status_code=500, detail="获取用户评审失败")

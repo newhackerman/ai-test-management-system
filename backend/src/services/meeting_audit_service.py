@@ -16,7 +16,7 @@ from sqlalchemy import Column, BigInteger, String, Text, DateTime, JSON, Enum as
 from sqlalchemy.orm import Session
 
 from ..models.base import BaseModel
-from ..core.database import get_async_session
+from ..core.database import get_async_session, get_async_session_ctx
 from ..utils.security_utils import SecurityUtils
 from ..core.config import get_settings
 
@@ -181,7 +181,7 @@ class MeetingAuditService:
             审计日志记录
         """
         try:
-            async with get_async_session() as db:
+            async with get_async_session_ctx() as db:
                 # 创建审计日志记录
                 audit_log = MeetingAuditLog(
                     event_type=event_type,
@@ -494,7 +494,7 @@ class MeetingAuditService:
         # 查询过去1小时内的失败次数
         one_hour_ago = datetime.utcnow() - timedelta(hours=1)
         
-        async with get_async_session() as db:
+        async with get_async_session_ctx() as db:
             from sqlalchemy import select, and_
             
             query = select(MeetingAuditLog).where(
@@ -530,7 +530,7 @@ class MeetingAuditService:
         # 检查用户今天参加的会议数量
         today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
         
-        async with get_async_session() as db:
+        async with get_async_session_ctx() as db:
             from sqlalchemy import select, and_
             
             query = select(MeetingAuditLog).where(
@@ -563,7 +563,7 @@ class MeetingAuditService:
             return
         
         # 检查会议中的文件操作数量
-        async with get_async_session() as db:
+        async with get_async_session_ctx() as db:
             from sqlalchemy import select, and_
             
             query = select(MeetingAuditLog).where(
@@ -619,7 +619,7 @@ class MeetingAuditService:
             审计日志列表
         """
         try:
-            async with get_async_session() as db:
+            async with get_async_session_ctx() as db:
                 from sqlalchemy import select, and_, desc
                 
                 conditions = []
@@ -672,7 +672,7 @@ class MeetingAuditService:
             if not end_time:
                 end_time = datetime.utcnow()
             
-            async with get_async_session() as db:
+            async with get_async_session_ctx() as db:
                 from sqlalchemy import select, and_, func
                 
                 # 基础查询条件
@@ -743,7 +743,7 @@ class MeetingAuditService:
         try:
             cutoff_date = datetime.utcnow() - timedelta(days=retention_days)
             
-            async with get_async_session() as db:
+            async with get_async_session_ctx() as db:
                 from sqlalchemy import delete
                 
                 # 删除旧日志

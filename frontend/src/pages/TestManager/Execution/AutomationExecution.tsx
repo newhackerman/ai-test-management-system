@@ -17,6 +17,7 @@ import {
   useStartAutomationExecution,
 } from '../../../hooks/testmanager/useExecution'
 import { useTestCases } from '../../../hooks/testmanager/useTestCase'
+import { testCaseService } from '../../../services/testmanager/testCaseService'
 import {
   EXECUTION_ENVIRONMENTS,
   RESULT_COLLECTION_OPTIONS,
@@ -25,7 +26,7 @@ import {
   type TestExecutionConfig,
   type TestExecutionEnvironment,
 } from '../../../services/testExecutionConfigService'
-import { AutomationLevel, ExecutionStatus, Priority } from '../../../types/testmanager'
+import { AutomationLevel, ExecutionStatus, Priority, type AutomationScript } from '../../../types/testmanager'
 
 const statusLabels: Record<string, string> = {
   PENDING: '待执行',
@@ -65,6 +66,14 @@ const priorityLabels: Record<string, string> = {
   [Priority.LOW]: '低',
 }
 
+const scriptFrameworkLabels: Record<string, string> = {
+  PLAYWRIGHT: 'Playwright',
+  SELENIUM: 'Selenium',
+  CYPRESS: 'Cypress',
+  PYTEST: 'Pytest',
+  JEST: 'Jest',
+}
+
 const AutomationExecution: React.FC = () => {
   const [selectedCases, setSelectedCases] = useState<number[]>([])
   const [activeExecutionId, setActiveExecutionId] = useState('')
@@ -75,6 +84,7 @@ const AutomationExecution: React.FC = () => {
   const [executionConfigError, setExecutionConfigError] = useState('')
   const [executionEnvironment, setExecutionEnvironment] = useState<TestExecutionEnvironment>('test')
   const [selectedConfigId, setSelectedConfigId] = useState('')
+  const [scriptByCase, setScriptByCase] = useState<Record<number, AutomationScript | null>>({})
 
   const { data: testCasesData, isLoading } = useTestCases({ page: 1, size: 100 })
   const startAutomation = useStartAutomationExecution()
@@ -91,6 +101,25 @@ const AutomationExecution: React.FC = () => {
         return `${item.case_code} ${item.case_title} ${item.module || ''}`.toLowerCase().includes(keyword)
       })
   }, [automationFilter, search, testCasesData?.data])
+
+  useEffect(() => {
+    let cancelled = false
+    const cases = (testCasesData?.data || []).filter((item) => item.automation_level === AutomationLevel.SEMI_AUTO || item.automation_level === AutomationLevel.FULL_AUTO)
+    if (!cases.length) {
+      setScriptByCase({})
+      return
+    }
+    Promise.all(cases.map((item) =>
+      testCaseService.getAutomationScript(item.id)
+        .then((script) => [item.id, script?.script_content ? script : null] as const)
+        .catch(() => [item.id, null] as const)
+    )).then((entries) => {
+      if (!cancelled) setScriptByCase(Object.fromEntries(entries))
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [testCasesData?.data])
 
   const executionStatus = statusQuery.data
   const isRunning = executionStatus?.status === 'RUNNING' || executionStatus?.status === 'PENDING'
@@ -425,11 +454,13 @@ const AutomationExecution: React.FC = () => {
                     <TableHead className="w-[120px]">模块</TableHead>
                     <TableHead className="w-[90px]">优先级</TableHead>
                     <TableHead className="w-[100px]">自动化</TableHead>
+                    <TableHead className="w-[120px]">脚本</TableHead>
+                    <TableHead className="w-[90px]">维护</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {isLoading ? (
-                    <TableRow><TableCell colSpan={5} className="h-24 text-center text-muted-foreground">加载中...</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={7} className="h-24 text-center text-muted-foreground">加载中...</TableCell></TableRow>
                   ) : testCases.length ? testCases.map((testCase) => (
                     <TableRow key={testCase.id}>
                       <TableCell>
@@ -442,9 +473,26 @@ const AutomationExecution: React.FC = () => {
                       <TableCell>{testCase.module || '-'}</TableCell>
                       <TableCell><Badge variant="outline">{priorityLabels[testCase.priority] || testCase.priority}</Badge></TableCell>
                       <TableCell><Badge variant="secondary">{automationLabels[testCase.automation_level] || testCase.automation_level}</Badge></TableCell>
+                      <TableCell>
+                        {scriptByCase[testCase.id] ? (
+                          <div className="space-y-1">
+                            <Badge variant="default">已配置</Badge>
+                            <p className="text-xs text-muted-foreground">
+                              {scriptFrameworkLabels[scriptByCase[testCase.id]?.framework || ''] || scriptByCase[testCase.id]?.framework}
+                            </p>
+                          </div>
+                        ) : (
+                          <Badge variant="destructive">未配置</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <Button asChild variant="ghost" size="sm">
+                          <Link to={`/test-manager/test-cases/${testCase.id}/edit`}>编辑</Link>
+                        </Button>
+                      </TableCell>
                     </TableRow>
                   )) : (
-                    <TableRow><TableCell colSpan={5} className="h-24 text-center text-muted-foreground">暂无可自动化执行的用例</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={7} className="h-24 text-center text-muted-foreground">暂无可自动化执行的用例</TableCell></TableRow>
                   )}
                 </TableBody>
               </Table>

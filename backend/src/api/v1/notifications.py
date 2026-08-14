@@ -45,6 +45,10 @@ class MarkReadResponse(BaseModel):
     count: int = 0
 
 
+class DeleteResponse(BaseModel):
+    success: bool = True
+
+
 router = APIRouter()
 
 
@@ -99,3 +103,17 @@ async def mark_all_notifications_read(
 ):
     service = SystemNotificationService(db)
     return MarkReadResponse(count=await service.mark_all_read(current_user.id))
+
+
+@router.delete("/notifications/{notification_id}", response_model=DeleteResponse)
+async def delete_notification(
+    notification_id: int,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    """Soft-delete a notification. Only the notification owner may delete it."""
+    service = SystemNotificationService(db)
+    deleted = await service.delete_notification(current_user.id, notification_id)
+    if not deleted:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="通知不存在")
+    return DeleteResponse()

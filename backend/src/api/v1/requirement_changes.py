@@ -17,6 +17,9 @@ from ...core.exceptions import BusinessLogicError, NotFoundError, ValidationErro
 from ...models.user import User
 from ...models.requirement import ChangeStatus, ChangeType, ChangePriority
 from ...services.requirement_change_service import RequirementChangeService
+from ...repositories.requirement_change_repository import RequirementChangeRepository
+from ...repositories.requirement_repository import RequirementRepository
+from ...repositories.requirement_relationship_repository import RequirementRelationshipRepository
 from ...services.enhanced_impact_analysis_service import EnhancedImpactAnalysisService
 from ...schemas.requirement_change import (
     ChangeRequestCreate, ChangeRequestUpdate, ChangeRequestApproval,
@@ -31,12 +34,18 @@ router = APIRouter(prefix="/requirement-changes", tags=["需求变更管理"])
 
 async def get_change_service(db: AsyncSession = Depends(get_async_session)) -> RequirementChangeService:
     """获取变更管理服务"""
-    return RequirementChangeService(db=db)
+    return RequirementChangeService(
+        change_repo=RequirementChangeRepository(session=db),
+        requirement_repo=RequirementRepository(db=db)
+    )
 
 
 async def get_impact_analysis_service(db: AsyncSession = Depends(get_async_session)) -> EnhancedImpactAnalysisService:
     """获取影响分析服务"""
-    return EnhancedImpactAnalysisService(db=db)
+    return EnhancedImpactAnalysisService(
+        requirement_repo=RequirementRepository(db=db),
+        relationship_repo=RequirementRelationshipRepository(db=db)
+    )
 
 
 @router.post("/", response_model=ChangeRequestResponse, summary="创建变更请求")
@@ -61,6 +70,77 @@ async def create_change_request(
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"创建变更请求失败: {str(e)}")
+
+
+# 静态 GET 路由必须注册在 /{change_request_id} 之前，否则
+# FastAPI 会把 pending-approvals / search / statistics 当作
+# change_request_id 参数匹配，触发 int 转换失败 → 422。
+@router.get("/pending-approvals", response_model=List[ChangeRequestResponse], summary="获取待审批的变更请求")
+async def get_pending_approvals(
+    priority_filter: Optional[List[ChangePriority]] = Query(None, description="优先级过滤"),
+    limit: int = Query(50, ge=1, le=100, description="返回数量限制"),
+    offset: int = Query(0, ge=0, description="偏移量"),
+    current_user: User = Depends(get_current_user),
+    service: RequirementChangeService = Depends(get_change_service)
+):
+    """获取当前用户待审批的变更请求"""
+    try:
+        return await service.get_pending_approvals(
+            approver_id=current_user.id,
+            priority_filter=priority_filter,
+            limit=limit,
+            offset=offset
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"获取待审批请求失败: {str(e)}")
+
+
+@router.get("/search", response_model=List[ChangeRequestResponse], summary="搜索变更请求")
+async def search_change_requests(
+    keyword: Optional[str] = Query(None, description="关键词搜索"),
+    status_filter: Optional[List[ChangeStatus]] = Query(None, description="状态过滤"),
+    type_filter: Optional[List[ChangeType]] = Query(None, description="类型过滤"),
+    priority_filter: Optional[List[ChangePriority]] = Query(None, description="优先级过滤"),
+    requestor_id: Optional[int] = Query(None, description="申请人ID"),
+    date_from: Optional[date] = Query(None, description="开始日期"),
+    date_to: Optional[date] = Query(None, description="结束日期"),
+    limit: int = Query(50, ge=1, le=100, description="返回数量限制"),
+    offset: int = Query(0, ge=0, description="偏移量"),
+    service: RequirementChangeService = Depends(get_change_service)
+):
+    """搜索变更请求"""
+    try:
+        return await service.search_change_requests(
+            keyword=keyword,
+            status_filter=status_filter,
+            type_filter=type_filter,
+            priority_filter=priority_filter,
+            requestor_id=requestor_id,
+            date_from=date_from,
+            date_to=date_to,
+            limit=limit,
+            offset=offset
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"搜索变更请求失败: {str(e)}")
+
+
+@router.get("/statistics", summary="获取变更统计信息")
+async def get_change_statistics(
+    requirement_id: Optional[int] = Query(None, description="需求ID"),
+    start_date: Optional[date] = Query(None, description="开始日期"),
+    end_date: Optional[date] = Query(None, description="结束日期"),
+    service: RequirementChangeService = Depends(get_change_service)
+):
+    """获取变更统计信息"""
+    try:
+        return await service.get_change_statistics(
+            requirement_id=requirement_id,
+            start_date=start_date,
+            end_date=end_date
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"获取统计信息失败: {str(e)}")
 
 
 @router.get("/{change_request_id}", response_model=ChangeRequestResponse, summary="获取变更请求详情")
@@ -152,74 +232,6 @@ async def get_change_requests_by_requirement(
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"获取变更请求列表失败: {str(e)}")
-
-
-@router.get("/pending-approvals", response_model=List[ChangeRequestResponse], summary="获取待审批的变更请求")
-async def get_pending_approvals(
-    priority_filter: Optional[List[ChangePriority]] = Query(None, description="优先级过滤"),
-    limit: int = Query(50, ge=1, le=100, description="返回数量限制"),
-    offset: int = Query(0, ge=0, description="偏移量"),
-    current_user: User = Depends(get_current_user),
-    service: RequirementChangeService = Depends(get_change_service)
-):
-    """获取当前用户待审批的变更请求"""
-    try:
-        return await service.get_pending_approvals(
-            approver_id=current_user.id,
-            priority_filter=priority_filter,
-            limit=limit,
-            offset=offset
-        )
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"获取待审批请求失败: {str(e)}")
-
-
-@router.get("/search", response_model=List[ChangeRequestResponse], summary="搜索变更请求")
-async def search_change_requests(
-    keyword: Optional[str] = Query(None, description="关键词搜索"),
-    status_filter: Optional[List[ChangeStatus]] = Query(None, description="状态过滤"),
-    type_filter: Optional[List[ChangeType]] = Query(None, description="类型过滤"),
-    priority_filter: Optional[List[ChangePriority]] = Query(None, description="优先级过滤"),
-    requestor_id: Optional[int] = Query(None, description="申请人ID"),
-    date_from: Optional[date] = Query(None, description="开始日期"),
-    date_to: Optional[date] = Query(None, description="结束日期"),
-    limit: int = Query(50, ge=1, le=100, description="返回数量限制"),
-    offset: int = Query(0, ge=0, description="偏移量"),
-    service: RequirementChangeService = Depends(get_change_service)
-):
-    """搜索变更请求"""
-    try:
-        return await service.search_change_requests(
-            keyword=keyword,
-            status_filter=status_filter,
-            type_filter=type_filter,
-            priority_filter=priority_filter,
-            requestor_id=requestor_id,
-            date_from=date_from,
-            date_to=date_to,
-            limit=limit,
-            offset=offset
-        )
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"搜索变更请求失败: {str(e)}")
-
-
-@router.get("/statistics", summary="获取变更统计信息")
-async def get_change_statistics(
-    requirement_id: Optional[int] = Query(None, description="需求ID"),
-    start_date: Optional[date] = Query(None, description="开始日期"),
-    end_date: Optional[date] = Query(None, description="结束日期"),
-    service: RequirementChangeService = Depends(get_change_service)
-):
-    """获取变更统计信息"""
-    try:
-        return await service.get_change_statistics(
-            requirement_id=requirement_id,
-            start_date=start_date,
-            end_date=end_date
-        )
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"获取统计信息失败: {str(e)}")
 
 
 @router.post("/impact-analysis", response_model=ImpactAnalysisResponse, summary="分析变更影响")

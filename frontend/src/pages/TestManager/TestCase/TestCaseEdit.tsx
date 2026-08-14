@@ -23,6 +23,8 @@ import {
   TEST_CASE_TYPE_LABELS,
 } from './testCaseLabels'
 import { cleanText, cleanTitle, emptyStep, normalizeSteps } from './testCaseFormUtils'
+import AutomationScriptEditor, { defaultAutomationScriptForm } from './AutomationScriptEditor'
+import { testCaseService } from '../../../services/testmanager/testCaseService'
 
 const TestCaseEdit: React.FC = () => {
   const navigate = useNavigate()
@@ -36,6 +38,7 @@ const TestCaseEdit: React.FC = () => {
   const [form, setForm] = useState<any | null>(null)
   const [steps, setSteps] = useState<TestStep[]>([])
   const [submitError, setSubmitError] = useState('')
+  const [automationScript, setAutomationScript] = useState(defaultAutomationScriptForm)
 
   useEffect(() => {
     let cancelled = false
@@ -82,6 +85,30 @@ const TestCaseEdit: React.FC = () => {
       : [emptyStep(1)])
   }, [testCase])
 
+  useEffect(() => {
+    if (!caseId) return
+    let cancelled = false
+    testCaseService.getAutomationScript(caseId)
+      .then((script) => {
+        if (cancelled || !script) return
+        setAutomationScript({
+          enabled: true,
+          script_name: script.script_name || '',
+          framework: script.framework || 'PYTEST',
+          language: script.language || 'PYTHON',
+          browser: script.browser || 'chrome',
+          script_path: script.script_path || '',
+          script_content: script.script_content || '',
+        })
+      })
+      .catch(() => {
+        if (!cancelled) setAutomationScript(defaultAutomationScriptForm)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [caseId])
+
   const planOptions = useMemo(() => testPlans.map((plan) => ({
     value: String(plan.id),
     label: `${plan.plan_code || `TP-${plan.id}`} - ${plan.plan_name}`,
@@ -124,6 +151,11 @@ const TestCaseEdit: React.FC = () => {
       setSubmitError('至少需要填写一个包含操作和预期结果的测试步骤')
       return
     }
+    const hasScript = automationScript.enabled && automationScript.script_content.trim()
+    if (form.automation_level !== AutomationLevel.MANUAL && !hasScript) {
+      setSubmitError('自动化用例需要配置可执行脚本，或将自动化级别改为“手动”')
+      return
+    }
 
     const result = await updateTestCase.mutateAsync({
       id: caseId,
@@ -145,6 +177,18 @@ const TestCaseEdit: React.FC = () => {
         tags: cleanText(form.tags_text).split(/[，,\n]/).map((tag) => tag.trim()).filter(Boolean),
       },
     })
+    if (hasScript) {
+      await testCaseService.saveAutomationScript(caseId, {
+        script_name: automationScript.script_name || `${testCase.case_code}_automation`,
+        framework: automationScript.framework,
+        language: automationScript.language,
+        browser: automationScript.browser,
+        script_path: automationScript.script_path,
+        script_content: automationScript.script_content,
+        dependencies: [],
+        is_active: true,
+      })
+    }
     navigate(`/test-manager/test-cases/${result.id}`)
   }
 
@@ -255,6 +299,8 @@ const TestCaseEdit: React.FC = () => {
             ))}
           </CardContent>
         </Card>
+
+        <AutomationScriptEditor value={automationScript} onChange={setAutomationScript} />
 
         <div className="flex justify-end gap-3">
           <Link to={`/test-manager/test-cases/${caseId}`}><Button type="button" variant="outline">取消</Button></Link>

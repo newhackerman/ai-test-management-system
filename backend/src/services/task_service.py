@@ -18,7 +18,7 @@ from sqlalchemy import select, and_, or_, func, desc, asc, text
 from sqlalchemy.orm import selectinload, joinedload
 from fastapi import Depends
 
-from ..core.database import get_async_session
+from ..core.database import get_async_session, get_async_session_ctx
 from ..core.exceptions import ValidationError, NotFoundError, PermissionError
 from ..models.project import Task, Project, ProjectMember
 from ..models.user import User
@@ -570,6 +570,12 @@ class TaskService:
         if not project:
             raise NotFoundError(f"项目 {project_id} 不存在")
         
+        # 超级用户绕过项目成员/经理校验，与 project_service 行为一致
+        user_result = await self.db.execute(select(User).where(User.id == user_id))
+        user = user_result.scalar_one_or_none()
+        if user and user.is_superuser:
+            return project
+
         # 检查是否是项目成员或项目经理
         result = await self.db.execute(
             select(ProjectMember).where(
@@ -703,6 +709,12 @@ class TaskService:
     
     async def _build_task_permission_filter(self, user_id: int):
         """构建任务权限过滤条件"""
+        # 超级用户可查看所有任务，与项目访问校验行为一致
+        user_result = await self.db.execute(select(User).where(User.id == user_id))
+        user = user_result.scalar_one_or_none()
+        if user and user.is_superuser:
+            return None
+
         # 用户可以查看自己参与项目的任务
         subquery = select(ProjectMember.project_id).where(
             and_(
@@ -722,6 +734,12 @@ class TaskService:
         # 项目经理、任务执行人、报告人可以更新任务
         project = await self._validate_project_access(task.project_id, user_id)
         
+        # 超级用户绕过细化权限校验
+        user_result = await self.db.execute(select(User).where(User.id == user_id))
+        user = user_result.scalar_one_or_none()
+        if user and user.is_superuser:
+            return
+
         if (project.project_manager_id != user_id and 
             task.assignee_id != user_id and 
             task.reporter_id != user_id):
@@ -809,6 +827,12 @@ class TaskService:
         # 只有项目经理和任务创建者可以删除任务
         project = await self._validate_project_access(task.project_id, user_id)
         
+        # 超级用户绕过细化权限校验
+        user_result = await self.db.execute(select(User).where(User.id == user_id))
+        user = user_result.scalar_one_or_none()
+        if user and user.is_superuser:
+            return
+
         if project.project_manager_id != user_id and task.created_by != user_id:
             raise PermissionError("只有项目经理和任务创建者可以删除任务")
     
@@ -832,6 +856,6 @@ class TaskService:
 async def get_task_service(db: AsyncSession = Depends(get_async_session)):
     """获取任务服务实例"""
     if db is None:
-        async with get_async_session() as session:
+        async with get_async_session_ctx() as session:
             return TaskService(session)
     return TaskService(db)

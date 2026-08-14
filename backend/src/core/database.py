@@ -1,3 +1,4 @@
+from contextlib import asynccontextmanager
 from sqlalchemy import create_engine, text
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
@@ -138,6 +139,31 @@ def get_db():
 
 # 获取异步数据库会话
 async def get_async_session():
+    """异步数据库会话生成器。
+
+    既被 FastAPI 的 Depends(get_async_session) 当作异步生成器依赖使用，
+    也可通过 get_async_session_ctx() 作为异步上下文管理器使用。
+    """
+    if AsyncSessionLocal is None:
+        raise RuntimeError("Async database engine not available")
+    async with AsyncSessionLocal() as session:
+        try:
+            yield session
+        except Exception:
+            await session.rollback()
+            raise
+        finally:
+            await session.close()
+
+
+@asynccontextmanager
+async def get_async_session_ctx():
+    """异步数据库会话上下文管理器。
+
+    用于 service/task 中需要 `async with ... as session:` 的场景。
+    之所以独立于 get_async_session，是因为后者要保持为 async generator
+    以兼容 FastAPI 的 Depends() 依赖注入。
+    """
     if AsyncSessionLocal is None:
         raise RuntimeError("Async database engine not available")
     async with AsyncSessionLocal() as session:

@@ -26,6 +26,20 @@ logger = logging.getLogger(__name__)
 security = HTTPBearer()
 
 
+def _user_attr(user, key: str, default: Any = None):
+    """从当前用户对象读取属性，同时支持 ORM User 对象和 dict。
+
+    `get_current_user` 在本模块返回 ORM User 对象，没有 `.get()` 方法；
+    但下游装饰器历史代码以 dict 风格读取属性。统一在此兼容两种形态，
+    避免抛出 'User' object has no attribute 'get' 类 AttributeError。
+    """
+    if user is None:
+        return default
+    if isinstance(user, dict):
+        return user.get(key, default)
+    return getattr(user, key, default)
+
+
 async def get_current_user_from_token(
     credentials: HTTPAuthorizationCredentials = Depends(security),
     db: AsyncSession = Depends(get_db_session)
@@ -149,7 +163,7 @@ def require_permissions(permissions: Union[str, List[str]], require_all: bool = 
                 )
             
             # 检查权限
-            user_permissions = current_user.get('permissions', [])
+            user_permissions = _user_attr(current_user, 'permissions', []) or []
             required_perms = [permissions] if isinstance(permissions, str) else permissions
             
             if require_all:
@@ -176,7 +190,7 @@ async def require_active_user(
     current_user: dict = Depends(get_current_user)
 ) -> dict:
     """要求活跃用户"""
-    if not current_user.get("is_active", False):
+    if not _user_attr(current_user, "is_active", False):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="用户账户未激活"
@@ -188,7 +202,7 @@ async def require_admin(
     current_user: dict = Depends(get_current_user)
 ) -> dict:
     """要求管理员权限"""
-    if not current_user.get("is_superuser", False):
+    if not _user_attr(current_user, "is_superuser", False):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="需要管理员权限"
@@ -199,10 +213,10 @@ async def require_admin(
 def require_permission(permission: str):
     """要求特定权限"""
     def permission_checker(current_user: dict = Depends(get_current_user)) -> dict:
-        user_permissions = current_user.get("permissions", [])
+        user_permissions = _user_attr(current_user, "permissions", []) or []
         
         # 超级用户拥有所有权限
-        if current_user.get("is_superuser", False):
+        if _user_attr(current_user, "is_superuser", False):
             return current_user
         
         # 检查用户是否有指定权限
@@ -220,10 +234,10 @@ def require_permission(permission: str):
 def require_role(role: str):
     """要求特定角色"""
     def role_checker(current_user: dict = Depends(get_current_user)) -> dict:
-        user_roles = current_user.get("roles", [])
+        user_roles = _user_attr(current_user, "roles", []) or []
         
         # 超级用户拥有所有角色
-        if current_user.get("is_superuser", False):
+        if _user_attr(current_user, "is_superuser", False):
             return current_user
         
         # 检查用户是否有指定角色
@@ -241,10 +255,10 @@ def require_role(role: str):
 def require_any_permission(permissions: List[str]):
     """要求任意一个权限"""
     def permission_checker(current_user: dict = Depends(get_current_user)) -> dict:
-        user_permissions = current_user.get("permissions", [])
+        user_permissions = _user_attr(current_user, "permissions", []) or []
         
         # 超级用户拥有所有权限
-        if current_user.get("is_superuser", False):
+        if _user_attr(current_user, "is_superuser", False):
             return current_user
         
         # 检查用户是否有任意一个指定权限
@@ -262,10 +276,10 @@ def require_any_permission(permissions: List[str]):
 def require_any_role(roles: List[str]):
     """要求任意一个角色"""
     def role_checker(current_user: dict = Depends(get_current_user)) -> dict:
-        user_roles = current_user.get("roles", [])
+        user_roles = _user_attr(current_user, "roles", []) or []
         
         # 超级用户拥有所有角色
-        if current_user.get("is_superuser", False):
+        if _user_attr(current_user, "is_superuser", False):
             return current_user
         
         # 检查用户是否有任意一个指定角色

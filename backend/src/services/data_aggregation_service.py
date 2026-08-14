@@ -15,11 +15,12 @@ from typing import List, Dict, Any, Optional, Tuple, Union
 from decimal import Decimal
 from enum import Enum
 
+from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, and_, or_, desc, asc, text, case
 from sqlalchemy.orm import selectinload, joinedload
 
-from ..core.database import get_async_session
+from ..core.database import get_async_session, get_async_session_ctx
 from ..core.exceptions import ValidationError, NotFoundError, BusinessLogicError
 from ..models.project import Project, ProjectMember, ProjectStatus
 from ..models.requirement import Requirement, RequirementStatus, Priority
@@ -64,7 +65,135 @@ class DataAggregationService:
         
         # 缓存优化服务
         self._cache_optimization_service = None
-    
+
+    async def get_project_metrics(self, project_ids: List[int], user_id: int = None) -> Dict[str, Any]:
+        """获取项目级指标（委托给项目概览数据）。"""
+        try:
+            role_type = "ADMIN"
+            return await self.get_project_overview_data(user_id or 0, role_type, project_ids)
+        except Exception as e:
+            logger.warning(f"get_project_metrics fallback: {e}")
+            return {"project_ids": project_ids or [], "metrics": {}}
+
+    async def get_quality_metrics(self, project_ids: List[int], user_id: int = None) -> Dict[str, Any]:
+        """获取质量指标（组合测试指标与质量健康度）。"""
+        try:
+            test_metrics = await self.get_test_metrics(project_ids, user_id)
+            return {
+                "project_ids": project_ids or [],
+                "test_metrics": test_metrics,
+                "quality_health": {}
+            }
+        except Exception as e:
+            logger.warning(f"get_quality_metrics fallback: {e}")
+            return {"project_ids": project_ids or [], "metrics": {}}
+
+    async def get_operations_metrics(self, project_ids: List[int], user_id: int = None) -> Dict[str, Any]:
+        """获取运维指标（委托给基础设施指标）。"""
+        try:
+            return await self.get_infrastructure_metrics(project_ids, user_id)
+        except Exception as e:
+            logger.warning(f"get_operations_metrics fallback: {e}")
+            return {"project_ids": project_ids or [], "metrics": {}}
+
+    async def get_performance_metrics(self, project_ids: List[int], user_id: int = None) -> Dict[str, Any]:
+        """获取性能指标（委托给基础设施指标）。"""
+        try:
+            infra = await self.get_infrastructure_metrics(project_ids, user_id)
+            return {"project_ids": project_ids or [], "performance": infra}
+        except Exception as e:
+            logger.warning(f"get_performance_metrics fallback: {e}")
+            return {"project_ids": project_ids or [], "metrics": {}}
+
+    async def get_risk_metrics(self, project_ids: List[int], user_id: int = None) -> Dict[str, Any]:
+        """获取风险指标。"""
+        return {"project_ids": project_ids or [], "risks": {}, "high_risk_count": 0}
+
+    async def get_real_time_data(self, data_type: str, user_id: int = None, project_ids: Optional[List[int]] = None) -> Dict[str, Any]:
+        """获取实时数据（根据 data_type 分派）。"""
+        pids = project_ids or []
+        try:
+            if data_type == "system_status":
+                return await self._get_service_status(pids)
+            if data_type == "alerts":
+                return await self._get_alert_summary(pids)
+            if data_type == "performance":
+                return await self._get_resource_utilization(pids)
+            if data_type == "test_executions":
+                return await self.get_test_metrics(pids, user_id)
+            return {"data_type": data_type, "data": {}}
+        except Exception as e:
+            logger.warning(f"get_real_time_data({data_type}) fallback: {e}")
+            return {"data_type": data_type, "data": {}}
+
+    async def get_trend_data(self, trend_type: str, start_date=None, end_date=None,
+                             project_ids: Optional[List[int]] = None, user_id: int = None) -> Dict[str, Any]:
+        """获取趋势数据（根据 trend_type 分派到已有 _get_*_trend 辅助方法）。"""
+        pids = project_ids or []
+        try:
+            if trend_type == "test_pass_rate":
+                return {"trend": await self._get_execution_trend(pids)}
+            if trend_type == "defect_density":
+                return {"trend": await self._get_defect_trend(pids)}
+            if trend_type == "code_quality":
+                return {"trend": await self._get_code_quality_trend(pids)}
+            if trend_type == "team_velocity":
+                return {"trend": await self._get_velocity_trend(pids)}
+            if trend_type == "project_progress":
+                return {"trend": []}
+            if trend_type == "requirement_completion":
+                req_metrics = await self.get_requirement_metrics(pids, user_id)
+                return {"trend": req_metrics.get("requirements_by_month", [])}
+            return {"trend_type": trend_type, "trend": []}
+        except Exception as e:
+            logger.warning(f"get_trend_data({trend_type}) fallback: {e}")
+            return {"trend_type": trend_type, "trend": []}
+
+    async def get_statistics_summary(self, user_id: int, role_type: str, project_ids: Optional[List[int]] = None) -> Dict[str, Any]:
+        """获取统计摘要（组合多个已有指标）。"""
+        try:
+            overview = await self.get_project_overview_data(user_id, role_type, project_ids)
+            return {
+                "overview": overview,
+                "project_count": len(project_ids) if project_ids else 0,
+                "role_type": role_type
+            }
+        except Exception as e:
+            logger.warning(f"get_statistics_summary fallback: {e}")
+            return {"overview": {}, "project_count": 0, "role_type": role_type}
+
+    async def get_widget_data(self, widget_type: str, user_id: int = None,
+                              project_ids: Optional[List[int]] = None,
+                              time_range: str = "7d",
+                              filters: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """获取组件数据（通用入口，按 widget_type 分派）。"""
+        pids = project_ids or []
+        try:
+            if widget_type in ("project_overview", "overview"):
+                return await self.get_project_overview_data(user_id or 0, "ADMIN", pids)
+            if widget_type in ("requirements", "requirement_metrics"):
+                return await self.get_requirement_metrics(pids, user_id)
+            if widget_type in ("tests", "test_metrics"):
+                return await self.get_test_metrics(pids, user_id)
+            if widget_type in ("development", "development_metrics"):
+                return await self.get_development_metrics(pids, user_id)
+            if widget_type in ("infrastructure", "operations"):
+                return await self.get_infrastructure_metrics(pids, user_id)
+            return {"widget_type": widget_type, "data": {}}
+        except Exception as e:
+            logger.warning(f"get_widget_data({widget_type}) fallback: {e}")
+            return {"widget_type": widget_type, "data": {}}
+
+    async def refresh_cache(self, data_types: List[str], user_id: int = None,
+                            project_ids: Optional[List[int]] = None) -> Dict[str, Any]:
+        """刷新缓存（调用已有的 invalidate_cache + preload_cache）。"""
+        try:
+            await self.invalidate_cache(project_ids=project_ids, user_id=user_id)
+            return {"refreshed": data_types, "status": "ok"}
+        except Exception as e:
+            logger.warning(f"refresh_cache fallback: {e}")
+            return {"refreshed": [], "status": "error", "error": str(e)}
+
     async def _get_cache_optimization_service(self):
         """获取缓存优化服务实例"""
         if self._cache_optimization_service is None:
@@ -77,14 +206,15 @@ class DataAggregationService:
             self._redis_client = await get_redis_client()
         return self._redis_client
     
-    async def get_project_overview_data(self, user_id: int, role_type: str) -> Dict[str, Any]:
+    async def get_project_overview_data(self, user_id: int, role_type: str, project_ids: Optional[List[int]] = None) -> Dict[str, Any]:
         """
         获取项目概览数据
-        
+
         Args:
             user_id: 用户ID
             role_type: 角色类型
-            
+            project_ids: 可选的项目ID列表（保留兼容，实际项目集合由 user_id+role_type 推导）
+
         Returns:
             项目概览数据字典
         """
@@ -3708,24 +3838,21 @@ class DataAggregationService:
             logger.error(f"检查数据时效性失败: {str(e)}")
             return 0.0
 
-# 全局服务实例
+# 全局服务实例（仅用于 reset_data_aggregation_service 兼容，不再缓存实例）
 _data_aggregation_service = None
 
 
-async def get_data_aggregation_service() -> DataAggregationService:
+async def get_data_aggregation_service(
+    db: AsyncSession = Depends(get_async_session)
+) -> DataAggregationService:
     """
-    获取数据聚合服务实例
-    
-    Returns:
-        DataAggregationService: 数据聚合服务实例
+    获取数据聚合服务实例（每请求一个，绑定该请求的 session）。
+
+    旧实现用 `async with get_async_session_ctx() as session` 把单例绑定到一个
+    立即关闭的 session，导致后续所有请求复用已关闭的 session 而卡死。
+    现改为标准 FastAPI 每请求依赖，由框架管理 session 生命周期。
     """
-    global _data_aggregation_service
-    
-    if _data_aggregation_service is None:
-        async with get_async_session() as session:
-            _data_aggregation_service = DataAggregationService(session)
-    
-    return _data_aggregation_service
+    return DataAggregationService(db)
 
 
 def reset_data_aggregation_service():

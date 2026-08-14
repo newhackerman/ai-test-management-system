@@ -70,9 +70,87 @@
       },
       "id": 2,
       "created_by": 39,
-      "status": "COMPLETED",
+      "status": "FAILED",
       "created_at": "2026-06-06T00:56:18.048284",
-      "updated_at": "2026-06-06T00:56:21.355433"
+      "updated_at": "2026-06-26T14:03:41.070693",
+      "last_execution_id": "perf_616598181876",
+      "last_result": {
+        "total_requests": 708,
+        "successful_requests": 686,
+        "failed_requests": 22,
+        "average_response_time": 537.63,
+        "min_response_time": 189.03,
+        "max_response_time": 1689.02,
+        "p90_response_time": 950.09,
+        "p95_response_time": 1112.04,
+        "p99_response_time": 1400.86,
+        "throughput": 5.57,
+        "error_rate": 3.11,
+        "status_codes": {
+          "200": 686,
+          "ERR": 22
+        },
+        "request_distribution": {
+          "访问目标地址": 708
+        },
+        "test_passed": false,
+        "violations": [
+          {
+            "metric": "错误率",
+            "actual": 3.11,
+            "threshold": 1.0,
+            "unit": "%"
+          }
+        ]
+      }
+    },
+    {
+      "test_name": "测试jmeter能否调通",
+      "description": "通过性能测试页面创建",
+      "project_id": 1,
+      "test_plan_id": null,
+      "test_type": "load",
+      "target_url": "http://www.baidu.com",
+      "test_scenario": {
+        "script_config": {
+          "script_type": "jmeter",
+          "repository": "",
+          "branch": "",
+          "script_path": "E:\\test\\apache-jmeter-5.6.3\\jmx脚本\\baidu-serach.jmx",
+          "entry_file": "",
+          "arguments": "",
+          "data_files": ""
+        },
+        "script_type": "jmeter",
+        "script_path": "E:\\test\\apache-jmeter-5.6.3\\jmx脚本\\baidu-serach.jmx",
+        "script_file": "E:\\test\\apache-jmeter-5.6.3\\jmx脚本\\baidu-serach.jmx"
+      },
+      "load_model": {
+        "concurrent_users": 5,
+        "ramp_up_time": 2,
+        "duration": 10,
+        "think_time_ms": 200,
+        "request_timeout": 10
+      },
+      "performance_criteria": {
+        "max_response_time": 1000,
+        "p95_response_time": 1500,
+        "max_error_rate": 1,
+        "min_throughput": 0
+      },
+      "test_duration": 10,
+      "concurrent_users": 5,
+      "ramp_up_time": 2,
+      "environment_config": {
+        "source": "web-ui",
+        "mode": "http-sampling"
+      },
+      "id": 3,
+      "created_by": 1,
+      "status": "DISPATCHED",
+      "created_at": "2026-06-27T11:14:25.487569",
+      "updated_at": "2026-06-28T01:22:51.412782",
+      "last_execution_id": "perf_f851bc305fea"
     }
   ],
   "executions": [
@@ -131,6 +209,1555 @@
           "error": null
         }
       ]
+    },
+    {
+      "execution_id": "perf_616598181876",
+      "test_id": 2,
+      "status": "FAILED",
+      "start_time": "2026-06-26T14:01:34.038983",
+      "end_time": "2026-06-26T14:03:41.070693",
+      "duration": 127,
+      "progress_percentage": 100,
+      "current_users": 0,
+      "total_requests": 708,
+      "successful_requests": 686,
+      "failed_requests": 22,
+      "average_response_time": 537.63,
+      "min_response_time": 189.03,
+      "max_response_time": 1689.02,
+      "throughput": 5.57,
+      "error_rate": 3.11,
+      "cpu_usage": null,
+      "memory_usage": null,
+      "real_time_metrics": [
+        {
+          "success": true,
+          "status_code": 200,
+          "response_time_ms": 1037.49,
+          "error": null,
+          "label": "访问目标地址"
+        },
+        {
+          "success": true,
+          "status_code": 200,
+          "response_time_ms": 587.25,
+          "error": null,
+          "label": "访问目标地址"
+        },
+        {
+          "success": true,
+          "status_code": 200,
+          "response_time_ms": 780.87,
+          "error": null,
+          "label": "访问目标地址"
+        },
+        {
+          "success": true,
+          "status_code": 200,
+          "response_time_ms": 644.18,
+          "error": null,
+          "label": "访问目标地址"
+        },
+        {
+          "success": true,
+          "status_code": 200,
+          "response_time_ms": 590.29,
+          "error": null,
+          "label": "访问目标地址"
+        },
+        {
+          "success": true,
+          "status_code": 200,
+          "response_time_ms": 463.42,
+          "error": null,
+          "label": "访问目标地址"
+        },
+        {
+          "success": true,
+          "status_code": 200,
+          "response_time_ms": 467.38,
+          "error": null,
+          "label": "访问目标地址"
+        },
+        {
+          "success": true,
+          "status_code": 200,
+          "response_time_ms": 711.86,
+          "error": null,
+          "label": "访问目标地址"
+        },
+        {
+          "success": true,
+          "status_code": 200,
+          "response_time_ms": 589.66,
+          "error": null,
+          "label": "访问目标地址"
+        },
+        {
+          "success": true,
+          "status_code": 200,
+          "response_time_ms": 551.74,
+          "error": null,
+          "label": "访问目标地址"
+        },
+        {
+          "success": true,
+          "status_code": 200,
+          "response_time_ms": 492.33,
+          "error": null,
+          "label": "访问目标地址"
+        },
+        {
+          "success": true,
+          "status_code": 200,
+          "response_time_ms": 481.05,
+          "error": null,
+          "label": "访问目标地址"
+        },
+        {
+          "success": true,
+          "status_code": 200,
+          "response_time_ms": 689.05,
+          "error": null,
+          "label": "访问目标地址"
+        },
+        {
+          "success": true,
+          "status_code": 200,
+          "response_time_ms": 641.89,
+          "error": null,
+          "label": "访问目标地址"
+        },
+        {
+          "success": true,
+          "status_code": 200,
+          "response_time_ms": 572.23,
+          "error": null,
+          "label": "访问目标地址"
+        },
+        {
+          "success": true,
+          "status_code": 200,
+          "response_time_ms": 831.21,
+          "error": null,
+          "label": "访问目标地址"
+        },
+        {
+          "success": true,
+          "status_code": 200,
+          "response_time_ms": 1039.35,
+          "error": null,
+          "label": "访问目标地址"
+        },
+        {
+          "success": true,
+          "status_code": 200,
+          "response_time_ms": 1617.42,
+          "error": null,
+          "label": "访问目标地址"
+        },
+        {
+          "success": true,
+          "status_code": 200,
+          "response_time_ms": 783.56,
+          "error": null,
+          "label": "访问目标地址"
+        },
+        {
+          "success": true,
+          "status_code": 200,
+          "response_time_ms": 1181.64,
+          "error": null,
+          "label": "访问目标地址"
+        },
+        {
+          "success": true,
+          "status_code": 200,
+          "response_time_ms": 616.7,
+          "error": null,
+          "label": "访问目标地址"
+        },
+        {
+          "success": true,
+          "status_code": 200,
+          "response_time_ms": 428.35,
+          "error": null,
+          "label": "访问目标地址"
+        },
+        {
+          "success": false,
+          "status_code": null,
+          "response_time_ms": 1233.6,
+          "error": "<urlopen error [SSL: UNEXPECTED_EOF_WHILE_READING] EOF occurred in violation of protocol (_ssl.c:1020)>",
+          "label": "访问目标地址"
+        },
+        {
+          "success": true,
+          "status_code": 200,
+          "response_time_ms": 793.31,
+          "error": null,
+          "label": "访问目标地址"
+        },
+        {
+          "success": true,
+          "status_code": 200,
+          "response_time_ms": 974.07,
+          "error": null,
+          "label": "访问目标地址"
+        },
+        {
+          "success": true,
+          "status_code": 200,
+          "response_time_ms": 766.36,
+          "error": null,
+          "label": "访问目标地址"
+        },
+        {
+          "success": true,
+          "status_code": 200,
+          "response_time_ms": 659.18,
+          "error": null,
+          "label": "访问目标地址"
+        },
+        {
+          "success": true,
+          "status_code": 200,
+          "response_time_ms": 862.29,
+          "error": null,
+          "label": "访问目标地址"
+        },
+        {
+          "success": true,
+          "status_code": 200,
+          "response_time_ms": 1488.22,
+          "error": null,
+          "label": "访问目标地址"
+        },
+        {
+          "success": true,
+          "status_code": 200,
+          "response_time_ms": 843.97,
+          "error": null,
+          "label": "访问目标地址"
+        },
+        {
+          "success": true,
+          "status_code": 200,
+          "response_time_ms": 846.51,
+          "error": null,
+          "label": "访问目标地址"
+        },
+        {
+          "success": true,
+          "status_code": 200,
+          "response_time_ms": 605.05,
+          "error": null,
+          "label": "访问目标地址"
+        },
+        {
+          "success": true,
+          "status_code": 200,
+          "response_time_ms": 277.67,
+          "error": null,
+          "label": "访问目标地址"
+        },
+        {
+          "success": true,
+          "status_code": 200,
+          "response_time_ms": 276.23,
+          "error": null,
+          "label": "访问目标地址"
+        },
+        {
+          "success": true,
+          "status_code": 200,
+          "response_time_ms": 217.54,
+          "error": null,
+          "label": "访问目标地址"
+        },
+        {
+          "success": true,
+          "status_code": 200,
+          "response_time_ms": 189.03,
+          "error": null,
+          "label": "访问目标地址"
+        },
+        {
+          "success": true,
+          "status_code": 200,
+          "response_time_ms": 194.03,
+          "error": null,
+          "label": "访问目标地址"
+        },
+        {
+          "success": true,
+          "status_code": 200,
+          "response_time_ms": 191.22,
+          "error": null,
+          "label": "访问目标地址"
+        },
+        {
+          "success": true,
+          "status_code": 200,
+          "response_time_ms": 199.38,
+          "error": null,
+          "label": "访问目标地址"
+        },
+        {
+          "success": true,
+          "status_code": 200,
+          "response_time_ms": 293.2,
+          "error": null,
+          "label": "访问目标地址"
+        },
+        {
+          "success": true,
+          "status_code": 200,
+          "response_time_ms": 202.05,
+          "error": null,
+          "label": "访问目标地址"
+        },
+        {
+          "success": true,
+          "status_code": 200,
+          "response_time_ms": 198.07,
+          "error": null,
+          "label": "访问目标地址"
+        },
+        {
+          "success": true,
+          "status_code": 200,
+          "response_time_ms": 211.58,
+          "error": null,
+          "label": "访问目标地址"
+        },
+        {
+          "success": true,
+          "status_code": 200,
+          "response_time_ms": 203.52,
+          "error": null,
+          "label": "访问目标地址"
+        },
+        {
+          "success": true,
+          "status_code": 200,
+          "response_time_ms": 317.87,
+          "error": null,
+          "label": "访问目标地址"
+        },
+        {
+          "success": true,
+          "status_code": 200,
+          "response_time_ms": 276.78,
+          "error": null,
+          "label": "访问目标地址"
+        },
+        {
+          "success": true,
+          "status_code": 200,
+          "response_time_ms": 323.05,
+          "error": null,
+          "label": "访问目标地址"
+        },
+        {
+          "success": true,
+          "status_code": 200,
+          "response_time_ms": 294.75,
+          "error": null,
+          "label": "访问目标地址"
+        },
+        {
+          "success": true,
+          "status_code": 200,
+          "response_time_ms": 277.29,
+          "error": null,
+          "label": "访问目标地址"
+        },
+        {
+          "success": true,
+          "status_code": 200,
+          "response_time_ms": 315.98,
+          "error": null,
+          "label": "访问目标地址"
+        },
+        {
+          "success": true,
+          "status_code": 200,
+          "response_time_ms": 192.53,
+          "error": null,
+          "label": "访问目标地址"
+        },
+        {
+          "success": true,
+          "status_code": 200,
+          "response_time_ms": 578.77,
+          "error": null,
+          "label": "访问目标地址"
+        },
+        {
+          "success": true,
+          "status_code": 200,
+          "response_time_ms": 578.8,
+          "error": null,
+          "label": "访问目标地址"
+        },
+        {
+          "success": true,
+          "status_code": 200,
+          "response_time_ms": 347.51,
+          "error": null,
+          "label": "访问目标地址"
+        },
+        {
+          "success": true,
+          "status_code": 200,
+          "response_time_ms": 277.51,
+          "error": null,
+          "label": "访问目标地址"
+        },
+        {
+          "success": true,
+          "status_code": 200,
+          "response_time_ms": 359.75,
+          "error": null,
+          "label": "访问目标地址"
+        },
+        {
+          "success": true,
+          "status_code": 200,
+          "response_time_ms": 408.44,
+          "error": null,
+          "label": "访问目标地址"
+        },
+        {
+          "success": true,
+          "status_code": 200,
+          "response_time_ms": 230.94,
+          "error": null,
+          "label": "访问目标地址"
+        },
+        {
+          "success": true,
+          "status_code": 200,
+          "response_time_ms": 500.78,
+          "error": null,
+          "label": "访问目标地址"
+        },
+        {
+          "success": true,
+          "status_code": 200,
+          "response_time_ms": 270.52,
+          "error": null,
+          "label": "访问目标地址"
+        },
+        {
+          "success": true,
+          "status_code": 200,
+          "response_time_ms": 367.3,
+          "error": null,
+          "label": "访问目标地址"
+        },
+        {
+          "success": true,
+          "status_code": 200,
+          "response_time_ms": 517.29,
+          "error": null,
+          "label": "访问目标地址"
+        },
+        {
+          "success": true,
+          "status_code": 200,
+          "response_time_ms": 218.38,
+          "error": null,
+          "label": "访问目标地址"
+        },
+        {
+          "success": true,
+          "status_code": 200,
+          "response_time_ms": 891.64,
+          "error": null,
+          "label": "访问目标地址"
+        },
+        {
+          "success": false,
+          "status_code": null,
+          "response_time_ms": 1102.55,
+          "error": "<urlopen error [SSL: UNEXPECTED_EOF_WHILE_READING] EOF occurred in violation of protocol (_ssl.c:1020)>",
+          "label": "访问目标地址"
+        },
+        {
+          "success": true,
+          "status_code": 200,
+          "response_time_ms": 191.37,
+          "error": null,
+          "label": "访问目标地址"
+        },
+        {
+          "success": true,
+          "status_code": 200,
+          "response_time_ms": 896.8,
+          "error": null,
+          "label": "访问目标地址"
+        },
+        {
+          "success": true,
+          "status_code": 200,
+          "response_time_ms": 309.92,
+          "error": null,
+          "label": "访问目标地址"
+        },
+        {
+          "success": true,
+          "status_code": 200,
+          "response_time_ms": 231.57,
+          "error": null,
+          "label": "访问目标地址"
+        },
+        {
+          "success": true,
+          "status_code": 200,
+          "response_time_ms": 240.29,
+          "error": null,
+          "label": "访问目标地址"
+        },
+        {
+          "success": true,
+          "status_code": 200,
+          "response_time_ms": 223.98,
+          "error": null,
+          "label": "访问目标地址"
+        },
+        {
+          "success": false,
+          "status_code": null,
+          "response_time_ms": 1096.84,
+          "error": "<urlopen error [SSL: UNEXPECTED_EOF_WHILE_READING] EOF occurred in violation of protocol (_ssl.c:1020)>",
+          "label": "访问目标地址"
+        },
+        {
+          "success": true,
+          "status_code": 200,
+          "response_time_ms": 232.4,
+          "error": null,
+          "label": "访问目标地址"
+        },
+        {
+          "success": true,
+          "status_code": 200,
+          "response_time_ms": 590.95,
+          "error": null,
+          "label": "访问目标地址"
+        },
+        {
+          "success": true,
+          "status_code": 200,
+          "response_time_ms": 376.96,
+          "error": null,
+          "label": "访问目标地址"
+        },
+        {
+          "success": true,
+          "status_code": 200,
+          "response_time_ms": 299.02,
+          "error": null,
+          "label": "访问目标地址"
+        },
+        {
+          "success": true,
+          "status_code": 200,
+          "response_time_ms": 561.59,
+          "error": null,
+          "label": "访问目标地址"
+        },
+        {
+          "success": true,
+          "status_code": 200,
+          "response_time_ms": 348.61,
+          "error": null,
+          "label": "访问目标地址"
+        },
+        {
+          "success": true,
+          "status_code": 200,
+          "response_time_ms": 487.03,
+          "error": null,
+          "label": "访问目标地址"
+        },
+        {
+          "success": true,
+          "status_code": 200,
+          "response_time_ms": 411.73,
+          "error": null,
+          "label": "访问目标地址"
+        },
+        {
+          "success": true,
+          "status_code": 200,
+          "response_time_ms": 397.27,
+          "error": null,
+          "label": "访问目标地址"
+        },
+        {
+          "success": true,
+          "status_code": 200,
+          "response_time_ms": 603.4,
+          "error": null,
+          "label": "访问目标地址"
+        },
+        {
+          "success": true,
+          "status_code": 200,
+          "response_time_ms": 420.72,
+          "error": null,
+          "label": "访问目标地址"
+        },
+        {
+          "success": true,
+          "status_code": 200,
+          "response_time_ms": 613.74,
+          "error": null,
+          "label": "访问目标地址"
+        },
+        {
+          "success": true,
+          "status_code": 200,
+          "response_time_ms": 409.85,
+          "error": null,
+          "label": "访问目标地址"
+        },
+        {
+          "success": true,
+          "status_code": 200,
+          "response_time_ms": 481.29,
+          "error": null,
+          "label": "访问目标地址"
+        },
+        {
+          "success": true,
+          "status_code": 200,
+          "response_time_ms": 615.34,
+          "error": null,
+          "label": "访问目标地址"
+        },
+        {
+          "success": true,
+          "status_code": 200,
+          "response_time_ms": 693.67,
+          "error": null,
+          "label": "访问目标地址"
+        },
+        {
+          "success": true,
+          "status_code": 200,
+          "response_time_ms": 529.96,
+          "error": null,
+          "label": "访问目标地址"
+        },
+        {
+          "success": true,
+          "status_code": 200,
+          "response_time_ms": 391.45,
+          "error": null,
+          "label": "访问目标地址"
+        },
+        {
+          "success": true,
+          "status_code": 200,
+          "response_time_ms": 725.76,
+          "error": null,
+          "label": "访问目标地址"
+        },
+        {
+          "success": true,
+          "status_code": 200,
+          "response_time_ms": 890.63,
+          "error": null,
+          "label": "访问目标地址"
+        },
+        {
+          "success": true,
+          "status_code": 200,
+          "response_time_ms": 390.06,
+          "error": null,
+          "label": "访问目标地址"
+        },
+        {
+          "success": true,
+          "status_code": 200,
+          "response_time_ms": 261.66,
+          "error": null,
+          "label": "访问目标地址"
+        },
+        {
+          "success": true,
+          "status_code": 200,
+          "response_time_ms": 282.29,
+          "error": null,
+          "label": "访问目标地址"
+        },
+        {
+          "success": true,
+          "status_code": 200,
+          "response_time_ms": 282.05,
+          "error": null,
+          "label": "访问目标地址"
+        },
+        {
+          "success": true,
+          "status_code": 200,
+          "response_time_ms": 277.47,
+          "error": null,
+          "label": "访问目标地址"
+        },
+        {
+          "success": true,
+          "status_code": 200,
+          "response_time_ms": 355.8,
+          "error": null,
+          "label": "访问目标地址"
+        },
+        {
+          "success": true,
+          "status_code": 200,
+          "response_time_ms": 555.62,
+          "error": null,
+          "label": "访问目标地址"
+        },
+        {
+          "success": true,
+          "status_code": 200,
+          "response_time_ms": 272.0,
+          "error": null,
+          "label": "访问目标地址"
+        }
+      ],
+      "summary": {
+        "total_requests": 708,
+        "successful_requests": 686,
+        "failed_requests": 22,
+        "average_response_time": 537.63,
+        "min_response_time": 189.03,
+        "max_response_time": 1689.02,
+        "p90_response_time": 950.09,
+        "p95_response_time": 1112.04,
+        "p99_response_time": 1400.86,
+        "throughput": 5.57,
+        "error_rate": 3.11,
+        "status_codes": {
+          "200": 686,
+          "ERR": 22
+        },
+        "request_distribution": {
+          "访问目标地址": 708
+        },
+        "test_passed": false,
+        "violations": [
+          {
+            "metric": "错误率",
+            "actual": 3.11,
+            "threshold": 1.0,
+            "unit": "%"
+          }
+        ]
+      }
+    },
+    {
+      "execution_id": "perf_5be9b9603078",
+      "test_id": 3,
+      "status": "DISPATCHED",
+      "start_time": "2026-06-27T11:14:28.466593",
+      "end_time": null,
+      "duration": null,
+      "progress_percentage": 5,
+      "current_users": 0,
+      "total_requests": 0,
+      "successful_requests": 0,
+      "failed_requests": 0,
+      "average_response_time": null,
+      "min_response_time": null,
+      "max_response_time": null,
+      "throughput": null,
+      "error_rate": null,
+      "cpu_usage": null,
+      "memory_usage": null,
+      "real_time_metrics": [],
+      "summary": null,
+      "execution_mode": "remote_runner",
+      "dispatch_status": "DISPATCHED",
+      "dispatch_message": "已创建调度任务，等待所选执行节点执行并回传结果。",
+      "runner_type": "ssh",
+      "runner_name": "开发环境 - 自动识别本机执行",
+      "runner_host": "127.0.0.1",
+      "framework": "auto",
+      "result_collection": "local",
+      "execution_config": {
+        "source": "test_execution_config",
+        "config_id": "bde89e1d-565f-40f2-922e-0488536a45be",
+        "config_name": "开发环境 - 自动识别本机执行",
+        "framework": "auto",
+        "framework_label": "自动识别导入脚本",
+        "environment": "dev",
+        "timeout": 900,
+        "runner_type": "ssh",
+        "runner_host": "127.0.0.1",
+        "runner_port": 22,
+        "runner_os": "windows",
+        "runner_workdir": "E:\\test\\apache-jmeter-5.6.3",
+        "result_collection": "local",
+        "result_format": "text",
+        "allow_local_debug": false
+      },
+      "dispatch_payload": {
+        "execution_id": "perf_5be9b9603078",
+        "test_id": 3,
+        "test_name": "测试jmeter能否调通",
+        "framework": "auto",
+        "runner_type": "ssh",
+        "runner_name": "开发环境 - 自动识别本机执行",
+        "runner_host": "127.0.0.1",
+        "runner_workdir": "E:\\test\\apache-jmeter-5.6.3",
+        "command_template": null,
+        "script": "E:\\test\\apache-jmeter-5.6.3\\jmx脚本\\baidu-serach.jmx",
+        "script_config": {
+          "script_type": "jmeter",
+          "repository": "",
+          "branch": "",
+          "script_path": "E:\\test\\apache-jmeter-5.6.3\\jmx脚本\\baidu-serach.jmx",
+          "entry_file": "",
+          "arguments": "",
+          "data_files": ""
+        },
+        "target_url": "http://www.baidu.com",
+        "steps": [
+          {
+            "name": "访问目标地址",
+            "method": "GET",
+            "url": "http://www.baidu.com",
+            "headers": "",
+            "body": ""
+          }
+        ],
+        "load": {
+          "concurrent_users": 5,
+          "duration": 10,
+          "ramp_up_time": 2,
+          "think_time_ms": 200,
+          "timeout": 10
+        },
+        "criteria": {
+          "max_response_time": 1000,
+          "p95_response_time": 1500,
+          "max_error_rate": 1,
+          "min_throughput": 0
+        },
+        "result_collection": {
+          "mode": "local",
+          "format": "text",
+          "result_directory": null,
+          "result_file_pattern": null,
+          "report_directory": null,
+          "callback_endpoint": "/performance-tests/executions/perf_5be9b9603078/results"
+        }
+      },
+      "artifacts": []
+    },
+    {
+      "execution_id": "perf_e90c621bdd1b",
+      "test_id": 3,
+      "status": "DISPATCHED",
+      "start_time": "2026-06-28T01:20:48.170683",
+      "end_time": null,
+      "duration": null,
+      "progress_percentage": 5,
+      "current_users": 0,
+      "total_requests": 0,
+      "successful_requests": 0,
+      "failed_requests": 0,
+      "average_response_time": null,
+      "min_response_time": null,
+      "max_response_time": null,
+      "throughput": null,
+      "error_rate": null,
+      "cpu_usage": null,
+      "memory_usage": null,
+      "real_time_metrics": [],
+      "summary": null,
+      "execution_mode": "remote_runner",
+      "dispatch_status": "DISPATCHED",
+      "dispatch_message": "已创建调度任务，等待所选执行节点执行并回传结果。",
+      "runner_type": "ssh",
+      "runner_name": "开发环境 - 自动识别本机执行",
+      "runner_host": "127.0.0.1",
+      "framework": "auto",
+      "result_collection": "local",
+      "execution_config": {
+        "source": "test_execution_config",
+        "config_id": "bde89e1d-565f-40f2-922e-0488536a45be",
+        "config_name": "开发环境 - 自动识别本机执行",
+        "framework": "auto",
+        "framework_label": "自动识别导入脚本",
+        "environment": "dev",
+        "timeout": 900,
+        "runner_type": "ssh",
+        "runner_host": "127.0.0.1",
+        "runner_port": 22,
+        "runner_os": "windows",
+        "runner_workdir": "E:\\test\\apache-jmeter-5.6.3",
+        "result_collection": "local",
+        "result_format": "text",
+        "allow_local_debug": false
+      },
+      "dispatch_payload": {
+        "execution_id": "perf_e90c621bdd1b",
+        "test_id": 3,
+        "test_name": "测试jmeter能否调通",
+        "framework": "auto",
+        "runner_type": "ssh",
+        "runner_name": "开发环境 - 自动识别本机执行",
+        "runner_host": "127.0.0.1",
+        "runner_workdir": "E:\\test\\apache-jmeter-5.6.3",
+        "command_template": null,
+        "script": "E:\\test\\apache-jmeter-5.6.3\\jmx脚本\\baidu-serach.jmx",
+        "script_config": {
+          "script_type": "jmeter",
+          "repository": "",
+          "branch": "",
+          "script_path": "E:\\test\\apache-jmeter-5.6.3\\jmx脚本\\baidu-serach.jmx",
+          "entry_file": "",
+          "arguments": "",
+          "data_files": ""
+        },
+        "target_url": "http://www.baidu.com",
+        "steps": [
+          {
+            "name": "访问目标地址",
+            "method": "GET",
+            "url": "http://www.baidu.com",
+            "headers": "",
+            "body": ""
+          }
+        ],
+        "load": {
+          "concurrent_users": 5,
+          "duration": 10,
+          "ramp_up_time": 2,
+          "think_time_ms": 200,
+          "timeout": 10
+        },
+        "criteria": {
+          "max_response_time": 1000,
+          "p95_response_time": 1500,
+          "max_error_rate": 1,
+          "min_throughput": 0
+        },
+        "result_collection": {
+          "mode": "local",
+          "format": "text",
+          "result_directory": null,
+          "result_file_pattern": null,
+          "report_directory": null,
+          "callback_endpoint": "/performance-tests/executions/perf_e90c621bdd1b/results"
+        }
+      },
+      "artifacts": []
+    },
+    {
+      "execution_id": "perf_1ad3fbe84deb",
+      "test_id": 3,
+      "status": "DISPATCHED",
+      "start_time": "2026-06-28T01:20:49.274837",
+      "end_time": null,
+      "duration": null,
+      "progress_percentage": 5,
+      "current_users": 0,
+      "total_requests": 0,
+      "successful_requests": 0,
+      "failed_requests": 0,
+      "average_response_time": null,
+      "min_response_time": null,
+      "max_response_time": null,
+      "throughput": null,
+      "error_rate": null,
+      "cpu_usage": null,
+      "memory_usage": null,
+      "real_time_metrics": [],
+      "summary": null,
+      "execution_mode": "remote_runner",
+      "dispatch_status": "DISPATCHED",
+      "dispatch_message": "已创建调度任务，等待所选执行节点执行并回传结果。",
+      "runner_type": "ssh",
+      "runner_name": "开发环境 - 自动识别本机执行",
+      "runner_host": "127.0.0.1",
+      "framework": "auto",
+      "result_collection": "local",
+      "execution_config": {
+        "source": "test_execution_config",
+        "config_id": "bde89e1d-565f-40f2-922e-0488536a45be",
+        "config_name": "开发环境 - 自动识别本机执行",
+        "framework": "auto",
+        "framework_label": "自动识别导入脚本",
+        "environment": "dev",
+        "timeout": 900,
+        "runner_type": "ssh",
+        "runner_host": "127.0.0.1",
+        "runner_port": 22,
+        "runner_os": "windows",
+        "runner_workdir": "E:\\test\\apache-jmeter-5.6.3",
+        "result_collection": "local",
+        "result_format": "text",
+        "allow_local_debug": false
+      },
+      "dispatch_payload": {
+        "execution_id": "perf_1ad3fbe84deb",
+        "test_id": 3,
+        "test_name": "测试jmeter能否调通",
+        "framework": "auto",
+        "runner_type": "ssh",
+        "runner_name": "开发环境 - 自动识别本机执行",
+        "runner_host": "127.0.0.1",
+        "runner_workdir": "E:\\test\\apache-jmeter-5.6.3",
+        "command_template": null,
+        "script": "E:\\test\\apache-jmeter-5.6.3\\jmx脚本\\baidu-serach.jmx",
+        "script_config": {
+          "script_type": "jmeter",
+          "repository": "",
+          "branch": "",
+          "script_path": "E:\\test\\apache-jmeter-5.6.3\\jmx脚本\\baidu-serach.jmx",
+          "entry_file": "",
+          "arguments": "",
+          "data_files": ""
+        },
+        "target_url": "http://www.baidu.com",
+        "steps": [
+          {
+            "name": "访问目标地址",
+            "method": "GET",
+            "url": "http://www.baidu.com",
+            "headers": "",
+            "body": ""
+          }
+        ],
+        "load": {
+          "concurrent_users": 5,
+          "duration": 10,
+          "ramp_up_time": 2,
+          "think_time_ms": 200,
+          "timeout": 10
+        },
+        "criteria": {
+          "max_response_time": 1000,
+          "p95_response_time": 1500,
+          "max_error_rate": 1,
+          "min_throughput": 0
+        },
+        "result_collection": {
+          "mode": "local",
+          "format": "text",
+          "result_directory": null,
+          "result_file_pattern": null,
+          "report_directory": null,
+          "callback_endpoint": "/performance-tests/executions/perf_1ad3fbe84deb/results"
+        }
+      },
+      "artifacts": []
+    },
+    {
+      "execution_id": "perf_fde76cca654b",
+      "test_id": 3,
+      "status": "DISPATCHED",
+      "start_time": "2026-06-28T01:20:49.889490",
+      "end_time": null,
+      "duration": null,
+      "progress_percentage": 5,
+      "current_users": 0,
+      "total_requests": 0,
+      "successful_requests": 0,
+      "failed_requests": 0,
+      "average_response_time": null,
+      "min_response_time": null,
+      "max_response_time": null,
+      "throughput": null,
+      "error_rate": null,
+      "cpu_usage": null,
+      "memory_usage": null,
+      "real_time_metrics": [],
+      "summary": null,
+      "execution_mode": "remote_runner",
+      "dispatch_status": "DISPATCHED",
+      "dispatch_message": "已创建调度任务，等待所选执行节点执行并回传结果。",
+      "runner_type": "ssh",
+      "runner_name": "开发环境 - 自动识别本机执行",
+      "runner_host": "127.0.0.1",
+      "framework": "auto",
+      "result_collection": "local",
+      "execution_config": {
+        "source": "test_execution_config",
+        "config_id": "bde89e1d-565f-40f2-922e-0488536a45be",
+        "config_name": "开发环境 - 自动识别本机执行",
+        "framework": "auto",
+        "framework_label": "自动识别导入脚本",
+        "environment": "dev",
+        "timeout": 900,
+        "runner_type": "ssh",
+        "runner_host": "127.0.0.1",
+        "runner_port": 22,
+        "runner_os": "windows",
+        "runner_workdir": "E:\\test\\apache-jmeter-5.6.3",
+        "result_collection": "local",
+        "result_format": "text",
+        "allow_local_debug": false
+      },
+      "dispatch_payload": {
+        "execution_id": "perf_fde76cca654b",
+        "test_id": 3,
+        "test_name": "测试jmeter能否调通",
+        "framework": "auto",
+        "runner_type": "ssh",
+        "runner_name": "开发环境 - 自动识别本机执行",
+        "runner_host": "127.0.0.1",
+        "runner_workdir": "E:\\test\\apache-jmeter-5.6.3",
+        "command_template": null,
+        "script": "E:\\test\\apache-jmeter-5.6.3\\jmx脚本\\baidu-serach.jmx",
+        "script_config": {
+          "script_type": "jmeter",
+          "repository": "",
+          "branch": "",
+          "script_path": "E:\\test\\apache-jmeter-5.6.3\\jmx脚本\\baidu-serach.jmx",
+          "entry_file": "",
+          "arguments": "",
+          "data_files": ""
+        },
+        "target_url": "http://www.baidu.com",
+        "steps": [
+          {
+            "name": "访问目标地址",
+            "method": "GET",
+            "url": "http://www.baidu.com",
+            "headers": "",
+            "body": ""
+          }
+        ],
+        "load": {
+          "concurrent_users": 5,
+          "duration": 10,
+          "ramp_up_time": 2,
+          "think_time_ms": 200,
+          "timeout": 10
+        },
+        "criteria": {
+          "max_response_time": 1000,
+          "p95_response_time": 1500,
+          "max_error_rate": 1,
+          "min_throughput": 0
+        },
+        "result_collection": {
+          "mode": "local",
+          "format": "text",
+          "result_directory": null,
+          "result_file_pattern": null,
+          "report_directory": null,
+          "callback_endpoint": "/performance-tests/executions/perf_fde76cca654b/results"
+        }
+      },
+      "artifacts": []
+    },
+    {
+      "execution_id": "perf_dadd89a13fa5",
+      "test_id": 3,
+      "status": "DISPATCHED",
+      "start_time": "2026-06-28T01:20:50.094194",
+      "end_time": null,
+      "duration": null,
+      "progress_percentage": 5,
+      "current_users": 0,
+      "total_requests": 0,
+      "successful_requests": 0,
+      "failed_requests": 0,
+      "average_response_time": null,
+      "min_response_time": null,
+      "max_response_time": null,
+      "throughput": null,
+      "error_rate": null,
+      "cpu_usage": null,
+      "memory_usage": null,
+      "real_time_metrics": [],
+      "summary": null,
+      "execution_mode": "remote_runner",
+      "dispatch_status": "DISPATCHED",
+      "dispatch_message": "已创建调度任务，等待所选执行节点执行并回传结果。",
+      "runner_type": "ssh",
+      "runner_name": "开发环境 - 自动识别本机执行",
+      "runner_host": "127.0.0.1",
+      "framework": "auto",
+      "result_collection": "local",
+      "execution_config": {
+        "source": "test_execution_config",
+        "config_id": "bde89e1d-565f-40f2-922e-0488536a45be",
+        "config_name": "开发环境 - 自动识别本机执行",
+        "framework": "auto",
+        "framework_label": "自动识别导入脚本",
+        "environment": "dev",
+        "timeout": 900,
+        "runner_type": "ssh",
+        "runner_host": "127.0.0.1",
+        "runner_port": 22,
+        "runner_os": "windows",
+        "runner_workdir": "E:\\test\\apache-jmeter-5.6.3",
+        "result_collection": "local",
+        "result_format": "text",
+        "allow_local_debug": false
+      },
+      "dispatch_payload": {
+        "execution_id": "perf_dadd89a13fa5",
+        "test_id": 3,
+        "test_name": "测试jmeter能否调通",
+        "framework": "auto",
+        "runner_type": "ssh",
+        "runner_name": "开发环境 - 自动识别本机执行",
+        "runner_host": "127.0.0.1",
+        "runner_workdir": "E:\\test\\apache-jmeter-5.6.3",
+        "command_template": null,
+        "script": "E:\\test\\apache-jmeter-5.6.3\\jmx脚本\\baidu-serach.jmx",
+        "script_config": {
+          "script_type": "jmeter",
+          "repository": "",
+          "branch": "",
+          "script_path": "E:\\test\\apache-jmeter-5.6.3\\jmx脚本\\baidu-serach.jmx",
+          "entry_file": "",
+          "arguments": "",
+          "data_files": ""
+        },
+        "target_url": "http://www.baidu.com",
+        "steps": [
+          {
+            "name": "访问目标地址",
+            "method": "GET",
+            "url": "http://www.baidu.com",
+            "headers": "",
+            "body": ""
+          }
+        ],
+        "load": {
+          "concurrent_users": 5,
+          "duration": 10,
+          "ramp_up_time": 2,
+          "think_time_ms": 200,
+          "timeout": 10
+        },
+        "criteria": {
+          "max_response_time": 1000,
+          "p95_response_time": 1500,
+          "max_error_rate": 1,
+          "min_throughput": 0
+        },
+        "result_collection": {
+          "mode": "local",
+          "format": "text",
+          "result_directory": null,
+          "result_file_pattern": null,
+          "report_directory": null,
+          "callback_endpoint": "/performance-tests/executions/perf_dadd89a13fa5/results"
+        }
+      },
+      "artifacts": []
+    },
+    {
+      "execution_id": "perf_2327975db748",
+      "test_id": 3,
+      "status": "DISPATCHED",
+      "start_time": "2026-06-28T01:21:00.690128",
+      "end_time": null,
+      "duration": null,
+      "progress_percentage": 5,
+      "current_users": 0,
+      "total_requests": 0,
+      "successful_requests": 0,
+      "failed_requests": 0,
+      "average_response_time": null,
+      "min_response_time": null,
+      "max_response_time": null,
+      "throughput": null,
+      "error_rate": null,
+      "cpu_usage": null,
+      "memory_usage": null,
+      "real_time_metrics": [],
+      "summary": null,
+      "execution_mode": "remote_runner",
+      "dispatch_status": "DISPATCHED",
+      "dispatch_message": "已创建调度任务，等待所选执行节点执行并回传结果。",
+      "runner_type": "ssh",
+      "runner_name": "开发环境 - 自动识别本机执行",
+      "runner_host": "127.0.0.1",
+      "framework": "auto",
+      "result_collection": "local",
+      "execution_config": {
+        "source": "test_execution_config",
+        "config_id": "bde89e1d-565f-40f2-922e-0488536a45be",
+        "config_name": "开发环境 - 自动识别本机执行",
+        "framework": "auto",
+        "framework_label": "自动识别导入脚本",
+        "environment": "dev",
+        "timeout": 900,
+        "runner_type": "ssh",
+        "runner_host": "127.0.0.1",
+        "runner_port": 22,
+        "runner_os": "windows",
+        "runner_workdir": "E:\\test\\apache-jmeter-5.6.3",
+        "result_collection": "local",
+        "result_format": "text",
+        "allow_local_debug": false
+      },
+      "dispatch_payload": {
+        "execution_id": "perf_2327975db748",
+        "test_id": 3,
+        "test_name": "测试jmeter能否调通",
+        "framework": "auto",
+        "runner_type": "ssh",
+        "runner_name": "开发环境 - 自动识别本机执行",
+        "runner_host": "127.0.0.1",
+        "runner_workdir": "E:\\test\\apache-jmeter-5.6.3",
+        "command_template": null,
+        "script": "E:\\test\\apache-jmeter-5.6.3\\jmx脚本\\baidu-serach.jmx",
+        "script_config": {
+          "script_type": "jmeter",
+          "repository": "",
+          "branch": "",
+          "script_path": "E:\\test\\apache-jmeter-5.6.3\\jmx脚本\\baidu-serach.jmx",
+          "entry_file": "",
+          "arguments": "",
+          "data_files": ""
+        },
+        "target_url": "http://www.baidu.com",
+        "steps": [
+          {
+            "name": "访问目标地址",
+            "method": "GET",
+            "url": "http://www.baidu.com",
+            "headers": "",
+            "body": ""
+          }
+        ],
+        "load": {
+          "concurrent_users": 5,
+          "duration": 10,
+          "ramp_up_time": 2,
+          "think_time_ms": 200,
+          "timeout": 10
+        },
+        "criteria": {
+          "max_response_time": 1000,
+          "p95_response_time": 1500,
+          "max_error_rate": 1,
+          "min_throughput": 0
+        },
+        "result_collection": {
+          "mode": "local",
+          "format": "text",
+          "result_directory": null,
+          "result_file_pattern": null,
+          "report_directory": null,
+          "callback_endpoint": "/performance-tests/executions/perf_2327975db748/results"
+        }
+      },
+      "artifacts": []
+    },
+    {
+      "execution_id": "perf_032727b637e6",
+      "test_id": 3,
+      "status": "DISPATCHED",
+      "start_time": "2026-06-28T01:21:19.002618",
+      "end_time": null,
+      "duration": null,
+      "progress_percentage": 5,
+      "current_users": 0,
+      "total_requests": 0,
+      "successful_requests": 0,
+      "failed_requests": 0,
+      "average_response_time": null,
+      "min_response_time": null,
+      "max_response_time": null,
+      "throughput": null,
+      "error_rate": null,
+      "cpu_usage": null,
+      "memory_usage": null,
+      "real_time_metrics": [],
+      "summary": null,
+      "execution_mode": "remote_runner",
+      "dispatch_status": "DISPATCHED",
+      "dispatch_message": "已创建调度任务，等待所选执行节点执行并回传结果。",
+      "runner_type": "ssh",
+      "runner_name": "开发环境 - 自动识别本机执行",
+      "runner_host": "127.0.0.1",
+      "framework": "auto",
+      "result_collection": "local",
+      "execution_config": {
+        "source": "test_execution_config",
+        "config_id": "bde89e1d-565f-40f2-922e-0488536a45be",
+        "config_name": "开发环境 - 自动识别本机执行",
+        "framework": "auto",
+        "framework_label": "自动识别导入脚本",
+        "environment": "dev",
+        "timeout": 900,
+        "runner_type": "ssh",
+        "runner_host": "127.0.0.1",
+        "runner_port": 22,
+        "runner_os": "windows",
+        "runner_workdir": "E:\\test\\apache-jmeter-5.6.3",
+        "result_collection": "local",
+        "result_format": "text",
+        "allow_local_debug": false
+      },
+      "dispatch_payload": {
+        "execution_id": "perf_032727b637e6",
+        "test_id": 3,
+        "test_name": "测试jmeter能否调通",
+        "framework": "auto",
+        "runner_type": "ssh",
+        "runner_name": "开发环境 - 自动识别本机执行",
+        "runner_host": "127.0.0.1",
+        "runner_workdir": "E:\\test\\apache-jmeter-5.6.3",
+        "command_template": null,
+        "script": "E:\\test\\apache-jmeter-5.6.3\\jmx脚本\\baidu-serach.jmx",
+        "script_config": {
+          "script_type": "jmeter",
+          "repository": "",
+          "branch": "",
+          "script_path": "E:\\test\\apache-jmeter-5.6.3\\jmx脚本\\baidu-serach.jmx",
+          "entry_file": "",
+          "arguments": "",
+          "data_files": ""
+        },
+        "target_url": "http://www.baidu.com",
+        "steps": [
+          {
+            "name": "访问目标地址",
+            "method": "GET",
+            "url": "http://www.baidu.com",
+            "headers": "",
+            "body": ""
+          }
+        ],
+        "load": {
+          "concurrent_users": 5,
+          "duration": 10,
+          "ramp_up_time": 2,
+          "think_time_ms": 200,
+          "timeout": 10
+        },
+        "criteria": {
+          "max_response_time": 1000,
+          "p95_response_time": 1500,
+          "max_error_rate": 1,
+          "min_throughput": 0
+        },
+        "result_collection": {
+          "mode": "local",
+          "format": "text",
+          "result_directory": null,
+          "result_file_pattern": null,
+          "report_directory": null,
+          "callback_endpoint": "/performance-tests/executions/perf_032727b637e6/results"
+        }
+      },
+      "artifacts": []
+    },
+    {
+      "execution_id": "perf_f851bc305fea",
+      "test_id": 3,
+      "status": "DISPATCHED",
+      "start_time": "2026-06-28T01:22:51.412782",
+      "end_time": null,
+      "duration": null,
+      "progress_percentage": 5,
+      "current_users": 0,
+      "total_requests": 0,
+      "successful_requests": 0,
+      "failed_requests": 0,
+      "average_response_time": null,
+      "min_response_time": null,
+      "max_response_time": null,
+      "throughput": null,
+      "error_rate": null,
+      "cpu_usage": null,
+      "memory_usage": null,
+      "real_time_metrics": [],
+      "summary": null,
+      "execution_mode": "remote_runner",
+      "dispatch_status": "DISPATCHED",
+      "dispatch_message": "已创建调度任务，等待所选执行节点执行并回传结果。",
+      "runner_type": "ssh",
+      "runner_name": "开发环境 - 自动识别本机执行",
+      "runner_host": "127.0.0.1",
+      "framework": "auto",
+      "result_collection": "local",
+      "execution_config": {
+        "source": "test_execution_config",
+        "config_id": "bde89e1d-565f-40f2-922e-0488536a45be",
+        "config_name": "开发环境 - 自动识别本机执行",
+        "framework": "auto",
+        "framework_label": "自动识别导入脚本",
+        "environment": "dev",
+        "timeout": 900,
+        "runner_type": "ssh",
+        "runner_host": "127.0.0.1",
+        "runner_port": 22,
+        "runner_os": "windows",
+        "runner_workdir": "E:\\test\\apache-jmeter-5.6.3",
+        "result_collection": "local",
+        "result_format": "text",
+        "allow_local_debug": false
+      },
+      "dispatch_payload": {
+        "execution_id": "perf_f851bc305fea",
+        "test_id": 3,
+        "test_name": "测试jmeter能否调通",
+        "framework": "auto",
+        "runner_type": "ssh",
+        "runner_name": "开发环境 - 自动识别本机执行",
+        "runner_host": "127.0.0.1",
+        "runner_workdir": "E:\\test\\apache-jmeter-5.6.3",
+        "command_template": null,
+        "script": "E:\\test\\apache-jmeter-5.6.3\\jmx脚本\\baidu-serach.jmx",
+        "script_config": {
+          "script_type": "jmeter",
+          "repository": "",
+          "branch": "",
+          "script_path": "E:\\test\\apache-jmeter-5.6.3\\jmx脚本\\baidu-serach.jmx",
+          "entry_file": "",
+          "arguments": "",
+          "data_files": ""
+        },
+        "target_url": "http://www.baidu.com",
+        "steps": [
+          {
+            "name": "访问目标地址",
+            "method": "GET",
+            "url": "http://www.baidu.com"
+          }
+        ],
+        "load": {
+          "concurrent_users": 5,
+          "duration": 10,
+          "ramp_up_time": 2,
+          "think_time_ms": 200,
+          "timeout": 10
+        },
+        "criteria": {
+          "max_response_time": 1000,
+          "p95_response_time": 1500,
+          "max_error_rate": 1,
+          "min_throughput": 0
+        },
+        "result_collection": {
+          "mode": "local",
+          "format": "text",
+          "result_directory": null,
+          "result_file_pattern": null,
+          "report_directory": null,
+          "callback_endpoint": "/performance-tests/executions/perf_f851bc305fea/results"
+        }
+      },
+      "artifacts": []
     }
   ]
 }

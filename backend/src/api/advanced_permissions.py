@@ -395,7 +395,7 @@ async def revoke_permission(
         raise HTTPException(status_code=500, detail=f"撤销权限失败: {str(e)}")
 
 
-@router.get("/audit-logs", response_model=ApiResponse[List[Dict[str, Any]]])
+@router.get("/audit-logs", response_model=ApiResponse[Dict[str, Any]])
 async def get_permission_audit_logs(
     user_id: Optional[int] = Query(None),
     action: Optional[str] = Query(None),

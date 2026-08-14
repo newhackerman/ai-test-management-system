@@ -7,7 +7,7 @@ from typing import List, Optional, Dict, Any
 from datetime import datetime
 from decimal import Decimal
 
-from ...core.database import get_db
+from ...core.database import get_async_session
 from ...core.auth import get_current_user
 from ...services.cost_control_service import (
     CostControlService, BudgetPeriod, AlertLevel, 
@@ -24,7 +24,7 @@ async def get_cost_summary(
     period: str = Query("daily", description="统计周期: daily, weekly, monthly, yearly"),
     provider: Optional[str] = Query(None, description="特定AI提供商"),
     user_id: Optional[int] = Query(None, description="特定用户ID"),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(get_current_user)
 ):
     """获取成本摘要"""
@@ -59,7 +59,7 @@ async def get_cost_summary(
 async def get_cost_alerts(
     level: Optional[str] = Query(None, description="告警级别: info, warning, critical, emergency"),
     limit: int = Query(100, description="返回数量限制"),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(get_current_user)
 ):
     """获取成本告警"""
@@ -112,7 +112,7 @@ async def get_cost_alerts(
 @router.post("/budgets", response_model=ApiResponse)
 async def create_budget(
     budget_data: Dict[str, Any],
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(get_current_user)
 ):
     """创建预算配置（仅管理员）"""
@@ -154,7 +154,7 @@ async def create_budget(
 @router.post("/quotas", response_model=ApiResponse)
 async def create_quota(
     quota_data: Dict[str, Any],
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(get_current_user)
 ):
     """创建配额配置（仅管理员）"""
@@ -193,7 +193,7 @@ async def create_quota(
 @router.delete("/budgets/{budget_id}", response_model=ApiResponse)
 async def delete_budget(
     budget_id: str,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(get_current_user)
 ):
     """删除预算配置（仅管理员）"""
@@ -223,7 +223,7 @@ async def delete_budget(
 @router.delete("/quotas/{quota_id}", response_model=ApiResponse)
 async def delete_quota(
     quota_id: str,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(get_current_user)
 ):
     """删除配额配置（仅管理员）"""
@@ -253,7 +253,7 @@ async def delete_quota(
 @router.post("/check", response_model=ApiResponse)
 async def check_cost_limits(
     check_data: Dict[str, Any],
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(get_current_user)
 ):
     """检查成本和配额限制"""
@@ -317,7 +317,7 @@ async def check_cost_limits(
 @router.post("/usage", response_model=ApiResponse)
 async def record_usage(
     usage_data: Dict[str, Any],
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(get_current_user)
 ):
     """记录使用情况"""
@@ -354,7 +354,7 @@ async def record_usage(
 @router.delete("/alerts", response_model=ApiResponse)
 async def clear_alerts(
     before: Optional[str] = Query(None, description="清除此时间之前的告警 (ISO格式)"),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(get_current_user)
 ):
     """清除告警历史（仅管理员）"""
@@ -382,7 +382,7 @@ async def clear_alerts(
 
 @router.get("/budgets", response_model=ApiResponse)
 async def list_budgets(
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(get_current_user)
 ):
     """获取预算配置列表（仅管理员）"""
@@ -416,13 +416,15 @@ async def list_budgets(
             message="预算配置列表获取成功"
         )
         
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"获取预算配置列表失败: {str(e)}")
 
 
 @router.get("/quotas", response_model=ApiResponse)
 async def list_quotas(
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(get_current_user)
 ):
     """获取配额配置列表（仅管理员）"""
@@ -453,6 +455,8 @@ async def list_quotas(
             message="配额配置列表获取成功"
         )
         
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"获取配额配置列表失败: {str(e)}")
 
@@ -460,7 +464,7 @@ async def list_quotas(
 @router.get("/dashboard", response_model=ApiResponse)
 async def get_cost_dashboard(
     period: str = Query("daily", description="统计周期: daily, weekly, monthly"),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(get_current_user)
 ):
     """获取成本监控仪表板数据"""
@@ -493,7 +497,7 @@ async def get_cost_trends(
     days: int = Query(30, description="统计天数"),
     provider: Optional[str] = Query(None, description="特定AI提供商"),
     user_id: Optional[int] = Query(None, description="特定用户ID"),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(get_current_user)
 ):
     """获取成本趋势数据"""
@@ -520,7 +524,7 @@ async def get_cost_trends(
 async def get_usage_statistics(
     period: str = Query("daily", description="统计周期: daily, weekly, monthly"),
     group_by: str = Query("provider", description="分组方式: provider, user, model"),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(get_current_user)
 ):
     """获取使用统计数据"""
@@ -552,7 +556,7 @@ async def get_usage_statistics(
 @router.get("/budget-usage", response_model=ApiResponse)
 async def get_budget_usage(
     budget_id: Optional[str] = Query(None, description="特定预算ID"),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(get_current_user)
 ):
     """获取预算使用情况"""
@@ -576,7 +580,7 @@ async def get_budget_usage(
 @router.get("/quota-usage", response_model=ApiResponse)
 async def get_quota_usage(
     quota_id: Optional[str] = Query(None, description="特定配额ID"),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(get_current_user)
 ):
     """获取配额使用情况"""
@@ -603,7 +607,7 @@ async def get_time_series_statistics(
     granularity: str = Query("hour", description="时间粒度: hour, day, week"),
     provider: Optional[str] = Query(None, description="特定AI提供商"),
     user_id: Optional[int] = Query(None, description="特定用户ID"),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(get_current_user)
 ):
     """获取时间序列使用统计"""
@@ -657,7 +661,7 @@ async def get_time_series_statistics(
 async def get_model_usage_metrics(
     period: str = Query("daily", description="统计周期: daily, weekly, monthly"),
     limit: int = Query(20, description="返回数量限制"),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(get_current_user)
 ):
     """获取模型使用指标"""
@@ -705,7 +709,7 @@ async def get_model_usage_metrics(
 async def get_user_activity_metrics(
     period: str = Query("daily", description="统计周期: daily, weekly, monthly"),
     limit: int = Query(50, description="返回数量限制"),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(get_current_user)
 ):
     """获取用户活动指标"""
@@ -749,6 +753,8 @@ async def get_user_activity_metrics(
             message="用户活动指标获取成功"
         )
         
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"获取用户活动指标失败: {str(e)}")
 
@@ -756,7 +762,7 @@ async def get_user_activity_metrics(
 @router.get("/enhanced-statistics/performance", response_model=ApiResponse)
 async def get_performance_metrics(
     period: str = Query("daily", description="统计周期: daily, weekly, monthly"),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(get_current_user)
 ):
     """获取性能指标"""
@@ -793,7 +799,7 @@ async def get_performance_metrics(
 async def get_usage_patterns(
     pattern_type: str = Query("hourly", description="模式类型: hourly, daily, weekly"),
     period: str = Query("weekly", description="分析周期: weekly, monthly, quarterly"),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(get_current_user)
 ):
     """获取使用模式分析"""
@@ -827,7 +833,7 @@ async def get_usage_patterns(
 @router.post("/enhanced-statistics/export", response_model=ApiResponse)
 async def export_usage_statistics(
     export_request: Dict[str, Any],
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(get_current_user)
 ):
     """导出使用统计数据"""

@@ -21,7 +21,7 @@ from sqlalchemy.engine import Result
 from sqlalchemy.sql import Select
 from sqlalchemy.orm import Query
 
-from ..core.database import get_async_session
+from ..core.database import get_async_session, get_async_session_ctx
 from ..core.redis_client import get_redis_client
 from ..models.project import Project, ProjectMember, Task, Milestone, WorkLog, ProjectRisk
 
@@ -1151,7 +1151,7 @@ connection_pool_manager = ConnectionPoolManager()
 async def get_database_optimizer(db: AsyncSession = None) -> DatabaseOptimizer:
     """获取数据库优化器实例"""
     if db is None:
-        async with get_async_session() as session:
+        async with get_async_session_ctx() as session:
             return DatabaseOptimizer(session)
     return DatabaseOptimizer(db)
 
@@ -1159,7 +1159,7 @@ async def get_database_optimizer(db: AsyncSession = None) -> DatabaseOptimizer:
 async def get_query_optimizer(db: AsyncSession = None) -> QueryOptimizer:
     """获取查询优化器实例"""
     if db is None:
-        async with get_async_session() as session:
+        async with get_async_session_ctx() as session:
             return QueryOptimizer(session)
     return QueryOptimizer(db)
 
@@ -1167,6 +1167,6 @@ async def get_query_optimizer(db: AsyncSession = None) -> QueryOptimizer:
 async def get_database_health_checker(db: AsyncSession = None) -> DatabaseHealthChecker:
     """获取数据库健康检查器实例"""
     if db is None:
-        async with get_async_session() as session:
+        async with get_async_session_ctx() as session:
             return DatabaseHealthChecker(session)
     return DatabaseHealthChecker(db)

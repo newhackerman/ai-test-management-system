@@ -29,7 +29,7 @@ from sqlalchemy import text, select, func, and_, or_
 from sqlalchemy.orm import selectinload, joinedload
 from sqlalchemy.sql import Select
 
-from ..core.database import get_async_session
+from ..core.database import get_async_session, get_async_session_ctx
 from ..core.config import get_settings
 from ..utils.redis_client import RedisCache
 
@@ -189,7 +189,7 @@ class DatabaseOptimizationService:
         """
         cache_key = f"ai_sessions:{user_id}:{limit}:{offset}"
         
-        async with get_async_session() as session:
+        async with get_async_session_ctx() as session:
             from ..models.ai_chat_session import AIChatSession
             
             # 使用索引优化的查询
@@ -211,7 +211,7 @@ class DatabaseOptimizationService:
         """
         cache_key = f"ai_messages:{session_id}:{limit}"
         
-        async with get_async_session() as session:
+        async with get_async_session_ctx() as session:
             from ..models.ai_chat_message import AIChatMessage
             
             # 使用预加载优化查询
@@ -239,7 +239,7 @@ class DatabaseOptimizationService:
         
         cache_key = f"ai_suggestions:{':'.join(cache_parts)}"
         
-        async with get_async_session() as session:
+        async with get_async_session_ctx() as session:
             from ..models.ai_suggestion import AISuggestion
             
             # 构建动态查询条件
@@ -367,7 +367,7 @@ class DatabaseOptimizationService:
             连接优化结果
         """
         try:
-            async with get_async_session() as session:
+            async with get_async_session_ctx() as session:
                 # 检查连接池状态
                 pool_status = await self._check_connection_pool_status(session)
                 
@@ -489,7 +489,7 @@ class DatabaseOptimizationService:
         results = []
         
         try:
-            async with get_async_session() as session:
+            async with get_async_session_ctx() as session:
                 # 开启事务
                 async with session.begin():
                     for operation in operations:

@@ -84,7 +84,7 @@ class PermissionService:
         result = self.db.execute(query)
         return result.scalar_one_or_none()
     
-    def get_roles(
+    async def get_roles(
         self,
         page: int = 1,
         size: int = 20,
@@ -95,7 +95,7 @@ class PermissionService:
         """获取角色列表"""
         # 构建查询条件
         conditions = []
-        
+
         if search:
             conditions.append(
                 or_(
@@ -104,37 +104,37 @@ class PermissionService:
                     Role.description.contains(search)
                 )
             )
-        
+
         if is_system_role is not None:
             conditions.append(Role.is_system_role == is_system_role)
-        
+
         if is_active is not None:
             conditions.append(Role.is_active == is_active)
-        
+
         # 查询总数
         count_query = select(func.count(Role.id))
         if conditions:
             count_query = count_query.where(and_(*conditions))
-        
-        total_result = self.db.execute(count_query)
+
+        total_result = await self.db.execute(count_query)
         total = total_result.scalar()
-        
+
         # 查询角色列表
         offset = (page - 1) * size
         query = (
             select(Role)
-            .options(selectinload(Role.permissions))
+            .options(selectinload(Role.permissions), selectinload(Role.users))
         )
-        
+
         if conditions:
             query = query.where(and_(*conditions))
-        
+
         query = query.order_by(Role.priority.asc(), Role.created_at.desc())
         query = query.offset(offset).limit(size)
-        
-        result = self.db.execute(query)
+
+        result = await self.db.execute(query)
         roles = result.scalars().all()
-        
+
         return list(roles), total
     
     def update_role(
@@ -323,7 +323,7 @@ class PermissionService:
         result = self.db.execute(query)
         return result.scalar_one_or_none()
     
-    def get_permissions(
+    async def get_permissions(
         self,
         page: int = 1,
         size: int = 20,
@@ -333,7 +333,7 @@ class PermissionService:
         """获取权限列表"""
         # 构建查询条件
         conditions = []
-        
+
         if search:
             conditions.append(
                 or_(
@@ -342,31 +342,31 @@ class PermissionService:
                     Permission.description.contains(search)
                 )
             )
-        
+
         if module:
             conditions.append(Permission.module == module)
-        
+
         # 查询总数
         count_query = select(func.count(Permission.id))
         if conditions:
             count_query = count_query.where(and_(*conditions))
-        
-        total_result = self.db.execute(count_query)
+
+        total_result = await self.db.execute(count_query)
         total = total_result.scalar()
-        
+
         # 查询权限列表
         offset = (page - 1) * size
         query = select(Permission)
-        
+
         if conditions:
             query = query.where(and_(*conditions))
-        
+
         query = query.order_by(Permission.module.asc(), Permission.action.asc())
         query = query.offset(offset).limit(size)
-        
-        result = self.db.execute(query)
+
+        result = await self.db.execute(query)
         permissions = result.scalars().all()
-        
+
         return list(permissions), total
     
     def update_permission(
@@ -645,10 +645,10 @@ class PermissionService:
         user_permissions = self.get_user_permissions(user_id)
         return all(code in user_permissions for code in permission_codes)
     
-    def get_permission_modules(self) -> List[str]:
+    async def get_permission_modules(self) -> List[str]:
         """获取所有权限模块"""
         query = select(Permission.module).distinct()
-        result = self.db.execute(query)
+        result = await self.db.execute(query)
         return [row[0] for row in result.all()]
     
     def get_permissions_by_module(self, module: str) -> List[Permission]:

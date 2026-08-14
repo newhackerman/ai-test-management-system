@@ -63,6 +63,7 @@ logs/
 # Uploads
 uploads/
 !uploads/.gitkeep
+imported_reports/
 
 # Coverage
 htmlcov/

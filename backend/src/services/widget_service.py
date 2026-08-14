@@ -29,13 +29,14 @@ class WidgetService:
         self.cache_manager = cache_manager or RedisCache("widget")
         self.permission_service = permission_service or PermissionService(db)
     
-    async def get_available_widgets(self, user_id: int, role_type: str) -> List[WidgetDefinition]:
+    async def get_available_widgets(self, user_id: int, role_type: str, category: Optional[str] = None) -> List[WidgetDefinition]:
         """
         获取用户可用的组件列表
         
         Args:
             user_id: 用户ID
             role_type: 角色类型
+            category: 可选，按分类过滤组件
             
         Returns:
             List[WidgetDefinition]: 可用组件列表
@@ -52,12 +53,18 @@ class WidgetService:
             cached_widgets = await self.cache_manager.get(cache_key)
             if cached_widgets:
                 logger.info(f"Retrieved available widgets from cache for role {role_type}")
-                return [self._deserialize_widget(widget_data) for widget_data in cached_widgets]
+                widgets = [self._deserialize_widget(widget_data) for widget_data in cached_widgets]
+                if category:
+                    widgets = [w for w in widgets if (w.category or '') == category]
+                return widgets
             
             # 获取所有激活的组件
             all_widgets = self.db.query(WidgetDefinition).filter(
                 WidgetDefinition.is_active == True
-            ).all()
+            )
+            if category:
+                all_widgets = all_widgets.filter(WidgetDefinition.category == category)
+            all_widgets = all_widgets.all()
             
             # 过滤支持该角色的组件
             available_widgets = []
@@ -429,6 +436,14 @@ class WidgetService:
             return True
         except ValueError:
             return False
+
+    async def get_widget_categories(self) -> List[str]:
+        """获取所有组件分类列表（返回枚举值字符串）。"""
+        try:
+            return [c.value for c in WidgetCategory]
+        except Exception as e:
+            logger.error(f"Error getting widget categories: {str(e)}")
+            return []
     
     def _validate_widget_data(self, widget_data: Dict[str, Any]) -> bool:
         """验证组件数据是否有效"""

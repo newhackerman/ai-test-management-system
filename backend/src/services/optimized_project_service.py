@@ -16,7 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, or_, func, desc, asc, text
 from sqlalchemy.orm import selectinload, joinedload, contains_eager
 
-from ..core.database import get_async_session
+from ..core.database import get_async_session, get_async_session_ctx
 from ..core.exceptions import ValidationError, NotFoundError, PermissionError
 from ..models.project import Project, ProjectMember, Task, Milestone, WorkLog
 from ..models.user import User
@@ -425,6 +425,6 @@ class OptimizedProjectService(ProjectService):
 async def get_optimized_project_service(db: AsyncSession = None) -> OptimizedProjectService:
     """获取优化的项目服务实例"""
     if db is None:
-        async with get_async_session() as session:
+        async with get_async_session_ctx() as session:
             return OptimizedProjectService(session)
     return OptimizedProjectService(db)

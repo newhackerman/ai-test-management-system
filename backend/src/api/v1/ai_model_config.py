@@ -5,7 +5,7 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ...core.database import get_db
+from ...core.database import get_async_session
 from ...decorators.permission import get_current_user, require_permission
 from ...services.ai_model_config_service import AIModelConfigService
 from ...services.simple_health_check_service import HealthCheckService
@@ -35,7 +35,7 @@ def get_ai_model_config_service() -> AIModelConfigService:
 @router.post("/", response_model=AIModelConfigResponse)
 async def create_model_config(
     config_data: AIModelConfigCreate,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_async_session),
     current_user: dict = Depends(require_permission("ai_config_manage")),
     service: AIModelConfigService = Depends(get_ai_model_config_service)
 ):
@@ -60,7 +60,7 @@ async def get_model_configs(
     public_only: bool = Query(False, description="仅显示公开的配置"),
     skip: int = Query(0, ge=0, description="跳过数量"),
     limit: int = Query(100, ge=1, le=1000, description="限制数量"),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_async_session),
     current_user: dict = Depends(require_permission("ai_config_view")),
     service: AIModelConfigService = Depends(get_ai_model_config_service)
 ):
@@ -72,20 +72,22 @@ async def get_model_configs(
     
     try:
         return await service.get_model_configs(
-            db, 
+            db,
             provider=provider.value if provider else None,
             enabled_only=enabled_only,
             public_only=public_only,
             skip=skip,
             limit=limit
         )
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"获取配置列表失败: {str(e)}")
 
 
 @router.get("/stats", response_model=List[AIProviderStats])
 async def get_provider_stats(
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_async_session),
     current_user: dict = Depends(require_permission("ai_config_view")),
     service: AIModelConfigService = Depends(get_ai_model_config_service)
 ):
@@ -104,7 +106,7 @@ async def get_provider_stats(
 @router.get("/{config_id}", response_model=AIModelConfigResponse)
 async def get_model_config(
     config_id: int,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_async_session),
     current_user: dict = Depends(require_permission("ai_config_view")),
     service: AIModelConfigService = Depends(get_ai_model_config_service)
 ):
@@ -126,7 +128,7 @@ async def get_model_config(
 async def update_model_config(
     config_id: int,
     update_data: AIModelConfigUpdate,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_async_session),
     current_user: dict = Depends(require_permission("ai_config_manage")),
     service: AIModelConfigService = Depends(get_ai_model_config_service)
 ):
@@ -149,7 +151,7 @@ async def update_model_config(
 @router.delete("/{config_id}")
 async def delete_model_config(
     config_id: int,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_async_session),
     current_user: dict = Depends(require_permission("ai_config_manage")),
     service: AIModelConfigService = Depends(get_ai_model_config_service)
 ):
@@ -171,7 +173,7 @@ async def delete_model_config(
 @router.post("/{config_id}/health-check", response_model=AIModelHealthCheck)
 async def health_check_model(
     config_id: int,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_async_session),
     current_user: dict = Depends(require_permission("ai_config_manage")),
     service: AIModelConfigService = Depends(get_ai_model_config_service)
 ):
@@ -192,7 +194,7 @@ async def health_check_model(
 @router.post("/batch-health-check", response_model=BatchHealthCheckResponse)
 async def batch_health_check(
     background_tasks: BackgroundTasks,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_async_session),
     current_user: dict = Depends(require_permission("ai_config_manage")),
     service: AIModelConfigService = Depends(get_ai_model_config_service)
 ):
@@ -214,7 +216,7 @@ async def batch_health_check(
 async def test_model(
     config_id: int,
     test_request: AIModelTestRequest,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_async_session),
     current_user: dict = Depends(require_permission("ai_config_manage")),
     service: AIModelConfigService = Depends(get_ai_model_config_service)
 ):
@@ -263,7 +265,7 @@ async def test_model(
 @router.post("/{config_id}/toggle", response_model=AIModelConfigResponse)
 async def toggle_model_status(
     config_id: int,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_async_session),
     current_user: dict = Depends(require_permission("ai_config_manage")),
     service: AIModelConfigService = Depends(get_ai_model_config_service)
 ):
@@ -290,7 +292,7 @@ async def toggle_model_status(
 @router.post("/{config_id}/set-default", response_model=AIModelConfigResponse)
 async def set_default_model(
     config_id: int,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_async_session),
     current_user: dict = Depends(require_permission("ai_config_manage")),
     service: AIModelConfigService = Depends(get_ai_model_config_service)
 ):

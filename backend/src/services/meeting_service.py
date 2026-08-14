@@ -29,7 +29,8 @@ from ..core.exceptions import ValidationError, NotFoundError, PermissionError
 from ..models.meeting import (
     Meeting, MeetingParticipant, MeetingType, MeetingStatus,
     ParticipantRole, InvitationStatus, AttendanceStatus,
-    MeetingMinutes, MinuteType, GenerationMethod, MinuteStatus
+    MeetingMinutes, MinuteType, GenerationMethod, MinuteStatus,
+    MeetingFile, FileShareStatus
 )
 from ..models.user import User
 from ..models.project import Project
@@ -150,13 +151,13 @@ class MeetingService:
 
         meeting.participant_count = await self._get_participant_count(meeting.id)
         
-        # 9. 发送邀请通知
-        await self._send_invitations(meeting)
-        
-        # 10. 提交事务
+        # 9. 提交事务
         await self.db.commit()
         await self.db.refresh(meeting)
-        
+
+        # 10. 发送邀请通知（在提交后发送，避免通知落库时提交半成品会议数据）
+        await self._send_invitations(meeting)
+
         logger.info(f"Created meeting {meeting.meeting_code} by user {organizer_id}")
         return meeting
 
@@ -232,7 +233,176 @@ class MeetingService:
             return meeting
 
         raise PermissionError("无权限查看会议")
-    
+
+    async def get_participants(self, meeting_id: int, query_params: Any, user_id: int) -> Tuple[List[MeetingParticipant], Dict[str, Any]]:
+        """
+        获取会议参与者列表及统计信息。
+
+        Args:
+            meeting_id: 会议ID
+            query_params: 查询参数（支持 role / invitation_status / attendance_status / include_user_info）
+            user_id: 当前用户ID（用于权限校验）
+
+        Returns:
+            (participants, statistics) 元组
+        """
+        # 权限校验：必须能查看该会议
+        await self.get_meeting_by_id(meeting_id, user_id)
+
+        # 构建查询
+        stmt = select(MeetingParticipant).where(MeetingParticipant.meeting_id == meeting_id)
+        role = getattr(query_params, "role", None)
+        invitation_status = getattr(query_params, "invitation_status", None)
+        attendance_status = getattr(query_params, "attendance_status", None)
+        if role is not None:
+            stmt = stmt.where(MeetingParticipant.participant_role == role)
+        if invitation_status is not None:
+            stmt = stmt.where(MeetingParticipant.invitation_status == invitation_status)
+        if attendance_status is not None:
+            stmt = stmt.where(MeetingParticipant.attendance_status == attendance_status)
+
+        result = await self.db.execute(stmt)
+        participants = list(result.scalars().all())
+
+        # 统计信息
+        roles_summary: Dict[str, int] = {}
+        by_status: Dict[str, int] = {}
+        online_count = 0
+        for p in participants:
+            role_val = p.participant_role.value if hasattr(p.participant_role, "value") else str(p.participant_role)
+            roles_summary[role_val] = roles_summary.get(role_val, 0) + 1
+            attend_val = p.attendance_status.value if hasattr(p.attendance_status, "value") else str(p.attendance_status)
+            by_status[attend_val] = by_status.get(attend_val, 0) + 1
+            if attend_val == "PRESENT":
+                online_count += 1
+
+        statistics = {
+            "total": len(participants),
+            "online_count": online_count,
+            "roles_summary": roles_summary,
+            # 补全 ParticipantStatistics schema 所需字段
+            "total_participants": len(participants),
+            "active_participants": online_count,
+            "by_role": roles_summary,
+            "by_status": by_status,
+            "average_duration_minutes": 0.0,
+            "total_interaction_count": 0,
+        }
+        return participants, statistics
+
+    async def get_participant_statistics(self, meeting_id: int, user_id: int) -> Dict[str, Any]:
+        """获取会议参与者统计信息。"""
+        _, stats = await self.get_participants(meeting_id, type("QP", (), {})(), user_id)
+        return stats
+
+    async def get_meeting_status(self, meeting_id: int, user_id: int) -> Dict[str, Any]:
+        """
+        获取会议实时状态信息。
+
+        Returns 包含: status, participant_count, is_recording, start_time,
+        duration_minutes, network_quality
+        """
+        meeting = await self.get_meeting_by_id(meeting_id, user_id)
+        participant_count = await self._get_participant_count(meeting_id)
+        status_val = meeting.status.value if hasattr(meeting.status, "value") else str(meeting.status)
+        duration_minutes = 0
+        actual_start = getattr(meeting, "actual_start_time", None)
+        if actual_start and status_val in ("IN_PROGRESS", "COMPLETED", "ENDED"):
+            end_ref = getattr(meeting, "actual_end_time", None) or datetime.utcnow()
+            if end_ref >= actual_start:
+                duration_minutes = int((end_ref - actual_start).total_seconds() // 60)
+        return {
+            "status": status_val,
+            "participant_count": participant_count,
+            "is_recording": getattr(meeting, "is_recording", False),
+            "start_time": actual_start,
+            "duration_minutes": duration_minutes,
+            "network_quality": getattr(meeting, "network_quality", "good"),
+        }
+
+    async def get_chat_history(self, meeting_id: int, query_params: Any,
+                               user_id: int) -> Tuple[List[Any], int]:
+        """
+        获取会议聊天历史（当前实现：无持久化存储，返回空列表）。
+        由路由层构建 ChatHistoryResponse。
+        """
+        await self.get_meeting_by_id(meeting_id, user_id)
+        return [], 0
+
+    async def get_files(self, meeting_id: int, query_params: Any,
+                        user_id: int) -> Tuple[List[MeetingFile], int]:
+        """
+        获取会议共享文件列表及总大小。
+
+        会议不存在时抛出 NotFoundError（由路由层转为 404）；
+        无权限时抛出 PermissionError。
+        """
+        # 校验会议存在及访问权限
+        await self.get_meeting_by_id(meeting_id, user_id)
+
+        conditions = [MeetingFile.meeting_id == meeting_id]
+
+        include_deleted = getattr(query_params, 'include_deleted', False) if query_params else False
+        if not include_deleted:
+            conditions.append(MeetingFile.status != FileShareStatus.DELETED)
+
+        if query_params:
+            file_type = getattr(query_params, 'file_type', None)
+            if file_type:
+                conditions.append(MeetingFile.file_type == file_type)
+
+            status_filter = getattr(query_params, 'status', None)
+            if status_filter:
+                conditions.append(MeetingFile.status == status_filter)
+
+            uploader_id = getattr(query_params, 'uploader_id', None)
+            if uploader_id:
+                conditions.append(MeetingFile.uploader_id == uploader_id)
+
+            start_date = getattr(query_params, 'start_date', None)
+            if start_date:
+                conditions.append(MeetingFile.uploaded_at >= start_date)
+
+            end_date = getattr(query_params, 'end_date', None)
+            if end_date:
+                conditions.append(MeetingFile.uploaded_at <= end_date)
+
+            keyword = getattr(query_params, 'keyword', None)
+            if keyword:
+                conditions.append(MeetingFile.file_name.ilike(f"%{keyword}%"))
+
+        query = (
+            select(MeetingFile)
+            .where(and_(*conditions))
+            .order_by(desc(MeetingFile.uploaded_at))
+        )
+        result = await self.db.execute(query)
+        files = result.scalars().all()
+
+        total_size = sum((f.file_size or 0) for f in files)
+        return files, total_size
+
+    async def get_whiteboard_state(self, meeting_id: int,
+                                   user_id: int) -> Dict[str, Any]:
+        """
+        获取会议白板状态（当前实现：无持久化存储，返回空白状态）。
+
+        会议不存在时抛出 NotFoundError（由路由层转为 404）；
+        无权限时抛出 PermissionError。
+        返回的字典键需与 WhiteboardState 模型字段匹配。
+        """
+        # 校验会议存在及访问权限
+        await self.get_meeting_by_id(meeting_id, user_id)
+
+        return {
+            'whiteboard_id': f"wb_{meeting_id}",
+            'meeting_id': meeting_id,
+            'content': {},
+            'version': 1,
+            'last_modified': datetime.utcnow(),
+            'last_modified_by': user_id,
+        }
+
     async def update_meeting(self, meeting_id: int, update_data: Dict[str, Any], user_id: int) -> Meeting:
         """
         更新会议信息
@@ -539,10 +709,32 @@ class MeetingService:
         logger.info(f"Postponed meeting {meeting.meeting_code} by user {user_id} from {original_start} to {new_start_time}")
         return meeting
     
+    async def add_participant(self, meeting_id: int, request: Any, user_id: int) -> MeetingParticipant:
+        """
+        添加单个参与者并发送邀请通知
+
+        Args:
+            meeting_id: 会议ID
+            request: 添加参与者请求（AddParticipantRequest 或 dict）
+            user_id: 操作用户ID
+
+        Returns:
+            添加的参与者
+
+        Raises:
+            NotFoundError: 会议或用户不存在
+            PermissionError: 权限不足
+            ValidationError: 数据验证失败或参与者已存在
+        """
+        added, failed_users = await self.add_participants(meeting_id, [request], user_id)
+        if not added:
+            raise ValidationError("参与者添加失败或已是会议参与者")
+        return added[0]
+
     async def add_participants(self, meeting_id: int, participants: List[Dict[str, Any]], user_id: int) -> List[MeetingParticipant]:
         """
         批量添加参与者
-        
+
         Args:
             meeting_id: 会议ID
             participants: 参与者列表，格式：[{
@@ -554,15 +746,32 @@ class MeetingService:
                 'can_record': bool         # 可选，默认为False
             }]
             user_id: 操作用户ID
-            
+
         Returns:
             添加的参与者列表
-            
+
         Raises:
             NotFoundError: 会议不存在
             PermissionError: 权限不足
             ValidationError: 数据验证失败
         """
+        # 0. 兼容 pydantic 请求对象（AddParticipantsRequest / AddParticipantRequest）
+        if hasattr(participants, 'participants'):
+            participants = participants.participants
+        normalized = []
+        for item in participants:
+            if hasattr(item, 'dict'):
+                data = {
+                    key: (value.value if hasattr(value, 'value') else value)
+                    for key, value in item.dict().items()
+                }
+            else:
+                data = dict(item)
+            if 'participant_role' in data and 'role' not in data:
+                data['role'] = data['participant_role']
+            normalized.append(data)
+        participants = normalized
+
         # 1. 获取会议
         meeting = await self._get_meeting_by_id(meeting_id)
         
@@ -579,13 +788,17 @@ class MeetingService:
         
         # 5. 添加参与者
         added_participants = []
+        failed_users = []
         for participant_data in participants:
             try:
                 participant = await self._add_single_participant(meeting_id, participant_data, user_id)
                 if participant:
                     added_participants.append(participant)
+                else:
+                    failed_users.append(participant_data.get('user_id'))
             except Exception as e:
                 logger.warning(f"Failed to add participant {participant_data.get('user_id')}: {str(e)}")
+                failed_users.append(participant_data.get('user_id'))
                 continue
         
         # 6. 更新会议参与者数量
@@ -600,8 +813,48 @@ class MeetingService:
         await self._send_invitations_batch(meeting, added_participants)
         
         logger.info(f"Added {len(added_participants)} participants to meeting {meeting.meeting_code}")
-        return added_participants
+        return added_participants, failed_users
     
+    async def send_invitation(self, meeting_id: int, user_id: int, request: Any = None, operator_id: int = None) -> Dict[str, Any]:
+        """
+        向单个参与者发送会议邀请通知
+
+        Args:
+            meeting_id: 会议ID
+            user_id: 参与者用户ID
+            request: 邀请请求（ParticipantInviteRequest，可选）
+            operator_id: 操作用户ID
+
+        Returns:
+            邀请结果，包含 invitation_id 和 sent_channels
+
+        Raises:
+            NotFoundError: 会议或参与者不存在
+            PermissionError: 权限不足
+        """
+        # 1. 获取会议
+        meeting = await self._get_meeting_by_id(meeting_id)
+
+        # 2. 验证权限
+        if operator_id:
+            await self._validate_manage_participants_permission(meeting, operator_id)
+
+        # 3. 获取参与者
+        participant = await self._get_participant_by_meeting_and_user(meeting_id, user_id)
+        if not participant:
+            raise NotFoundError(f"参与者不存在: {user_id}")
+
+        # 4. 发送邀请通知
+        sent = await self._send_participant_invitation(meeting, participant)
+        if sent:
+            participant.invited_at = datetime.utcnow()
+            await self.db.commit()
+
+        return {
+            'invitation_id': participant.id,
+            'sent_channels': ['websocket', 'in_app'] if sent else []
+        }
+
     async def send_invitations(self, meeting_id: int, participant_ids: List[int] = None, user_id: int = None) -> bool:
         """
         发送会议邀请
@@ -2586,15 +2839,29 @@ class MeetingService:
     
     async def _send_invitations(self, meeting: Meeting) -> None:
         """发送会议邀请"""
-        # TODO: 实现邀请发送逻辑
-        logger.info(f"Sending invitations for meeting {meeting.meeting_code}")
-        pass
-    
+        try:
+            participants = await self._get_meeting_participants(meeting.id)
+            pending_participants = [
+                p for p in participants
+                if p.invitation_status == InvitationStatus.PENDING
+            ]
+            if pending_participants:
+                await self.notification_service.send_meeting_invitation(meeting, pending_participants)
+                await self.notification_service.schedule_meeting_reminders(meeting)
+                logger.info(
+                    f"Sent invitations for meeting {meeting.meeting_code} "
+                    f"to {len(pending_participants)} participants"
+                )
+        except Exception as e:
+            logger.error(f"Error sending invitations for meeting {meeting.meeting_code}: {str(e)}")
+
     async def _send_participant_invitation(self, meeting: Meeting, participant: MeetingParticipant) -> None:
         """发送参与者邀请"""
-        # TODO: 实现单个参与者邀请发送逻辑
-        logger.info(f"Sending invitation to user {participant.user_id} for meeting {meeting.meeting_code}")
-        pass
+        try:
+            await self.notification_service.send_meeting_invitation(meeting, [participant])
+            logger.info(f"Sending invitation to user {participant.user_id} for meeting {meeting.meeting_code}")
+        except Exception as e:
+            logger.error(f"Error sending invitation to user {participant.user_id}: {str(e)}")
     
     async def _add_to_waiting_room(self, meeting_id: int, user_id: int) -> None:
         """添加到等候室"""
@@ -3078,12 +3345,12 @@ class MeetingService:
     async def _send_invitations(self, meeting: Meeting) -> None:
         """发送会议邀请"""
         try:
-            # 获取所有待邀请的参与者
-            participants = await self._get_pending_participants(meeting.id)
+            # 获取所有参与者（含组织者，组织者作为参与人也需要收到通知）
+            participants = await self._get_meeting_participants(meeting.id)
             if participants:
                 await self.notification_service.send_meeting_invitation(meeting, participants)
                 await self.notification_service.schedule_meeting_reminders(meeting)
-            
+
             logger.info(f"Sent invitations for meeting {meeting.meeting_code}")
         except Exception as e:
             logger.error(f"Error sending invitations for meeting {meeting.meeting_code}: {str(e)}")

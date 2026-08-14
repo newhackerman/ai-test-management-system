@@ -144,6 +144,10 @@ async def update_settings(
     session: AsyncSession = Depends(get_async_session),
 ):
     """Persist system settings."""
+    # 拒绝空请求体（所有字段均使用默认值，等同于无操作）
+    incoming = request.model_dump(exclude_unset=True)
+    if not incoming:
+        raise HTTPException(status_code=422, detail="请求体不能为空")
     config = await _get_settings_config(session)
     existing = _decode_settings(config)
     incoming = request.model_dump()

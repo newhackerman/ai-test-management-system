@@ -52,6 +52,8 @@ async def get_user_dashboards(
     try:
         configs = await dashboard_service.get_user_dashboards(current_user["id"])
         return [DashboardConfigResponse.model_validate(config.__dict__) for config in configs]
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"获取仪表板配置失败: {str(e)}")
 
@@ -72,6 +74,8 @@ async def get_dashboard_config(
     
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"获取仪表板配置失败: {str(e)}")
 
@@ -127,6 +131,8 @@ async def reset_dashboard_layout(
             "reset_at": datetime.utcnow().isoformat()
         }
     
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"重置布局失败: {str(e)}")
 

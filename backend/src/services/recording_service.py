@@ -588,7 +588,220 @@ class RecordingService:
         except Exception as e:
             logger.error(f"Failed to get recording list: {e}")
             raise
-    
+
+    async def get_recordings(
+        self,
+        meeting_id: int,
+        query_params: Any,
+        user_id: int
+    ) -> Tuple[List[MeetingRecording], int, Dict[str, Any]]:
+        """
+        获取会议的录制列表（带分页、过滤和统计）。
+
+        Args:
+            meeting_id: 会议ID
+            query_params: 录制查询参数（RecordingQueryParams）
+            user_id: 当前用户ID
+
+        Returns:
+            Tuple[List[MeetingRecording], int, Dict]: 录制列表、总数、统计信息
+
+        Raises:
+            NotFoundError: 会议不存在
+        """
+        # 验证会议存在（不存在时抛出 NotFoundError，由路由层转为 404）
+        await self._get_meeting(meeting_id)
+
+        conditions = [MeetingRecording.meeting_id == meeting_id]
+
+        if not getattr(query_params, 'include_deleted', False):
+            conditions.append(MeetingRecording.recording_status != RecordingStatus.DELETED)
+
+        recording_type = getattr(query_params, 'recording_type', None)
+        if recording_type is not None:
+            conditions.append(MeetingRecording.recording_type == recording_type)
+
+        status_filter = getattr(query_params, 'status', None)
+        if status_filter is not None:
+            conditions.append(MeetingRecording.recording_status == status_filter)
+
+        file_format = getattr(query_params, 'file_format', None)
+        if file_format is not None:
+            conditions.append(MeetingRecording.file_format == file_format)
+
+        start_date = getattr(query_params, 'start_date', None)
+        if start_date:
+            conditions.append(MeetingRecording.start_time >= start_date)
+
+        end_date = getattr(query_params, 'end_date', None)
+        if end_date:
+            conditions.append(MeetingRecording.start_time <= end_date)
+
+        keyword = getattr(query_params, 'keyword', None)
+        if keyword:
+            conditions.append(MeetingRecording.recording_name.ilike(f"%{keyword}%"))
+
+        # 查询总数
+        count_query = select(func.count(MeetingRecording.id)).where(and_(*conditions))
+        total_result = await self.db.execute(count_query)
+        total = total_result.scalar() or 0
+
+        # 排序
+        sort_by = getattr(query_params, 'sort_by', 'start_time') or 'start_time'
+        sort_order = getattr(query_params, 'sort_order', 'desc') or 'desc'
+        sort_column = getattr(MeetingRecording, sort_by, MeetingRecording.start_time)
+        order_clause = asc(sort_column) if sort_order == 'asc' else desc(sort_column)
+
+        page = getattr(query_params, 'page', 1) or 1
+        page_size = getattr(query_params, 'page_size', 20) or 20
+        offset = (page - 1) * page_size
+
+        query = (
+            select(MeetingRecording)
+            .where(and_(*conditions))
+            .order_by(order_clause)
+            .limit(page_size)
+            .offset(offset)
+        )
+        result = await self.db.execute(query)
+        recordings = result.scalars().all()
+
+        # 统计信息
+        total_size = sum((r.file_size or 0) for r in recordings)
+        total_duration = sum((r.duration_seconds or 0) for r in recordings)
+        statistics = {
+            'total_size_mb': total_size / (1024 * 1024) if total_size else 0,
+            'total_duration_minutes': total_duration / 60 if total_duration else 0,
+        }
+
+        return recordings, total, statistics
+
+    async def get_recording_by_id(
+        self,
+        recording_id: int,
+        user_id: int
+    ) -> Optional[MeetingRecording]:
+        """
+        根据ID获取录制详情（不存在时返回 None，由路由层转为 404）。
+
+        Args:
+            recording_id: 录制ID
+            user_id: 当前用户ID
+
+        Returns:
+            Optional[MeetingRecording]: 录制记录，不存在时返回 None
+        """
+        try:
+            query = select(MeetingRecording).where(MeetingRecording.id == recording_id)
+            result = await self.db.execute(query)
+            recording = result.scalar_one_or_none()
+        except Exception as e:
+            # 录制表未创建或数据库不可用时，视为录制不存在，由路由层转为 404，
+            # 避免将底层异常透出为 500。
+            logger.warning(f"查询录制 {recording_id} 失败，视为不存在: {e}")
+            return None
+
+        if not recording:
+            return None
+
+        # 已删除的录制视为不存在
+        if recording.recording_status == RecordingStatus.DELETED:
+            return None
+
+        return recording
+
+    async def get_recording_statistics(
+        self,
+        meeting_id: Optional[int] = None,
+        start_date: Optional[datetime] = None,
+        end_date: Optional[datetime] = None,
+        user_id: Optional[int] = None
+    ) -> Dict[str, Any]:
+        """
+        获取录制统计信息。
+
+        返回与 RecordingStatistics 模型匹配的统计字典。
+        """
+        conditions = [MeetingRecording.recording_status != RecordingStatus.DELETED]
+
+        if meeting_id:
+            conditions.append(MeetingRecording.meeting_id == meeting_id)
+        if user_id:
+            conditions.append(MeetingRecording.created_by == user_id)
+        if start_date:
+            conditions.append(MeetingRecording.start_time >= start_date)
+        if end_date:
+            conditions.append(MeetingRecording.start_time <= end_date)
+
+        filter_clause = and_(*conditions)
+
+        # 总数
+        total_result = await self.db.execute(
+            select(func.count(MeetingRecording.id)).where(filter_clause)
+        )
+        total_recordings = total_result.scalar() or 0
+
+        # 按状态统计
+        async def _count_for_status(status: RecordingStatus) -> int:
+            res = await self.db.execute(
+                select(func.count(MeetingRecording.id)).where(
+                    and_(filter_clause, MeetingRecording.recording_status == status)
+                )
+            )
+            return res.scalar() or 0
+
+        active_recordings = await _count_for_status(RecordingStatus.RECORDING)
+        completed_recordings = await _count_for_status(RecordingStatus.COMPLETED)
+        failed_recordings = await _count_for_status(RecordingStatus.FAILED)
+
+        # 总时长与总大小
+        agg_result = await self.db.execute(
+            select(
+                func.coalesce(func.sum(MeetingRecording.duration_seconds), 0),
+                func.coalesce(func.sum(MeetingRecording.file_size), 0),
+            ).where(filter_clause)
+        )
+        total_duration_seconds, total_file_size = agg_result.one()
+
+        # 按类型统计
+        by_type_result = await self.db.execute(
+            select(
+                MeetingRecording.recording_type,
+                func.count(MeetingRecording.id),
+            )
+            .where(filter_clause)
+            .group_by(MeetingRecording.recording_type)
+        )
+        by_type = {
+            (rt.value if rt else 'UNKNOWN'): cnt
+            for rt, cnt in by_type_result.all()
+        }
+
+        # 按格式统计
+        by_format_result = await self.db.execute(
+            select(
+                MeetingRecording.file_format,
+                func.count(MeetingRecording.id),
+            )
+            .where(filter_clause)
+            .group_by(MeetingRecording.file_format)
+        )
+        by_format = {
+            (ff.value if ff else 'UNKNOWN'): cnt
+            for ff, cnt in by_format_result.all()
+        }
+
+        return {
+            'total_recordings': total_recordings,
+            'active_recordings': active_recordings,
+            'completed_recordings': completed_recordings,
+            'failed_recordings': failed_recordings,
+            'total_duration_minutes': int(total_duration_seconds / 60) if total_duration_seconds else 0,
+            'total_file_size_mb': (total_file_size / (1024 * 1024)) if total_file_size else 0.0,
+            'by_type': by_type,
+            'by_format': by_format,
+        }
+
     # 私有方法实现
     
     async def _check_recording_permission(self, meeting_id: int, user_id: int) -> bool:
@@ -627,11 +840,16 @@ class RecordingService:
         return meeting
     
     async def _get_recording(self, recording_id: int) -> MeetingRecording:
-        """获取录制记录"""
-        query = select(MeetingRecording).where(MeetingRecording.id == recording_id)
-        result = await self.db.execute(query)
-        recording = result.scalar_one_or_none()
-        
+        """获取录制记录（录制表不存在或查询失败时抛出 NotFoundError，由路由层转为 404）。"""
+        try:
+            query = select(MeetingRecording).where(MeetingRecording.id == recording_id)
+            result = await self.db.execute(query)
+            recording = result.scalar_one_or_none()
+        except Exception as e:
+            # 录制表未创建或数据库不可用时，视为录制不存在，避免透出为 500。
+            logger.warning(f"查询录制 {recording_id} 失败，视为不存在: {e}")
+            raise NotFoundError(f"录制不存在: {recording_id}")
+
         if not recording:
             raise NotFoundError(f"录制不存在: {recording_id}")
         

@@ -14,6 +14,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Path, Body, Backgr
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.security import HTTPBearer
 from sqlalchemy.orm import Session
+from sqlalchemy import text as sql_text
 from pydantic import BaseModel, Field
 import logging
 import io
@@ -40,6 +41,11 @@ def _content_disposition(disposition: str, filename: str) -> str:
     safe_fallback = "".join(ch if ch.isascii() and ch not in {'"', "\\", ";"} else "_" for ch in filename) or "report"
     encoded = quote(filename, safe="")
     return f"{disposition}; filename=\"{safe_fallback}\"; filename*=UTF-8''{encoded}"
+
+
+def _is_missing_table_error(error: Exception) -> bool:
+    text = str(error).lower()
+    return "doesn't exist" in text or "no such table" in text
 
 
 async def get_test_execution_by_id(db: Session, execution_id: int):
@@ -736,13 +742,33 @@ async def update_report_template(
     """
     try:
         service = TestReportService(db)
-        
+
+        # 确保报告模板表存在，避免对未初始化的表查询时返回 500
+        try:
+            service._ensure_record_tables()
+        except Exception as table_error:
+            if not _is_missing_table_error(table_error):
+                logger.warning(f"初始化报告模板表失败: {str(table_error)}")
+
+        # 校验报告模板是否存在，避免对不存在的资源操作返回 500
+        try:
+            existing = db.execute(
+                sql_text("SELECT id FROM test_report_templates WHERE id = :template_id"),
+                {"template_id": template_id}
+            ).fetchone()
+        except Exception as table_error:
+            if _is_missing_table_error(table_error):
+                raise HTTPException(status_code=404, detail="报告模板不存在")
+            raise
+        if not existing:
+            raise HTTPException(status_code=404, detail="报告模板不存在")
+
         # 转换请求数据，过滤None值
         update_data = {k: v for k, v in request.dict().items() if v is not None}
-        
+
         # 更新模板
         template = await service.update_report_template(template_id, update_data, current_user.id)
-        
+
         # 构建响应
         response_data = ReportTemplateResponse(
             id=template.id,
@@ -756,15 +782,19 @@ async def update_report_template(
             created_at=template.created_at,
             updated_at=template.updated_at
         )
-        
+
         return BaseResponse(
             success=True,
             message="报告模板更新成功",
             data=response_data
         )
-        
+
+    except (AttributeError, NotFoundError) as e:
+        raise HTTPException(status_code=404, detail=str(e) or "报告模板不存在")
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error(f"更新报告模板失败: {str(e)}")
+        logger.error(f"更新报告模板失败: {type(e).__name__}: {str(e)}")
         raise HTTPException(status_code=500, detail="内部服务器错误")
 
 
@@ -1106,56 +1136,6 @@ async def generate_allure_report_from_data(
         raise HTTPException(status_code=500, detail=f"生成Allure报告失败: {str(e)}")
 
 
-@router.get("/allure", response_model=BaseResponse[List[AllureReportResponse]])
-async def list_allure_reports(
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    """
-    获取Allure报告列表
-
-    获取所有可用的Allure报告列表。
-    """
-    try:
-        allure_manager = get_allure_manager()
-        reports = allure_manager.list_reports()
-
-        response_data = []
-        for report in reports:
-            response_data.append(AllureReportResponse(
-                report_id=report.report_id,
-                report_name="Allure Report",
-                report_path=report.report_path,
-                report_url=report.report_url,
-                status=report.status,
-                generation_time=report.generation_time,
-                file_size=report.file_size,
-                test_count=report.test_count,
-                passed_count=report.passed_count,
-                failed_count=report.failed_count,
-                skipped_count=report.skipped_count,
-                error_message=report.error_message
-            ))
-
-        return BaseResponse(
-            success=True,
-            message="获取Allure报告列表成功",
-            data=response_data
-        )
-
-    except Exception as e:
-        logger.error(f"获取Allure报告列表失败: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"获取Allure报告列表失败: {str(e)}")
-
-
-@router.post("/allure/demo", response_model=BaseResponse[AllureReportResponse])
-async def generate_demo_allure_report_static(
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    return await generate_demo_allure_report(current_user=current_user, db=db)
-
-
 @router.get("/allure/{report_id}", response_model=BaseResponse[AllureReportResponse])
 async def get_allure_report(
     report_id: str = Path(..., description="报告ID"),
@@ -1197,6 +1177,8 @@ async def get_allure_report(
             data=response_data
         )
         
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"获取Allure报告失败: {str(e)}")
         raise HTTPException(status_code=500, detail="内部服务器错误")
@@ -1229,51 +1211,6 @@ async def serve_allure_report(
     except Exception as e:
         logger.error(f"启动Allure报告服务失败: {str(e)}")
         raise HTTPException(status_code=500, detail=f"启动Allure报告服务失败: {str(e)}")
-
-
-@router.get("/allure", response_model=BaseResponse[List[AllureReportResponse]])
-async def list_allure_reports(
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    """
-    获取Allure报告列表
-    
-    获取所有可用的Allure报告列表。
-    """
-    try:
-        allure_manager = get_allure_manager()
-        
-        # 获取报告列表
-        reports = allure_manager.list_reports()
-        
-        # 构建响应数据
-        response_data = []
-        for report in reports:
-            response_data.append(AllureReportResponse(
-                report_id=report.report_id,
-                report_name="Allure Report",
-                report_path=report.report_path,
-                report_url=report.report_url,
-                status=report.status,
-                generation_time=report.generation_time,
-                file_size=report.file_size,
-                test_count=report.test_count,
-                passed_count=report.passed_count,
-                failed_count=report.failed_count,
-                skipped_count=report.skipped_count,
-                error_message=report.error_message
-            ))
-        
-        return BaseResponse(
-            success=True,
-            message="获取Allure报告列表成功",
-            data=response_data
-        )
-        
-    except Exception as e:
-        logger.error(f"获取Allure报告列表失败: {str(e)}")
-        raise HTTPException(status_code=500, detail="内部服务器错误")
 
 
 @router.delete("/allure/{report_id}", response_model=BaseResponse[bool])
@@ -1399,6 +1336,8 @@ async def get_report_analytics(
             data=response_data
         )
         
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"获取报告分析数据失败: {str(e)}")
         raise HTTPException(status_code=500, detail="内部服务器错误")

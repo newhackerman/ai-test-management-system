@@ -80,7 +80,7 @@ apiClient.interceptors.response.use(
         clearAuthAndRedirect()
       } else if (status === 403) {
         message.error('没有权限访问该资源。')
-      } else if (status === 404) {
+      } else if (status === 404 && !(error.config as any)?.silent404) {
         message.error('请求的资源不存在。')
       } else if (status >= 500) {
         message.error(getErrorMessage(data, '服务器内部错误。'))
