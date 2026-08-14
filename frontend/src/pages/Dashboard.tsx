@@ -443,7 +443,7 @@ const Dashboard: React.FC = () => {
 
   const hasBusinessPanel = canView('projects') || canView('requirements') || canView('tasks')
   const hasQualityPanel = canView('testing') || canView('defects') || canView('reports')
-  const hasTeamPanel = canView('users') || canView('roles') || canView('meetings') || canView('reports')
+  const hasTeamPanel = canView('users') || canView('roles') || canView('meetings')
   const hasAnyModule = !summary?.access?.modules || Object.values(summary.access.modules).some(Boolean)
 
   return (
@@ -491,9 +491,9 @@ const Dashboard: React.FC = () => {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {canView('projects') && (
-        <Card className={cn(hasTeamPanel ? 'xl:col-span-8' : 'xl:col-span-12')}>
+        <Card>
           <CardHeader>
             <CardTitle className="text-lg">项目与交付</CardTitle>
           </CardHeader>
@@ -512,7 +512,7 @@ const Dashboard: React.FC = () => {
         )}
 
         {hasTeamPanel && (
-        <Card className={cn(canView('projects') ? 'xl:col-span-4' : 'xl:col-span-12')}>
+        <Card>
           <CardHeader>
             <CardTitle className="text-lg">人员与会议</CardTitle>
           </CardHeader>
@@ -535,19 +535,6 @@ const Dashboard: React.FC = () => {
                 <CompactMetric label="今日" value={summary?.meetings.today} loading={loading} />
                 <CompactMetric label="待开始" value={summary?.meetings.upcoming} loading={loading} />
                 <CompactMetric label="进行中" value={summary?.meetings.running} loading={loading} />
-              </div>
-            </div>
-            )}
-            {canView('reports') && (
-            <div className="rounded-lg border p-4">
-              <div className="mb-3 flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-                <FileText className="h-4 w-4" />
-                测试报告
-              </div>
-              <div className="grid grid-cols-3 gap-3">
-                <CompactMetric label="总数" value={summary?.reports.total} loading={loading} />
-                <CompactMetric label="完成" value={summary?.reports.completed} loading={loading} />
-                <CompactMetric label="失败" value={summary?.reports.failed} loading={loading} emphasis={Boolean(summary?.reports.failed)} />
               </div>
             </div>
             )}
@@ -591,6 +578,9 @@ const Dashboard: React.FC = () => {
               {canView('testing') && <CompactMetric label="活跃用例" value={summary?.testing.cases_active} loading={loading} />}
               {canView('defects') && <CompactMetric label="未关缺陷" value={summary?.defects.open} loading={loading} emphasis={Boolean(summary?.defects.open)} />}
               {canView('defects') && <CompactMetric label="高优先级" value={summary?.defects.high_priority_open} loading={loading} emphasis={Boolean(summary?.defects.high_priority_open)} />}
+              {canView('reports') && <CompactMetric label="报告总数" value={summary?.reports.total} loading={loading} />}
+              {canView('reports') && <CompactMetric label="报告完成" value={summary?.reports.completed} loading={loading} />}
+              {canView('reports') && <CompactMetric label="报告失败" value={summary?.reports.failed} loading={loading} emphasis={Boolean(summary?.reports.failed)} />}
             </div>
             {canView('testing') && <ProgressBlock label="测试通过率" value={summary?.testing.pass_rate} />}
             {canView('defects') && <ProgressBlock label="缺陷解决率" value={summary?.defects.resolution_rate} />}
@@ -600,8 +590,8 @@ const Dashboard: React.FC = () => {
         )}
       </div>
 
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
-        <Card className="xl:col-span-2">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <Card>
           <CardHeader>
             <CardTitle className="text-lg">最近动态</CardTitle>
           </CardHeader>
