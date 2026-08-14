@@ -135,9 +135,28 @@ class UserService:
         sort_order: str = "desc"
     ) -> Dict[str, Any]:
         """分页获取用户列表"""
+        from ..models.user import UserStatus
+
         query = select(User)
         count_query = select(func.count(func.distinct(User.id)))
-        
+
+        # 默认排除软删除用户，除非显式请求 status=deleted
+        if status and status.lower() == "deleted":
+            status_enum = UserStatus.DELETED
+            query = query.where(User.status == status_enum)
+            count_query = count_query.where(User.status == status_enum)
+        elif status:
+            try:
+                status_enum = UserStatus(status.lower())
+                query = query.where(User.status == status_enum)
+                count_query = count_query.where(User.status == status_enum)
+            except ValueError:
+                pass  # 忽略无效状态
+        else:
+            # 未指定状态时，默认排除已删除用户
+            query = query.where(User.status != UserStatus.DELETED)
+            count_query = count_query.where(User.status != UserStatus.DELETED)
+
         # 添加搜索条件
         if search:
             search_pattern = f"%{search}%"
@@ -148,16 +167,7 @@ class UserService:
                     User.nickname.ilike(search_pattern)
                 )
             )
-        
-        # 添加状态筛选
-        if status:
-            from ..models.user import UserStatus
-            try:
-                status_enum = UserStatus(status.lower())
-                query = query.where(User.status == status_enum)
-            except ValueError:
-                pass  # 忽略无效状态
-        
+
         if role:
             query = query.join(UserRole, UserRole.user_id == User.id).join(Role, Role.id == UserRole.role_id)
             count_query = count_query.join(UserRole, UserRole.user_id == User.id).join(Role, Role.id == UserRole.role_id)
@@ -171,7 +181,7 @@ class UserService:
             role_filter = or_(*role_filter_items)
             query = query.where(role_filter)
             count_query = count_query.where(role_filter)
-        
+
         # 添加排序
         if hasattr(User, sort_by):
             order_column = getattr(User, sort_by)
@@ -179,9 +189,8 @@ class UserService:
                 query = query.order_by(order_column.desc())
             else:
                 query = query.order_by(order_column.asc())
-        
+
         # 获取总数
-        # count_query initialized before filters so role joins are preserved.
         if search:
             search_pattern = f"%{search}%"
             count_query = count_query.where(
@@ -191,14 +200,7 @@ class UserService:
                     User.nickname.ilike(search_pattern)
                 )
             )
-        if status:
-            from ..models.user import UserStatus
-            try:
-                status_enum = UserStatus(status.lower())
-                count_query = count_query.where(User.status == status_enum)
-            except ValueError:
-                pass
-        
+
         total_result = await self.db.execute(count_query)
         total = total_result.scalar()
         

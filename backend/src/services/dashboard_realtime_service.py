@@ -196,20 +196,35 @@ class DashboardRealtimeService:
     
     def _start_background_tasks(self):
         """启动后台任务"""
+        # 在没有运行事件循环的上下文中构造时（例如同步依赖解析），
+        # asyncio.create_task 会抛出 RuntimeError。此处做防御性处理，
+        # 后台任务会在首次进入异步上下文时按需启动。
+        if not self._has_running_event_loop():
+            logger.debug("No running event loop; deferring background task startup.")
+            return
+
         # 心跳检测任务
         heartbeat_task = asyncio.create_task(self._heartbeat_monitor())
         self.background_tasks.add(heartbeat_task)
         heartbeat_task.add_done_callback(self.background_tasks.discard)
-        
+
         # 消息处理任务
         message_task = asyncio.create_task(self._message_processor())
         self.background_tasks.add(message_task)
         message_task.add_done_callback(self.background_tasks.discard)
-        
+
         # 连接清理任务
         cleanup_task = asyncio.create_task(self._connection_cleanup())
         self.background_tasks.add(cleanup_task)
         cleanup_task.add_done_callback(self.background_tasks.discard)
+
+    @staticmethod
+    def _has_running_event_loop() -> bool:
+        try:
+            asyncio.get_running_loop()
+            return True
+        except RuntimeError:
+            return False
     
     async def connect_user(
         self,
