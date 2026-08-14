@@ -404,14 +404,6 @@ const AppLayout: React.FC = () => {
             <button className="rounded-md p-2 hover:bg-gray-100 dark:hover:bg-slate-800 lg:hidden dark:bg-gray-800" onClick={() => setSidebarOpen(true)} aria-label="打开菜单">
               <Menu className="h-5 w-5" />
             </button>
-            <button
-              className="hidden rounded-md p-2 hover:bg-gray-100 dark:hover:bg-slate-800 lg:inline-flex dark:bg-gray-800"
-              onClick={() => setSidebarCollapsed((value) => !value)}
-              aria-label={sidebarCollapsed ? '展开菜单' : '收起菜单'}
-              title={sidebarCollapsed ? '展开菜单' : '收起菜单'}
-            >
-              <Menu className="h-5 w-5" />
-            </button>
             <div className="min-w-0">
               <div className="truncate text-base font-semibold">{currentTitle}</div>
             </div>
