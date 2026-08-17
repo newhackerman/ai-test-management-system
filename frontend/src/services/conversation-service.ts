@@ -1,7 +1,7 @@
 /**
  * 对话管理服务
  */
-import { apiClient } from '../lib/api-client';
+import { apiClient } from './api/client';
 
 const unwrapResponse = <T>(response: unknown): T => {
   const payload = response as T | { data?: T };
@@ -265,9 +265,9 @@ export class ConversationService {
     page?: number;
     size?: number;
   }): Promise<ConversationListResponse> {
-    const response = await apiClient.get<ConversationListResponse>(
+    const response = await apiClient.post<ConversationListResponse>(
       `${this.baseUrl}/conversations/search`,
-      { params }
+      params
     );
     return unwrapResponse<ConversationListResponse>(response);
   }

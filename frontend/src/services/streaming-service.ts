@@ -1,281 +1,154 @@
 /**
- * 流式响应服务
+ * AI 助手流式响应服务
+ *
+ * 通过 fetch + ReadableStream 消费后端 SSE 接口（POST /api/v1/streaming/query/stream），
+ * 正确解析 `event:` / `data:` 行，携带 Bearer 鉴权，支持 AbortController 中止。
  */
 
-export interface StreamingMessage {
-  id?: number;
-  content: string;
-  role: 'user' | 'assistant';
-  timestamp: string;
-  isStreaming?: boolean;
-  isComplete?: boolean;
-  isError?: boolean;
-  error?: string;
-  metadata?: {
-    provider?: string;
-    model?: string;
-    tokens_used?: number;
-    confidence_score?: number;
-    processing_time?: number;
-  };
+import { apiClient, getAuthToken } from './api/client'
+
+export interface StreamCompleteInfo {
+  content: string
+  provider?: string
+  model?: string
+  tokensUsed?: number
+  confidenceScore?: number
+  processingTime?: number
 }
 
-export interface StreamingEvent {
-  type: 'user_message' | 'ai_start' | 'ai_content' | 'ai_metadata' | 'ai_complete' | 'error' | 'stream_end';
-  data: any;
+export interface StreamCallbacks {
+  onStart?: (info: { provider?: string; model?: string; taskType?: string }) => void
+  onDelta?: (delta: string, content: string) => void
+  onComplete?: (info: StreamCompleteInfo) => void
+  onError?: (message: string) => void
 }
 
-export interface StreamingOptions {
-  onMessage?: (message: StreamingMessage) => void;
-  onError?: (error: string) => void;
-  onComplete?: (message: StreamingMessage) => void;
-  onStart?: () => void;
-  onEnd?: () => void;
+export interface StreamQueryBody {
+  content: string
+  context?: Record<string, unknown>
+  conversation_id?: number
+  preferred_model?: string
 }
 
-export class StreamingService {
-  private baseUrl = '/api/v1/streaming';
-  private activeStreams = new Map<string, any>();
+const buildStreamUrl = () => `${apiClient.defaults.baseURL || ''}/api/v1/streaming/query/stream`
 
-  /**
-   * 开始流式对话
-   */
-  async startStreaming(
-    conversationId: number,
-    content: string,
-    options: StreamingOptions = {},
-    metadata?: Record<string, any>
-  ): Promise<string> {
-    const streamId = `${conversationId}_${Date.now()}`;
-    
+/**
+ * 发起流式 AI 查询。
+ *
+ * 返回值：收到 complete 事件返回 true；流异常中断且未完成返回 false（调用方可回退到非流式接口）。
+ */
+export async function streamAiQuery(
+  body: StreamQueryBody,
+  callbacks: StreamCallbacks,
+  signal?: AbortSignal,
+): Promise<boolean> {
+  const token = getAuthToken()
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    Accept: 'text/event-stream',
+  }
+  if (token) headers.Authorization = `Bearer ${token}`
+
+  const response = await fetch(buildStreamUrl(), {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(body),
+    signal,
+  })
+
+  if (!response.ok) {
+    let detail = `HTTP ${response.status}`
     try {
-      // 构建请求参数
-      const requestBody = {
-        content,
-        metadata: metadata || {}
-      };
-      
-      // 构建请求URL，使用POST方式发送数据并接收流式响应
-      const url = `${this.baseUrl}/conversations/${conversationId}/stream`;
-      
-      // 使用fetch发送POST请求并处理流式响应
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'text/event-stream',
-          'Cache-Control': 'no-cache',
-        },
-        body: JSON.stringify(requestBody)
-      });
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
-      // 处理流式响应
-      const reader = response.body?.getReader();
-      if (!reader) {
-        throw new Error('无法获取响应流');
-      }
-      
-      // 存储流式连接信息
-      this.activeStreams.set(streamId, { reader, controller: new AbortController() });
-      
-      // 处理流式数据
-      this.processStreamingResponse(reader, streamId, options);
-      
-      return streamId;
-      
-    } catch (error) {
-      console.error('Error starting streaming:', error);
-      options.onError?.('启动流式对话失败');
-      throw error;
+      const data = await response.json()
+      detail = data?.detail || data?.message || detail
+    } catch {
+      /* 非 JSON 错误体，保留状态码 */
     }
+    throw new Error(`流式接口请求失败：${detail}`)
   }
-  
-  /**
-   * 处理流式响应
-   */
-  private async processStreamingResponse(
-    reader: ReadableStreamDefaultReader<Uint8Array>,
-    streamId: string,
-    options: StreamingOptions
-  ): Promise<void> {
-    const decoder = new TextDecoder();
-    let buffer = '';
-    
-    // 初始化流式消息状态
-    let currentMessage: StreamingMessage = {
-      content: '',
-      role: 'assistant',
-      timestamp: new Date().toISOString(),
-      isStreaming: true,
-      isComplete: false,
-      metadata: {}
-    };
-    
-    options.onStart?.();
-    
+
+  const reader = response.body?.getReader()
+  if (!reader) {
+    throw new Error('当前浏览器不支持流式响应')
+  }
+
+  const decoder = new TextDecoder()
+  let buffer = ''
+  let completed = false
+  let content = ''
+
+  const handleEvent = (eventType: string, rawData: string) => {
+    let data: any
     try {
-      while (true) {
-        const { done, value } = await reader.read();
-        
-        if (done) {
-          break;
-        }
-        
-        // 解码数据
-        buffer += decoder.decode(value, { stream: true });
-        
-        // 处理SSE数据
-        const lines = buffer.split('\n');
-        buffer = lines.pop() || ''; // 保留不完整的行
-        
-        for (const line of lines) {
-          if (line.trim() === '') continue;
-          
-          if (line.startsWith('event: ')) {
-            const eventType = line.substring(7).trim();
-            continue;
-          }
-          
-          if (line.startsWith('data: ')) {
-            const data = line.substring(6).trim();
-            
-            try {
-              const eventData = JSON.parse(data);
-              this.handleStreamEvent({ type: 'ai_content', data: eventData }, currentMessage, options);
-            } catch (e) {
-              console.error('Error parsing SSE data:', e);
-            }
-          }
-        }
-      }
-    } catch (error) {
-      console.error('Error processing streaming response:', error);
-      options.onError?.('处理流式响应时出错');
-    } finally {
-      this.activeStreams.delete(streamId);
-      options.onEnd?.();
+      data = rawData ? JSON.parse(rawData) : {}
+    } catch {
+      return
     }
-  }
-  
-  /**
-   * 停止流式对话
-   */
-  stopStreaming(streamId: string): void {
-    const streamInfo = this.activeStreams.get(streamId);
-    if (streamInfo) {
-      if ('close' in streamInfo) {
-        // EventSource
-        (streamInfo as EventSource).close();
-      } else {
-        // ReadableStream
-        const { reader, controller } = streamInfo as any;
-        controller.abort();
-        reader.cancel();
-      }
-      this.activeStreams.delete(streamId);
-      console.log(`Stopped streaming: ${streamId}`);
-    }
-  }
-  
-  /**
-   * 停止所有流式对话
-   */
-  stopAllStreaming(): void {
-    this.activeStreams.forEach((streamInfo, streamId) => {
-      if ('close' in streamInfo) {
-        // EventSource
-        (streamInfo as EventSource).close();
-      } else {
-        // ReadableStream
-        const { reader, controller } = streamInfo as any;
-        controller.abort();
-        reader.cancel();
-      }
-      console.log(`Stopped streaming: ${streamId}`);
-    });
-    this.activeStreams.clear();
-  }
-  
-  /**
-   * 获取活跃的流式连接数
-   */
-  getActiveStreamCount(): number {
-    return this.activeStreams.size;
-  }
-  
-  /**
-   * 检查是否有活跃的流式连接
-   */
-  hasActiveStreams(): boolean {
-    return this.activeStreams.size > 0;
-  }
-  
-  /**
-   * 处理流式事件
-   */
-  private handleStreamEvent(
-    event: StreamingEvent,
-    currentMessage: StreamingMessage,
-    options: StreamingOptions
-  ): void {
-    switch (event.type) {
-      case 'user_message':
-        // 用户消息确认，可以在这里更新UI状态
-        break;
-        
+
+    switch (eventType) {
       case 'ai_start':
-        currentMessage.metadata = {
-          ...currentMessage.metadata,
-          provider: event.data.provider,
-          model: event.data.model
-        };
-        options.onMessage?.(currentMessage);
-        break;
-        
+        callbacks.onStart?.({
+          provider: data.provider,
+          model: data.model,
+          taskType: data.task_type,
+        })
+        break
       case 'ai_content':
-        currentMessage.content += event.data.delta || '';
-        currentMessage.isStreaming = true;
-        options.onMessage?.(currentMessage);
-        break;
-        
-      case 'ai_metadata':
-        currentMessage.metadata = {
-          ...currentMessage.metadata,
-          ...event.data
-        };
-        options.onMessage?.(currentMessage);
-        break;
-        
+        if (typeof data.content === 'string' && data.content) {
+          content = data.content
+        } else if (typeof data.delta === 'string') {
+          content += data.delta
+        }
+        callbacks.onDelta?.(typeof data.delta === 'string' ? data.delta : '', content)
+        break
       case 'ai_complete':
-        currentMessage.id = event.data.id;
-        currentMessage.content = event.data.content;
-        currentMessage.isStreaming = false;
-        currentMessage.isComplete = true;
-        currentMessage.metadata = {
-          ...currentMessage.metadata,
-          ...event.data
-        };
-        options.onMessage?.(currentMessage);
-        options.onComplete?.(currentMessage);
-        break;
-        
+        completed = true
+        if (typeof data.content === 'string' && data.content) content = data.content
+        callbacks.onComplete?.({
+          content,
+          provider: data.provider,
+          model: data.model,
+          tokensUsed: data.tokens_used,
+          confidenceScore: data.confidence_score,
+          processingTime: data.processing_time,
+        })
+        break
       case 'error':
-        currentMessage.isError = true;
-        currentMessage.error = event.data.message;
-        currentMessage.isStreaming = false;
-        options.onMessage?.(currentMessage);
-        options.onError?.(event.data.message);
-        break;
-        
-      case 'stream_end':
-        options.onEnd?.();
-        break;
+        callbacks.onError?.(data.message || 'AI 服务调用失败')
+        break
+      default:
+        break
     }
   }
-}
 
-export const streamingService = new StreamingService();
+  try {
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+
+      buffer += decoder.decode(value, { stream: true })
+      // SSE 事件以空行分隔
+      const events = buffer.split('\n\n')
+      buffer = events.pop() || ''
+
+      for (const block of events) {
+        let eventType = 'message'
+        const dataLines: string[] = []
+        for (const line of block.split('\n')) {
+          if (line.startsWith('event:')) {
+            eventType = line.slice(6).trim()
+          } else if (line.startsWith('data:')) {
+            dataLines.push(line.slice(5).trimStart())
+          }
+        }
+        if (dataLines.length) {
+          handleEvent(eventType, dataLines.join('\n'))
+        }
+      }
+    }
+  } finally {
+    reader.releaseLock?.()
+  }
+
+  return completed
+}

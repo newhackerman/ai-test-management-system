@@ -8,7 +8,7 @@ const normalizeEndpoint = (url?: string) => {
   return endpoint.startsWith('/api/') ? endpoint : `/api/v1${endpoint}`
 }
 
-const getAuthToken = () => {
+export const getAuthToken = () => {
   const directToken = localStorage.getItem('auth-access-token') || localStorage.getItem('auth_token') || localStorage.getItem('token')
   if (directToken) return directToken
 

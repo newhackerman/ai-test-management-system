@@ -28,11 +28,51 @@ from ...services.ai_websocket_manager import (
 from ...services.ai_assistant_service import AIAssistantService
 from ...services.conversation_service import ConversationService
 from ...core.database import get_db
+from ...utils.jwt import verify_token
 from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+
+def _resolve_ws_user_id(token: Optional[str], websocket: WebSocket) -> Optional[int]:
+    """从 WebSocket 连接的 token query 参数解析用户 ID，验证失败时关闭连接。"""
+    if not token:
+        logger.warning("AI WebSocket connection rejected: missing token")
+        try:
+            websocket.close(code=4001, reason="未提供认证令牌")
+        except Exception:
+            pass
+        return None
+
+    payload = verify_token(token)
+    if not payload:
+        logger.warning("AI WebSocket connection rejected: invalid token")
+        try:
+            websocket.close(code=4001, reason="认证令牌无效或已过期")
+        except Exception:
+            pass
+        return None
+
+    user_id_raw = payload.get("sub")
+    if user_id_raw is None:
+        logger.warning("AI WebSocket connection rejected: token missing sub claim")
+        try:
+            websocket.close(code=4001, reason="令牌缺少用户信息")
+        except Exception:
+            pass
+        return None
+
+    try:
+        return int(user_id_raw)
+    except (ValueError, TypeError):
+        logger.warning(f"AI WebSocket connection rejected: invalid user_id '{user_id_raw}'")
+        try:
+            websocket.close(code=4001, reason="用户信息格式错误")
+        except Exception:
+            pass
+        return None
 
 
 # 请求/响应模型
@@ -70,34 +110,27 @@ class ConversationSubscribersResponse(BaseModel):
 async def ai_assistant_websocket(
     websocket: WebSocket,
     conversation_id: Optional[int] = Query(None, description="要订阅的对话ID"),
-    auto_subscribe: bool = Query(True, description="是否自动订阅对话")
+    auto_subscribe: bool = Query(True, description="是否自动订阅对话"),
+    token: Optional[str] = Query(None, description="JWT 访问令牌"),
 ):
     """
     AI助手WebSocket连接端点
-    
+
     提供AI助手的实时WebSocket连接，支持：
     1. 实时AI响应接收
     2. 对话状态同步
     3. 输入状态指示
     4. 连接状态管理
-    
+
     连接参数：
     - conversation_id: 可选，要自动订阅的对话ID
     - auto_subscribe: 是否自动订阅指定的对话
-    
-    WebSocket消息格式：
-    {
-        "type": "message_type",
-        "data": {...},
-        "conversation_id": 123,
-        "message_id": "uuid",
-        "timestamp": "2024-01-01T00:00:00Z"
-    }
+    - token: JWT 访问令牌（从 query 参数传入）
     """
-    # TODO: 从WebSocket连接中获取用户认证信息
-    # 这里简化处理，实际应该从JWT token或session中获取
-    user_id = 1
-    
+    user_id = _resolve_ws_user_id(token, websocket)
+    if user_id is None:
+        return
+
     connection_id = None
     
     try:
@@ -161,17 +194,19 @@ async def ai_assistant_websocket(
 @router.websocket("/ws/ai-assistant/{conversation_id}")
 async def ai_conversation_websocket(
     websocket: WebSocket,
-    conversation_id: int
+    conversation_id: int,
+    token: Optional[str] = Query(None, description="JWT 访问令牌"),
 ):
     """
     AI对话专用WebSocket连接端点
-    
+
     为特定对话提供专用的WebSocket连接，自动订阅指定对话。
     适合单对话页面使用。
     """
-    # TODO: 从WebSocket连接中获取用户认证信息
-    user_id = 1
-    
+    user_id = _resolve_ws_user_id(token, websocket)
+    if user_id is None:
+        return
+
     connection_id = None
     
     try:

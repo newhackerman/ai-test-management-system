@@ -280,11 +280,11 @@ class AIAssistantService:
                     _get_openai_setting("OPENAI_AUTH_SCHEME", "bearer")
                     or "bearer"
                 ),
-                "models": [
+                "models": _parse_model_list(
                     _get_openai_setting("OPENAI_MODEL")
-                    or _get_openai_setting("OPENAI_DEFAULT_MODEL", "gpt-4")
-                    or "gpt-4"
-                ],
+                    or _get_openai_setting("OPENAI_DEFAULT_MODEL", ""),
+                    ["gpt-4"],
+                ),
                 "max_tokens": 4000,
                 "temperature": 0.7,
                 "cost_per_1k_tokens": 0.03,
@@ -292,8 +292,13 @@ class AIAssistantService:
             },
             AIProvider.ANTHROPIC: {
                 "enabled": True,
-                "api_key": getattr(settings, "CLAUDE_API_KEY", ""),
-                "models": ["claude-3-opus", "claude-3-sonnet", "claude-3-haiku"],
+                "api_key": _get_openai_setting("ANTHROPIC_API_KEY", "") or getattr(settings, "CLAUDE_API_KEY", ""),
+                "api_endpoint": _get_openai_setting("ANTHROPIC_BASE_URL", "") or "https://api.anthropic.com/v1",
+                "auth_scheme": "bearer",
+                "models": _parse_model_list(
+                    _get_openai_setting("ANTHROPIC_MODEL", ""),
+                    ["claude-3-opus", "claude-3-sonnet", "claude-3-haiku"],
+                ),
                 "max_tokens": 4000,
                 "temperature": 0.7,
                 "cost_per_1k_tokens": 0.015,
@@ -301,8 +306,13 @@ class AIAssistantService:
             },
             AIProvider.BAIDU_WENXIN: {
                 "enabled": True,
-                "api_key": getattr(settings, "BAIDU_API_KEY", ""),
-                "models": ["wenxin-4.0", "wenxin-3.5"],
+                "api_key": _get_openai_setting("BAIDU_API_KEY", "") or getattr(settings, "BAIDU_API_KEY", ""),
+                "api_endpoint": _get_openai_setting("BAIDU_BASE_URL", "") or "https://aip.baidubce.com/rpc/2.0/ai_custom/v1",
+                "auth_scheme": "bearer",
+                "models": _parse_model_list(
+                    _get_openai_setting("BAIDU_MODEL", ""),
+                    ["wenxin-4.0", "wenxin-3.5"],
+                ),
                 "max_tokens": 2000,
                 "temperature": 0.7,
                 "cost_per_1k_tokens": 0.008,
@@ -310,8 +320,13 @@ class AIAssistantService:
             },
             AIProvider.ALIYUN_TONGYI: {
                 "enabled": True,
-                "api_key": getattr(settings, "ALIYUN_API_KEY", ""),
-                "models": ["qwen-max", "qwen-plus"],
+                "api_key": _get_openai_setting("ALIYUN_API_KEY", "") or getattr(settings, "ALIYUN_API_KEY", ""),
+                "api_endpoint": _get_openai_setting("ALIYUN_BASE_URL", "") or "https://dashscope.aliyuncs.com/compatible-mode/v1",
+                "auth_scheme": "bearer",
+                "models": _parse_model_list(
+                    _get_openai_setting("ALIYUN_MODEL", ""),
+                    ["qwen-max", "qwen-plus"],
+                ),
                 "max_tokens": 2000,
                 "temperature": 0.7,
                 "cost_per_1k_tokens": 0.01,
@@ -319,8 +334,13 @@ class AIAssistantService:
             },
             AIProvider.GOOGLE_GEMINI: {
                 "enabled": True,
-                "api_key": getattr(settings, "GOOGLE_API_KEY", ""),
-                "models": ["gemini-pro", "gemini-ultra"],
+                "api_key": _get_openai_setting("GEMINI_API_KEY", "") or getattr(settings, "GOOGLE_API_KEY", ""),
+                "api_endpoint": _get_openai_setting("GEMINI_BASE_URL", "") or "https://generativelanguage.googleapis.com/v1beta/openai",
+                "auth_scheme": "bearer",
+                "models": _parse_model_list(
+                    _get_openai_setting("GEMINI_MODEL", ""),
+                    ["gemini-pro", "gemini-ultra"],
+                ),
                 "max_tokens": 4000,
                 "temperature": 0.7,
                 "cost_per_1k_tokens": 0.02,
@@ -408,6 +428,93 @@ class AIAssistantService:
         """初始化监控"""
         self.metrics["service_start_time"] = self.startup_time.isoformat()
         self.logger.debug("Monitoring initialized")
+
+    def get_available_models(self) -> List[Dict[str, Any]]:
+        """返回前端可选的 AI 模型列表（仅返回已配置 API Key 的可用 provider）。"""
+        models: List[Dict[str, Any]] = []
+        for provider, config in self.ai_configs.items():
+            if not config.get("enabled"):
+                continue
+            if not config.get("api_key"):
+                continue
+            provider_models = config.get("models") or []
+            if not provider_models:
+                continue
+            models.append({
+                "provider": provider.value,
+                "provider_label": provider.value.replace("_", " ").title(),
+                "models": list(provider_models),
+                "default_model": provider_models[0],
+                "api_endpoint": config.get("api_endpoint"),
+            })
+        return models
+
+    async def fetch_remote_models(self) -> List[Dict[str, Any]]:
+        """
+        遍历所有已配置 API Key 的 provider，调用各自的 {endpoint}/models 接口
+        拉取实际可用的模型列表。拉取失败的 provider 回退到 .env 配置的静态模型列表。
+
+        Returns:
+            List[Dict]: 每个 provider 的远程模型信息，结构同 get_available_models
+        """
+        import aiohttp
+
+        results: List[Dict[str, Any]] = []
+
+        for provider, config in self.ai_configs.items():
+            if not config.get("enabled") or not config.get("api_key"):
+                continue
+
+            endpoint = (config.get("api_endpoint") or "").rstrip("/")
+            api_key = config.get("api_key")
+            auth_scheme = str(config.get("auth_scheme") or "bearer").strip().lower()
+            static_models = list(config.get("models") or [])
+
+            headers: Dict[str, str] = {}
+            if auth_scheme == "raw":
+                headers["Authorization"] = api_key
+            elif auth_scheme == "x-api-key":
+                headers["x-api-key"] = api_key
+            else:
+                headers["Authorization"] = f"Bearer {api_key}"
+
+            remote_models: List[str] = []
+            fetch_error: Optional[str] = None
+
+            if endpoint:
+                try:
+                    timeout = aiohttp.ClientTimeout(total=10)
+                    async with aiohttp.ClientSession(timeout=timeout) as session:
+                        async with session.get(f"{endpoint}/models", headers=headers) as response:
+                            if response.status == 200:
+                                data = await response.json()
+                                # OpenAI 兼容格式: {"data": [{"id": "model-name"}, ...]}
+                                model_items = data.get("data") or data.get("models") or []
+                                for item in model_items:
+                                    model_id = item.get("id") if isinstance(item, dict) else str(item)
+                                    if model_id and model_id not in remote_models:
+                                        remote_models.append(model_id)
+                            else:
+                                fetch_error = f"HTTP {response.status}"
+                except Exception as exc:
+                    fetch_error = str(exc)[:80]
+
+            # 拉取失败或返回空时回退到静态配置
+            final_models = remote_models if remote_models else static_models
+            if not final_models:
+                continue
+
+            results.append({
+                "provider": provider.value,
+                "provider_label": provider.value.replace("_", " ").title(),
+                "models": final_models,
+                "default_model": final_models[0],
+                "api_endpoint": config.get("api_endpoint"),
+                "remote_fetched": bool(remote_models),
+                "error": fetch_error,
+            })
+
+        return results
 
     async def generate_content(
         self,
@@ -801,57 +908,79 @@ class AIAssistantService:
                     yield StreamingChunk("error", "", {"error": str(e)})
                     return
             
-            # 发送开始信号
+            # 发送开始信号（反映用户选择的模型或配置默认模型）
+            config = self.ai_configs[selected_provider]
+            active_model = self._resolve_model(config, query.context)
             yield StreamingChunk("metadata", "", {
                 "provider": selected_provider.value,
-                "model": self.ai_configs[selected_provider]["models"][0],
+                "model": active_model,
                 "task_type": task_type.value
             })
             
             # 3. 构建提示词
             enhanced_prompt = await self._build_enhanced_prompt(query, task_type)
-            
-            # 4. 流式调用AI服务
+
+            # 4. 流式调用AI服务：优先真实流式，失败且尚未输出内容时回退为完整调用后分段输出
+            streamed_content = ""
             try:
-                # 模拟流式AI响应（实际实现中会调用真实的AI API）
-                full_response = await self._call_ai_service(enhanced_prompt, selected_provider)
-                
-                # 将完整响应分块流式返回
-                words = full_response.content.split()
-                current_content = ""
-                
-                for i, word in enumerate(words):
-                    current_content += word + " "
-                    
-                    # 每几个词发送一次增量内容
-                    if i % 3 == 0 or i == len(words) - 1:
-                        yield StreamingChunk("content", word + " ", {
-                            "total_content": current_content.strip(),
-                            "progress": (i + 1) / len(words)
+                async for chunk in self._stream_openai_compatible_service(
+                    enhanced_prompt, selected_provider, query.context
+                ):
+                    if chunk["type"] == "content":
+                        streamed_content += chunk["delta"]
+                        yield StreamingChunk("content", chunk["delta"], {
+                            "total_content": streamed_content
                         })
-                        
-                        # 添加延迟模拟真实流式响应
-                        await asyncio.sleep(0.1)
-                
-                # 发送完成信号
-                processing_time = (datetime.utcnow() - start_time).total_seconds()
-                yield StreamingChunk("complete", "", {
-                    "provider": full_response.provider.value,
-                    "model": full_response.model,
-                    "tokens_used": full_response.tokens_used,
-                    "confidence_score": full_response.confidence_score,
-                    "processing_time": processing_time
-                })
-                
-                # 更新指标
-                await self._update_metrics(processing_time, full_response.tokens_used, True)
-                
-            except Exception as ai_error:
-                self.logger.error(f"AI service error during streaming: {str(ai_error)}")
-                yield StreamingChunk("error", "", {
-                    "error": str(ai_error),
-                    "error_type": "ai_service"
-                })
+                    elif chunk["type"] == "final":
+                        processing_time = (datetime.utcnow() - start_time).total_seconds()
+                        yield StreamingChunk("complete", "", {
+                            "provider": selected_provider.value,
+                            "model": chunk.get("model") or self.ai_configs[selected_provider]["models"][0],
+                            "tokens_used": int(chunk.get("tokens_used") or 0),
+                            "confidence_score": 0.9,
+                            "processing_time": processing_time,
+                            "total_content": streamed_content
+                        })
+                        await self._update_metrics(processing_time, int(chunk.get("tokens_used") or 0), True)
+
+            except Exception as stream_error:
+                if streamed_content:
+                    self.logger.error(f"AI streaming interrupted after partial output: {str(stream_error)}")
+                    yield StreamingChunk("error", "", {
+                        "error": str(stream_error),
+                        "error_type": "ai_service"
+                    })
+                else:
+                    # 流式不可用（网络、接口不支持等）：完整调用后按小段输出
+                    self.logger.warning(f"Streaming unavailable, falling back to full call: {str(stream_error)}")
+                    try:
+                        full_response = await self._call_ai_service(enhanced_prompt, selected_provider, query.context)
+                        current_content = ""
+                        for i in range(0, len(full_response.content), 8):
+                            piece = full_response.content[i:i + 8]
+                            current_content += piece
+                            yield StreamingChunk("content", piece, {
+                                "total_content": current_content,
+                                "progress": (i + 8) / max(len(full_response.content), 1)
+                            })
+                            await asyncio.sleep(0.02)
+
+                        processing_time = (datetime.utcnow() - start_time).total_seconds()
+                        yield StreamingChunk("complete", "", {
+                            "provider": full_response.provider.value,
+                            "model": full_response.model,
+                            "tokens_used": full_response.tokens_used,
+                            "confidence_score": full_response.confidence_score,
+                            "processing_time": processing_time,
+                            "total_content": current_content
+                        })
+                        await self._update_metrics(processing_time, full_response.tokens_used, True)
+                    except Exception as ai_error:
+                        self.logger.error(f"AI service error during streaming: {str(ai_error)}")
+                        yield StreamingChunk("error", "", {
+                            "error": str(ai_error),
+                            "error_type": "ai_service"
+                        })
                 
         except Exception as e:
             self.logger.error(f"Error in streaming query: {str(e)}")
@@ -958,14 +1087,27 @@ class AIAssistantService:
     async def _select_ai_provider(self, query: UserQuery, task_type: TaskType, user_id: Optional[int] = None) -> AIProvider:
         """
         选择最适合的AI服务提供商
-        
+
+        如果用户通过 context.preferred_model 指定了模型，优先选择包含该模型的 provider。
+        否则基于任务类型选择最适合的 provider。
+
         Args:
             query: 用户查询对象
             task_type: 任务类型
-            
+
         Returns:
             AIProvider: 选择的AI服务提供商
         """
+        # 如果用户指定了模型，找到包含该模型的可用 provider
+        preferred_model = (query.context or {}).get("preferred_model")
+        if preferred_model and isinstance(preferred_model, str):
+            for provider, config in self.ai_configs.items():
+                if not config.get("enabled") or not config.get("api_key"):
+                    continue
+                if preferred_model.strip() in (config.get("models") or []):
+                    if await self._is_provider_available(provider):
+                        return provider
+
         # 基于任务类型选择最适合的AI服务
         provider_preferences = {
             TaskType.COMPLEX_ANALYSIS: [AIProvider.OPENAI, AIProvider.ANTHROPIC],
@@ -1008,24 +1150,23 @@ class AIAssistantService:
     async def _is_provider_available(self, provider: AIProvider) -> bool:
         """
         检查AI服务提供商是否可用
-        
+
+        所有配了 API Key 的 provider 都视为可用（统一走 OpenAI 兼容接口）。
+
         Args:
             provider: AI服务提供商
-            
+
         Returns:
             bool: 是否可用
         """
-        if provider != AIProvider.OPENAI:
-            return False
-
         config = self.ai_configs.get(provider)
         if not config:
             return False
-        
+
         # 检查是否启用
         if not config.get("enabled", False):
             return False
-        
+
         # 检查API密钥是否配置
         if not config.get("api_key"):
             return False
@@ -1154,18 +1295,92 @@ class AIAssistantService:
     async def _call_ai_service(self, prompt: str, provider: AIProvider, context: Optional[Dict[str, Any]] = None) -> AIResponse:
         """
         调用AI服务
-        
+
+        所有 provider 统一走 OpenAI 兼容的 Chat Completions 接口。
+        各 provider 的 api_endpoint / api_key / auth_scheme / models
+        均从 .env 配置读取，只要配了 Key 即可用。
+
         Args:
             prompt: 提示词
             provider: AI服务提供商
-            
+
         Returns:
             AIResponse: AI响应
         """
-        if provider != AIProvider.OPENAI:
-            raise RuntimeError(f"{provider.value} 真实调用尚未实现，请配置 OpenAI 兼容服务")
+        config = self.ai_configs.get(provider)
+        if not config or not config.get("api_key"):
+            raise RuntimeError(f"{provider.value} 未配置 API Key，请在 .env 中设置后重启服务")
 
         return await self._call_openai_compatible_service(prompt, provider, context)
+
+    def _build_chat_user_content(self, prompt: str, context: Optional[Dict[str, Any]] = None) -> Any:
+        """构建消息内容：带图片附件时使用多模态结构，否则使用纯文本。"""
+        image_attachments = [
+            attachment
+            for attachment in ((context or {}).get("attachments") or [])
+            if isinstance(attachment, dict) and attachment.get("image_data_url")
+        ]
+        if not image_attachments:
+            return prompt
+
+        user_content: Any = [{"type": "text", "text": prompt}]
+        for attachment in image_attachments[:4]:
+            user_content.append({
+                "type": "image_url",
+                "image_url": {"url": attachment["image_data_url"]},
+            })
+        return user_content
+
+    def _build_ai_auth_headers(self, config: Dict[str, Any], api_key: str) -> Dict[str, str]:
+        """按配置的鉴权方案构建请求头。"""
+        headers = {"Content-Type": "application/json"}
+        auth_scheme = str(config.get("auth_scheme") or "bearer").strip().lower()
+        if auth_scheme == "raw":
+            headers["Authorization"] = api_key
+        elif auth_scheme == "x-api-key":
+            headers["x-api-key"] = api_key
+        else:
+            headers["Authorization"] = f"Bearer {api_key}"
+        return headers
+
+    def _resolve_model(self, config: Dict[str, Any], context: Optional[Dict[str, Any]] = None) -> str:
+        """解析本次请求使用的模型：优先 context.preferred_model，其次配置的第一个模型。"""
+        preferred = (context or {}).get("preferred_model") if context else None
+        if preferred and isinstance(preferred, str) and preferred.strip():
+            return preferred.strip()
+        return (config.get("models") or ["gpt-4"])[0]
+
+
+def _parse_model_list(value: Optional[str], fallback: List[str]) -> List[str]:
+    """将逗号分隔的模型字符串解析为列表。"""
+    if not value:
+        return fallback
+    models = [m.strip() for m in value.split(",") if m.strip()]
+    return models if models else fallback
+
+    @staticmethod
+    def _raise_openai_http_error(status_code: int, response_text: str) -> None:
+        """将上游 HTTP 错误转换为带排查建议的 RuntimeError。"""
+        detail = response_text[:500]
+        try:
+            error_data = json.loads(response_text)
+            detail = (
+                error_data.get("error", {}).get("message")
+                or error_data.get("message")
+                or detail
+            )
+        except json.JSONDecodeError:
+            pass
+
+        if status_code == 401:
+            raise RuntimeError(
+                "OpenAI 兼容服务鉴权失败：API Key 无效或已过期，请更新后端 OPENAI_API_KEY 后重启服务。"
+            )
+        if status_code == 403:
+            raise RuntimeError(
+                f"OpenAI 兼容服务拒绝访问：请检查 API Key 权限、账户余额或模型权限。详情：{detail}"
+            )
+        raise RuntimeError(f"OpenAI 兼容服务调用失败: HTTP {status_code} {response_text[:500]}")
 
     async def _call_openai_compatible_service(
         self,
@@ -1180,24 +1395,12 @@ class AIAssistantService:
             raise RuntimeError("OpenAI API key 未配置")
 
         endpoint = (config.get("api_endpoint") or "https://api.openai.com/v1").rstrip("/")
-        model = (config.get("models") or ["gpt-4"])[0]
+        model = self._resolve_model(config, context)
         timeout_seconds = float(getattr(settings, "OPENAI_TIMEOUT", 90.0) or 90.0)
         max_tokens = int(config.get("max_tokens") or os.getenv("AI_MAX_TOKENS") or getattr(settings, "OPENAI_MAX_TOKENS", 4000) or 4000)
         temperature = float(config.get("temperature") or os.getenv("AI_TEMPERATURE") or getattr(settings, "OPENAI_TEMPERATURE", 0.7) or 0.7)
 
-        user_content: Any = prompt
-        image_attachments = [
-            attachment
-            for attachment in ((context or {}).get("attachments") or [])
-            if isinstance(attachment, dict) and attachment.get("image_data_url")
-        ]
-        if image_attachments:
-            user_content = [{"type": "text", "text": prompt}]
-            for attachment in image_attachments[:4]:
-                user_content.append({
-                    "type": "image_url",
-                    "image_url": {"url": attachment["image_data_url"]},
-                })
+        user_content = self._build_chat_user_content(prompt, context)
 
         payload = {
             "model": model,
@@ -1216,40 +1419,14 @@ class AIAssistantService:
             "max_tokens": max_tokens,
         }
 
-        auth_scheme = str(config.get("auth_scheme") or "bearer").strip().lower()
-        headers = {"Content-Type": "application/json"}
-        if auth_scheme == "raw":
-            headers["Authorization"] = api_key
-        elif auth_scheme == "x-api-key":
-            headers["x-api-key"] = api_key
-        else:
-            headers["Authorization"] = f"Bearer {api_key}"
+        headers = self._build_ai_auth_headers(config, api_key)
 
         timeout = aiohttp.ClientTimeout(total=timeout_seconds)
         async with aiohttp.ClientSession(timeout=timeout) as session:
             async with session.post(f"{endpoint}/chat/completions", headers=headers, json=payload) as response:
                 response_text = await response.text()
                 if response.status >= 400:
-                    detail = response_text[:500]
-                    try:
-                        error_data = json.loads(response_text)
-                        detail = (
-                            error_data.get("error", {}).get("message")
-                            or error_data.get("message")
-                            or detail
-                        )
-                    except json.JSONDecodeError:
-                        pass
-
-                    if response.status == 401:
-                        raise RuntimeError(
-                            "OpenAI 兼容服务鉴权失败：API Key 无效或已过期，请更新后端 OPENAI_API_KEY 后重启服务。"
-                        )
-                    if response.status == 403:
-                        raise RuntimeError(
-                            f"OpenAI 兼容服务拒绝访问：请检查 API Key 权限、账户余额或模型权限。详情：{detail}"
-                        )
-                    raise RuntimeError(f"OpenAI 兼容服务调用失败: HTTP {response.status} {response_text[:500]}")
+                    self._raise_openai_http_error(response.status, response_text)
 
                 try:
                     data = json.loads(response_text)
@@ -1280,9 +1457,110 @@ class AIAssistantService:
                 "simulated": False,
                 "api_endpoint": endpoint,
                 "finish_reason": choices[0].get("finish_reason"),
-                "image_attachments": len(image_attachments),
+                "image_attachments": len(((context or {}).get("attachments") or [])),
             },
         )
+
+    async def _stream_openai_compatible_service(
+        self,
+        prompt: str,
+        provider: AIProvider,
+        context: Optional[Dict[str, Any]] = None,
+    ):
+        """
+        流式调用 OpenAI 兼容的 Chat Completions 接口。
+
+        逐步产出内容增量，最后产出一条 final 结果。
+        上游不支持 stream_options 时部分服务会返回 400，由调用方回退到完整调用。
+        """
+        config = self.ai_configs.get(provider, {})
+        api_key = config.get("api_key")
+        if not api_key:
+            raise RuntimeError("OpenAI API key 未配置")
+
+        endpoint = (config.get("api_endpoint") or "https://api.openai.com/v1").rstrip("/")
+        model = self._resolve_model(config, context)
+        timeout_seconds = float(getattr(settings, "OPENAI_TIMEOUT", 90.0) or 90.0)
+        max_tokens = int(config.get("max_tokens") or os.getenv("AI_MAX_TOKENS") or getattr(settings, "OPENAI_MAX_TOKENS", 4000) or 4000)
+        temperature = float(config.get("temperature") or os.getenv("AI_TEMPERATURE") or getattr(settings, "OPENAI_TEMPERATURE", 0.7) or 0.7)
+
+        payload = {
+            "model": model,
+            "messages": [
+                {
+                    "role": "system",
+                    "content": (
+                        "你是 AI 测试管理系统中的真实 AI 助手，不得声称自己是模拟响应。"
+                        "你擅长需求分析、测试设计、缺陷定位、项目风险识别和测试管理改进。"
+                        "回答必须具体、可执行，缺少上下文时说明假设和需要补充的信息。"
+                    ),
+                },
+                {"role": "user", "content": self._build_chat_user_content(prompt, context)},
+            ],
+            "temperature": temperature,
+            "max_tokens": max_tokens,
+            "stream": True,
+            "stream_options": {"include_usage": True},
+        }
+
+        headers = self._build_ai_auth_headers(config, api_key)
+
+        content_chunks: list = []
+        usage: Optional[Dict[str, Any]] = None
+        finish_reason: Optional[str] = None
+        response_model = model
+
+        timeout = aiohttp.ClientTimeout(total=timeout_seconds)
+        async with aiohttp.ClientSession(timeout=timeout) as session:
+            async with session.post(f"{endpoint}/chat/completions", headers=headers, json=payload) as response:
+                if response.status >= 400:
+                    response_text = await response.text()
+                    self._raise_openai_http_error(response.status, response_text)
+
+                async for raw_line in response.content:
+                    line = raw_line.decode("utf-8", errors="ignore").strip()
+                    if not line.startswith("data:"):
+                        continue
+                    data_str = line[len("data:"):].strip()
+                    if not data_str or data_str == "[DONE]":
+                        if data_str == "[DONE]":
+                            break
+                        continue
+
+                    try:
+                        chunk = json.loads(data_str)
+                    except json.JSONDecodeError:
+                        continue
+
+                    if chunk.get("usage"):
+                        usage = chunk["usage"]
+                    if chunk.get("model"):
+                        response_model = chunk["model"]
+
+                    choices = chunk.get("choices") or []
+                    if not choices:
+                        continue
+                    finish_reason = choices[0].get("finish_reason") or finish_reason
+                    delta = (choices[0].get("delta") or {}).get("content")
+                    if delta:
+                        content_chunks.append(delta)
+                        yield {"type": "content", "delta": delta}
+
+        full_content = "".join(content_chunks).strip()
+        if not full_content:
+            raise RuntimeError("OpenAI 兼容服务流式响应为空")
+
+        tokens_used = (usage or {}).get("total_tokens")
+        if tokens_used is None:
+            tokens_used = max(1, (len(prompt) + len(full_content)) // 4)
+
+        yield {
+            "type": "final",
+            "content": full_content,
+            "model": response_model,
+            "tokens_used": int(tokens_used),
+            "finish_reason": finish_reason,
+        }
     
     async def _post_process_response(self, ai_response: AIResponse, query: UserQuery) -> AIResponse:
         """

@@ -122,35 +122,37 @@ class StreamingService:
             confidence_score = 0.0
             
             try:
-                # 检查是否支持流式响应
                 if hasattr(self.ai_service, 'stream_user_query'):
-                    # 使用流式API
+                    # 使用流式API（StreamingChunk 为普通对象，通过属性访问）
                     async for chunk in self.ai_service.stream_user_query(user_query):
                         if not self.active_streams.get(stream_id, False):
                             break
-                        
-                        if chunk.get('type') == 'content':
-                            content_delta = chunk.get('content', '')
+
+                        if chunk.type == 'content':
+                            content_delta = chunk.content
                             ai_response_content += content_delta
-                            
+
                             yield self._format_sse_data("ai_content", {
                                 "delta": content_delta,
                                 "content": ai_response_content
                             })
-                        
-                        elif chunk.get('type') == 'metadata':
-                            ai_provider = chunk.get('provider')
-                            ai_model = chunk.get('model')
-                            tokens_used = chunk.get('tokens_used', 0)
-                            confidence_score = chunk.get('confidence_score', 0.0)
-                            
+
+                        elif chunk.type == 'metadata':
+                            ai_provider = chunk.metadata.get('provider')
+                            ai_model = chunk.metadata.get('model')
                             yield self._format_sse_data("ai_metadata", {
                                 "provider": ai_provider,
                                 "model": ai_model,
-                                "tokens_used": tokens_used,
-                                "confidence_score": confidence_score
+                                "task_type": chunk.metadata.get('task_type')
                             })
-                        
+
+                        elif chunk.type == 'complete':
+                            ai_provider = chunk.metadata.get('provider', ai_provider)
+                            ai_model = chunk.metadata.get('model', ai_model)
+                            tokens_used = chunk.metadata.get('tokens_used', tokens_used)
+                            confidence_score = chunk.metadata.get('confidence_score', confidence_score)
+                            ai_response_content = chunk.metadata.get('total_content', ai_response_content)
+
                         # 添加小延迟以模拟真实的流式响应
                         await asyncio.sleep(0.05)
                 

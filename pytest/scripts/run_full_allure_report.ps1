@@ -2,7 +2,7 @@ param(
     [string]$BaseUrl = "http://127.0.0.1:8000",
     [string]$FrontendUrl = "http://localhost:3000",
     [int]$Reruns = 0,
-    [int]$TimeoutSeconds = 30,
+    [int]$TimeoutSeconds = 15,
     [int]$PreferredPort = 8089
 )
 

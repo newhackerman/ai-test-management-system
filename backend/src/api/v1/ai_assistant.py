@@ -1,4 +1,4 @@
-"""
+﻿"""
 AI助手API端点 - 演示依赖注入框架的使用
 
 本模块提供AI助手相关的API端点，展示如何使用依赖注入框架。
@@ -32,6 +32,7 @@ from ...schemas.conversation import (
     ConversationStatsResponse, SearchConversationsRequest, ConversationContextResponse
 )
 from ...services.context_manager import ContextWindow
+from ...decorators.ai_operation_logger import log_conversation_activity
 
 logger = logging.getLogger(__name__)
 
@@ -44,6 +45,7 @@ class QueryRequest(BaseModel):
     content: str = Field(..., description="查询内容", min_length=1, max_length=10000)
     context: Optional[Dict[str, Any]] = Field(None, description="查询上下文")
     conversation_id: Optional[int] = Field(None, description="对话ID")
+    preferred_model: Optional[str] = Field(None, description="用户指定的模型名称，覆盖默认模型")
 
 
 class QueryResponse(BaseModel):
@@ -289,7 +291,10 @@ async def process_query(
             content=request.content,
             user_id=current_user.id,
             conversation_id=request.conversation_id,
-            context=request.context or {}
+            context={
+                **(request.context or {}),
+                "preferred_model": request.preferred_model,
+            }
         )
         
         # 调用AI服务处理查询
@@ -379,6 +384,40 @@ async def get_ai_status(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"获取 AI 服务状态失败: {str(e)}"
+        )
+
+
+@router.get("/models", summary="获取可用 AI 模型列表")
+async def get_available_models(
+    ai_service: AIAssistantService = Inject(AIAssistantService),
+    current_user: User = Depends(get_current_user)
+):
+    """返回前端 AI 助手页面可选的 provider 与模型列表，不暴露 API Key。"""
+    try:
+        models = ai_service.get_available_models()
+        return {"success": True, "models": models}
+    except Exception as e:
+        logger.error(f"Error getting available models: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"获取可用模型列表失败: {str(e)}"
+        )
+
+
+@router.get("/models/remote", summary="从各 provider 的 BaseURL 拉取实际可用模型列表")
+async def get_remote_models(
+    ai_service: AIAssistantService = Inject(AIAssistantService),
+    current_user: User = Depends(get_current_user)
+):
+    """遍历所有已配置的 provider，调用各自 {endpoint}/models 接口拉取实际可用模型。"""
+    try:
+        models = await ai_service.fetch_remote_models()
+        return {"success": True, "models": models}
+    except Exception as e:
+        logger.error(f"Error fetching remote models: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"拉取远程模型列表失败: {str(e)}"
         )
 
 
@@ -555,9 +594,11 @@ async def get_services_info(request: Request):
 # ==================== 对话管理API ====================
 
 @router.post("/conversations", response_model=ConversationResponse, summary="创建对话")
+@log_conversation_activity("create", "create_conversation")
 async def create_conversation(
     request: CreateConversationRequest,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """
     创建新的AI对话会话
@@ -575,8 +616,7 @@ async def create_conversation(
     try:
         logger.info(f"Creating conversation with title: {request.title}")
         
-        # TODO: 从认证信息获取真实用户ID
-        user_id = 1
+        user_id = current_user.id
         
         conversation_service = ConversationServiceSync(db)
         
@@ -636,7 +676,8 @@ async def get_conversations(
     sort_order: str = "desc",
     page: int = 1,
     size: int = 20,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """
     获取用户的对话列表
@@ -651,8 +692,7 @@ async def get_conversations(
     try:
         logger.info(f"Getting conversations for user, page: {page}, size: {size}")
         
-        # TODO: 从认证信息获取真实用户ID
-        user_id = 1
+        user_id = current_user.id
         
         conversation_service = ConversationServiceSync(db)
         
@@ -720,14 +760,14 @@ async def get_conversations(
 
 @router.get("/conversations/stats", response_model=ConversationStatsResponse, summary="获取对话统计")
 async def get_conversation_stats(
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """获取用户的对话统计信息"""
     try:
         logger.info("Getting conversation statistics")
 
-        # TODO: 从认证信息获取真实用户ID
-        user_id = 1
+        user_id = current_user.id
 
         conversation_service = ConversationServiceSync(db)
         stats = conversation_service.get_conversation_stats(user_id)
@@ -757,14 +797,14 @@ async def get_conversation_stats(
 @router.get("/conversations/{conversation_id}", response_model=ConversationResponse, summary="获取对话详情")
 async def get_conversation(
     conversation_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """获取指定对话的详细信息"""
     try:
         logger.info(f"Getting conversation {conversation_id}")
         
-        # TODO: 从认证信息获取真实用户ID
-        user_id = 1
+        user_id = current_user.id
         
         conversation_service = ConversationServiceSync(db)
         conversation = conversation_service.get_conversation(conversation_id, user_id)
@@ -812,14 +852,14 @@ async def get_conversation(
 async def update_conversation(
     conversation_id: int,
     request: UpdateConversationRequest,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """更新对话信息"""
     try:
         logger.info(f"Updating conversation {conversation_id}")
         
-        # TODO: 从认证信息获取真实用户ID
-        user_id = 1
+        user_id = current_user.id
         
         conversation_service = ConversationServiceSync(db)
         
@@ -887,16 +927,17 @@ async def update_conversation(
 
 
 @router.delete("/conversations/{conversation_id}", summary="删除对话")
+@log_conversation_activity("delete", "delete_conversation")
 async def delete_conversation(
     conversation_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """删除对话（软删除）"""
     try:
         logger.info(f"Deleting conversation {conversation_id}")
         
-        # TODO: 从认证信息获取真实用户ID
-        user_id = 1
+        user_id = current_user.id
         
         conversation_service = ConversationServiceSync(db)
         success = conversation_service.delete_conversation(conversation_id, user_id)
@@ -923,14 +964,14 @@ async def delete_conversation(
 @router.post("/conversations/{conversation_id}/archive", summary="归档对话")
 async def archive_conversation(
     conversation_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """归档对话"""
     try:
         logger.info(f"Archiving conversation {conversation_id}")
         
-        # TODO: 从认证信息获取真实用户ID
-        user_id = 1
+        user_id = current_user.id
         
         conversation_service = ConversationServiceSync(db)
         success = conversation_service.archive_conversation(conversation_id, user_id)
@@ -957,6 +998,7 @@ async def archive_conversation(
 # ==================== 消息管理API ====================
 
 @router.post("/conversations/{conversation_id}/messages", response_model=MessageResponse, summary="发送消息")
+@log_conversation_activity("send_message", "send_message")
 async def send_message(
     conversation_id: int,
     request: SendMessageRequest,
@@ -977,8 +1019,7 @@ async def send_message(
     try:
         logger.info(f"Sending message to conversation {conversation_id}")
         
-        # TODO: 从认证信息获取真实用户ID
-        user_id = 1
+        user_id = current_user.id
         
         conversation_service = ConversationServiceSync(db)
         
@@ -1174,7 +1215,8 @@ async def get_messages(
     limit: int = 50,
     offset: int = 0,
     include_metadata: bool = True,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """
     获取对话的消息历史
@@ -1185,8 +1227,7 @@ async def get_messages(
     try:
         logger.info(f"Getting messages for conversation {conversation_id}, limit: {limit}, offset: {offset}")
         
-        # TODO: 从认证信息获取真实用户ID
-        user_id = 1
+        user_id = current_user.id
         
         conversation_service = ConversationServiceSync(db)
         
@@ -1266,7 +1307,8 @@ async def get_messages(
 async def get_latest_message(
     conversation_id: int,
     role: Optional[MessageRole] = None,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """
     获取对话中的最新消息
@@ -1277,8 +1319,7 @@ async def get_latest_message(
     try:
         logger.info(f"Getting latest message for conversation {conversation_id}, role: {role}")
         
-        # TODO: 从认证信息获取真实用户ID
-        user_id = 1
+        user_id = current_user.id
         
         conversation_service = ConversationServiceSync(db)
         
@@ -1352,8 +1393,7 @@ async def regenerate_ai_response(
     try:
         logger.info(f"Regenerating AI response for message {message_id} in conversation {conversation_id}")
         
-        # TODO: 从认证信息获取真实用户ID
-        user_id = 1
+        user_id = current_user.id
         
         conversation_service = ConversationServiceSync(db)
         
@@ -1476,14 +1516,14 @@ async def regenerate_ai_response(
 @router.post("/conversations/search", response_model=ConversationListResponse, summary="搜索对话")
 async def search_conversations(
     request: SearchConversationsRequest,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """搜索对话"""
     try:
         logger.info(f"Searching conversations with query: {request.query}")
         
-        # TODO: 从认证信息获取真实用户ID
-        user_id = 1
+        user_id = current_user.id
         
         conversation_service = ConversationServiceSync(db)
         
@@ -1587,7 +1627,8 @@ async def get_conversation_context(
     ai_model: Optional[str] = None,
     max_messages: Optional[int] = None,
     include_system_prompt: bool = True,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """
     获取对话的上下文信息
@@ -1598,8 +1639,7 @@ async def get_conversation_context(
     try:
         logger.info(f"Getting context for conversation {conversation_id}, model: {ai_model}")
         
-        # TODO: 从认证信息获取真实用户ID
-        user_id = 1
+        user_id = current_user.id
         
         conversation_service = ConversationServiceSync(db)
         
@@ -1683,14 +1723,14 @@ async def get_conversation_context(
 @router.get("/conversations/{conversation_id}/context/summary", summary="获取对话摘要")
 async def get_context_summary(
     conversation_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """获取对话的上下文摘要"""
     try:
         logger.info(f"Getting context summary for conversation {conversation_id}")
         
-        # TODO: 从认证信息获取真实用户ID
-        user_id = 1
+        user_id = current_user.id
         
         conversation_service = ConversationServiceSync(db)
         
@@ -1725,14 +1765,14 @@ async def get_context_summary(
 @router.get("/conversations/{conversation_id}/context/stats", summary="获取上下文统计")
 async def get_context_stats(
     conversation_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """获取对话的上下文统计信息"""
     try:
         logger.info(f"Getting context stats for conversation {conversation_id}")
         
-        # TODO: 从认证信息获取真实用户ID
-        user_id = 1
+        user_id = current_user.id
         
         conversation_service = ConversationServiceSync(db)
         
@@ -1768,14 +1808,14 @@ async def get_context_stats(
 async def mark_message_important(
     conversation_id: int,
     message_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """标记消息为重要，影响上下文优先级"""
     try:
         logger.info(f"Marking message {message_id} as important in conversation {conversation_id}")
         
-        # TODO: 从认证信息获取真实用户ID
-        user_id = 1
+        user_id = current_user.id
         
         conversation_service = ConversationServiceSync(db)
         
@@ -1826,14 +1866,14 @@ async def mark_message_important(
 async def get_formatted_context(
     conversation_id: int,
     ai_model: str,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """获取为特定AI模型格式化的上下文"""
     try:
         logger.info(f"Getting formatted context for conversation {conversation_id}, model: {ai_model}")
         
-        # TODO: 从认证信息获取真实用户ID
-        user_id = 1
+        user_id = current_user.id
         
         conversation_service = ConversationServiceSync(db)
         
@@ -1871,14 +1911,14 @@ async def get_formatted_context(
 async def preload_context_cache(
     conversation_id: int,
     ai_models: Optional[List[str]] = None,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """预加载对话上下文到缓存"""
     try:
         logger.info(f"Preloading context cache for conversation {conversation_id}")
         
-        # TODO: 从认证信息获取真实用户ID
-        user_id = 1
+        user_id = current_user.id
         
         conversation_service = ConversationServiceSync(db)
         
@@ -1913,14 +1953,14 @@ async def preload_context_cache(
 @router.get("/conversations/{conversation_id}/context/cache-info", summary="获取缓存信息")
 async def get_context_cache_info(
     conversation_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """获取对话的上下文缓存信息"""
     try:
         logger.info(f"Getting cache info for conversation {conversation_id}")
         
-        # TODO: 从认证信息获取真实用户ID
-        user_id = 1
+        user_id = current_user.id
         
         conversation_service = ConversationServiceSync(db)
         

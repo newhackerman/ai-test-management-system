@@ -47,6 +47,9 @@ import {
 import { Input } from '@/components/ui/Input'
 import { Textarea } from '@/components/ui/Textarea'
 import { apiClient } from '@/services/api/client'
+import { streamAiQuery } from '@/services/streaming-service'
+import { conversationService } from '@/services/conversation-service'
+import type { ConversationResponse, MessageResponse } from '@/services/conversation-service'
 
 type ChatRole = 'user' | 'assistant'
 
@@ -61,10 +64,12 @@ interface ChatMessage {
   tokensUsed?: number
   elapsedMs?: number
   sourcePrompt?: string
+  serverId?: number
 }
 
 interface ChatSession {
   id: string
+  serverId?: number
   title: string
   messages: ChatMessage[]
   createdAt: string
@@ -80,6 +85,16 @@ interface AIStatus {
   message: string
 }
 
+interface AIModelOption {
+  provider: string
+  provider_label: string
+  models: string[]
+  default_model: string
+  api_endpoint?: string
+  remote_fetched?: boolean
+  error?: string | null
+}
+
 interface AttachedFile {
   id: string
   filename: string
@@ -92,7 +107,6 @@ interface AttachedFile {
   warnings: string[]
 }
 
-const STORAGE_KEY = 'ai-assistant:sessions:v2'
 const AI_IMPORT_DRAFT_KEY = 'ai-assistant:import-draft'
 
 const promptTemplates = [
@@ -349,17 +363,33 @@ const AssistantMarkdown = ({ content }: { content: string }) => (
   </div>
 )
 
+const mapConversation = (conv: ConversationResponse): ChatSession => ({
+  id: `server-${conv.id}`,
+  serverId: conv.id,
+  title: conv.title || 'AI 对话',
+  messages: [],
+  createdAt: conv.created_at || new Date().toISOString(),
+  updatedAt: conv.updated_at || conv.last_activity_at || conv.created_at || new Date().toISOString(),
+})
+
+const mapMessage = (msg: MessageResponse): ChatMessage => ({
+  id: `server-${msg.id}`,
+  serverId: msg.id,
+  role: msg.role === 'ASSISTANT' ? 'assistant' : 'user',
+  content: msg.content || '',
+  createdAt: msg.created_at || new Date().toISOString(),
+  isError: msg.is_error,
+  provider: msg.ai_provider || undefined,
+  model: msg.ai_model || undefined,
+  tokensUsed: msg.tokens_used || undefined,
+})
+
 const AIAssistant: React.FC = () => {
   const navigate = useNavigate()
-  const [sessions, setSessions] = useState<ChatSession[]>(() => {
-    try {
-      const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]')
-      return Array.isArray(saved) && saved.length ? saved : [createSession()]
-    } catch {
-      return [createSession()]
-    }
-  })
+  const [sessions, setSessions] = useState<ChatSession[]>([createSession()])
   const [activeSessionId, setActiveSessionId] = useState(() => sessions[0]?.id)
+  const [sessionsLoading, setSessionsLoading] = useState(true)
+  const [loadedSessionIds, setLoadedSessionIds] = useState<Set<string>>(new Set())
   const [input, setInput] = useState('')
   const [search, setSearch] = useState('')
   const [outputMode, setOutputMode] = useState('structured')
@@ -367,9 +397,13 @@ const AIAssistant: React.FC = () => {
   const [attachedFiles, setAttachedFiles] = useState<AttachedFile[]>([])
   const [attachmentLoading, setAttachmentLoading] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null)
   const [elapsedSeconds, setElapsedSeconds] = useState(0)
   const [statusLoading, setStatusLoading] = useState(false)
   const [statusInfo, setStatusInfo] = useState<AIStatus | null>(null)
+  const [modelOptions, setModelOptions] = useState<AIModelOption[]>([])
+  const [selectedModel, setSelectedModel] = useState<string>('')
+  const [modelsRefreshing, setModelsRefreshing] = useState(false)
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null)
   const [pendingDeleteSession, setPendingDeleteSession] = useState<ChatSession | null>(null)
   const [pendingDeleteMessageId, setPendingDeleteMessageId] = useState<string | null>(null)
@@ -381,6 +415,8 @@ const AIAssistant: React.FC = () => {
   const requestControllerRef = useRef<AbortController | null>(null)
 
   const activeSession = sessions.find((session) => session.id === activeSessionId) || sessions[0]
+  const streamingMessage = activeSession?.messages.find((message) => message.id === streamingMessageId)
+  const hasStreamingContent = Boolean(streamingMessage?.content)
 
   const filteredSessions = useMemo(() => {
     const keyword = search.trim().toLowerCase()
@@ -391,9 +427,50 @@ const AIAssistant: React.FC = () => {
     })
   }, [search, sessions])
 
+  const loadSessions = async () => {
+    setSessionsLoading(true)
+    try {
+      const data = await conversationService.getConversations({ sort_by: 'last_activity_at', sort_order: 'desc', size: 50 })
+      const mapped = (data.conversations || []).map(mapConversation)
+      setSessions(mapped.length ? mapped : [createSession()])
+      setLoadedSessionIds(new Set())
+      if (mapped.length && !activeSessionId?.startsWith('server-')) {
+        setActiveSessionId(mapped[0].id)
+      }
+    } catch {
+      setSessions([createSession()])
+    } finally {
+      setSessionsLoading(false)
+    }
+  }
+
+  const loadMessages = async (sessionId: string, serverId: number) => {
+    try {
+      const data = await conversationService.getMessages(serverId, { limit: 100 })
+      const messages = (data.messages || []).map(mapMessage)
+      setSessions((current) =>
+        current.map((session) =>
+          session.id === sessionId
+            ? { ...session, messages }
+            : session,
+        ),
+      )
+      setLoadedSessionIds((current) => new Set(current).add(sessionId))
+    } catch {
+      setLoadedSessionIds((current) => new Set(current).add(sessionId))
+    }
+  }
+
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(sessions))
-  }, [sessions])
+    loadSessions()
+  }, [])
+
+  useEffect(() => {
+    const active = sessions.find((s) => s.id === activeSessionId)
+    if (active?.serverId && !loadedSessionIds.has(active.id)) {
+      loadMessages(active.id, active.serverId)
+    }
+  }, [activeSessionId, sessions, loadedSessionIds])
 
   useEffect(() => {
     messageEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
@@ -444,11 +521,48 @@ const AIAssistant: React.FC = () => {
     }
   }
 
+  const loadModels = async () => {
+    try {
+      const response = await apiClient.get('/ai-assistant/models')
+      const data = response.data?.data || response.data || {}
+      const models: AIModelOption[] = data.models || []
+      setModelOptions(models)
+      setSelectedModel((current) => {
+        if (current) return current
+        const first = models[0]
+        return first?.default_model || first?.models?.[0] || ''
+      })
+    } catch (error) {
+      setModelOptions([])
+    }
+  }
+
+  const refreshRemoteModels = async () => {
+    setModelsRefreshing(true)
+    try {
+      const response = await apiClient.get('/ai-assistant/models/remote')
+      const data = response.data?.data || response.data || {}
+      const models: AIModelOption[] = data.models || []
+      setModelOptions(models)
+      setSelectedModel((current) => {
+        if (current && models.some((m) => m.models.includes(current))) return current
+        const first = models[0]
+        return first?.default_model || first?.models?.[0] || ''
+      })
+    } catch (error) {
+      setModelOptions([])
+    } finally {
+      setModelsRefreshing(false)
+    }
+  }
+
   useEffect(() => {
     loadStatus()
+    loadModels()
   }, [])
 
-  const createNewSession = () => {
+  const createNewSession = async () => {
+    // 先在本地创建临时会话，发首条消息后再同步到服务端
     const session = createSession()
     setSessions((current) => [session, ...current])
     setActiveSessionId(session.id)
@@ -456,13 +570,35 @@ const AIAssistant: React.FC = () => {
     setAttachedFiles([])
   }
 
-  const deleteSession = (sessionId: string) => {
+  const ensureServerSession = async (sessionId: string, title: string): Promise<number | null> => {
+    const session = sessions.find((s) => s.id === sessionId)
+    if (session?.serverId) return session.serverId
+    try {
+      const conv = await conversationService.createConversation({ title: title.slice(0, 80) || '新的 AI 对话' })
+      setSessions((current) =>
+        current.map((s) => (s.id === sessionId ? { ...s, serverId: conv.id } : s)),
+      )
+      return conv.id
+    } catch {
+      return null
+    }
+  }
+
+  const deleteSession = async (sessionId: string) => {
+    const session = sessions.find((s) => s.id === sessionId)
+    if (session?.serverId) {
+      try {
+        await conversationService.deleteConversation(session.serverId)
+      } catch {
+        /* 即便后端删除失败也从前端移除 */
+      }
+    }
     setSessions((current) => {
-      const next = current.filter((session) => session.id !== sessionId)
+      const next = current.filter((s) => s.id !== sessionId)
       if (!next.length) {
-        const session = createSession()
-        setActiveSessionId(session.id)
-        return [session]
+        const fresh = createSession()
+        setActiveSessionId(fresh.id)
+        return [fresh]
       }
       if (activeSessionId === sessionId) setActiveSessionId(next[0].id)
       return next
@@ -514,6 +650,9 @@ const AIAssistant: React.FC = () => {
     if (!activeSession || activeSession.title !== '新的 AI 对话') return
     const title = prompt.replace(/\s+/g, ' ').slice(0, 24)
     updateActiveSession((session) => ({ ...session, title, updatedAt: new Date().toISOString() }))
+    if (activeSession.serverId) {
+      conversationService.updateConversation(activeSession.serverId, { title }).catch(() => {})
+    }
   }
 
   const applyBusinessContextTemplate = (template: (typeof businessContextTemplates)[number]) => {
@@ -583,6 +722,22 @@ const AIAssistant: React.FC = () => {
     )
     const displayContent = buildDisplayUserMessage(prompt, filesForMessage)
     const conversationContext = buildConversationContext(activeSession.messages, prompt)
+    const contextPayload = {
+      output_mode: outputModes.find((item) => item.value === outputMode)?.label,
+      business_context: businessContext.trim() || undefined,
+      ...conversationContext,
+      attachments: filesForMessage.map((file) => ({
+        filename: file.filename,
+        file_kind: file.fileKind,
+        file_size: file.fileSize,
+        summary: file.summary,
+        warnings: file.warnings,
+        extracted_chars: file.extractedText.length,
+        image_data_url: file.imageDataUrl,
+      })),
+      ui_source: 'ai_assistant_workspace',
+      preferred_model: selectedModel || undefined,
+    }
 
     const now = new Date().toISOString()
     const userMessage: ChatMessage = {
@@ -591,87 +746,138 @@ const AIAssistant: React.FC = () => {
       content: displayContent,
       createdAt: now,
     }
+    const assistantMessageId = createId()
+    const assistantPlaceholder: ChatMessage = {
+      id: assistantMessageId,
+      role: 'assistant',
+      content: '',
+      createdAt: now,
+      sourcePrompt: requestContent,
+    }
 
     setInput('')
     if (!overridePrompt) setAttachedFiles([])
     renameSessionFromPrompt(prompt)
     updateActiveSession((session) => ({
       ...session,
-      messages: [...session.messages, userMessage],
+      messages: [...session.messages, userMessage, assistantPlaceholder],
       updatedAt: now,
     }))
+
+    // 确保会话已持久化到服务端，以便消息可被保存
+    const conversationId = await ensureServerSession(activeSession.id, prompt)
+
     setLoading(true)
+    setStreamingMessageId(assistantMessageId)
     const controller = new AbortController()
     requestControllerRef.current = controller
 
     const startedAt = performance.now()
+    let lastScrollAt = 0
+    const patchAssistantMessage = (patch: Partial<ChatMessage>) => {
+      updateActiveSession((session) => ({
+        ...session,
+        messages: session.messages.map((message) =>
+          message.id === assistantMessageId ? { ...message, ...patch } : message,
+        ),
+      }))
+      const current = Date.now()
+      if (current - lastScrollAt > 300) {
+        lastScrollAt = current
+        messageEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
+      }
+    }
+
+    let streamedContent = ''
+    let streamErrorMessage = ''
+    let streamFinished = false
+
     try {
-      const response = await apiClient.post(
-        '/ai-assistant/query',
+      streamFinished = await streamAiQuery(
+        { content: requestContent, context: contextPayload, preferred_model: selectedModel || undefined, conversation_id: conversationId || undefined },
         {
-          content: requestContent,
-          context: {
-            output_mode: outputModes.find((item) => item.value === outputMode)?.label,
-            business_context: businessContext.trim() || undefined,
-            ...conversationContext,
-            attachments: filesForMessage.map((file) => ({
-              filename: file.filename,
-              file_kind: file.fileKind,
-              file_size: file.fileSize,
-              summary: file.summary,
-              warnings: file.warnings,
-              extracted_chars: file.extractedText.length,
-              image_data_url: file.imageDataUrl,
-            })),
-            ui_source: 'ai_assistant_workspace',
+          onStart: (info) => patchAssistantMessage({ provider: info.provider, model: info.model }),
+          onDelta: (_delta, content) => {
+            streamedContent = content
+            patchAssistantMessage({ content })
+          },
+          onComplete: (info) => {
+            streamedContent = info.content || streamedContent
+            patchAssistantMessage({
+              content: streamedContent,
+              provider: info.provider,
+              model: info.model,
+              tokensUsed: info.tokensUsed,
+              elapsedMs: Math.round(performance.now() - startedAt),
+            })
+          },
+          onError: (messageText) => {
+            streamErrorMessage = messageText
           },
         },
-        { timeout: 120000, signal: controller.signal },
+        controller.signal,
       )
-      const data = response.data?.data || response.data || {}
-      const answer = String(data.content || '').trim()
-      if (!answer) throw new Error('后端未返回可展示的 AI 内容。')
-
-      const assistantMessage: ChatMessage = {
-        id: createId(),
-        role: 'assistant',
-        content: answer,
-        createdAt: new Date().toISOString(),
-        provider: data.provider,
-        model: data.model,
-        tokensUsed: data.tokens_used,
-        elapsedMs: Math.round(performance.now() - startedAt),
-        sourcePrompt: requestContent,
+    } catch (streamError) {
+      if (!controller.signal.aborted) {
+        streamErrorMessage = getErrorText(streamError)
       }
-
-      updateActiveSession((session) => ({
-        ...session,
-        messages: [...session.messages, assistantMessage],
-        updatedAt: assistantMessage.createdAt,
-      }))
-      if (data.metadata?.simulated === true) {
-        setStatusInfo((current) => ({ ...(current || {}), simulated: true }))
-      }
-    } catch (error) {
-      const isCanceled = error?.code === 'ERR_CANCELED' || error?.name === 'CanceledError'
-      const errorMessage: ChatMessage = {
-        id: createId(),
-        role: 'assistant',
-        content: isCanceled ? '已停止本次 AI 请求。' : getErrorText(error),
-        createdAt: new Date().toISOString(),
-        isError: true,
-        elapsedMs: Math.round(performance.now() - startedAt),
-        sourcePrompt: requestContent,
-      }
-      updateActiveSession((session) => ({
-        ...session,
-        messages: [...session.messages, errorMessage],
-        updatedAt: errorMessage.createdAt,
-      }))
-    } finally {
-      requestControllerRef.current = null
-      setLoading(false)
     }
+
+    if (!streamFinished) {
+      if (controller.signal.aborted) {
+        patchAssistantMessage(
+          streamedContent
+            ? { content: `${streamedContent}\n\n（已停止生成）` }
+            : { content: '已停止本次 AI 请求。', isError: true },
+        )
+      } else if (streamErrorMessage && !streamedContent) {
+        // 流式接口不可用且未输出任何内容时，回退到非流式接口重试一次
+        try {
+          const response = await apiClient.post(
+            '/ai-assistant/query',
+            { content: requestContent, context: contextPayload, preferred_model: selectedModel || undefined, conversation_id: conversationId || undefined },
+            { timeout: 120000 },
+          )
+          const data = response.data?.data || response.data || {}
+          const answer = String(data.content || '').trim()
+          if (!answer) throw new Error('后端未返回可展示的 AI 内容。')
+          streamedContent = answer
+          patchAssistantMessage({
+            content: answer,
+            provider: data.provider,
+            model: data.model,
+            tokensUsed: data.tokens_used,
+            elapsedMs: Math.round(performance.now() - startedAt),
+          })
+          if (data.metadata?.simulated === true) {
+            setStatusInfo((current) => ({ ...(current || {}), simulated: true }))
+          }
+        } catch (fallbackError) {
+          patchAssistantMessage({
+            content: getErrorText(fallbackError),
+            isError: true,
+            elapsedMs: Math.round(performance.now() - startedAt),
+          })
+        }
+      } else if (streamErrorMessage) {
+        patchAssistantMessage({ content: `${streamedContent}\n\n（${streamErrorMessage}）`, isError: false })
+      } else {
+        // 连接中断且未收到完成信号，保留已输出内容
+        patchAssistantMessage(
+          streamedContent
+            ? { content: `${streamedContent}\n\n（连接中断，内容可能不完整）` }
+            : { content: '流式连接中断，且未收到任何内容。', isError: true },
+        )
+      }
+    }
+
+    updateActiveSession((session) => ({
+      ...session,
+      updatedAt: new Date().toISOString(),
+    }))
+    requestControllerRef.current = null
+    setStreamingMessageId(null)
+    setLoading(false)
   }
 
   const stopGeneration = () => {
@@ -913,7 +1119,14 @@ const AIAssistant: React.FC = () => {
                       }`}
                     >
                       {message.role === 'assistant' && !message.isError ? (
-                        <AssistantMarkdown content={message.content} />
+                        message.content ? (
+                          <AssistantMarkdown content={message.content} />
+                        ) : (
+                          <span className="inline-flex items-center gap-1 text-sm text-gray-500 dark:text-slate-400">
+                            正在接收 AI 回复
+                            <span className="animate-pulse">…</span>
+                          </span>
+                        )
                       ) : (
                         <div className="whitespace-pre-wrap break-words text-sm leading-6">{message.content}</div>
                       )}
@@ -960,12 +1173,12 @@ const AIAssistant: React.FC = () => {
                     )}
                   </div>
                 ))}
-                {loading && (
+                {loading && !hasStreamingContent && (
                   <div className="flex items-center gap-3 text-sm text-gray-600 dark:text-slate-400">
                     <div className="flex h-8 w-8 items-center justify-center rounded-md bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300">
                       <Loader2 className="h-4 w-4 animate-spin" />
                     </div>
-                    请稍等，AI处理中... {elapsedSeconds}s
+                    {streamingMessageId ? 'AI 正在流式生成回复...' : `请稍等，AI处理中... ${elapsedSeconds}s`}
                   </div>
                 )}
                 <div ref={messageEndRef} />
@@ -1071,6 +1284,65 @@ const AIAssistant: React.FC = () => {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4 p-4 pt-0">
+              <div>
+                <div className="mb-2 flex items-center justify-between">
+                  <span className="text-sm font-medium text-gray-700 dark:text-slate-200">模型选择</span>
+                  <button
+                    type="button"
+                    onClick={refreshRemoteModels}
+                    disabled={modelsRefreshing}
+                    className="inline-flex items-center gap-1 rounded-md border border-gray-200 bg-white px-2 py-1 text-xs text-gray-600 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
+                    title="从各服务地址拉取实际可用模型"
+                  >
+                    {modelsRefreshing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+                    {modelsRefreshing ? '拉取中…' : '拉取远程模型'}
+                  </button>
+                </div>
+                <select
+                  value={selectedModel}
+                  onChange={(event) => setSelectedModel(event.target.value)}
+                  disabled={!modelOptions.length}
+                  className="w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:border-sky-500 focus:outline-none disabled:cursor-not-allowed disabled:bg-gray-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:disabled:bg-slate-800"
+                >
+                  {modelOptions.length === 0 && <option value="">使用默认模型</option>}
+                  {modelOptions.flatMap((option) =>
+                    option.models.map((model) => (
+                      <option key={`${option.provider}:${model}`} value={model}>
+                        {option.provider_label} / {model}
+                      </option>
+                    )),
+                  )}
+                </select>
+                {modelOptions.length === 0 && (
+                  <div className="mt-1 text-xs text-gray-500 dark:text-slate-400">未获取到可用模型，将使用后端默认模型。</div>
+                )}
+                {modelOptions.length > 0 && (
+                  <div className="mt-2 space-y-1">
+                    {modelOptions.map((option) => (
+                      <div
+                        key={option.provider}
+                        className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-slate-400"
+                      >
+                        {option.remote_fetched ? (
+                          <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
+                        ) : option.error ? (
+                          <AlertCircle className="h-3.5 w-3.5 text-amber-500" />
+                        ) : (
+                          <AlertCircle className="h-3.5 w-3.5 text-gray-400" />
+                        )}
+                        <span>{option.provider_label}</span>
+                        <span className="text-gray-400 dark:text-slate-500">
+                          {option.remote_fetched
+                            ? `${option.models.length} 个模型（远程）`
+                            : option.error
+                              ? `使用配置，${option.error}`
+                              : `${option.models.length} 个模型（本地配置）`}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
               <div>
                 <div className="mb-2 text-sm font-medium text-gray-700 dark:text-slate-200">输出格式</div>
                 <div className="grid grid-cols-1 gap-2">
