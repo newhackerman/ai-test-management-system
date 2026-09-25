@@ -96,10 +96,10 @@ const Login: React.FC = () => {
   return (
     <div className="flex min-h-screen">
       {/* 左側品牌面板 — 桌面端可见 */}
-      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-primary/90 via-primary to-primary-800 items-center justify-center relative overflow-hidden">
+      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-primary/90 via-primary to-primary-800 dark:from-primary-800 dark:via-primary-900 dark:to-background items-center justify-center relative overflow-hidden">
         <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '24px 24px' }} />
         <div className="relative z-10 text-center px-8">
-          <div className="inline-flex h-20 w-20 items-center justify-center rounded-2xl bg-white/20 backdrop-blur mb-6 shadow-lg">
+          <div className="inline-flex h-20 w-20 items-center justify-center rounded-2xl bg-white/20 backdrop-blur mb-6 shadow-lg dark:bg-white/10">
             <span className="text-3xl font-bold text-white">AI</span>
           </div>
           <h1 className="text-4xl font-bold text-white tracking-tight">AI 测试管理系统</h1>
