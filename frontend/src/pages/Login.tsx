@@ -96,27 +96,29 @@ const Login: React.FC = () => {
   return (
     <div className="flex min-h-screen">
       {/* 左側品牌面板 — 桌面端可见 */}
-      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-primary/90 via-primary to-primary-800 dark:from-primary-800 dark:via-primary-900 dark:to-background items-center justify-center relative overflow-hidden">
-        <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '24px 24px' }} />
+      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-primary-50 via-primary-100 to-primary-200 dark:from-primary-800 dark:via-primary-900 dark:to-background items-center justify-center relative overflow-hidden">
+        {/* 浅色：主色点阵；深色：白色点阵 */}
+        <div className="absolute inset-0 dark:hidden" style={{ backgroundImage: 'radial-gradient(circle, hsl(var(--primary) / 0.18) 1px, transparent 1px)', backgroundSize: '24px 24px' }} />
+        <div className="absolute inset-0 hidden opacity-10 dark:block" style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '24px 24px' }} />
         <div className="relative z-10 text-center px-8">
-          <div className="inline-flex h-20 w-20 items-center justify-center rounded-2xl bg-white/20 backdrop-blur mb-6 shadow-lg dark:bg-white/10">
+          <div className="inline-flex h-20 w-20 items-center justify-center rounded-2xl bg-primary mb-6 shadow-lg shadow-primary/20 dark:bg-white/10 dark:shadow-none dark:backdrop-blur">
             <span className="text-3xl font-bold text-white">AI</span>
           </div>
-          <h1 className="text-4xl font-bold text-white tracking-tight">AI 测试管理系统</h1>
-          <p className="mt-4 text-lg text-white/80 max-w-md mx-auto">
+          <h1 className="text-4xl font-bold text-primary-900 tracking-tight dark:text-white">AI 测试管理系统</h1>
+          <p className="mt-4 text-lg text-primary-900/70 max-w-md mx-auto dark:text-white/80">
             智能化测试管理平台，覆盖测试计划、用例管理、缺陷跟踪与报告分析全流程
           </p>
-          <div className="mt-10 flex items-center justify-center gap-8 text-white/60 text-sm">
+          <div className="mt-10 flex items-center justify-center gap-8 text-primary-900/60 text-sm dark:text-white/60">
             <div className="flex items-center gap-2">
-              <div className="h-2 w-2 rounded-full bg-emerald-400" />
+              <div className="h-2 w-2 rounded-full bg-emerald-500 dark:bg-emerald-400" />
               <span>自动化测试</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="h-2 w-2 rounded-full bg-amber-400" />
+              <div className="h-2 w-2 rounded-full bg-amber-500 dark:bg-amber-400" />
               <span>性能监控</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="h-2 w-2 rounded-full bg-sky-400" />
+              <div className="h-2 w-2 rounded-full bg-sky-500 dark:bg-sky-400" />
               <span>AI 辅助</span>
             </div>
           </div>
