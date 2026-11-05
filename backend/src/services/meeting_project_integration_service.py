@@ -469,45 +469,6 @@ class MeetingProjectIntegrationService:
             })
         return schedule
     
-    async def create_tasks_from_meeting(
-        self,
-        meeting_id: int,
-        action_items: List[Dict[str, Any]],
-        creator_id: int
-    ) -> List[Task]:
-        """从会议行动项目创建项目任务"""
-        # 获取会议信息
-        meeting_query = select(Meeting).where(Meeting.id == meeting_id)
-        meeting_result = await self.db_session.execute(meeting_query)
-        meeting = meeting_result.scalar_one_or_none()
-        
-        if not meeting:
-            raise ValidationError("会议不存在")
-        
-        if not meeting.project_id:
-            raise ValidationError("会议未关联项目")
-        
-        tasks = []
-        for item in action_items:
-            task = Task(
-                title=item['title'],
-                description=item.get('description', ''),
-                project_id=meeting.project_id,
-                meeting_id=meeting_id,
-                assignee_id=item.get('assignee_id'),
-                creator_id=creator_id,
-                due_date=item.get('due_date'),
-                priority=item.get('priority', 'medium'),
-                status='todo',
-                created_at=datetime.now()
-            )
-            
-            self.db_session.add(task)
-            tasks.append(task)
-        
-        await self.db_session.flush()
-        return tasks
-    
     async def auto_invite_project_members(
         self,
         meeting_id: int,

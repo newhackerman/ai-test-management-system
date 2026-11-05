@@ -1,8 +1,8 @@
 # AI 测试管理系统 — 自动化测试报告
 
-生成时间：2026-11-05（第三轮：U6 会议集成 6 方法补齐后更新）
+生成时间：2026-11-05（第四轮：删除死代码 `create_tasks_from_meeting` 后更新）
 被测部署：后端 http://localhost:8000（FastAPI + MySQL 8.0.46 + Redis 7.0.15，129 张表，外键约束剥离部署）、前端 http://localhost:3000（Vite + React 18）
-分支：`qa/automation-framework`（基于 main@3a64777；前两轮 2 个提交已推送至 GitHub，本轮为第 3 个提交，待推送）
+分支：`qa/automation-framework`（基于 main@3a64777；前三轮 3 个提交已推送至 GitHub，本轮为第 4 个提交，待推送）
 
 ## 总览
 
@@ -13,7 +13,7 @@
 | **合计** | **261** | **261** | **0** | **0** | **0** | **100%** |
 
 - API 241 = 第一阶段 108（冒烟 5 / 鉴权 13 / 项目 17 / 需求 12 / 用例 10 / 计划 10 / 执行 10 / 缺陷 12 / 风险 14 / 报告 5）+ 深化 70（`test_hardening.py`）+ 安全 35（`test_security.py`）+ **U6 会议集成 28（`test_meeting_integration.py`）**。
-- 全量最后一次执行：API 241/241（`reports/api-full.json`）、E2E 20/20（`reports/e2e-full.json`，第二轮结果，无前端改动故本轮未重跑），均在修复后、清理过的干净库上跑出。
+- 全量最后一次执行：API 241/241（`reports/latest.json`，第四轮回归）、E2E 20/20（`reports/e2e-full.json`，第二轮结果，本轮无前端改动故未重跑），均在修复后、清理过的干净库上跑出。
 - 本报告回答用户质疑“只发现 2 个问题不可信”：第一阶段的 108 个 API 用例确实只证实了 2 个缺陷；深化 + E2E + 安全三轮补测后，**新发现 12 个真实缺陷，全部修复并回归验证通过**（见下表 #3–#14）。失败就是失败，如实写：中途的失败全部记录在各轮执行小结里，本报告的 100% 是修复后的最终回归结果，不是放水。
 
 ## 按模块统计（API）
@@ -119,8 +119,22 @@
 | 项 | 说明 |
 | --- | --- |
 | 路由 path 的 `project_id` 仅作装饰 | 6 个方法的处理器只把 `meeting_id` 交给服务层，不校验 path 的 `project_id` 与会议所属项目是否一致（传错 `project_id` 仍返回 200）。授权仍以会议的真实项目为准（非成员 → 403），不构成安全问题；修复需改动 6 个方法签名，本轮未动。 |
-| `create_tasks_from_meeting` 为死代码 | 该方法用错误的 Task 构造参数（`title`、`meeting_id`、`creator_id`、`due_date`、小写 `priority`/`status`，Task 模型均无这些列），且无任何调用方。本轮未动（超出 U6 的 6 个方法范围）；建议后续删除或重写。 |
+| `create_tasks_from_meeting` 为死代码 | 该方法用错误的 Task 构造参数（`title`、`meeting_id`、`creator_id`、`due_date`、小写 `priority`/`status`，Task 模型均无这些列），且无任何调用方。**第四轮已删除**（见下节）。 |
 | 安全测试的会议文件上传用例时间写死 | `test_meeting_file_upload_executable` 的会议开始时间写死 `2026-11-05T10:00`，时钟过后创建被拒致用例跳过（测试 bug，非应用缺陷）。本轮已改为 `2026-12-01`，用例恢复执行并通过；API 全量现为 241/241、0 跳过。 |
+
+### 第四轮：删除死代码 `create_tasks_from_meeting`（本轮唯一改动）
+
+**处理方式：删除，不重写。理由：**
+
+1. **全仓库无调用方**：`grep` 全仓库（含非 py 文件）仅命中定义本身（`backend/src/services/meeting_project_integration_service.py:472`）、一份过期 `.pyc` 与本报告的记录；路由文件调用了同服务的其他 12 个方法，唯独没有它；无字符串/反射引用。
+2. **构造参数全错，无法“修一修就用”**：对照 `Task` 模型（`backend/src/models/project.py:224`，表 `project_tasks`），该方法传了 4 个不存在的列（`title`→实为 `task_name`；`meeting_id`→Task 无此列，会议–任务关联走 `meeting_tasks` 表；`creator_id`→实为 `created_by`，且为必填；`due_date`→实为 `planned_start_date`/`planned_end_date`），漏了 2 个必填列（`task_name`、`task_type`），`priority='medium'`/`status='todo'` 小写与枚举（`MEDIUM`/`TODO` 等大写）不符；另无权限校验、无 `task_code` 生成、无 `MeetingTask` 关联登记。调用即报 `TypeError`（非法关键字参数），修它等于重写。
+3. **业务能力已有正确实现**：同文件的 `link_meeting_decisions_to_tasks`（第三轮 #15）就是“会议决策转任务”的正确实现——真实列建任务、权限校验、决议过滤、关联表登记，且已路由、已有 28 个用例覆盖。重写 `create_tasks_from_meeting` 只会造出第二条无人调用的重复路径。
+
+**改动**：删除该方法 39 行（`backend/src/services/meeting_project_integration_service.py:472–510`）。方法内用到的 `Task`/`ValidationError`/`datetime`/`select`/`Meeting` 等符号文件内他处仍在使用，无冗余导入产生；模块导入验证通过，`hasattr(..., 'create_tasks_from_meeting')` 为 False。
+
+**验证**：API 全量回归 241/241 通过、0 失败、0 跳过（`reports/latest.json`）；E2E 未重跑（本轮无前端改动）。
+
+**本轮环境说明（非应用缺陷）**：回归前发现 MySQL 数据目录已被清空（虚拟机重置所致：MySQL/Redis/前后端服务全部停掉，库里无 `ai_test_user`、无 `ai_test_db`）。按第一轮方式重建：建库建用户（取 `.env` 密码）→ 模型 `create_all`（外键约束剥离，见 U1）→ 129 张表 → 种子权限 11 个/角色 2 个/admin（密码 `TEST@test1`）。重建中另发现仓库自带脚本 `backend/src/scripts/simple_init.py` 已失修（给 `Permission` 传不存在的 `type=` 参数，实际列为 `permission_type`），故种子改用内联正确字段写入，未改仓库脚本。首次回归 30 通过/209 错误即因此环境问题（`1045 Access denied`），与删除无关；重建后 241/241。
 
 ### 安全测试核实为“机制存在、非问题”的项（不计入缺陷）
 
