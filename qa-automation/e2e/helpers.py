@@ -55,9 +55,10 @@ def create_project_ui(page, name: str, start: str = "2026-11-05", end: str = "20
 def create_requirement_ui(page, title: str, project_name: str | None = None):
     """Create a requirement through the 新建需求 dialog.
 
-    The project is selected explicitly in the dialog: the form snapshots
-    the project list when the dialog opens, so opening it before the list
-    loads leaves project_id empty and submit is blocked by validation.
+    The project is selected explicitly in the dialog. (U7 fixed: if the
+    dialog is opened before the project list loads, the first project is
+    auto-filled once the list arrives instead of leaving project_id empty
+    and blocking submit.)
     """
     page.goto(f"{FRONTEND_URL}/requirements")
     page.get_by_role("button", name="新建需求").click()

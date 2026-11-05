@@ -292,6 +292,21 @@ function RequirementsManagement() {
     setAiDraftConsumed(true)
   }, [aiDraft, aiDraftConsumed, filters.project_id, projects])
 
+  // U7: backfill the project once the reference list arrives. openCreate()
+  // snapshots projects[0] at click time; if the dialog was opened before
+  // loadReferences() resolved, project_id stayed '' and submit kept failing
+  // validation even after the list loaded. Only backfill a fresh create
+  // form (dialog open, not editing, user has not picked a project yet);
+  // never overwrite an explicit choice or an edit form.
+  useEffect(() => {
+    if (editingRequirement !== null) return
+    if (form === emptyForm) return
+    if (form.project_id) return
+    const fallbackId = filters.project_id || String(projects[0]?.id || '')
+    if (!fallbackId) return
+    setForm((current) => (current.project_id ? current : { ...current, project_id: fallbackId }))
+  }, [projects, editingRequirement, form, filters.project_id])
+
   const openCreate = () => {
     setEditingRequirement(null)
     setForm({
