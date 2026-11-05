@@ -236,6 +236,28 @@ app.add_middleware(
     allow_headers=cors_config["allow_headers"],
 )
 
+# 安全响应头中间件：此前所有响应均不带 X-Content-Type-Options /
+# X-Frame-Options / CSP / HSTS / Referrer-Policy。CSP 在 /docs、
+# /redoc、/openapi.json 上跳过——Swagger UI 依赖内联脚本与 CDN，
+# 默认 CSP 会破坏文档页；其余路径一律下发。
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        response.headers["Strict-Transport-Security"] = (
+            "max-age=31536000; includeSubDomains"
+        )
+        if request.url.path not in ("/docs", "/redoc", "/openapi.json"):
+            response.headers["Content-Security-Policy"] = (
+                "default-src 'self'; frame-ancestors 'none'"
+            )
+        return response
+
+
+app.add_middleware(SecurityHeadersMiddleware)
+
 # 全局认证中间件：拦截 /api/v1/* 请求，白名单放行认证/文档端点
 app.add_middleware(AuthMiddleware)
 

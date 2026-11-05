@@ -15,6 +15,8 @@ import asyncio
 import logging
 import secrets
 import string
+import uuid
+from pathlib import Path
 from datetime import datetime, timedelta
 from typing import List, Optional, Dict, Any, Tuple
 from decimal import Decimal
@@ -25,6 +27,7 @@ from sqlalchemy.orm import selectinload, joinedload
 from fastapi import Depends
 
 from ..core.database import get_async_session
+from ..core.config import get_settings
 from ..core.exceptions import ValidationError, NotFoundError, PermissionError
 from ..models.meeting import (
     Meeting, MeetingParticipant, MeetingType, MeetingStatus,
@@ -328,6 +331,66 @@ class MeetingService:
         """
         await self.get_meeting_by_id(meeting_id, user_id)
         return [], 0
+
+    # 允许上传的文件扩展名（与上传接口文档一致：文档 / 图片 /
+    # 视频 / 压缩包）。可执行与脚本类型（php/exe/sh/py/js 等）
+    # 不在白名单内，直接拒绝。
+    ALLOWED_UPLOAD_EXTENSIONS = frozenset({
+        "pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx", "txt", "md",
+        "jpg", "jpeg", "png", "gif", "svg", "bmp", "webp",
+        "mp4", "avi", "mov", "mkv", "webm",
+        "zip", "rar", "7z", "tar", "gz",
+    })
+
+    async def upload_file(self, meeting_id: int, uploader_id: int,
+                          upload_request: Any, file: Any) -> MeetingFile:
+        """上传文件到会议。
+
+        路由曾调用本方法但服务类中并不存在（AttributeError -> 500），
+        会议文件上传端点整体不可用。本实现：校验会议存在、按白名单
+        校验扩展名（可执行/脚本类型直接拒绝）、落盘到
+        UPLOAD_DIR/meetings/{meeting_id}/ 下的随机文件名（防路径穿越
+        与同名覆盖）、创建 MeetingFile 记录。
+        """
+        meeting = await self.db.get(Meeting, meeting_id)
+        if not meeting or meeting.deleted_at is not None:
+            raise NotFoundError("会议不存在")
+
+        original_name = (getattr(upload_request, "file_name", "") or "").strip()
+        ext = original_name.rsplit(".", 1)[-1].lower() if "." in original_name else ""
+        if not ext or ext not in self.ALLOWED_UPLOAD_EXTENSIONS:
+            raise ValidationError(f"不支持的文件类型: .{ext or '?'}")
+
+        content = await file.read()
+        max_size = get_settings().MAX_FILE_SIZE
+        if len(content) > max_size:
+            raise ValidationError(
+                f"文件大小不能超过{max_size // (1024 * 1024)}MB"
+            )
+
+        upload_dir = Path(get_settings().UPLOAD_DIR) / "meetings" / str(meeting_id)
+        upload_dir.mkdir(parents=True, exist_ok=True)
+        stored_name = f"{uuid.uuid4().hex}.{ext}"
+        file_path = upload_dir / stored_name
+        file_path.write_bytes(content)
+
+        record = MeetingFile(
+            meeting_id=meeting_id,
+            uploader_id=uploader_id,
+            file_name=original_name,
+            file_path=str(file_path),
+            file_size=len(content),
+            file_type=ext,
+            mime_type=getattr(upload_request, "mime_type", None),
+            status=FileShareStatus.AVAILABLE,
+            is_public=getattr(upload_request, "is_public", True),
+            description=getattr(upload_request, "description", None),
+            file_metadata={"original_name": original_name},
+        )
+        self.db.add(record)
+        await self.db.commit()
+        await self.db.refresh(record)
+        return record
 
     async def get_files(self, meeting_id: int, query_params: Any,
                         user_id: int) -> Tuple[List[MeetingFile], int]:

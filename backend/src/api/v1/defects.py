@@ -27,6 +27,7 @@ from ...services.defect_notification_service import DefectNotificationService
 from ...services.auth_dependencies import get_current_user
 from ...models.user import User
 from ...models.test_case import Defect, DefectType, DefectSeverity, DefectStatus, DefectResolution, TestCasePriority, TestCase, TestExecution
+from ...models.requirement import Requirement
 from ...models.test_plan import TestPlan
 from ...models.defect_comment import DefectComment
 from ...schemas.base import BaseResponse, PaginatedResponse
@@ -240,6 +241,19 @@ async def create_defect(
     创建新的缺陷记录，支持AI辅助分类和智能分配。
     """
     try:
+        # 关联对象存在性校验：此前不校验，传入不存在的
+        # test_case_id / test_execution_id / requirement_id 会静默
+        # 创建孤儿缺陷（与已修复的需求孤儿问题同类）
+        if request.test_case_id is not None:
+            if not db.query(TestCase).filter(TestCase.id == request.test_case_id).first():
+                raise ValidationError("指定的测试用例不存在")
+        if request.test_execution_id is not None:
+            if not db.query(TestExecution).filter(TestExecution.id == request.test_execution_id).first():
+                raise ValidationError("指定的测试执行不存在")
+        if request.requirement_id is not None:
+            if not db.query(Requirement).filter(Requirement.id == request.requirement_id).first():
+                raise ValidationError("指定的需求不存在")
+
         now = datetime.utcnow()
         defect = Defect(
             defect_code=_generate_defect_code(db),

@@ -55,6 +55,38 @@ class MeetingProjectIntegrationService:
         result = await self.db_session.execute(query)
         return result.scalars().all()
 
+    async def create_project_meeting(
+        self,
+        project_id: int,
+        meeting_data: Dict[str, Any],
+        creator_id: int,
+        auto_invite_team: bool = True,
+    ) -> Meeting:
+        """为项目创建会议。
+
+        路由曾调用本方法但服务类中并不存在（AttributeError -> 500），
+        导致 POST /projects/{id}/meetings 整体不可用。实现委托给
+        已有的 MeetingService.create_meeting（负责校验、生成会议
+        编码与创建会议实体），再按需自动邀请项目成员。
+        """
+        from ..services.meeting_service import MeetingService
+
+        project = await self.db_session.get(Project, project_id)
+        if not project:
+            raise NotFoundError("项目不存在")
+
+        data = {**meeting_data, "project_id": project_id}
+        meeting_service = MeetingService(self.db_session)
+        meeting = await meeting_service.create_meeting(data, creator_id)
+
+        if auto_invite_team:
+            await self.auto_invite_project_members(
+                meeting.id, project_id, creator_id
+            )
+            await self.db_session.flush()
+
+        return meeting
+
     async def generate_project_meeting_schedule(
         self,
         project_id: int,

@@ -668,6 +668,14 @@ class TestCaseService:
             requirement = self.db.query(Requirement).filter(Requirement.id == case_data['requirement_id']).first()
             if not requirement:
                 raise ValidationError("指定的关联需求不存在")
+
+        # 测试计划存在性验证（此前未校验：不存在的 test_plan_id 会
+        # 静默创建孤儿用例；_validate_create_permission 只在计划
+        # 存在时才检查权限，不存在时直接放行）
+        if case_data.get('test_plan_id'):
+            test_plan = self.db.query(TestPlan).filter(TestPlan.id == case_data['test_plan_id']).first()
+            if not test_plan:
+                raise ValidationError("指定的测试计划不存在")
         
         # 负责人验证
         if case_data.get('assignee_id'):

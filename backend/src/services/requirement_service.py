@@ -228,6 +228,8 @@ class RequirementService:
             )
             return updated_requirement
             
+        except (NotFoundError, ValidationError):
+            raise
         except Exception as e:
             logger.error(f"更新需求失败: {str(e)}")
             raise BusinessLogicError(f"更新需求失败: {str(e)}")
@@ -281,6 +283,8 @@ class RequirementService:
             logger.info(f"需求删除成功: {requirement.requirement_code}")
             return deleted
             
+        except (NotFoundError, ValidationError):
+            raise
         except Exception as e:
             logger.error(f"删除需求失败: {str(e)}")
             raise BusinessLogicError(f"删除需求失败: {str(e)}")
@@ -347,6 +351,8 @@ class RequirementService:
             logger.info(f"需求状态更新成功: {requirement.requirement_code} {requirement.status.value} -> {new_status.value}")
             return updated_requirement
             
+        except (NotFoundError, ValidationError):
+            raise
         except Exception as e:
             logger.error(f"更新需求状态失败: {str(e)}")
             raise BusinessLogicError(f"更新需求状态失败: {str(e)}")

@@ -14,7 +14,7 @@ from pydantic import BaseModel, Field
 
 from ....core.database import get_async_session
 from ....core.auth import get_current_user
-from ....core.exceptions import NotFoundError
+from ....core.exceptions import NotFoundError, ValidationError
 from ....services.meeting_project_integration_service import MeetingProjectIntegrationService
 from ....models.user import User
 from ....models.meeting import MeetingType
@@ -139,6 +139,10 @@ async def create_project_meeting(
     
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+    except ValidationError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except NotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
     except PermissionError as e:
         raise HTTPException(status_code=403, detail=str(e))
     except Exception as e:
