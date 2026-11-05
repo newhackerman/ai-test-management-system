@@ -1111,8 +1111,12 @@ def _normalize_environment(value: Optional[str]) -> str:
     }
     if environment in environment_map:
         return environment_map[environment]
-    ascii_environment = "".join(char for char in environment if char.isascii() and (char.isalnum() or char in "-_"))
-    return (ascii_environment[:100] or "test")
+    # U4: unknown values used to be ASCII-stripped here ("QA环境" -> "QA",
+    # "生产" -> "test"), silently changing what the user typed — and
+    # sometimes to a wrong environment. Preserve unknown values verbatim
+    # (truncated to the column width) instead; only known names map to
+    # canonical codes.
+    return (environment[:100] or "test")
 
 
 def _automation_status_from_executions(executions: List[TestExecution]) -> str:

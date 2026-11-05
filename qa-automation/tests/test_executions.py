@@ -128,3 +128,32 @@ def test_execution_statistics(api, started_execution):
     data = assert_envelope_ok(resp, "data")
     assert data["total_executions"] >= 1
     assert "pass_rate" in data
+
+
+@pytest.mark.crud
+@pytest.mark.parametrize(
+    "given,stored",
+    [
+        # U4: unknown values must be preserved verbatim, not ASCII-stripped
+        # ("QA环境" used to become "QA", "生产" silently became "test").
+        ("QA环境", "QA环境"),
+        ("生产", "生产"),
+        ("灰度环境", "灰度环境"),
+        ("UAT环境", "UAT环境"),
+        # Known names still map to canonical codes.
+        ("测试环境", "test"),
+        ("生产环境", "prod"),
+        ("staging", "staging"),
+        ("dev", "dev"),
+    ],
+)
+def test_manual_start_preserves_environment_name(api, make_case, given, stored):
+    case = make_case()
+    resp = api.post(
+        "/api/v1/test-executions/manual/start",
+        json={"test_case_id": case["id"], "test_environment": given},
+    )
+    execution = assert_envelope_ok(resp, "data")
+    assert execution["test_environment"] == stored, (
+        f"environment {given!r} was stored as {execution['test_environment']!r}, expected {stored!r}"
+    )
