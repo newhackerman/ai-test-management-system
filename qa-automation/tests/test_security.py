@@ -480,8 +480,8 @@ def test_meeting_file_upload_executable(api, make_project):
         json={
             "title": "sec-probe-meeting",
             "meeting_type": "PROGRESS_SYNC",
-            "scheduled_start_time": "2026-11-05T10:00:00",
-            "scheduled_end_time": "2026-11-05T11:00:00",
+            "scheduled_start_time": "2026-12-01T10:00:00",
+            "scheduled_end_time": "2026-12-01T11:00:00",
         },
     )
     if resp.status_code not in (200, 201):

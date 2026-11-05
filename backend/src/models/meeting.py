@@ -541,6 +541,29 @@ class MeetingFile(BaseModel):
         return f"<MeetingFile(id={self.id}, meeting_id={self.meeting_id}, file_name='{self.file_name}', status='{self.status}')>"
 
 
+class MeetingTask(BaseModel):
+    """会议任务关联模型
+
+    会议与项目任务的多对多关联：Task 模型本身没有 meeting_id 列，
+    会议-任务的关联关系由本表承载（会议项目集成的 6 个方法
+    link/sync/update-progress 均读写本表）。
+    """
+    __tablename__ = 'meeting_tasks'
+
+    meeting_id = Column(Integer, ForeignKey('meetings.id', ondelete='CASCADE'), nullable=False, index=True, comment='会议ID')
+    task_id = Column(BigInteger, ForeignKey('project_tasks.id', ondelete='CASCADE'), nullable=False, index=True, comment='任务ID')
+    linked_by = Column(Integer, comment='关联人ID')
+    linked_at = Column(DateTime, default=datetime.utcnow, comment='关联时间')
+
+    __table_args__ = (
+        UniqueConstraint('meeting_id', 'task_id', name='uk_meeting_task'),
+        {'mysql_engine': 'InnoDB', 'mysql_charset': 'utf8mb4'},
+    )
+
+    def __repr__(self):
+        return f"<MeetingTask(meeting_id={self.meeting_id}, task_id={self.task_id})>"
+
+
 class MeetingAnalytics(BaseModel):
     """会议分析数据模型"""
     __tablename__ = 'meeting_analytics'

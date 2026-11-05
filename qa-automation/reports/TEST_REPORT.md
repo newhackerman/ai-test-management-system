@@ -1,19 +1,19 @@
 # AI 测试管理系统 — 自动化测试报告
 
-生成时间：2026-11-05（第二轮：E2E + 深化 + 安全测试后更新）
-被测部署：后端 http://localhost:8000（FastAPI + MySQL 8.0.46 + Redis 7.0.15，122 张表，外键约束剥离部署）、前端 http://localhost:3000（Vite + React 18）
-分支：`qa/automation-framework`（基于 main@3a64777；未 push）
+生成时间：2026-11-05（第三轮：U6 会议集成 6 方法补齐后更新）
+被测部署：后端 http://localhost:8000（FastAPI + MySQL 8.0.46 + Redis 7.0.15，129 张表，外键约束剥离部署）、前端 http://localhost:3000（Vite + React 18）
+分支：`qa/automation-framework`（基于 main@3a64777；前两轮 2 个提交已推送至 GitHub，本轮为第 3 个提交，待推送）
 
 ## 总览
 
 | 套件 | 用例总数 | 通过 | 失败 | 错误 | 跳过 | 通过率 |
 | --- | --- | --- | --- | --- | --- | --- |
-| API（`tests/`） | 213 | 213 | 0 | 0 | 0 | 100% |
+| API（`tests/`） | 241 | 241 | 0 | 0 | 0 | 100% |
 | E2E（`e2e/`，Playwright + Chromium 真实浏览器） | 20 | 20 | 0 | 0 | 0 | 100% |
-| **合计** | **233** | **233** | **0** | **0** | **0** | **100%** |
+| **合计** | **261** | **261** | **0** | **0** | **0** | **100%** |
 
-- API 213 = 第一阶段 108（冒烟 5 / 鉴权 13 / 项目 17 / 需求 12 / 用例 10 / 计划 10 / 执行 10 / 缺陷 12 / 风险 14 / 报告 5）+ 深化 70（`test_hardening.py`）+ 安全 35（`test_security.py`）。
-- 全量最后一次执行：API 213/213（`reports/api-full.json`）、E2E 20/20（`reports/e2e-full.json`），均在修复后、清理过的干净库上跑出。
+- API 241 = 第一阶段 108（冒烟 5 / 鉴权 13 / 项目 17 / 需求 12 / 用例 10 / 计划 10 / 执行 10 / 缺陷 12 / 风险 14 / 报告 5）+ 深化 70（`test_hardening.py`）+ 安全 35（`test_security.py`）+ **U6 会议集成 28（`test_meeting_integration.py`）**。
+- 全量最后一次执行：API 241/241（`reports/api-full.json`）、E2E 20/20（`reports/e2e-full.json`，第二轮结果，无前端改动故本轮未重跑），均在修复后、清理过的干净库上跑出。
 - 本报告回答用户质疑“只发现 2 个问题不可信”：第一阶段的 108 个 API 用例确实只证实了 2 个缺陷；深化 + E2E + 安全三轮补测后，**新发现 12 个真实缺陷，全部修复并回归验证通过**（见下表 #3–#14）。失败就是失败，如实写：中途的失败全部记录在各轮执行小结里，本报告的 100% 是修复后的最终回归结果，不是放水。
 
 ## 按模块统计（API）
@@ -32,6 +32,7 @@
 | test_reports | 5 | 5 | 0 |
 | test_hardening | 70 | 70 | 0 |
 | test_security | 35 | 35 | 0 |
+| test_meeting_integration | 28 | 28 | 0 |
 
 ## 按模块统计（E2E）
 
@@ -56,6 +57,10 @@
 | 深化+安全第二轮（修测试 bug + 修 #5–#11 后） | 102 通过 / 3 失败 | 真实缺陷 3 个：用户守卫的 403 被通用异常处理吞成 500（2 处）、会议文件上传 500（缺方法） |
 | 深化+安全第三轮（修 #12–#14 后） | **105 通过 / 0 失败** | — |
 | API 全量（213） | **213 通过 / 0 失败** | 修复无回归 |
+| U6 新套件首轮 | 26 通过 / 2 失败（28） | 全部为测试 bug：`project` fixture 是 module 级共享，成员在测试间累积（硬编码人数断言错）、里程碑名在项目内唯一（重名 400） |
+| U6 新套件第二轮（修测试 bug 后） | **28 通过 / 0 失败** | — |
+| API 全量（241，修测试 bug 后） | 240 通过 / 0 失败 / **1 跳过** | 跳过的是 `test_meeting_file_upload_executable`：会议创建时间写死 `2026-11-05T10:00`，时钟已过该时间，创建被“开始时间不能早于当前时间”拒（400）→ 测试 bug，非应用缺陷 |
+| API 全量（最终，修时间后） | **241 通过 / 0 失败 / 0 跳过** | 修复无回归 |
 | E2E 首轮 | 12 通过 / 7 失败 | 全部为测试 bug（断言文本、清理路径斜杠、原生 required 校验等），应用缺陷 2 个（#3、#4） |
 | E2E 全量（修复后） | 19 通过 / 1 失败 | `test_stored_xss_does_not_execute`：payload 缺 `project_manager_id` 致 422（测试 bug） |
 | E2E 全量（补 `project_manager_id` 后） | 19 通过 / 1 失败 | 同一用例：Playwright 严格模式下 payload 文本匹配到 2 个元素（测试定位器问题，非应用缺陷） |
@@ -99,6 +104,24 @@
 | 13 | 会议文件上传返回 HTTP 500。根因同 #12：`collaboration_routes.py` 调用的 `MeetingService.upload_file` 方法不存在（`AttributeError`），任意文件上传都 500，无法验证可执行文件是否被拦。 | major | P1 | ✅ 已修复 | `src/services/meeting_service.py`：实现 `upload_file`（会议存在性校验 → 扩展名白名单校验 → 按 `MAX_FILE_SIZE` 限大小 → 落盘到 `UPLOAD_DIR/meetings/{meeting_id}/` 下的随机文件名，防路径穿越与同名覆盖 → 创建 `MeetingFile` 记录）。白名单与接口文档一致：文档/图片/视频/压缩包；`.php`、`.exe` 等可执行/脚本类型直接拒绝。验证：`test_meeting_file_upload_executable`（`.php`）返回 400；合法上传流程已打通。 |
 | 14 | `src/api/users.py` 6 个处理器缺 `except HTTPException: raise`，守卫抛出的 403 被通用 `except Exception` 吞成 500（#8 修复后第二轮回归暴露）。 | minor | P2 | ✅ 已修复 | 6 个处理器（列表、导出、创建、用户统计、高级搜索、活动日志）补 `except HTTPException: raise`。验证：深化+安全第三轮 105/105。 |
 
+### 第三轮发现（U6 会议集成，28 个新用例）
+
+| # | 问题 | 严重程度 | 优先级 | 状态 | 修复 |
+| --- | --- | --- | --- | --- | --- |
+| 15 | **U6：会议项目集成的 6 个方法全部未实现，所属端点一律 500**：`sync_project_team_to_meeting`、`create_milestone_review_meeting`、`link_meeting_decisions_to_tasks`、`sync_meeting_tasks_with_project`、`link_existing_task_to_meeting`、`update_task_from_meeting_progress`（与 #12、#13 同根因：路由调用了服务类不存在的方法）。6 个方法均不涉及外部会议服务（Zoom/腾讯会议等），全部是内部逻辑，无需外部密钥或账号，因此全部实现，未留“需外部集成”项。 | major | P1 | ✅ 已修复 | `src/services/meeting_project_integration_service.py`：6 个方法全部实现，语义以现有模型、接口 schema 与相邻已实现方法为准：① 同步团队成员：校验会议与访问权限，复用已修复的 `auto_invite_project_members`，返回成员总数/已有参与者/新增数，幂等；② 里程碑评审会：默认标题 `{里程碑名}评审会议`、类型 `PROGRESS_SYNC`（枚举无里程碑评审类型）、开始时间为里程碑计划日 10:00、时长 1 小时，`meeting_config` 可覆盖标题/类型/时间/描述/人数/自动邀请/议程；复用 `create_project_meeting`；③ 决议转任务：仅 `create_task=true` 的决议建任务，`task_type`/`priority` 按 Task 模型枚举校验，任务用真实列（`task_name`/`task_type`/`priority`/`status=TODO`/`assignee_id`/`reporter_id`/`planned_start_date`/`planned_end_date`/`estimated_hours`/`acceptance_criteria`）创建并写入关联表；④ 任务同步：按关联表核对会议任务与项目归属，跨项目任务移回本项目；⑤ 关联已有任务：任务须属于会议的项目（否则 400），幂等；⑥ 按会议进度更新任务：任务须已关联到会议（否则 400），更新 `status`/`actual_hours`，`progress_percentage` 仅用于派生状态（100→COMPLETED、>0→IN_PROGRESS、0→TODO，Task 模型无该列，不存储）。新增 `MeetingTask` 模型（`src/models/meeting.py`，表 `meeting_tasks`：`meeting_id`、`task_id`、`linked_by`、`linked_at`，唯一约束 `(meeting_id, task_id)`）承载会议–任务关联——Task 模型本身无 `meeting_id` 列，`get_meeting_related_tasks` 也已改走该关联表；线上库已建表（现 129 张表）。验证：28 个新用例全部通过（正常 + 异常：未知会议/任务/里程碑 → 404、非法枚举 → 400、未关联任务 → 400、非成员 → 403）。 |
+| 16 | `auto_invite_project_members`（#15-① 的直接依赖）有 4 处错误，之前只是潜伏——第二轮测试无其他成员，从未触发：① 读 `member.role`（ProjectMember 只有 `role_in_project`）→ AttributeError；② 读 `member.permissions`（无此列）；③ 传 `role=` 给 `MeetingParticipant`（实际字段是 `participant_role`）；④ `invitation_status` 传小写字符串 `"pending"`（应为 `InvitationStatus.PENDING` 枚举）。另缺“已参与成员跳过”逻辑，重复邀请会撞唯一约束。 | major | P1 | ✅ 已修复 | `src/services/meeting_project_integration_service.py`：按 `role_in_project` 映射（`_map_project_role_to_meeting_role` 重写为英文角色码 → `ParticipantRole` 枚举：PROJECT_MANAGER→MODERATOR、ARCHITECT/DESIGNER/REQUIREMENT_MANAGER→PRESENTER、其余→PARTICIPANT）；`can_share_screen` 按角色给（PROJECT_MANAGER/ARCHITECT → True）；`invitation_status=InvitationStatus.PENDING`；已参与成员跳过。验证：`test_sync_team_adds_member`、`test_sync_team_idempotent` 通过。 |
+| 17 | `project_integration_routes.py` 未从 `core.exceptions` 导入 `PermissionError`，文件内全部 `except PermissionError` 只捕获 Python 内置 `PermissionError`，服务层自定义的权限异常落入通用 `except Exception` → 500。实测：非项目成员调同步团队接口返回 500 而非 403。 | minor | P2 | ✅ 已修复 | 路由文件补 `PermissionError` 导入，一次性修复该文件全部处理器的权限映射。验证：非成员调 5 个写接口均返回 403（sync-team、link-existing、decisions-to-tasks、sync-tasks、update-progress）；项目成员仍 200。 |
+| 18 | `get_meeting_related_tasks`（会议任务读接口）无权限校验：非项目成员 `GET .../tasks` 返回 200，可看到会议任务列表。 | minor | P2 | ✅ 已修复 | `src/services/meeting_project_integration_service.py`：`get_meeting_related_tasks` 内补 `_require_meeting_access` 校验（`user_id` 为 None 的内部调用跳过）；`get_meeting_task_progress_summary` 复用该方法，继承同一校验。验证：`test_get_tasks_outsider_forbidden` 返回 403。 |
+| 19 | `get_meeting_related_tasks` 处理器引用不存在的 `task.progress_percentage`（Task 模型无该列）：关联任务一旦返回，处理器会抛 AttributeError。之前未暴露是因为该方法一直返回空列表。 | minor | P2 | ✅ 已修复 | `src/api/v1/meetings/project_integration_routes.py`：`progress_percentage` 改为按状态派生（COMPLETED→100、IN_PROGRESS→50、其余→0）。验证：`test_update_progress_status_and_hours`、`test_get_progress_summary_counts` 通过（进度 50 / 总体 50.0）。 |
+
+第三轮观察记录（未计入缺陷，未修）：
+
+| 项 | 说明 |
+| --- | --- |
+| 路由 path 的 `project_id` 仅作装饰 | 6 个方法的处理器只把 `meeting_id` 交给服务层，不校验 path 的 `project_id` 与会议所属项目是否一致（传错 `project_id` 仍返回 200）。授权仍以会议的真实项目为准（非成员 → 403），不构成安全问题；修复需改动 6 个方法签名，本轮未动。 |
+| `create_tasks_from_meeting` 为死代码 | 该方法用错误的 Task 构造参数（`title`、`meeting_id`、`creator_id`、`due_date`、小写 `priority`/`status`，Task 模型均无这些列），且无任何调用方。本轮未动（超出 U6 的 6 个方法范围）；建议后续删除或重写。 |
+| 安全测试的会议文件上传用例时间写死 | `test_meeting_file_upload_executable` 的会议开始时间写死 `2026-11-05T10:00`，时钟过后创建被拒致用例跳过（测试 bug，非应用缺陷）。本轮已改为 `2026-12-01`，用例恢复执行并通过；API 全量现为 241/241、0 跳过。 |
+
 ### 安全测试核实为“机制存在、非问题”的项（不计入缺陷）
 
 | 项 | 核实结果 |
@@ -135,13 +158,14 @@
 | U3 | 日志警告 `AIAssistantService` 缺少 `generate_test_strategy` 方法；启动预热任务报 `cannot import name 'get_usage_statistics_service'` | 均为非致命警告，不影响 API 功能；AI 相关功能无外部密钥，本次未深入 |
 | U4 | `test_environment` 传入 `"QA环境"` 后被存储为 `"QA"`（疑似静默截断/归一化） | 未复现为明确缺陷，仅作观察记录 |
 | U5 | Alembic 迁移链另有残留问题（011 前提错误、008/009 分支重复建表等） | 部署已绕过迁移链直接用模型建表；迁移链修复需逐个迁移验证，超出本次范围 |
-| U6 | 会议项目集成路由另有 6 个未实现的方法，所属端点仍 500：`create_milestone_review_meeting`、`link_existing_task_to_meeting`、`link_meeting_decisions_to_tasks`、`sync_meeting_tasks_with_project`、`sync_project_team_to_meeting`、`update_task_from_meeting_progress`（与 #12、#13 同根因：路由调用了服务类不存在的方法） | 会议模块多处未实现，属于较大范围的功能补齐，本次只修了测试覆盖到的 2 个（创建会议、上传文件）；其余建议按模块排期补齐 |
 | U7 | 需求创建弹窗存在项目竞态：打开弹窗瞬间快照 `projects[0]`，若项目列表尚未加载完，`project_id` 为空导致提交被“请选择所属项目”拦住，之后列表加载完也不会回填（E2E 观察记录） | 前端时序问题，测试通过手动选项目绕过；未修 |
+
+> U6（会议模块 6 个未实现方法）已在第三轮修复，见 #15–#19，已从本表移除。
 
 ## 测试数据清理
 
 - API/E2E 夹具的清理为“尽力而为”：项目删除是软删除（`deleted_at`），列表接口不可见，但行仍留在表里；多轮执行后表里曾积到 140 个软删项目与 8 个测试用户。
-- 本报告定稿前已物理清理全部测试数据：项目/需求/用例/计划/执行/缺陷/风险/会议/会议文件/用户（除 admin）/会话/审计日志等表均清空，`uploads/meetings/` 测试文件已删除。最终状态：项目 0、用户 1（admin）、会议 0；后端 `/api/v1/health` 正常，前端首页 200。
+- 本报告定稿前已物理清理全部测试数据：项目/需求/用例/计划/执行/缺陷/风险/会议/会议文件/会议任务关联/任务/里程碑/用户（除 admin）/会话/审计日志等表均清空，`uploads/meetings/` 测试文件已删除。最终状态：项目 0、用户 1（admin）、会议 0、会议任务关联 0；后端 `/api/v1/health` 正常，前端首页 200。
 
 ## 框架使用
 

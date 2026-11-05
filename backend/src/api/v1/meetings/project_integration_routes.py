@@ -14,7 +14,7 @@ from pydantic import BaseModel, Field
 
 from ....core.database import get_async_session
 from ....core.auth import get_current_user
-from ....core.exceptions import NotFoundError, ValidationError
+from ....core.exceptions import NotFoundError, ValidationError, PermissionError
 from ....services.meeting_project_integration_service import MeetingProjectIntegrationService
 from ....models.user import User
 from ....models.meeting import MeetingType
@@ -224,6 +224,8 @@ async def sync_project_team_to_meeting(
 
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+    except ValidationError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     except (AttributeError, NotFoundError) as e:
         raise HTTPException(status_code=404, detail=str(e))
     except PermissionError as e:
@@ -258,6 +260,8 @@ async def create_milestone_review_meeting(
         return MeetingResponse.from_orm(meeting)
 
     except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except ValidationError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except (AttributeError, NotFoundError) as e:
         raise HTTPException(status_code=404, detail=str(e))
@@ -339,6 +343,10 @@ async def link_meeting_decisions_to_tasks(
     
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+    except ValidationError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except NotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
     except PermissionError as e:
         raise HTTPException(status_code=403, detail=str(e))
     except Exception as e:
@@ -519,7 +527,9 @@ async def get_meeting_related_tasks(
                     'planned_end_date': task.planned_end_date.isoformat() if task.planned_end_date else None,
                     'estimated_hours': task.estimated_hours,
                     'actual_hours': task.actual_hours,
-                    'progress_percentage': task.progress_percentage,
+                    # Task 模型没有 progress_percentage 列，按状态推导
+                    #（COMPLETED=100，IN_PROGRESS=50，其余=0）。
+                    'progress_percentage': 100 if task.status == 'COMPLETED' else (50 if task.status == 'IN_PROGRESS' else 0),
                     'tags': task.tags,
                     'created_at': task.created_at.isoformat() if task.created_at else None
                 } for task in tasks
@@ -565,6 +575,8 @@ async def sync_meeting_tasks_with_project(
 
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+    except ValidationError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     except (AttributeError, NotFoundError) as e:
         raise HTTPException(status_code=404, detail=str(e))
     except PermissionError as e:
@@ -608,6 +620,8 @@ async def link_existing_task_to_meeting(
         }
 
     except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except ValidationError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except (AttributeError, NotFoundError) as e:
         raise HTTPException(status_code=404, detail=str(e))
@@ -686,6 +700,10 @@ async def update_tasks_from_meeting_progress(
     
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+    except ValidationError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except NotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
     except PermissionError as e:
         raise HTTPException(status_code=403, detail=str(e))
     except Exception as e:
