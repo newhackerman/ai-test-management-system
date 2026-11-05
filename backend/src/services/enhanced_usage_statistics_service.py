@@ -4,7 +4,7 @@
 import logging
 from datetime import datetime, timedelta, date
 from typing import Dict, List, Optional, Any, Tuple
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
 from decimal import Decimal
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -798,3 +798,54 @@ class EnhancedUsageStatisticsService:
             
         except Exception:
             return 0
+
+    async def get_system_overview(self, period: str = "daily") -> Dict[str, Any]:
+        """系统总览：聚合模型使用、用户活跃与性能指标。
+
+        Called by the cache-preheating scheduler (``_preheat_system_stats``)
+        to warm the statistics cache. Aggregates the existing metric
+        methods; no new queries are introduced here.
+        """
+        models = await self.get_model_usage_metrics(period=period, limit=20)
+        users = await self.get_user_activity_metrics(period=period, limit=50)
+        performance = await self.get_performance_metrics(period=period)
+        return {
+            "period": period,
+            "total_requests": sum(m.requests for m in models),
+            "total_tokens": sum(m.tokens for m in models),
+            "total_cost": round(sum(m.cost for m in models), 4),
+            "active_users": len(users),
+            "avg_response_time": performance.avg_response_time,
+            "error_rate": performance.error_rate,
+            "availability": performance.availability,
+            "models": [asdict(m) for m in models],
+            "top_users": [asdict(u) for u in users[:10]],
+            "performance": asdict(performance),
+        }
+
+
+_usage_statistics_service_instance = None
+
+
+async def get_usage_statistics_service(
+    db: AsyncSession = None,
+) -> EnhancedUsageStatisticsService:
+    """获取增强使用统计服务实例（供缓存预热等后台任务使用）。
+
+    Follows the async-factory pattern used by the other services in this
+    package. With an explicit session the caller owns it; without one a
+    process-wide instance backed by its own session is returned (the
+    scheduler only uses it for read-only aggregates).
+    """
+    global _usage_statistics_service_instance
+    if db is not None:
+        return EnhancedUsageStatisticsService(db)
+    if _usage_statistics_service_instance is None:
+        from ..core.database import AsyncSessionLocal
+
+        if AsyncSessionLocal is None:
+            raise RuntimeError("Async database engine not available")
+        _usage_statistics_service_instance = EnhancedUsageStatisticsService(
+            AsyncSessionLocal()
+        )
+    return _usage_statistics_service_instance
