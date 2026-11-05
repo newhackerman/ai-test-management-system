@@ -1,0 +1,18 @@
+[Unit]
+Description=AI Test Management System - frontend (Vite dev server)
+After=network.target ai-test-backend.service
+Wants=ai-test-backend.service
+
+[Service]
+Type=simple
+WorkingDirectory=/home/hatch/workspace/ai-test-management-system/frontend
+Environment=HOME=/home/hatch
+Environment=PATH=/opt/hatch-image/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart=/opt/hatch-image/bin/npm run dev -- --port 3000 --host 0.0.0.0
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

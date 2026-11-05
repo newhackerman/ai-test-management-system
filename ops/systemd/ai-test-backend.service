@@ -1,0 +1,16 @@
+[Unit]
+Description=AI Test Management System - backend (FastAPI/uvicorn)
+After=network.target mysql.service
+Wants=mysql.service
+
+[Service]
+Type=simple
+WorkingDirectory=/home/hatch/workspace/ai-test-management-system/backend
+ExecStart=/home/hatch/workspace/ai-test-management-system/backend/venv/bin/python -m uvicorn src.main:app --host 0.0.0.0 --port 8000
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
