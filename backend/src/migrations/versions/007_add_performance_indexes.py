@@ -13,7 +13,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = '007_add_performance_indexes'
-down_revision = '006_add_ai_operation_logs'
+down_revision = ('006_add_ai_operation_logs', '002_ai_assistant_extended')
 branch_labels = None
 depends_on = None
 
@@ -29,32 +29,28 @@ def upgrade():
     op.create_index(
         'idx_ai_chat_sessions_user_activity',
         'ai_chat_sessions',
-        ['user_id', 'last_activity_at', 'status'],
-        comment='用户会话按活动时间查询优化'
+        ['user_id', 'last_activity_at', 'status']
     )
     
     # 会话状态和AI提供商查询优化
     op.create_index(
         'idx_ai_chat_sessions_provider_status',
         'ai_chat_sessions',
-        ['ai_provider', 'status', 'created_at'],
-        comment='按AI提供商和状态查询优化'
+        ['ai_provider', 'status', 'created_at']
     )
     
     # 会话分享查询优化
     op.create_index(
         'idx_ai_chat_sessions_share',
         'ai_chat_sessions',
-        ['is_shared', 'share_token', 'expires_at'],
-        comment='会话分享功能查询优化'
+        ['is_shared', 'share_token', 'expires_at']
     )
     
     # 会话统计查询优化
     op.create_index(
         'idx_ai_chat_sessions_stats',
         'ai_chat_sessions',
-        ['user_id', 'created_at', 'message_count'],
-        comment='会话统计查询优化'
+        ['user_id', 'created_at', 'message_count']
     )
     
     # =====================================================
@@ -65,40 +61,35 @@ def upgrade():
     op.create_index(
         'idx_ai_chat_messages_session_time',
         'ai_chat_messages',
-        ['session_id', 'created_at', 'role'],
-        comment='会话消息按时间和角色查询优化'
+        ['session_id', 'created_at', 'role']
     )
     
     # AI提供商和模型查询优化
     op.create_index(
         'idx_ai_chat_messages_ai_info',
         'ai_chat_messages',
-        ['ai_provider', 'ai_model', 'created_at'],
-        comment='按AI提供商和模型查询优化'
+        ['ai_provider', 'ai_model', 'created_at']
     )
     
     # 消息评分和反馈查询优化
     op.create_index(
         'idx_ai_chat_messages_feedback',
         'ai_chat_messages',
-        ['user_rating', 'is_bookmarked', 'created_at'],
-        comment='消息评分和收藏查询优化'
+        ['user_rating', 'is_bookmarked', 'created_at']
     )
     
     # 错误消息查询优化
     op.create_index(
         'idx_ai_chat_messages_errors',
         'ai_chat_messages',
-        ['is_error', 'error_code', 'created_at'],
-        comment='错误消息查询优化'
+        ['is_error', 'error_code', 'created_at']
     )
     
     # 流式消息查询优化
     op.create_index(
         'idx_ai_chat_messages_streaming',
         'ai_chat_messages',
-        ['is_streaming', 'session_id', 'created_at'],
-        comment='流式消息查询优化'
+        ['is_streaming', 'session_id', 'created_at']
     )
     
     # =====================================================
@@ -109,24 +100,21 @@ def upgrade():
     op.create_index(
         'idx_ai_model_configs_available',
         'ai_model_configs',
-        ['is_enabled', 'is_public', 'priority'],
-        comment='可用模型查询优化'
+        ['is_enabled', 'is_public', 'priority']
     )
     
     # 模型健康状态查询优化
     op.create_index(
         'idx_ai_model_configs_health',
         'ai_model_configs',
-        ['health_status', 'last_health_check', 'provider'],
-        comment='模型健康状态查询优化'
+        ['health_status', 'last_health_check', 'provider']
     )
     
     # 模型使用统计查询优化
     op.create_index(
         'idx_ai_model_configs_usage',
         'ai_model_configs',
-        ['provider', 'last_used_at', 'total_requests'],
-        comment='模型使用统计查询优化'
+        ['provider', 'last_used_at', 'total_requests']
     )
     
     # =====================================================
@@ -137,32 +125,28 @@ def upgrade():
     op.create_index(
         'idx_ai_prompt_templates_category_visibility',
         'ai_prompt_templates',
-        ['category', 'visibility', 'is_featured'],
-        comment='模板分类和可见性查询优化'
+        ['category', 'visibility', 'is_featured']
     )
     
     # 用户模板查询优化
     op.create_index(
         'idx_ai_prompt_templates_owner',
         'ai_prompt_templates',
-        ['owner_id', 'visibility', 'created_at'],
-        comment='用户模板查询优化'
+        ['owner_id', 'visibility', 'created_at']
     )
     
     # 模板使用统计查询优化
     op.create_index(
         'idx_ai_prompt_templates_usage',
         'ai_prompt_templates',
-        ['usage_count', 'rating_avg', 'last_used_at'],
-        comment='模板使用统计查询优化'
+        ['usage_count', 'rating_avg', 'last_used_at']
     )
     
     # 模板版本查询优化
     op.create_index(
         'idx_ai_prompt_templates_version',
         'ai_prompt_templates',
-        ['parent_template_id', 'is_latest_version', 'version'],
-        comment='模板版本查询优化'
+        ['parent_template_id', 'is_latest_version', 'version']
     )
     
     # =====================================================
@@ -173,32 +157,28 @@ def upgrade():
     op.create_index(
         'idx_ai_suggestions_user_project',
         'ai_suggestions',
-        ['user_id', 'project_id', 'status'],
-        comment='用户项目建议查询优化'
+        ['user_id', 'project_id', 'status']
     )
     
     # 建议类型和优先级查询优化
     op.create_index(
         'idx_ai_suggestions_type_priority',
         'ai_suggestions',
-        ['suggestion_type', 'priority', 'suggested_at'],
-        comment='建议类型和优先级查询优化'
+        ['suggestion_type', 'priority', 'suggested_at']
     )
     
     # 建议状态和时间查询优化
     op.create_index(
         'idx_ai_suggestions_status_time',
         'ai_suggestions',
-        ['status', 'suggested_at', 'accepted_at'],
-        comment='建议状态和时间查询优化'
+        ['status', 'suggested_at', 'accepted_at']
     )
     
     # 建议评分查询优化
     op.create_index(
         'idx_ai_suggestions_scores',
         'ai_suggestions',
-        ['confidence_score', 'impact_score', 'user_rating'],
-        comment='建议评分查询优化'
+        ['confidence_score', 'impact_score', 'user_rating']
     )
     
     # =====================================================
@@ -209,24 +189,21 @@ def upgrade():
     op.create_index(
         'idx_ai_requirements_analysis_user',
         'ai_requirements_analysis',
-        ['user_id', 'project_id', 'analysis_type'],
-        comment='用户需求分析查询优化'
+        ['user_id', 'project_id', 'analysis_type']
     )
     
     # 分析状态和时间查询优化
     op.create_index(
         'idx_ai_requirements_analysis_status',
         'ai_requirements_analysis',
-        ['status', 'started_at', 'completed_at'],
-        comment='分析状态和时间查询优化'
+        ['status', 'started_at', 'completed_at']
     )
     
     # 分析评分查询优化
     op.create_index(
         'idx_ai_requirements_analysis_scores',
         'ai_requirements_analysis',
-        ['overall_score', 'completeness_score', 'clarity_score'],
-        comment='需求分析评分查询优化'
+        ['overall_score', 'completeness_score', 'clarity_score']
     )
     
     # =====================================================
@@ -237,32 +214,28 @@ def upgrade():
     op.create_index(
         'idx_ai_usage_stats_user_date',
         'ai_usage_stats',
-        ['user_id', 'stat_date', 'operation_type'],
-        comment='用户使用统计查询优化'
+        ['user_id', 'stat_date', 'operation_type']
     )
     
     # AI提供商统计查询优化
     op.create_index(
         'idx_ai_usage_stats_provider',
         'ai_usage_stats',
-        ['ai_provider', 'ai_model', 'stat_date'],
-        comment='AI提供商统计查询优化'
+        ['ai_provider', 'ai_model', 'stat_date']
     )
     
     # 统计周期查询优化
     op.create_index(
         'idx_ai_usage_stats_period',
         'ai_usage_stats',
-        ['stat_period', 'stat_date', 'stat_hour'],
-        comment='统计周期查询优化'
+        ['stat_period', 'stat_date', 'stat_hour']
     )
     
     # 成本统计查询优化
     op.create_index(
         'idx_ai_usage_stats_cost',
         'ai_usage_stats',
-        ['stat_date', 'total_cost', 'total_tokens'],
-        comment='成本统计查询优化'
+        ['stat_date', 'total_cost', 'total_tokens']
     )
     
     # =====================================================
@@ -273,24 +246,21 @@ def upgrade():
     op.create_index(
         'idx_ai_template_usage_template_user',
         'ai_template_usage',
-        ['template_id', 'user_id', 'created_at'],
-        comment='模板使用记录查询优化'
+        ['template_id', 'user_id', 'created_at']
     )
     
     # 使用场景查询优化
     op.create_index(
         'idx_ai_template_usage_case',
         'ai_template_usage',
-        ['use_case', 'is_successful', 'created_at'],
-        comment='使用场景查询优化'
+        ['use_case', 'is_successful', 'created_at']
     )
     
     # AI提供商使用查询优化
     op.create_index(
         'idx_ai_template_usage_ai',
         'ai_template_usage',
-        ['ai_provider', 'ai_model', 'created_at'],
-        comment='AI提供商使用查询优化'
+        ['ai_provider', 'ai_model', 'created_at']
     )
     
     # =====================================================
@@ -303,48 +273,42 @@ def upgrade():
         op.create_index(
             'idx_projects_status_priority',
             'projects',
-            ['status', 'priority', 'updated_at'],
-            comment='项目状态和优先级查询优化'
+            ['status', 'priority', 'updated_at']
         )
         
         # 项目经理查询优化
         op.create_index(
             'idx_projects_manager_dates',
             'projects',
-            ['project_manager_id', 'start_date', 'end_date'],
-            comment='项目经理和时间查询优化'
+            ['project_manager_id', 'start_date', 'end_date']
         )
         
         # 需求查询优化
         op.create_index(
             'idx_requirements_project_status',
             'requirements',
-            ['project_id', 'status', 'priority'],
-            comment='需求项目和状态查询优化'
+            ['project_id', 'status', 'priority']
         )
         
         # 测试用例查询优化
         op.create_index(
             'idx_test_cases_project_req',
             'test_cases',
-            ['project_id', 'requirement_id', 'status'],
-            comment='测试用例项目和需求查询优化'
+            ['project_id', 'requirement_id', 'status']
         )
         
         # 缺陷查询优化
         op.create_index(
             'idx_defects_project_severity',
             'defects',
-            ['project_id', 'severity', 'status'],
-            comment='缺陷项目和严重程度查询优化'
+            ['project_id', 'severity', 'status']
         )
         
         # 项目指标查询优化
         op.create_index(
             'idx_project_metrics_project_date',
             'project_metrics',
-            ['project_id', 'metric_date'],
-            comment='项目指标时间查询优化'
+            ['project_id', 'metric_date']
         )
         
     except Exception:

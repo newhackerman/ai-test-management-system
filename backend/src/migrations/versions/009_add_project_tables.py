@@ -1,7 +1,7 @@
 """
 添加项目管理模块新表
 
-Revision ID: 009_add_project_management_tables
+Revision ID: 009_add_project_tables
 Revises: 005_add_project_tables
 Create Date: 2024-12-20 11:00:00.000000
 
@@ -17,7 +17,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import mysql
 
 # revision identifiers, used by Alembic.
-revision = '009_add_project_management_tables'
+revision = '009_add_project_tables'
 down_revision = '005_add_project_tables'
 branch_labels = None
 depends_on = None

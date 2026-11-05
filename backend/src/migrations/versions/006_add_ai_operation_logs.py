@@ -21,7 +21,7 @@ def upgrade():
     
     # 创建AI操作日志表
     op.create_table('ai_operation_logs',
-        sa.Column('id', sa.BigInteger(), autoincrement=True, nullable=False, comment='主键ID'),
+        sa.Column('id', sa.Integer(), autoincrement=True, nullable=False, comment='主键ID'),
         sa.Column('created_at', sa.DateTime(), nullable=True, comment='创建时间'),
         sa.Column('updated_at', sa.DateTime(), nullable=True, comment='更新时间'),
         sa.Column('deleted_at', sa.DateTime(), nullable=True, comment='删除时间'),
@@ -102,7 +102,7 @@ def upgrade():
         sa.Column('correlation_id', sa.String(100), nullable=True, comment='关联ID'),
         sa.Column('trace_id', sa.String(100), nullable=True, comment='追踪ID'),
         
-        sa.PrimaryKey('id'),
+        sa.PrimaryKeyConstraint('id'),
         sa.ForeignKeyConstraint(['user_id'], ['users.id'], ondelete='SET NULL'),
         sa.ForeignKeyConstraint(['approved_by'], ['users.id'], ondelete='SET NULL'),
         sa.ForeignKeyConstraint(['parent_log_id'], ['ai_operation_logs.id'], ondelete='SET NULL'),
@@ -112,7 +112,7 @@ def upgrade():
     
     # 创建AI操作日志汇总表
     op.create_table('ai_operation_log_summaries',
-        sa.Column('id', sa.BigInteger(), autoincrement=True, nullable=False, comment='主键ID'),
+        sa.Column('id', sa.Integer(), autoincrement=True, nullable=False, comment='主键ID'),
         sa.Column('created_at', sa.DateTime(), nullable=True, comment='创建时间'),
         sa.Column('updated_at', sa.DateTime(), nullable=True, comment='更新时间'),
         sa.Column('deleted_at', sa.DateTime(), nullable=True, comment='删除时间'),
@@ -148,7 +148,7 @@ def upgrade():
         sa.Column('total_tokens_used', sa.Integer(), nullable=True, comment='总Token使用量'),
         sa.Column('total_cost', sa.Float(), nullable=True, comment='总成本'),
         
-        sa.PrimaryKey('id'),
+        sa.PrimaryKeyConstraint('id'),
         sa.ForeignKeyConstraint(['user_id'], ['users.id'], ondelete='CASCADE'),
         
         comment='AI操作日志汇总表'

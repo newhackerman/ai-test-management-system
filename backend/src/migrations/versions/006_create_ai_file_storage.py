@@ -1,7 +1,7 @@
 """
 创建AI文件存储相关表
 
-Revision ID: 006_create_ai_file_storage_tables
+Revision ID: 006_create_ai_file_storage
 Revises: 005_create_ai_assistant_tables
 Create Date: 2024-01-20 10:00:00.000000
 """
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import mysql
 
 # revision identifiers
-revision = '006_create_ai_file_storage_tables'
+revision = '006_create_ai_file_storage'
 down_revision = '005_create_ai_assistant_tables'
 branch_labels = None
 depends_on = None
@@ -69,10 +69,10 @@ def upgrade():
         sa.Column('storage_region', sa.String(50), nullable=True, comment='存储区域'),
         
         # 关联信息
-        sa.Column('user_id', sa.BigInteger(), nullable=False, comment='上传用户ID'),
-        sa.Column('session_id', sa.BigInteger(), nullable=True, comment='关联会话ID'),
-        sa.Column('message_id', sa.BigInteger(), nullable=True, comment='关联消息ID'),
-        sa.Column('template_id', sa.BigInteger(), nullable=True, comment='关联模板ID'),
+        sa.Column('user_id', sa.Integer(), nullable=False, comment='上传用户ID'),
+        sa.Column('session_id', sa.Integer(), nullable=True, comment='关联会话ID'),
+        sa.Column('message_id', sa.Integer(), nullable=True, comment='关联消息ID'),
+        sa.Column('template_id', sa.Integer(), nullable=True, comment='关联模板ID'),
         
         # 元数据
         sa.Column('metadata', sa.Text(), nullable=True, comment='文件元数据(JSON)'),
@@ -124,7 +124,7 @@ def upgrade():
         
         # 关联信息
         sa.Column('file_id', sa.BigInteger(), nullable=False, comment='文件ID'),
-        sa.Column('user_id', sa.BigInteger(), nullable=False, comment='分享用户ID'),
+        sa.Column('user_id', sa.Integer(), nullable=False, comment='分享用户ID'),
         
         # 分享信息
         sa.Column('share_token', sa.String(64), nullable=False, comment='分享令牌'),
@@ -174,7 +174,7 @@ def upgrade():
         
         # 关联信息
         sa.Column('file_id', sa.BigInteger(), nullable=False, comment='文件ID'),
-        sa.Column('user_id', sa.BigInteger(), nullable=True, comment='访问用户ID'),
+        sa.Column('user_id', sa.Integer(), nullable=True, comment='访问用户ID'),
         sa.Column('share_id', sa.BigInteger(), nullable=True, comment='分享ID'),
         
         # 访问信息
