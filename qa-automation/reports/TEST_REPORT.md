@@ -1,19 +1,19 @@
 # AI 测试管理系统 — 自动化测试报告
 
-生成时间：2026-11-05（第四轮：删除死代码 `create_tasks_from_meeting` 后更新）
-被测部署：后端 http://localhost:8000（FastAPI + MySQL 8.0.46 + Redis 7.0.15，129 张表，外键约束剥离部署）、前端 http://localhost:3000（Vite + React 18）
-分支：`qa/automation-framework`（基于 main@3a64777；前三轮 3 个提交已推送至 GitHub，本轮为第 4 个提交，待推送）
+生成时间：2026-11-05（第五轮：U1–U5、U7 全部修复后更新）
+被测部署：后端 http://localhost:8000（FastAPI + MySQL 8.0.46 + Redis 7.0.15，118 张表，**外键约束已保留**——U1 修复后 `ops/rebuild_db.py` 不再剥离外键）、前端 http://localhost:3000（Vite + React 18）
+分支：`qa/automation-framework`（基于 main@3a64777；前五轮共 11 个提交，其中前 5 个已推送至 GitHub，第五轮 6 个提交待推送）
 
 ## 总览
 
 | 套件 | 用例总数 | 通过 | 失败 | 错误 | 跳过 | 通过率 |
 | --- | --- | --- | --- | --- | --- | --- |
-| API（`tests/`） | 241 | 241 | 0 | 0 | 0 | 100% |
-| E2E（`e2e/`，Playwright + Chromium 真实浏览器） | 20 | 20 | 0 | 0 | 0 | 100% |
-| **合计** | **261** | **261** | **0** | **0** | **0** | **100%** |
+| API（`tests/`） | 251 | 251 | 0 | 0 | 0 | 100% |
+| E2E（`e2e/`，Playwright + Chromium 真实浏览器） | 21 | 21 | 0 | 0 | 0 | 100% |
+| **合计** | **272** | **272** | **0** | **0** | **0** | **100%** |
 
-- API 241 = 第一阶段 108（冒烟 5 / 鉴权 13 / 项目 17 / 需求 12 / 用例 10 / 计划 10 / 执行 10 / 缺陷 12 / 风险 14 / 报告 5）+ 深化 70（`test_hardening.py`）+ 安全 35（`test_security.py`）+ **U6 会议集成 28（`test_meeting_integration.py`）**。
-- 全量最后一次执行：API 241/241（`reports/latest.json`，第四轮回归）、E2E 20/20（`reports/e2e-full.json`，第二轮结果，本轮无前端改动故未重跑），均在修复后、清理过的干净库上跑出。
+- API 251 = 第一阶段 108（冒烟 5 / 鉴权 13 / 项目 17 / 需求 12 / 用例 10 / 计划 10 / 执行 10 / 缺陷 12 / 风险 14 / 报告 5）+ 深化 70（`test_hardening.py`）+ 安全 35（`test_security.py`）+ **U6 会议集成 28（`test_meeting_integration.py`）** + **U4 执行环境 8（`test_executions.py` 新增参数化用例）** + **U3 AI 服务 2（`test_ai_services.py`）**。
+- 全量最后一次执行：API 251/251（第五轮最终回归）、E2E 21/21（第五轮最终回归，含 U7 竞态新用例），均在修复后、清理过的干净库上跑出。
 - 本报告回答用户质疑“只发现 2 个问题不可信”：第一阶段的 108 个 API 用例确实只证实了 2 个缺陷；深化 + E2E + 安全三轮补测后，**新发现 12 个真实缺陷，全部修复并回归验证通过**（见下表 #3–#14）。失败就是失败，如实写：中途的失败全部记录在各轮执行小结里，本报告的 100% 是修复后的最终回归结果，不是放水。
 
 ## 按模块统计（API）
@@ -26,13 +26,14 @@
 | test_requirements | 12 | 12 | 0 |
 | test_test_cases | 10 | 10 | 0 |
 | test_test_plans | 10 | 10 | 0 |
-| test_executions | 10 | 10 | 0 |
+| test_executions | 18 | 18 | 0 |
 | test_defects | 12 | 12 | 0 |
 | test_risks | 14 | 14 | 0 |
 | test_reports | 5 | 5 | 0 |
 | test_hardening | 70 | 70 | 0 |
 | test_security | 35 | 35 | 0 |
 | test_meeting_integration | 28 | 28 | 0 |
+| test_ai_services | 2 | 2 | 0 |
 
 ## 按模块统计（E2E）
 
@@ -41,6 +42,7 @@
 | test_e2e_login | 5 | 登录页渲染、正确登录、错误密码提示、未登录拦截、登出 |
 | test_e2e_projects | 3 | 创建项目、项目列表出现新数据、必填校验 |
 | test_e2e_requirements | 2 | 创建需求、搜索需点“查询”才生效 |
+| test_e2e_requirement_project_race | 1 | U7 竞态：项目列表延迟 6 秒时打开创建弹窗，提交前 `project_id` 应随列表到达自动回填（反向验证：无修复时该用例失败） |
 | test_e2e_test_cases | 3 | 创建用例、必填校验（标题/步骤为空不提交） |
 | test_e2e_test_plans | 2 | 创建计划、计划列表出现新数据 |
 | test_e2e_execution_defects | 3 | 手动执行（开始→步骤通过→完成保存）、提交缺陷 |
@@ -61,6 +63,7 @@
 | U6 新套件第二轮（修测试 bug 后） | **28 通过 / 0 失败** | — |
 | API 全量（241，修测试 bug 后） | 240 通过 / 0 失败 / **1 跳过** | 跳过的是 `test_meeting_file_upload_executable`：会议创建时间写死 `2026-11-05T10:00`，时钟已过该时间，创建被“开始时间不能早于当前时间”拒（400）→ 测试 bug，非应用缺陷 |
 | API 全量（最终，修时间后） | **241 通过 / 0 失败 / 0 跳过** | 修复无回归 |
+| 第五轮（U1–U5、U7 修复后） | **API 251 通过 / 0 失败；E2E 21 通过 / 0 失败** | U4/U3 新增用例一次通过；U7 竞态用例反向验证通过（无修复时失败）；U1/U5 为模型与迁移层改动，全量回归无新增失败 |
 | E2E 首轮 | 12 通过 / 7 失败 | 全部为测试 bug（断言文本、清理路径斜杠、原生 required 校验等），应用缺陷 2 个（#3、#4） |
 | E2E 全量（修复后） | 19 通过 / 1 失败 | `test_stored_xss_does_not_execute`：payload 缺 `project_manager_id` 致 422（测试 bug） |
 | E2E 全量（补 `project_manager_id` 后） | 19 通过 / 1 失败 | 同一用例：Playwright 严格模式下 payload 文本匹配到 2 个元素（测试定位器问题，非应用缺陷） |
@@ -134,6 +137,8 @@
 
 **验证**：API 全量回归 241/241 通过、0 失败、0 跳过（`reports/latest.json`）；E2E 未重跑（本轮无前端改动）。
 
+**第五轮环境说明（非应用缺陷）**：U1 验证时按新方式重建线上库（删库后用 `ops/rebuild_db.py` 重建，**外键约束保留**）：118 张表（111 张元数据表 + 7 张应用启动时建的表）、159 个外键约束、种子权限 45 个/角色 9 个、admin 正常登录；重建后后端重启、API 全量 251/251、E2E 21/21。U5 验证用的是临时库 `ai_test_u5_check`（已删），未动线上库。
+
 **本轮环境说明（非应用缺陷）**：回归前发现 MySQL 数据目录已被清空（虚拟机重置所致：MySQL/Redis/前后端服务全部停掉，库里无 `ai_test_user`、无 `ai_test_db`）。按第一轮方式重建：建库建用户（取 `.env` 密码）→ 模型 `create_all`（外键约束剥离，见 U1）→ 129 张表 → 种子权限 11 个/角色 2 个/admin（密码 `TEST@test1`）。重建中另发现仓库自带脚本 `backend/src/scripts/simple_init.py` 已失修（给 `Permission` 传不存在的 `type=` 参数，实际列为 `permission_type`），故种子改用内联正确字段写入，未改仓库脚本。首次回归 30 通过/209 错误即因此环境问题（`1045 Access denied`），与删除无关；重建后 241/241。
 
 ### 安全测试核实为“机制存在、非问题”的项（不计入缺陷）
@@ -153,28 +158,28 @@
 
 | # | 问题 | 修复 |
 | --- | --- | --- |
-| D1 | `backend/.env.example` 的 `MAX_FILE_SIZE=100MB` 无法被 pydantic 解析为 int，服务无法启动 | 本地 `.env` 改为 `104857600`（示例文件本身待修，见未修复项 U2） |
+| D1 | `backend/.env.example` 的 `MAX_FILE_SIZE=100MB` 无法被 pydantic 解析为 int，服务无法启动 | 本地 `.env` 改为 `104857600`；第五轮 U2 已把示例文件本身改为 `104857600` |
 | D2 | `src/migrations/env.py` 使用相对导入，alembic 加载失败 | 改为绝对导入 |
 | D3 | `src/models/__init__.py` 的 `__all__` 列出 14 个不存在的名字，`from src.models import *` 报错 | 移除失效条目 |
 | D4 | `src/models/meeting_analytics.py` 缺少 `String` 导入，`NameError` | 补导入（后核实该模块为死代码：无任何 `src/` 模块导入它；`MeetingAnalytics` 的实际定义在 `src/models/meeting.py:546`，与该文件重复定义同一张表） |
 | D5 | 迁移 002 种子插入缺失 NOT NULL 列（`is_active`/`created_at`/`updated_at`），MySQL 1364 | 补齐列 |
 | D6 | 迁移 004 插入 `permissions` 表不存在的列（`type`/`is_system_permission`/`is_active`/`sort_order`/`updated_at`），且角色码大小写不符 | 按 001 的实际 schema 对齐 |
 | D7 | 迁移 008 把 `projects.id` INT→BIGINT，未同步放宽 4 个引用外键列，MySQL 3780 | 先放宽外键列再改主键 |
-| D8 | `requirements.txt` 缺少 9 个运行时依赖（pymysql、requests、aioredis、apscheduler、bleach、PyJWT、python-magic、psutil、scikit-learn） | 本地 venv 已补装（requirements.txt 本身待修，见未修复项 U2） |
+| D8 | `requirements.txt` 缺少 9 个运行时依赖（pymysql、requests、aioredis、apscheduler、bleach、PyJWT、python-magic、psutil、scikit-learn） | 本地 venv 已补装；第五轮 U2 已把其中 8 个声明进 `requirements.txt`（`aioredis` 除外，见 U2 说明） |
 | D9 | CORS 缺口（#4 的一部分）：`.env.example` 缺 `127.0.0.1` 源 | `.env.example` 与本地 `.env` 均已补齐 4 个源 |
 
-### 未修复项（附原因）
+### 第五轮修复（U1–U5、U7 全部修复；本轮后未修复项为零）
 
-| # | 问题 | 原因 / 说明 |
+| # | 问题 | 修复与验证 |
 | --- | --- | --- |
-| U1 | 模型层存在 39 处外键类型不匹配（INT vs BIGINT），`create_all` 带外键约束时建表失败；本次部署以去掉外键约束的方式兜底 | 逐表对齐外键类型属于较大范围的模型层改动，需逐个核对并做数据迁移验证，超出本次修复范围；已在部署中验证无外键约束下功能正常 |
-| U2 | `backend/.env.example` 的 `MAX_FILE_SIZE=100MB` 与 `requirements.txt` 缺依赖（D1/D8 的源头）未改回仓库文件 | 属于仓库配置修复，改动面小但与本次测试修复无关，建议后续单独提交（`.env.example` 的 CORS 部分已在 #4 中修复） |
-| U3 | 日志警告 `AIAssistantService` 缺少 `generate_test_strategy` 方法；启动预热任务报 `cannot import name 'get_usage_statistics_service'` | 均为非致命警告，不影响 API 功能；AI 相关功能无外部密钥，本次未深入 |
-| U4 | `test_environment` 传入 `"QA环境"` 后被存储为 `"QA"`（疑似静默截断/归一化） | 未复现为明确缺陷，仅作观察记录 |
-| U5 | Alembic 迁移链另有残留问题（011 前提错误、008/009 分支重复建表等） | 部署已绕过迁移链直接用模型建表；迁移链修复需逐个迁移验证，超出本次范围 |
-| U7 | 需求创建弹窗存在项目竞态：打开弹窗瞬间快照 `projects[0]`，若项目列表尚未加载完，`project_id` 为空导致提交被“请选择所属项目”拦住，之后列表加载完也不会回填（E2E 观察记录） | 前端时序问题，测试通过手动选项目绕过；未修 |
+| U1 | 模型层 39 处外键类型不匹配（INT vs BIGINT），`create_all` 带外键约束时建表失败 | 逐表把外键列类型与被引用主键对齐（BigInteger→Integer 以匹配 `users.id` 等，Integer→BigInteger 以匹配 `projects.id`），共 8 个模型文件；第 39 处在未注册的死代码 `src/models/task.py`（`tasks` 表从未建表、API 用的是 `project.py` 的 `Task`），也一并改掉并记录。验证：类型不匹配扫描归零；临时库上带外键约束的 `create_all` 成功（111 张表、158 个外键约束）；`ops/rebuild_db.py` 移除剥离外键的兜底并用新方式重建线上库（111 张元数据表全部在库、159 个外键约束、种子权限 45 个/角色 9 个/admin 正常）；全量 API 251/251 通过。附注：另有 7 张表（`audit_logs` 等）不在 `Base.metadata` 中、由应用启动时建表，是既有行为，未动。提交 `8e263f2`。 |
+| U2 | `backend/.env.example` 的 `MAX_FILE_SIZE=100MB` 与 `requirements.txt` 缺依赖（D1/D8 的源头） | `.env.example` 改为 `104857600`；`requirements.txt` 补声明 8 个缺失依赖（pymysql、requests、apscheduler、bleach、PyJWT、python-magic、psutil、scikit-learn）。`aioredis` **故意未加**：其末版 2.0.1 在 Python 3.12 上根本无法导入（无 distutils 报 `ModuleNotFoundError`；有 setuptools 报 `TypeError: duplicate base class TimeoutError`，且 `cache_utils.py` 的旧 guard 只捕 `ImportError` 兜不住——新 venv 实测导入即退出 1、后端起不来）。改用官方后继 `redis.asyncio` 迁移 `src/utils/cache_utils.py`（随已声明的 `redis` 包提供）。验证：新 venv `pip install -r requirements.txt` 成功、8 个导入 + `redis.asyncio` 全过、异步 Redis 往返正常、`from src.main import app` 正常、`.env.example` 解析为 int 104857600。提交 `67cbed9`。 |
+| U3 | 日志警告 `AIAssistantService` 缺少 `generate_test_strategy` 方法；启动预热任务报 `cannot import name 'get_usage_statistics_service'` | 两处都补齐：(1) 在 `AIAssistantService` 上实现 `generate_test_strategy(prompt)`（复用现有 `generate_content()`，有 JSON 回复时解析、无 AI 密钥时记 warning 并返回空结构而非抛错）；(2) 在 `enhanced_usage_statistics_service.py` 补 `get_usage_statistics_service` 工厂与 `get_system_overview()` 方法（预热调度器调用）。验证：无密钥下 `generate_test_strategy` 返回空结构；工厂 + `get_system_overview()` 对线上库跑通；预热 `_preheat_system_stats` 干净执行；后端重启无相关警告。新增 `tests/test_ai_services.py` 2/2 通过。提交 `b9f5ba7`。 |
+| U4 | `test_environment` 传入 `"QA环境"` 后被存储为 `"QA"` | **复现证实为真 bug，且比报告写的更严重**：`_normalize_environment()` 会把未知值做 ASCII 剥离——`"QA环境"`→`"QA"`、`"生产"`→`"test"`（静默存错环境）、`"灰度环境"`→`"test"`、`"UAT环境"`→`"UAT"`。修复：未知值原样保留（去首尾空白、按 `String(100)` 截断），已知名称仍映射为规范码（“测试环境”→test、“生产环境”→prod），两条 start 接口均适用。新增 8 个参数化用例（`tests/test_executions.py` 10→18），模块 18/18 通过。提交 `118e3b2`。 |
+| U5 | Alembic 迁移链残留问题（011 前提错误、008/009 分支重复建表等） | 空库 `alembic upgrade head` 现已干净跑完（退出 0，终点 `df4d66178796` 单 head，45 张表、61 个外键约束、无重复建表）。修了：(1) 类型与模型对齐：001 的 `users.id` 等由 BIGINT 改为 INT（011 的前提由此成立），AI 分支的 FK 列同步改为 INT，005 的 `projects.id` 与 4 个 `project_id` 改为 BIGINT；(2) 去重：005 删 5 张与 001_ai_assistant/002 重复的建表，suggestion_006 删 2 张与 002 重复的建表，008 删 5 张与 009 重复的建表及多余的 BIGINT ALTER 块；(3) 补跨分支前置依赖（005→001_ai_assistant、suggestion_006→002、007→002、001_ai_assistant→001、010→008），merge 修订的 down_revision 收敛为 5 个真正 head；(4) 4 个超长 revision id（008/006/009/010，33–35 字符）超 `alembic_version.version_num` VARCHAR(32) 上限，改短并重命名文件；(5) 两个 API 级 bug：`sa.PrimaryKey`→`PrimaryKeyConstraint`（006_operation_logs）、`create_index` 的 `comment=` 参数 36 处移除（007）。抽查迁移后 schema：`users.id` INT、`projects.id` BIGINT、项目用户列 INT 且有外键、`requirements.project_id` BIGINT。附注：迁移链只覆盖历史 schema（45 张表），线上库仍由模型 `create_all` 构建（118 张表）。提交 `e0836f`。 |
+| U7 | 需求创建弹窗项目竞态：打开弹窗瞬间快照 `projects[0]`，项目列表未加载完时 `project_id` 为空导致提交被“请选择所属项目”拦住，之后也不回填 | 修复：新增 `useEffect`，列表到达后为全新创建表单（且 `project_id` 仍空时）回填首个项目或当前筛选项目，绝不覆盖用户已选值或编辑表单。新增 E2E `e2e/test_e2e_requirement_project_race.py`：延迟项目列表响应 6 秒、飞行中途打开弹窗，断言下拉初始为空、列表到达后自动填好并可保存；反向验证：无修复时该用例失败、有修复时通过。E2E 全量 21/21 通过。提交 `f85fbe7`。 |
 
-> U6（会议模块 6 个未实现方法）已在第三轮修复，见 #15–#19，已从本表移除。
+> U6（会议模块 6 个未实现方法）已在第三轮修复，见 #15–#19。第五轮后，报告中的未修复项已清零。
 
 ## 测试数据清理
 
