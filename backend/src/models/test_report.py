@@ -3,7 +3,7 @@
 
 本模块定义了测试报告相关的数据库模型
 """
-from sqlalchemy import Column, Integer, String, Text, DateTime, JSON, Boolean, Float, ForeignKey
+from sqlalchemy import Column, BigInteger, Integer, String, Text, DateTime, JSON, Boolean, Float, ForeignKey
 from sqlalchemy.orm import relationship
 from datetime import datetime
 
@@ -38,7 +38,7 @@ class TestReportRecord(Base):
     name = Column(String(200), nullable=False, comment="报告名称")
     description = Column(Text, comment="报告描述")
     report_type = Column(String(50), nullable=False, comment="报告类型")
-    project_id = Column(Integer, ForeignKey("projects.id"), comment="项目ID")
+    project_id = Column(BigInteger, ForeignKey("projects.id"), comment="项目ID")
     template_id = Column(Integer, ForeignKey("test_report_templates.id"), comment="模板ID")
     
     # 报告配置

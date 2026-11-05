@@ -5,9 +5,11 @@ Usage (called by ops/recover.sh, or manually):
     backend/venv/bin/python ops/rebuild_db.py
 
 What it does, idempotently:
-  1. Creates all tables from the SQLAlchemy models with FOREIGN KEY
-     constraints stripped (see report U1: 39 INT-vs-BIGINT FK mismatches
-     make MySQL reject create_all with FKs, error 3780).
+  1. Creates all tables from the SQLAlchemy models WITH FOREIGN KEY
+     constraints kept. (Before round 5 / U1 the FKs were stripped here
+     because 39 INT-vs-BIGINT FK mismatches made MySQL reject create_all
+     with FKs, error 3780. The mismatches are fixed, verified on a scratch
+     database: 111 tables, 158 FK constraints.)
   2. Seeds default permissions + roles via PermissionService.
   3. Creates the admin user (username ``admin``) if missing and links
      it to the ``admin`` role.
@@ -22,14 +24,12 @@ to the documented default only when the variable is absent.
 import os
 import sys
 
-import copy
-
 REPO_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 BACKEND_DIR = os.path.join(REPO_DIR, "backend")
 sys.path.insert(0, BACKEND_DIR)
 os.chdir(BACKEND_DIR)
 
-from sqlalchemy import ForeignKeyConstraint, MetaData, inspect  # noqa: E402
+from sqlalchemy import inspect  # noqa: E402
 
 from src.core.config import settings  # noqa: E402
 from src.core.database import SessionLocal, engine  # noqa: E402
@@ -46,32 +46,12 @@ ADMIN_EMAIL = "admin@example.com"
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "TEST@test1")
 
 
-def strip_foreign_keys(metadata: MetaData) -> int:
-    """Remove FK constraints from a metadata copy (U1 workaround).
-
-    Operates on a deepcopy of the model metadata, so the mapped classes
-    keep their FKs and ORM relationships still resolve. Returns the
-    number of FK constraints removed.
-    """
-    removed = 0
-    for table in metadata.tables.values():
-        fks = [c for c in table.constraints if isinstance(c, ForeignKeyConstraint)]
-        removed += len(fks)
-        if fks:
-            table.constraints = {
-                c for c in table.constraints if not isinstance(c, ForeignKeyConstraint)
-            }
-            for column in table.columns:
-                if column.foreign_keys:
-                    column.foreign_keys = set()
-    return removed
-
-
 def create_tables() -> None:
-    ddl_metadata = copy.deepcopy(Base.metadata)
-    removed = strip_foreign_keys(ddl_metadata)
-    print(f"creating tables (FK constraints stripped: {removed})...")
-    ddl_metadata.create_all(bind=engine)
+    # U1 fixed (round 5): all 39 FK type mismatches aligned, so create_all
+    # runs with FOREIGN KEY constraints kept (verified on a scratch
+    # database: 111 tables, 158 FK constraints).
+    print("creating tables (FK constraints kept)...")
+    Base.metadata.create_all(bind=engine)
     names = sorted(inspect(engine).get_table_names())
     print(f"tables present after create_all: {len(names)}")
 
