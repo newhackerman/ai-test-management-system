@@ -5,7 +5,7 @@
 """
 from datetime import datetime
 from typing import Dict, Any, Optional
-from sqlalchemy import Column, Integer, Float, DateTime, JSON, ForeignKey, Text
+from sqlalchemy import Column, Integer, Float, DateTime, JSON, ForeignKey, Text, String
 from sqlalchemy.orm import relationship
 
 from src.models.base import Base

@@ -71,7 +71,7 @@ class TestPlan(Base):
     actual_end_date = Column(Date, comment='实际结束日期')
     
     # 人员管理
-    test_manager_id = Column(BigInteger, nullable=False, comment='测试经理ID')
+    test_manager_id = Column(BigInteger, nullable=True, comment='测试经理ID')
     created_by = Column(BigInteger, nullable=False, comment='创建人ID')
     
     # 进度管理

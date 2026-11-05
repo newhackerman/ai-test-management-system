@@ -222,11 +222,11 @@ def upgrade():
         connection.execute(
             sa.text("""
                 INSERT INTO permissions (
-                    code, name, description, module, type, resource, action,
-                    is_system_permission, is_active, sort_order, created_at, updated_at
+                    code, name, description, module, resource, action,
+                    created_at
                 ) VALUES (
-                    :code, :name, :description, :module, :type, :resource, :action,
-                    true, true, :sort_order, :created_at, :updated_at
+                    :code, :name, :description, :module, :resource, :action,
+                    :created_at
                 )
             """),
             {
@@ -237,16 +237,14 @@ def upgrade():
                 'type': perm['type'],
                 'resource': perm['resource'],
                 'action': perm['action'],
-                'sort_order': i * 10,
-                'created_at': datetime.utcnow(),
-                'updated_at': datetime.utcnow()
+                'created_at': datetime.utcnow()
             }
         )
     
     # 为超级管理员角色分配所有AI权限
     # 首先获取超级管理员角色ID
     result = connection.execute(
-        sa.text("SELECT id FROM roles WHERE code = 'super_admin' LIMIT 1")
+        sa.text("SELECT id FROM roles WHERE code = 'SUPER_ADMIN' LIMIT 1")
     )
     super_admin_role = result.fetchone()
     
@@ -265,13 +263,11 @@ def upgrade():
                 sa.text("""
                     INSERT INTO role_permissions (role_id, permission_id, created_at)
                     VALUES (:role_id, :permission_id, :created_at)
-                    ON DUPLICATE KEY UPDATE updated_at = :updated_at
                 """),
                 {
                     'role_id': super_admin_role_id,
                     'permission_id': permission_id,
-                    'created_at': datetime.utcnow(),
-                    'updated_at': datetime.utcnow()
+                    'created_at': datetime.utcnow()
                 }
             )
     
@@ -312,13 +308,11 @@ def upgrade():
                     sa.text("""
                         INSERT INTO role_permissions (role_id, permission_id, created_at)
                         VALUES (:role_id, :permission_id, :created_at)
-                        ON DUPLICATE KEY UPDATE updated_at = :updated_at
                     """),
                     {
                         'role_id': user_role_id,
                         'permission_id': permission_id,
-                        'created_at': datetime.utcnow(),
-                        'updated_at': datetime.utcnow()
+                        'created_at': datetime.utcnow()
                     }
                 )
     

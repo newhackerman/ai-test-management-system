@@ -72,6 +72,12 @@ def upgrade():
     op.execute("ALTER TABLE projects MODIFY COLUMN priority ENUM('LOW', 'MEDIUM', 'HIGH', 'URGENT') DEFAULT 'MEDIUM' COMMENT '项目优先级'")
     
     # 修改ID字段类型为BigInteger
+    # 先拓宽引用 projects.id 的外键列（INT->BIGINT），否则 MySQL 会因外键类型
+    # 不兼容（错误 3780）拒绝修改 projects.id
+    op.execute("ALTER TABLE requirements MODIFY COLUMN project_id BIGINT NOT NULL COMMENT '项目ID'")
+    op.execute("ALTER TABLE test_cases MODIFY COLUMN project_id BIGINT NOT NULL COMMENT '项目ID'")
+    op.execute("ALTER TABLE defects MODIFY COLUMN project_id BIGINT NOT NULL COMMENT '项目ID'")
+    op.execute("ALTER TABLE project_metrics MODIFY COLUMN project_id BIGINT NOT NULL COMMENT '项目ID'")
     op.execute("ALTER TABLE projects MODIFY COLUMN id BIGINT AUTO_INCREMENT COMMENT '项目ID'")
     op.execute("ALTER TABLE projects MODIFY COLUMN project_manager_id BIGINT COMMENT '项目经理ID'")
     op.execute("ALTER TABLE projects MODIFY COLUMN created_by BIGINT COMMENT '创建人ID'")

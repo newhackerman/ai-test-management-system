@@ -9,8 +9,8 @@ import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
 # 导入模型
-from ..core.database import Base
-from ..models import *  # 导入所有模型
+from src.core.database import Base
+from src.models import *  # 导入所有模型
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -33,7 +33,7 @@ target_metadata = Base.metadata
 
 def get_url():
     """获取数据库URL"""
-    from ..core.config import settings
+    from src.core.config import settings
     # 将异步驱动替换为同步驱动用于迁移
     url = settings.DATABASE_URL
     if url.startswith("mysql+asyncmy://"):

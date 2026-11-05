@@ -479,6 +479,15 @@ class RequirementService:
             if field not in requirement_data or not requirement_data[field]:
                 raise ValidationError(f"必填字段缺失: {field}")
         
+        # 验证项目存在性（不存在的项目下不得创建需求，避免产生孤儿需求）
+        project = (
+            await self.db.execute(
+                select(Project).where(Project.id == requirement_data['project_id'])
+            )
+        ).scalar_one_or_none()
+        if not project:
+            raise ValidationError(f"项目不存在: {requirement_data['project_id']}")
+
         # 验证枚举值
         if 'requirement_type' in requirement_data:
             try:
