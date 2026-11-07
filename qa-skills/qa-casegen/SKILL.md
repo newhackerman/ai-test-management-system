@@ -12,11 +12,12 @@
 - Cross-check the inventory against the route files so undocumented endpoints are not missed.
 - Read the data models for every entity and note the required fields, the enums and the foreign keys.
 - Read the auth module and note how login works, what roles exist and which endpoints check roles.
+- Build a frontend route inventory too: parse the router file for every path (static and parameterised) and the sidebar menu. The API inventory alone never proves a page was opened — a route with no test is a gap, not a pass.
 - Write the inventory down as the analysis record. Generate no cases before this record exists.
 
 ## Set up the framework
 
-- Copy `qa-skills/template/` into the repository as `qa-automation/`.
+- Copy `~/workspace/custom-skills/qa-template/` into the repository as `qa-automation/`.
 - Adapt it in the five steps its README lists: set the environment, match the auth and envelope shapes, add one payload builder and one fixture per entity, then write the cases.
 - Confirm the adaptation with the template smoke suite before writing any domain case. A red smoke suite means the client or the envelope is still wrong, not that the API is broken.
 
@@ -32,10 +33,13 @@
 
 ## Generate E2E flows with AI
 
-- Read the frontend routes and pick the core user flows: login, create and list each main entity, and one full chain from the first entity to the last.
+- First, generate the page tour: one parametrized test that logs in and opens every static route from the route inventory, proving each page renders (non-blank, no error boundary, no console errors, no failed API responses). A page no test visits is a page nobody watches.
+- Add the route-coverage guard: a test that parses the router file and fails the suite when a route sits in no coverage bucket (tour / module-covered / excluded-with-a-written-reason). New routes must land in a bucket — never nowhere.
+- Then read the frontend routes and pick the core user flows: login, create and list each main entity, and one full chain from the first entity to the last.
 - Drive the real browser for every E2E case. A 200 from the server never proves the page renders.
 - Write one helper per UI creation flow in `e2e/helpers.py`, following the login helper pattern in the template.
 - End every creation flow with a visible proof that the record persisted, such as searching for its unique name in the list.
+- Spot-check primary actions, not just rendering: a visible button that does nothing when clicked is a defect the render checks cannot see. For each key list page, click its main action and prove something happens (a modal opens, navigation happens, a toast appears).
 
 ## Hand off
 

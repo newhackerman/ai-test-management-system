@@ -72,3 +72,20 @@ To cover a new module, add a test file under `tests/` and reuse:
 - `assertions.*` — `assert_status`, `assert_envelope_ok`, ...
 
 New cases only need a payload + expected status; no new plumbing.
+
+## Page tour and route coverage
+
+The E2E suite opens every page, not just the flows with creation
+tests. `e2e/page_tour_routes.py` is the inventory of every static
+route; `e2e/test_e2e_page_tour.py` visits each one and proves it
+renders (non-blank, no error boundary, no console errors, no failed
+API responses). `e2e/helpers.assert_page_renders` collects page
+errors, console errors and failed responses for every visit — a 200
+never proves the page renders.
+
+`tests/test_route_coverage.py` is the guard: it parses
+`frontend/src/routes/index.tsx` and fails the suite when a route sits
+in no coverage bucket (tour / module-covered / excluded-with-reason /
+param-covered / known-gap). **When you add a route to the app, put it
+in a bucket in `e2e/page_tour_routes.py` or the suite goes red.**
+Coverage gaps must be explicit decisions, never accidents.

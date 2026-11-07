@@ -23,7 +23,12 @@ def browser(pw):
 
 @pytest.fixture()
 def page(browser):
-    context = browser.new_context(viewport={"width": 1440, "height": 900})
+    # accept_downloads lets tests prove a download button actually
+    # downloads (a visible button that does nothing is a real defect
+    # class — see the 2026-11-07 report download bug).
+    context = browser.new_context(
+        viewport={"width": 1440, "height": 900}, accept_downloads=True
+    )
     page = context.new_page()
     yield page
     context.close()
