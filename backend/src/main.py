@@ -54,6 +54,8 @@ class AuthMiddleware(BaseHTTPMiddleware):
         "/api/v1/redoc",
         # 健康检查端点需公开访问（监控/探活），不应要求认证
         "/api/v1/health",
+        # AI 文件分享链接需匿名访问（端点内自行校验分享令牌/密码/有效期/次数）
+        "/api/v1/ai/files/share/",
     )
 
     async def dispatch(self, request: Request, call_next):

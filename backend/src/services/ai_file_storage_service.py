@@ -470,7 +470,8 @@ class AIFileStorageService:
             user_id=user_id,
             share_token=share_token,
             share_url=share_url,
-            share_password=password,
+            # 分享密码只存 SHA256 摘要，不存明文
+            share_password=hashlib.sha256(password.encode()).hexdigest() if password else None,
             can_download=can_download,
             can_preview=can_preview,
             max_downloads=max_downloads,
@@ -659,13 +660,15 @@ class AIFileStorageService:
         error_message: Optional[str] = None,
         bytes_transferred: Optional[int] = None,
         ip_address: Optional[str] = None,
-        user_agent: Optional[str] = None
+        user_agent: Optional[str] = None,
+        share_id: Optional[int] = None
     ):
         """记录文件访问日志"""
         try:
             log_record = AIFileAccessLog(
                 file_id=file_id,
                 user_id=user_id,
+                share_id=share_id,
                 action=action,
                 success=success,
                 error_message=error_message,

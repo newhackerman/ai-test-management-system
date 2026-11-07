@@ -112,6 +112,10 @@ register_router_with_config(health_websocket_router, "health_websocket")
 # 注册AI权限管理路由
 register_router_with_config(ai_permissions_router, "ai_permissions")
 
+# 注册AI文件存储路由（上传/下载/预览/分享/统计/清理）
+from .ai_file_storage import router as ai_file_storage_router
+register_router_with_config(ai_file_storage_router, "ai_files")
+
 # 注册用户角色权限管理路由
 from .v1.user_role_management import router as user_role_management_router
 api_router.include_router(user_role_management_router, tags=["用户角色权限管理"])
