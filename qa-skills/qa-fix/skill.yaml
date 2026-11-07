@@ -1,0 +1,5 @@
+name: "qa-fix"
+title: "Fix defects by priority and re-verify"
+description: "Fix the defects from the test report in priority order, re-run the affected modules and then the full suite on a clean database, and update the report. Runs after execution."
+category: "Work and knowledge"
+include_in_prompt: false

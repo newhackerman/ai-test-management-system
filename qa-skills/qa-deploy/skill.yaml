@@ -1,0 +1,5 @@
+name: "qa-deploy"
+title: "Deploy the target project for testing"
+description: "Clone or take a project repo, identify its stack, start its dependencies and services, verify health, and add self-healing recovery. Entry point of the QA pipeline: the user only supplies a repo URL or a local code path."
+category: "Work and knowledge"
+include_in_prompt: false

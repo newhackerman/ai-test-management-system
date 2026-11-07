@@ -1,0 +1,5 @@
+name: "qa-submit"
+title: "Submit the QA work on a branch and open a PR"
+description: "Create a branch, commit the framework, fixes and report in logical chunks, push it, and open a pull request. Final step of the QA pipeline."
+category: "Work and knowledge"
+include_in_prompt: false
