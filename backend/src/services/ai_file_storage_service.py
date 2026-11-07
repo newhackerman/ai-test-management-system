@@ -319,22 +319,34 @@ class AIFileStorageService:
                 return False
             
             if permanent:
-                # 永久删除：删除物理文件和数据库记录
+                # 永久删除：先记删除日志（文件行还在，访问日志的外键才成立），
+                # 再删该文件的访问日志（它们外键引用分享行），然后删分享行
+                # （分享行外键引用文件行），最后删物理文件与数据库记录
+                await self._log_file_access(file_record.id, user_id, 'delete')
+                await self.db.execute(
+                    delete(AIFileAccessLog).where(AIFileAccessLog.file_id == file_id)
+                )
+                await self.db.execute(
+                    delete(AIFileShare).where(AIFileShare.file_id == file_id)
+                )
                 file_path = Path(file_record.file_path)
                 if file_path.exists():
                     file_path.unlink()
-                
+
                 await self.db.delete(file_record)
+                await self.db.commit()
+                logger.info(f"File deleted: {file_id}, permanent: {permanent}")
+                return True
             else:
                 # 软删除：只更新状态
                 file_record.status = FileStatus.DELETED
                 file_record.deleted_at = datetime.utcnow()
-            
+
             await self.db.commit()
-            
+
             # 记录访问日志
             await self._log_file_access(file_record.id, user_id, 'delete')
-            
+
             logger.info(f"File deleted: {file_id}, permanent: {permanent}")
             return True
             
