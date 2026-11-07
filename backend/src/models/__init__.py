@@ -10,7 +10,7 @@ from .permission import (
     PermissionEffect
 )
 from .config import (
-    SystemConfig, ConfigGroup, ConfigHistory, ConfigAudit, 
+    SystemConfig, ConfigGroup, ConfigHistory, ConfigAudit, ConfigAuditComment,
     SystemEnvironment, ConfigPermission, ConfigType, Environment
 )
 from .config_template import ConfigTemplate
@@ -142,6 +142,7 @@ __all__ = [
     "ConfigGroup",
     "ConfigHistory",
     "ConfigAudit",
+    "ConfigAuditComment",
     "SystemEnvironment",
     "ConfigPermission",
     "ConfigType",

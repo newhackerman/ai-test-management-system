@@ -201,6 +201,19 @@ class ConfigAudit(BaseModel):
         return f"<ConfigAudit(code={self.audit_code}, status={self.audit_status}, key={self.config_key})>"
 
 
+class ConfigAuditComment(BaseModel):
+    """配置审核意见表"""
+    __tablename__ = 'sys_config_audit_comments'
+
+    audit_id = Column(Integer, ForeignKey('sys_config_audit.id', ondelete='CASCADE'), nullable=False, comment='审核ID')
+    user_id = Column(BigInteger, nullable=False, comment='意见人ID')
+    username = Column(String(100), nullable=True, comment='意见人用户名')
+    comment = Column(Text, nullable=False, comment='意见内容')
+
+    def __repr__(self):
+        return f"<ConfigAuditComment(audit_id={self.audit_id}, user_id={self.user_id})>"
+
+
 class SystemEnvironment(BaseModel):
     """环境管理表"""
     __tablename__ = 'sys_environment'

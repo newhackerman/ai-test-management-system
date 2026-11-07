@@ -1,7 +1,7 @@
 """
 配置审核API接口
 """
-from fastapi import APIRouter, Depends, HTTPException, Query, status, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, Query, status, BackgroundTasks, WebSocket, WebSocketDisconnect
 from typing import List, Optional, Dict, Any
 from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
@@ -10,11 +10,12 @@ from sqlalchemy import func
 from ..schemas.config import (
     ConfigAuditCreateRequest, ConfigAuditResponse, ApiResponse
 )
-from ..core.database import get_db
+from ..core.database import get_db, SessionLocal
 from ..core.security import get_current_user
 from ..models.user import User
 from ..services.config_permission import config_permission_service
-from ..models.config import ConfigAudit, SystemConfig, Environment, PermissionAction
+from ..models.config import ConfigAudit, ConfigAuditComment, SystemConfig, Environment, PermissionAction
+from ..utils.jwt import verify_token
 import logging
 
 logger = logging.getLogger(__name__)
@@ -73,6 +74,38 @@ def _username(user) -> str:
     if isinstance(user, dict):
         return user.get("username") or user.get("sub") or ""
     return getattr(user, "username", "")
+
+
+def _is_superuser(db: Session, user_id: int) -> bool:
+    """查库判断用户是否为超级管理员。
+
+    注意：JWT 里不含 is_superuser，token 解析出的该字段恒为 False，
+    因此管理员判断必须查库，不能信任 current_user.is_superuser。
+    """
+    if not user_id:
+        return False
+    row = db.query(User.is_superuser).filter(User.id == user_id).first()
+    return bool(row and row[0])
+
+
+def _audit_usernames(db: Session, user_ids) -> Dict[int, str]:
+    """批量取用户名，用于历史记录展示。"""
+    ids = [uid for uid in set(user_ids) if uid]
+    if not ids:
+        return {}
+    rows = db.query(User.id, User.username).filter(User.id.in_(ids)).all()
+    return {row[0]: row[1] for row in rows}
+
+
+def _comment_to_dict(comment: ConfigAuditComment) -> Dict[str, Any]:
+    return {
+        "id": comment.id,
+        "audit_id": comment.audit_id,
+        "user_id": comment.user_id,
+        "user_name": comment.username,
+        "comment": comment.comment,
+        "created_at": comment.created_at.isoformat() if comment.created_at else None,
+    }
 
 
 def _model_environment(value) -> Environment:
@@ -406,19 +439,49 @@ async def reject_audit(
 async def add_audit_comment(
     audit_id: int,
     comment: str,
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
 ):
     """添加审核意见"""
     try:
-        # TODO: 实现添加审核意见功能
-        # 可以支持在审核过程中添加多条意见
-        
+        if not comment or comment.strip() == "":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="审核意见不能为空"
+            )
+
+        audit = db.query(ConfigAudit).filter(ConfigAudit.id == audit_id).first()
+        if not audit:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="审核记录不存在"
+            )
+        if _enum_value(audit.audit_status) not in ("PENDING", "IN_REVIEW"):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="当前审核状态不允许添加意见"
+            )
+
+        record = ConfigAuditComment(
+            audit_id=audit_id,
+            user_id=_user_id(current_user),
+            username=_username(current_user) or _audit_usernames(db, [_user_id(current_user)]).get(_user_id(current_user), ""),
+            comment=comment.strip(),
+            created_by=_user_id(current_user),
+            updated_by=_user_id(current_user),
+        )
+        db.add(record)
+        db.commit()
+        db.refresh(record)
+
         return ApiResponse(
-            success=True, 
-            data={"audit_id": audit_id, "comment_added": True}, 
+            success=True,
+            data=_comment_to_dict(record),
             message="审核意见添加成功"
         )
-        
+
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"添加审核意见失败: {e}")
         raise HTTPException(
@@ -431,19 +494,45 @@ async def add_audit_comment(
 async def cancel_audit(
     audit_id: int,
     cancel_reason: str,
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
 ):
     """取消审核申请"""
     try:
-        # TODO: 实现取消审核申请功能
-        # 只有申请人或管理员可以取消审核
-        
+        audit = db.query(ConfigAudit).filter(ConfigAudit.id == audit_id).first()
+        if not audit:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="审核记录不存在"
+            )
+
+        operator_id = _user_id(current_user)
+        if audit.apply_user_id != operator_id and not _is_superuser(db, operator_id):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="只有申请人或管理员可以取消审核"
+            )
+        if _enum_value(audit.audit_status) not in ("PENDING", "IN_REVIEW"):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="当前审核状态不允许取消"
+            )
+
+        audit.audit_status = "CANCELLED"
+        audit.audit_user_id = operator_id
+        audit.audit_reason = cancel_reason
+        audit.updated_by = operator_id
+        db.commit()
+        db.refresh(audit)
+
         return ApiResponse(
-            success=True, 
-            data={"audit_id": audit_id, "cancelled": True}, 
+            success=True,
+            data=_audit_to_dict(audit),
             message="审核申请已取消"
         )
-        
+
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"取消审核申请失败: {e}")
         raise HTTPException(
@@ -455,26 +544,70 @@ async def cancel_audit(
 @router.get("/{audit_id}/history", response_model=ApiResponse[List[dict]])
 async def get_audit_history(
     audit_id: int,
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
 ):
     """获取审核历史"""
     try:
-        # TODO: 实现获取审核历史功能
-        # 显示审核过程中的所有操作记录
-        
-        history = [
-            {
-                "id": 1,
-                "action": "submitted",
-                "user_id": _user_id(current_user),
-                "user_name": _username(current_user),
-                "comment": "提交审核申请",
-                "created_at": "2024-01-01T10:00:00Z"
+        audit = db.query(ConfigAudit).filter(ConfigAudit.id == audit_id).first()
+        if not audit:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="审核记录不存在"
+            )
+
+        comments = db.query(ConfigAuditComment).filter(
+            ConfigAuditComment.audit_id == audit_id
+        ).order_by(ConfigAuditComment.created_at.asc(), ConfigAuditComment.id.asc()).all()
+
+        user_ids = [audit.apply_user_id, audit.audit_user_id]
+        user_ids += [c.user_id for c in comments]
+        names = _audit_usernames(db, user_ids)
+
+        def _event(action: str, user_id, comment: str, when, seq: int):
+            return {
+                "id": None,
+                "action": action,
+                "user_id": user_id,
+                "user_name": names.get(user_id, ""),
+                "comment": comment,
+                "created_at": when.isoformat() if when else None,
+                "_sort": when or datetime.min,
+                "_seq": seq,
             }
-        ]
-        
-        return ApiResponse(success=True, data=history, message="获取审核历史成功")
-        
+
+        events = [_event("submitted", audit.apply_user_id, "提交审核申请", audit.applied_at, 0)]
+        status_value = _enum_value(audit.audit_status)
+        if audit.audited_at:
+            action = "approved" if status_value == "APPROVED" else (
+                "rejected" if status_value == "REJECTED" else "reviewed"
+            )
+            events.append(_event(action, audit.audit_user_id, audit.audit_reason or "", audit.audited_at, 2))
+        if status_value == "CANCELLED":
+            events.append(_event("cancelled", audit.audit_user_id, audit.audit_reason or "取消审核申请", audit.updated_at, 3))
+        if audit.executed_at and status_value == "APPROVED":
+            events.append(_event("executed", audit.audit_user_id, "审核通过后执行", audit.executed_at, 4))
+        for c in comments:
+            events.append({
+                "id": c.id,
+                "action": "comment",
+                "user_id": c.user_id,
+                "user_name": c.username or names.get(c.user_id, ""),
+                "comment": c.comment,
+                "created_at": c.created_at.isoformat() if c.created_at else None,
+                "_sort": c.created_at or datetime.min,
+                "_seq": 1,
+            })
+
+        events.sort(key=lambda e: (e["_sort"], e["_seq"]))
+        for e in events:
+            e.pop("_sort", None)
+            e.pop("_seq", None)
+
+        return ApiResponse(success=True, data=events, message="获取审核历史成功")
+
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"获取审核历史失败: {e}")
         raise HTTPException(
@@ -485,10 +618,47 @@ async def get_audit_history(
 
 # 审核相关的WebSocket通知端点
 @router.websocket("/ws/{audit_id}")
-async def audit_websocket_endpoint(websocket, audit_id: int):
-    """审核状态实时推送"""
+async def audit_websocket_endpoint(websocket: WebSocket, audit_id: int, token: Optional[str] = Query(None)):
+    """审核状态实时推送
+
+    连接时用 ?token=<JWT> 鉴权，握手后先推送一次当前审核状态快照；
+    客户端发送任意文本消息（例如 "status"）即再次推送最新快照，
+    发送 "ping" 回复 "pong"。断开即结束。
+    """
+    if not token:
+        await websocket.close(code=4001, reason="未提供认证令牌")
+        return
+    payload = verify_token(token)
+    if not payload or payload.get("sub") is None:
+        await websocket.close(code=4001, reason="认证令牌无效或已过期")
+        return
+
+    await websocket.accept()
+    db = SessionLocal()
     try:
-        # TODO: 实现WebSocket连接和实时推送
+        def _snapshot():
+            audit = db.query(ConfigAudit).filter(ConfigAudit.id == audit_id).first()
+            if not audit:
+                return {"type": "audit_status", "audit_id": audit_id, "exists": False}
+            data = _audit_to_dict(audit)
+            data["type"] = "audit_status"
+            data["exists"] = True
+            return data
+
+        await websocket.send_json(_snapshot())
+        while True:
+            try:
+                message = await websocket.receive_text()
+            except WebSocketDisconnect:
+                break
+            if message.strip().lower() == "ping":
+                await websocket.send_text("pong")
+            else:
+                db.expire_all()
+                await websocket.send_json(_snapshot())
+    except WebSocketDisconnect:
         pass
     except Exception as e:
         logger.error(f"审核WebSocket连接失败: {e}")
+    finally:
+        db.close()
