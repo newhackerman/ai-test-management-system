@@ -54,9 +54,11 @@ class AuthService:
             await self.db.commit()
             await self.db.refresh(user)
 
-        # 检查用户状态
+        # 检查用户状态：只有 LOCKED 走 423（见路由层）；其余非 ACTIVE 状态仍按 401 处理
         if user.status != UserStatus.ACTIVE:
             await self._log_login_attempt(user.id, username, client_ip, user_agent, AuditResult.FAILURE, f"用户状态: {user.status.value}")
+            if user.status == UserStatus.LOCKED:
+                return {"success": False, "message": "用户账户不可用", "error_code": "ACCOUNT_LOCKED"}
             return {"success": False, "message": "用户账户不可用"}
         
         # 验证密码

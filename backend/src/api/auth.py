@@ -24,7 +24,7 @@ from ..utils.auth_rate_limit import (
     check_reset_password_rate_limit,
     increment_reset_password_failure,
 )
-from ..utils.error_responses import unauthorized_error, internal_server_error, bad_request_error
+from ..utils.error_responses import unauthorized_error, locked_error, internal_server_error, bad_request_error
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -174,6 +174,10 @@ async def login(
         )
         
         if not result["success"]:
+            # 账户被锁定返回 423（RFC 4918），与 401 凭据错误区分开；
+            # 其余失败（用户不存在/密码错误/其他非 ACTIVE 状态）仍返回 401。
+            if result.get("error_code") == "ACCOUNT_LOCKED":
+                raise locked_error(result["message"], "登录验证失败")
             raise unauthorized_error(result["message"], "登录验证失败")
         
         return LoginResponse(

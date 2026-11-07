@@ -89,9 +89,10 @@ def test_brute_force_locks_account(api, sec_user):
     """Repeated failed logins must lock the account. The auth
     service locks after 3 failures (15 min) and 5 failures (24 h),
     so after the failures even the correct password must be
-    rejected (401, message indicates the lockout). A lock that
-    never bites would be a finding; a 429/423 is not required —
-    this app signals lockout with 401 + message."""
+    rejected with 423 Locked (RFC 4918) — not 401, which means
+    "bad credentials" and would mislead the user into retrying
+    the password. Wrong-password / unknown-user logins still
+    return 401 (see test_auth.py)."""
     for _ in range(5):
         api.post(
             "/api/v1/auth/login",
@@ -101,7 +102,7 @@ def test_brute_force_locks_account(api, sec_user):
         "/api/v1/auth/login",
         json={"username": sec_user["username"], "password": SEC_PASSWORD},
     )
-    assert resp.status_code in (401, 403, 423), (
+    assert resp.status_code == 423, (
         f"account NOT locked after 5 failed logins: {resp.status_code} {resp.text[:200]}"
     )
     assert "锁定" in resp.text or "不可用" in resp.text, (
