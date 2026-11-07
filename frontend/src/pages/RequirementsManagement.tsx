@@ -26,6 +26,8 @@ import { Checkbox } from '@/components/ui/Checkbox'
 import { Input } from '@/components/ui/Input'
 import { Textarea } from '@/components/ui/Textarea'
 import requirementService from '@/services/requirementService'
+import { TraceabilityMatrix } from '@/components/requirements/TraceabilityMatrix'
+import { TraceabilityCoverageAnalysis } from '@/components/requirements/TraceabilityCoverageAnalysis'
 import ProjectService from '@/services/projectService'
 import userService from '@/services/user-service'
 import type { Requirement } from '@/types/requirement'
@@ -208,6 +210,7 @@ function RequirementsManagement() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
+  const [view, setView] = useState<'list' | 'traceability'>('list')
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize))
   const categories = useMemo(() => {
@@ -499,6 +502,10 @@ function RequirementsManagement() {
     <div className="space-y-4">
       <div className="flex flex-wrap justify-end gap-3">
         <div className="flex flex-wrap gap-2">
+          <div className="flex rounded-md border overflow-hidden">
+            <button type="button" onClick={() => setView('list')} className={`px-3 py-2 text-sm ${view === 'list' ? 'bg-primary text-primary-foreground' : 'bg-background'}`}>需求列表</button>
+            <button type="button" onClick={() => setView('traceability')} className={`px-3 py-2 text-sm ${view === 'traceability' ? 'bg-primary text-primary-foreground' : 'bg-background'}`}>追溯分析</button>
+          </div>
           <Button variant="outline" onClick={() => { loadRequirements(page); loadStatistics() }} disabled={loading}>
             <RefreshCw className="mr-2 h-4 w-4" />
             刷新
@@ -579,6 +586,7 @@ function RequirementsManagement() {
       {notice && <div className="rounded-md border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">{notice}</div>}
       {error && <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:text-red-400 dark:bg-red-900/20 dark:border-red-800">{error}</div>}
 
+      {view === 'list' ? (
       <Card>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
@@ -681,6 +689,12 @@ function RequirementsManagement() {
           </div>
         </CardContent>
       </Card>
+      ) : (
+        <div className="space-y-6">
+          <TraceabilityMatrix filters={filters} loading={loading} onRefresh={() => { loadRequirements(page); loadStatistics() }} />
+          <TraceabilityCoverageAnalysis filters={filters} loading={loading} onRefresh={() => { loadRequirements(page); loadStatistics() }} />
+        </div>
+      )}
 
       {(editingRequirement !== null || form !== emptyForm) && (
         <RequirementFormDialog

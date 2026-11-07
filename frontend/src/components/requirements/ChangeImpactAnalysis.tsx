@@ -20,6 +20,81 @@ import {
   RefreshCw
 } from 'lucide-react'
 import { RequirementChangeRequest } from '@/types/requirement'
+import { traceabilityService, downloadJson, type ChangeImpactAnalysisResponse, type ImpactItem } from '@/services/traceabilityService'
+
+/** 后端风险等级（小写）映射到前端展示等级；后端没有 CRITICAL。 */
+function mapRiskLevel(level: string): 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL' {
+  const v = (level || '').toLowerCase()
+  if (v === 'high') return 'HIGH'
+  if (v === 'medium') return 'MEDIUM'
+  if (v === 'critical') return 'CRITICAL'
+  return 'LOW'
+}
+
+/** 后端对象标题形如 “编码 标题”，拆回编码与标题。 */
+function splitCodeTitle(objectTitle: string): { code: string; title: string } {
+  const [first, ...rest] = (objectTitle || '').split(' ')
+  return rest.length ? { code: first, title: rest.join(' ') } : { code: '', title: objectTitle || '' }
+}
+
+/**
+ * 把后端影响分析映射为前端展示结构。
+ * 影响评分按“风险基线 + 直接影响×2 + 间接影响×1（封顶 100）”计算；
+ * 领域得分是该领域影响项占全部影响项的比例；时间线与资源影响后端
+ * 不提供，置零如实展示，不编造数据。
+ */
+function mapToImpactData(resp: ChangeImpactAnalysisResponse): ImpactAnalysisData {
+  const risk = mapRiskLevel(resp.risk_level)
+  const baseScore = { LOW: 25, MEDIUM: 50, HIGH: 75, CRITICAL: 90 }[risk]
+  const impactScore = Math.min(100, baseScore + resp.direct_impacts.length * 2 + resp.indirect_impacts.length)
+  const all = [...resp.direct_impacts, ...resp.indirect_impacts]
+  const area = (items: ImpactItem[]) => ({
+    score: all.length ? Math.round((items.length / all.length) * 100) : 0,
+    items: items.map((i) => i.impact_description),
+  })
+  const reqItems = (items: ImpactItem[], relationship: string) =>
+    items
+      .filter((i) => i.object_type === 'requirement')
+      .map((i) => {
+        const { code, title } = splitCodeTitle(i.object_title)
+        return { id: i.object_id, code, title, impact_level: i.impact_level as 'LOW' | 'MEDIUM' | 'HIGH', relationship }
+      })
+  return {
+    overall_risk: risk,
+    impact_score: impactScore,
+    affected_areas: {
+      technical: area(all.filter((i) => i.object_type === 'task')),
+      functional: area(all.filter((i) => i.object_type === 'requirement')),
+      schedule: { score: 0, items: ['本次分析未涉及进度数据'] },
+      cost: { score: 0, items: ['本次分析未涉及成本数据'] },
+      quality: area(all.filter((i) => i.object_type === 'test_case')),
+    },
+    affected_requirements: [
+      ...reqItems(resp.direct_impacts, '直接依赖'),
+      ...reqItems(resp.indirect_impacts, '间接影响'),
+    ],
+    affected_test_cases: all
+      .filter((i) => i.object_type === 'test_case')
+      .map((i) => {
+        const { title } = splitCodeTitle(i.object_title)
+        return { id: i.object_id, name: title || i.object_title, impact_level: i.impact_level as 'LOW' | 'MEDIUM' | 'HIGH', action_required: i.impact_description }
+      }),
+    affected_tasks: all
+      .filter((i) => i.object_type === 'task')
+      .map((i) => {
+        const { title } = splitCodeTitle(i.object_title)
+        return { id: i.object_id, name: title || i.object_title, impact_level: i.impact_level as 'LOW' | 'MEDIUM' | 'HIGH', status: '—' }
+      }),
+    recommendations: resp.recommendations.map((description) => ({
+      type: 'RISK_MITIGATION' as const,
+      priority: risk === 'HIGH' || risk === 'CRITICAL' ? ('HIGH' as const) : ('MEDIUM' as const),
+      description,
+      action_items: [description],
+    })),
+    timeline_impact: { estimated_delay: 0, critical_path_affected: false, milestone_impact: [] },
+    resource_impact: { additional_effort: 0, skill_requirements: [], team_members_affected: 0 },
+  }
+}
 
 interface ImpactAnalysisData {
   overall_risk: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'
@@ -97,6 +172,7 @@ export function ChangeImpactAnalysis({
   onClose
 }: ChangeImpactAnalysisProps) {
   const [analysisData, setAnalysisData] = useState<ImpactAnalysisData | null>(null)
+  const [rawAnalysis, setRawAnalysis] = useState<ChangeImpactAnalysisResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [regenerating, setRegenerating] = useState(false)
 
@@ -107,122 +183,16 @@ export function ChangeImpactAnalysis({
   const loadImpactAnalysis = async () => {
     setLoading(true)
     try {
-      // TODO: 调用影响分析API
-      // const analysis = await changeService.getImpactAnalysis(changeRequest.id)
-      // setAnalysisData(analysis)
-      
-      // 模拟数据
-      const mockAnalysis: ImpactAnalysisData = {
-        overall_risk: 'MEDIUM',
-        impact_score: 65,
-        affected_areas: {
-          technical: {
-            score: 70,
-            items: ['数据库架构调整', 'API接口变更', '第三方集成影响']
-          },
-          functional: {
-            score: 60,
-            items: ['用户界面调整', '业务流程变更', '权限控制更新']
-          },
-          schedule: {
-            score: 55,
-            items: ['开发周期延长', '测试时间增加', '部署计划调整']
-          },
-          cost: {
-            score: 45,
-            items: ['额外开发成本', '测试资源投入', '培训成本']
-          },
-          quality: {
-            score: 50,
-            items: ['代码复杂度增加', '测试覆盖率要求', '文档更新需求']
-          }
-        },
-        affected_requirements: [
-          {
-            id: 103,
-            code: 'REQ-2024-003',
-            title: '用户权限管理',
-            impact_level: 'HIGH',
-            relationship: '直接依赖'
-          },
-          {
-            id: 104,
-            code: 'REQ-2024-004',
-            title: '系统日志记录',
-            impact_level: 'MEDIUM',
-            relationship: '间接影响'
-          }
-        ],
-        affected_test_cases: [
-          {
-            id: 201,
-            name: '登录功能测试',
-            impact_level: 'HIGH',
-            action_required: '需要重新设计测试用例'
-          },
-          {
-            id: 202,
-            name: '权限验证测试',
-            impact_level: 'MEDIUM',
-            action_required: '需要更新测试数据'
-          }
-        ],
-        affected_tasks: [
-          {
-            id: 301,
-            name: '前端登录页面开发',
-            impact_level: 'HIGH',
-            status: '进行中'
-          },
-          {
-            id: 302,
-            name: '后端认证服务',
-            impact_level: 'MEDIUM',
-            status: '已完成'
-          }
-        ],
-        recommendations: [
-          {
-            type: 'RISK_MITIGATION',
-            priority: 'HIGH',
-            description: '建议进行详细的技术方案评审',
-            action_items: [
-              '组织技术架构评审会议',
-              '制定详细的实施计划',
-              '准备回滚方案'
-            ]
-          },
-          {
-            type: 'TIMELINE_ADJUSTMENT',
-            priority: 'MEDIUM',
-            description: '建议调整项目时间线',
-            action_items: [
-              '重新评估里程碑时间',
-              '调整资源分配',
-              '通知相关干系人'
-            ]
-          }
-        ],
-        timeline_impact: {
-          estimated_delay: 5,
-          critical_path_affected: true,
-          milestone_impact: [
-            {
-              milestone: '功能开发完成',
-              original_date: '2024-02-15',
-              new_date: '2024-02-20'
-            }
-          ]
-        },
-        resource_impact: {
-          additional_effort: 8,
-          skill_requirements: ['前端开发', '后端开发', '测试'],
-          team_members_affected: 3
-        }
-      }
-      setAnalysisData(mockAnalysis)
+      // 后端每次调用都重新计算：直接影响/间接影响/风险等级/建议均来自真实追溯链接
+      const resp = await traceabilityService.analyzeChangeImpact(
+        changeRequest.requirement_id,
+        changeRequest.description || changeRequest.title,
+      )
+      setRawAnalysis(resp)
+      setAnalysisData(mapToImpactData(resp))
     } catch (error) {
       console.error('加载影响分析失败:', error)
+      setAnalysisData(null)
     } finally {
       setLoading(false)
     }
@@ -231,8 +201,7 @@ export function ChangeImpactAnalysis({
   const regenerateAnalysis = async () => {
     setRegenerating(true)
     try {
-      // TODO: 调用重新生成分析API
-      // await changeService.regenerateImpactAnalysis(changeRequest.id)
+      // 后端分析是实时计算的，重新调用即重新生成
       await loadImpactAnalysis()
     } catch (error) {
       console.error('重新生成分析失败:', error)
@@ -242,8 +211,11 @@ export function ChangeImpactAnalysis({
   }
 
   const exportAnalysis = () => {
-    // TODO: 实现导出功能
-    console.log('导出影响分析报告')
+    if (!rawAnalysis) return
+    downloadJson(
+      `impact-analysis-${changeRequest.change_request_code || changeRequest.id}.json`,
+      { changeRequest, analysis: rawAnalysis, mapped: analysisData },
+    )
   }
 
   const getRiskBadge = (risk: string) => {

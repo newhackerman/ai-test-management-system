@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/Badge'
 import { Progress } from '@/components/ui/Progress'
 import { Table } from '@/components/ui/Table'
 import { Loading } from '@/components/ui/Loading'
+import { traceabilityService, downloadJson } from '@/services/traceabilityService'
 import { 
   BarChart3, 
   PieChart, 
@@ -66,7 +67,7 @@ interface CoverageStatistics {
 }
 
 interface TraceabilityCoverageAnalysisProps {
-  statistics: any
+  statistics?: any
   filters?: any
   loading: boolean
   onRefresh: () => void
@@ -90,121 +91,106 @@ export function TraceabilityCoverageAnalysis({
   }, [filters])
 
   const loadCoverageData = async () => {
+    const projectId = Number((filters as any)?.project_id)
+    if (!projectId) {
+      setCoverageData([])
+      return
+    }
     try {
-      // TODO: 调用覆盖率分析API
-      // const data = await traceabilityService.getCoverageAnalysis(filters)
-      // setCoverageData(data)
-      
-      // 模拟数据
-      const mockData: CoverageData[] = [
-        {
-          requirement_id: 101,
-          requirement_code: 'REQ-2024-001',
-          requirement_title: '用户登录功能',
-          requirement_type: 'FUNCTIONAL',
-          priority: 'HIGH',
-          forward_coverage: 95,
-          backward_coverage: 90,
-          bidirectional_coverage: 85,
-          design_coverage: 100,
-          test_coverage: 90,
-          implementation_coverage: 95,
-          overall_coverage: 92,
-          coverage_status: 'EXCELLENT',
-          gaps: []
-        },
-        {
-          requirement_id: 102,
-          requirement_code: 'REQ-2024-002',
-          requirement_title: '数据导出功能',
-          requirement_type: 'FUNCTIONAL',
-          priority: 'MEDIUM',
-          forward_coverage: 70,
-          backward_coverage: 60,
-          bidirectional_coverage: 55,
-          design_coverage: 80,
-          test_coverage: 50,
-          implementation_coverage: 70,
-          overall_coverage: 65,
-          coverage_status: 'FAIR',
-          gaps: [
-            {
-              type: 'TEST_COVERAGE',
-              description: '缺少集成测试用例',
-              severity: 'MEDIUM'
-            }
-          ]
-        },
-        {
-          requirement_id: 103,
-          requirement_code: 'REQ-2024-003',
-          requirement_title: '权限管理功能',
-          requirement_type: 'FUNCTIONAL',
-          priority: 'HIGH',
-          forward_coverage: 30,
-          backward_coverage: 20,
-          bidirectional_coverage: 15,
-          design_coverage: 40,
-          test_coverage: 0,
-          implementation_coverage: 30,
-          overall_coverage: 25,
-          coverage_status: 'POOR',
-          gaps: [
-            {
-              type: 'DESIGN_COVERAGE',
-              description: '缺少详细设计文档',
-              severity: 'HIGH'
-            },
-            {
-              type: 'TEST_COVERAGE',
-              description: '未创建测试用例',
-              severity: 'HIGH'
-            }
-          ]
+      // 三类矩阵各给一维覆盖率：设计/测试/实现；后端没有设计模型时设计维为 0
+      const [testMatrix, taskMatrix, designMatrix] = await Promise.all([
+        traceabilityService.getTraceabilityMatrix(projectId, 'requirement_to_test'),
+        traceabilityService.getTraceabilityMatrix(projectId, 'requirement_to_task'),
+        traceabilityService.getTraceabilityMatrix(projectId, 'requirement_to_design'),
+      ])
+      const pct = (matrixData: Record<string, Record<string, boolean>>, reqId: number, total: number) => {
+        if (!total) return 0
+        const row = matrixData[String(reqId)] || {}
+        const linked = Object.values(row).filter(Boolean).length
+        return Math.round((linked / total) * 100)
+      }
+      const statusOf = (overall: number): CoverageData['coverage_status'] =>
+        overall >= 90 ? 'EXCELLENT' : overall >= 70 ? 'GOOD' : overall >= 50 ? 'FAIR' : 'POOR'
+      const rows: CoverageData[] = testMatrix.requirements.map((req: any) => {
+        const designCoverage = pct(designMatrix.matrix_data, req.id, designMatrix.targets.length)
+        const testCoverage = pct(testMatrix.matrix_data, req.id, testMatrix.targets.length)
+        const implementationCoverage = pct(taskMatrix.matrix_data, req.id, taskMatrix.targets.length)
+        const overallCoverage = Math.round((designCoverage + testCoverage + implementationCoverage) / 3)
+        const gaps: CoverageData['gaps'] = []
+        if (designCoverage === 0) gaps.push({ type: 'DESIGN_COVERAGE', description: '缺少设计追溯', severity: 'HIGH' })
+        if (testCoverage === 0) gaps.push({ type: 'TEST_COVERAGE', description: '未创建测试用例', severity: 'HIGH' })
+        if (implementationCoverage === 0) gaps.push({ type: 'IMPLEMENTATION_COVERAGE', description: '未关联开发任务', severity: 'MEDIUM' })
+        return {
+          requirement_id: req.id,
+          requirement_code: req.requirement_code || `REQ-${req.id}`,
+          requirement_title: req.title || '',
+          requirement_type: req.requirement_type || 'FUNCTIONAL',
+          priority: req.priority || 'MEDIUM',
+          // 后端不区分前后向：三向统一取总体覆盖率
+          forward_coverage: overallCoverage,
+          backward_coverage: overallCoverage,
+          bidirectional_coverage: overallCoverage,
+          design_coverage: designCoverage,
+          test_coverage: testCoverage,
+          implementation_coverage: implementationCoverage,
+          overall_coverage: overallCoverage,
+          coverage_status: statusOf(overallCoverage),
+          gaps,
         }
-      ]
-      setCoverageData(mockData)
+      })
+      setCoverageData(rows)
     } catch (error) {
       console.error('加载覆盖率数据失败:', error)
+      setCoverageData([])
     }
   }
 
   const loadDetailedStatistics = async () => {
+    const projectId = Number((filters as any)?.project_id)
+    if (!projectId) {
+      setDetailedStats(null)
+      return
+    }
     try {
-      // TODO: 调用详细统计API
-      // const stats = await traceabilityService.getDetailedStatistics(filters)
-      // setDetailedStats(stats)
-      
-      // 模拟统计数据
-      const mockStats: CoverageStatistics = {
-        total_requirements: 150,
-        traced_requirements: 120,
-        untraced_requirements: 30,
-        coverage_percentage: 80,
-        forward_traceability: 85,
-        backward_traceability: 75,
-        bidirectional_traceability: 70,
-        by_type: {
-          FUNCTIONAL: { total: 100, covered: 85, percentage: 85 },
-          NON_FUNCTIONAL: { total: 30, covered: 20, percentage: 67 },
-          CONSTRAINT: { total: 15, covered: 10, percentage: 67 },
-          INTERFACE: { total: 5, covered: 5, percentage: 100 }
-        },
-        by_priority: {
-          CRITICAL: { total: 20, covered: 18, percentage: 90 },
-          HIGH: { total: 50, covered: 45, percentage: 90 },
-          MEDIUM: { total: 60, covered: 45, percentage: 75 },
-          LOW: { total: 20, covered: 12, percentage: 60 }
-        },
-        trends: {
-          coverage_trend: 5.2,
-          improvement_rate: 8.5,
-          period: '本月'
-        }
+      const [coverage, testMatrix] = await Promise.all([
+        traceabilityService.getTraceabilityCoverage(projectId),
+        traceabilityService.getTraceabilityMatrix(projectId, 'requirement_to_test'),
+      ])
+      const stats = coverage.coverage_stats
+      const total = stats.total_requirements
+      const traced = stats.covered_requirements
+      const uncovered = new Set<number>(stats.uncovered_requirements || [])
+      const percentage = total ? Math.round(stats.coverage_rate * 100) : 0
+      const groupBy = (key: string) => {
+        const groups: Record<string, { total: number; covered: number; percentage: number }> = {}
+        testMatrix.requirements.forEach((req: any) => {
+          const name = String(req[key] || 'UNKNOWN')
+          const g = groups[name] || (groups[name] = { total: 0, covered: 0, percentage: 0 })
+          g.total += 1
+          if (!uncovered.has(req.id)) g.covered += 1
+        })
+        Object.values(groups).forEach((g) => {
+          g.percentage = g.total ? Math.round((g.covered / g.total) * 100) : 0
+        })
+        return groups
       }
-      setDetailedStats(mockStats)
+      setDetailedStats({
+        total_requirements: total,
+        traced_requirements: traced,
+        untraced_requirements: total - traced,
+        coverage_percentage: percentage,
+        // 后端不区分前后向：三向统一取总体覆盖率
+        forward_traceability: percentage,
+        backward_traceability: percentage,
+        bidirectional_traceability: percentage,
+        by_type: groupBy('requirement_type'),
+        by_priority: groupBy('priority'),
+        // 后端没有历史快照，趋势暂无数据
+        trends: { coverage_trend: 0, improvement_rate: 0, period: '暂无历史数据' },
+      })
     } catch (error) {
       console.error('加载详细统计失败:', error)
+      setDetailedStats(null)
     }
   }
 
@@ -262,6 +248,22 @@ export function TraceabilityCoverageAnalysis({
     }
   })
 
+  // 父组件未传 statistics 时用本页算出的总体覆盖率兜底
+  const displayStatistics = statistics ?? (detailedStats ? {
+    forward_traceability: detailedStats.coverage_percentage,
+    backward_traceability: detailedStats.coverage_percentage,
+    bidirectional_traceability: detailedStats.coverage_percentage,
+  } : { forward_traceability: 0, backward_traceability: 0, bidirectional_traceability: 0 })
+
+  const exportReport = () => {
+    downloadJson(`traceability-coverage-${(filters as any)?.project_id || 'all'}.json`, {
+      project_id: (filters as any)?.project_id ?? null,
+      statistics: detailedStats,
+      coverage: coverageData,
+      generated_at: new Date().toISOString(),
+    })
+  }
+
   if (loading) {
     return (
       <div className="flex justify-center items-center py-8">
@@ -305,7 +307,7 @@ export function TraceabilityCoverageAnalysis({
             <RefreshCw className="w-4 h-4 mr-2" />
             刷新
           </Button>
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" onClick={exportReport}>
             <Download className="w-4 h-4 mr-2" />
             导出报告
           </Button>
@@ -323,10 +325,10 @@ export function TraceabilityCoverageAnalysis({
               </CardHeader>
               <CardContent>
                 <div className="text-center">
-                  <div className={`text-3xl font-bold ${getCoverageColor(statistics.forward_traceability)}`}>
-                    {statistics.forward_traceability}%
+                  <div className={`text-3xl font-bold ${getCoverageColor(displayStatistics.forward_traceability)}`}>
+                    {displayStatistics.forward_traceability}%
                   </div>
-                  <Progress value={statistics.forward_traceability} className="mt-2" />
+                  <Progress value={displayStatistics.forward_traceability} className="mt-2" />
                   <p className="text-sm text-gray-600 mt-2 dark:text-gray-400">需求 → 设计 → 实现</p>
                 </div>
               </CardContent>
@@ -338,10 +340,10 @@ export function TraceabilityCoverageAnalysis({
               </CardHeader>
               <CardContent>
                 <div className="text-center">
-                  <div className={`text-3xl font-bold ${getCoverageColor(statistics.backward_traceability)}`}>
-                    {statistics.backward_traceability}%
+                  <div className={`text-3xl font-bold ${getCoverageColor(displayStatistics.backward_traceability)}`}>
+                    {displayStatistics.backward_traceability}%
                   </div>
-                  <Progress value={statistics.backward_traceability} className="mt-2" />
+                  <Progress value={displayStatistics.backward_traceability} className="mt-2" />
                   <p className="text-sm text-gray-600 mt-2 dark:text-gray-400">实现 → 设计 → 需求</p>
                 </div>
               </CardContent>
@@ -353,10 +355,10 @@ export function TraceabilityCoverageAnalysis({
               </CardHeader>
               <CardContent>
                 <div className="text-center">
-                  <div className={`text-3xl font-bold ${getCoverageColor(statistics.bidirectional_traceability)}`}>
-                    {statistics.bidirectional_traceability}%
+                  <div className={`text-3xl font-bold ${getCoverageColor(displayStatistics.bidirectional_traceability)}`}>
+                    {displayStatistics.bidirectional_traceability}%
                   </div>
-                  <Progress value={statistics.bidirectional_traceability} className="mt-2" />
+                  <Progress value={displayStatistics.bidirectional_traceability} className="mt-2" />
                   <p className="text-sm text-gray-600 mt-2 dark:text-gray-400">完整的追溯链</p>
                 </div>
               </CardContent>

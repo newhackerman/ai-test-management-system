@@ -5,10 +5,10 @@ import { Badge } from '@/components/ui/Badge'
 import { Table } from '@/components/ui/Table'
 import { Loading } from '@/components/ui/Loading'
 import { Tooltip } from '@/components/ui/Tooltip'
-import { 
-  GitBranch, 
-  ArrowRight, 
-  ArrowLeft, 
+import {
+  GitBranch,
+  ArrowRight,
+  ArrowLeft,
   ArrowUpDown,
   CheckCircle,
   XCircle,
@@ -17,6 +17,21 @@ import {
   Edit,
   Plus
 } from 'lucide-react'
+import { traceabilityService, type MatrixType } from '@/services/traceabilityService'
+
+interface MatrixViewData {
+  requirements: Array<Record<string, any>>
+  targets: Array<Record<string, any>>
+  matrixData: Record<string, Record<string, boolean>>
+  generatedAt: string
+}
+
+/** 目标类型到后端矩阵类型的映射。后端只有三种矩阵；选 REQUIREMENT 作目标时退到需求→用例矩阵。 */
+function matrixTypeForTarget(targetType: string): MatrixType {
+  if (targetType === 'TEST_CASE' || targetType === 'REQUIREMENT') return 'requirement_to_test'
+  if (targetType === 'IMPLEMENTATION') return 'requirement_to_task'
+  return 'requirement_to_design'
+}
 
 interface TraceabilityItem {
   id: number
@@ -48,94 +63,99 @@ export function TraceabilityMatrix({
   onRefresh
 }: TraceabilityMatrixProps) {
   const [traceabilityData, setTraceabilityData] = useState<TraceabilityItem[]>([])
+  const [matrixViewData, setMatrixViewData] = useState<MatrixViewData | null>(null)
   const [matrixView, setMatrixView] = useState<'list' | 'matrix'>('list')
   const [selectedSourceType, setSelectedSourceType] = useState<string>('REQUIREMENT')
-  const [selectedTargetType, setSelectedTargetType] = useState<string>('DESIGN')
+  const [selectedTargetType, setSelectedTargetType] = useState<string>('TEST_CASE')
+  const [fetching, setFetching] = useState(false)
+  const [fetchError, setFetchError] = useState('')
 
   useEffect(() => {
     loadTraceabilityData()
-  }, [filters])
+  }, [filters, selectedTargetType])
 
   const loadTraceabilityData = async () => {
+    const projectId = Number((filters as any)?.project_id)
+    if (!projectId) {
+      setTraceabilityData([])
+      setMatrixViewData(null)
+      return
+    }
+    setFetching(true)
+    setFetchError('')
     try {
-      // TODO: 调用追溯矩阵API
-      // const data = await traceabilityService.getTraceabilityMatrix(filters)
-      // setTraceabilityData(data)
-      
-      // 模拟数据
-      const mockData: TraceabilityItem[] = [
-        {
-          id: 1,
-          source_id: 101,
-          source_type: 'REQUIREMENT',
-          source_code: 'REQ-2024-001',
-          source_title: '用户登录功能',
-          target_id: 201,
-          target_type: 'DESIGN',
-          target_code: 'DES-2024-001',
-          target_title: '登录模块设计',
-          trace_type: 'FORWARD',
-          relationship: 'IMPLEMENTS',
-          coverage_status: 'COVERED',
-          confidence_level: 'HIGH',
-          created_at: '2024-01-15T10:00:00Z',
-          updated_at: '2024-01-15T10:00:00Z'
-        },
-        {
-          id: 2,
-          source_id: 101,
-          source_type: 'REQUIREMENT',
-          source_code: 'REQ-2024-001',
-          source_title: '用户登录功能',
-          target_id: 301,
-          target_type: 'TEST_CASE',
-          target_code: 'TC-2024-001',
-          target_title: '登录功能测试',
-          trace_type: 'FORWARD',
-          relationship: 'TESTS',
-          coverage_status: 'COVERED',
-          confidence_level: 'HIGH',
-          created_at: '2024-01-15T11:00:00Z',
-          updated_at: '2024-01-15T11:00:00Z'
-        },
-        {
-          id: 3,
-          source_id: 102,
-          source_type: 'REQUIREMENT',
-          source_code: 'REQ-2024-002',
-          source_title: '数据导出功能',
-          target_id: 202,
-          target_type: 'DESIGN',
-          target_code: 'DES-2024-002',
-          target_title: '导出模块设计',
-          trace_type: 'FORWARD',
-          relationship: 'IMPLEMENTS',
-          coverage_status: 'PARTIAL',
-          confidence_level: 'MEDIUM',
-          created_at: '2024-01-16T09:00:00Z',
-          updated_at: '2024-01-16T09:00:00Z'
-        },
-        {
-          id: 4,
-          source_id: 103,
-          source_type: 'REQUIREMENT',
-          source_code: 'REQ-2024-003',
-          source_title: '权限管理功能',
-          target_id: 0,
-          target_type: 'DESIGN',
-          target_code: '',
-          target_title: '',
-          trace_type: 'FORWARD',
-          relationship: 'IMPLEMENTS',
-          coverage_status: 'UNCOVERED',
-          confidence_level: 'LOW',
-          created_at: '2024-01-17T14:00:00Z',
-          updated_at: '2024-01-17T14:00:00Z'
+      const matrixType = matrixTypeForTarget(selectedTargetType)
+      const data = await traceabilityService.getTraceabilityMatrix(projectId, matrixType)
+      const targetType = (selectedTargetType === 'REQUIREMENT' ? 'TEST_CASE' : selectedTargetType) as TraceabilityItem['target_type']
+      const relationship = matrixType === 'requirement_to_test' ? 'TESTS' : 'IMPLEMENTS'
+      const reqById = new Map<number, Record<string, any>>(data.requirements.map((r: any) => [r.id, r]))
+      const targetById = new Map<number, Record<string, any>>(data.targets.map((t: any) => [t.id, t]))
+      const items: TraceabilityItem[] = []
+      const coveredReqIds = new Set<number>()
+      let idSeq = 1
+      Object.entries(data.matrix_data || {}).forEach(([reqId, targets]) => {
+        const req = reqById.get(Number(reqId))
+        if (!req) return
+        Object.entries(targets as Record<string, boolean>).forEach(([targetId, linked]) => {
+          if (!linked) return
+          const target = targetById.get(Number(targetId))
+          if (!target) return
+          coveredReqIds.add(req.id)
+          items.push({
+            id: idSeq++,
+            source_id: req.id,
+            source_type: 'REQUIREMENT',
+            source_code: req.requirement_code || `REQ-${req.id}`,
+            source_title: req.title || '',
+            target_id: target.id,
+            target_type: targetType,
+            target_code: target.code || `${targetType}-${target.id}`,
+            target_title: target.title || '',
+            trace_type: 'FORWARD',
+            relationship,
+            coverage_status: 'COVERED',
+            confidence_level: 'HIGH',
+            created_at: data.generated_at,
+            updated_at: data.generated_at,
+          })
+        })
+      })
+      // 没有任何追溯链接的需求单独列一行未覆盖
+      data.requirements.forEach((req: any) => {
+        if (!coveredReqIds.has(req.id)) {
+          items.push({
+            id: idSeq++,
+            source_id: req.id,
+            source_type: 'REQUIREMENT',
+            source_code: req.requirement_code || `REQ-${req.id}`,
+            source_title: req.title || '',
+            target_id: 0,
+            target_type: targetType,
+            target_code: '',
+            target_title: '',
+            trace_type: 'FORWARD',
+            relationship: 'IMPLEMENTS',
+            coverage_status: 'UNCOVERED',
+            confidence_level: 'LOW',
+            created_at: data.generated_at,
+            updated_at: data.generated_at,
+          })
         }
-      ]
-      setTraceabilityData(mockData)
+      })
+      setTraceabilityData(items)
+      setMatrixViewData({
+        requirements: data.requirements,
+        targets: data.targets,
+        matrixData: data.matrix_data || {},
+        generatedAt: data.generated_at,
+      })
     } catch (error) {
       console.error('加载追溯矩阵数据失败:', error)
+      setFetchError('加载追溯矩阵失败，请确认已选择项目后重试')
+      setTraceabilityData([])
+      setMatrixViewData(null)
+    } finally {
+      setFetching(false)
     }
   }
 
@@ -207,10 +227,31 @@ export function TraceabilityMatrix({
     return typeMap[type as keyof typeof typeMap] || type
   }
 
-  if (loading) {
+  if (loading || fetching) {
     return (
       <div className="flex justify-center items-center py-8">
         <Loading />
+      </div>
+    )
+  }
+
+  if (fetchError) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-red-600 dark:text-red-400">{fetchError}</p>
+        <Button variant="outline" size="sm" className="mt-4" onClick={loadTraceabilityData}>
+          重试
+        </Button>
+      </div>
+    )
+  }
+
+  if (!(filters as any)?.project_id) {
+    return (
+      <div className="text-center py-8">
+        <GitBranch className="w-12 h-12 text-gray-400 mx-auto mb-4 dark:text-gray-500" />
+        <h3 className="text-lg font-medium text-gray-900 mb-2 dark:text-gray-100">请先选择项目</h3>
+        <p className="text-gray-500 dark:text-gray-400">追溯矩阵按项目生成，请在上方筛选器中选择一个项目</p>
       </div>
     )
   }
@@ -380,57 +421,65 @@ export function TraceabilityMatrix({
           <CardContent>
             <div className="overflow-x-auto">
               <div className="min-w-full">
-                {/* 矩阵表头 */}
-                <div className="grid grid-cols-6 gap-2 mb-4">
-                  <div className="font-medium text-sm text-gray-700 dark:text-gray-300">
-                    {getTypeText(selectedSourceType)} \ {getTypeText(selectedTargetType)}
+                {/* 矩阵表头：行=需求，列=目标（均取自后端矩阵接口，最多各展示 10 个） */}
+                {!matrixViewData || matrixViewData.requirements.length === 0 || matrixViewData.targets.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                    {matrixViewData ? '当前矩阵没有目标列（该类型下暂无目标对象或追溯链接）' : '请先选择项目以加载追溯矩阵'}
                   </div>
-                  <div className="text-center text-sm font-medium text-gray-700 dark:text-gray-300">DES-001</div>
-                  <div className="text-center text-sm font-medium text-gray-700 dark:text-gray-300">DES-002</div>
-                  <div className="text-center text-sm font-medium text-gray-700 dark:text-gray-300">DES-003</div>
-                  <div className="text-center text-sm font-medium text-gray-700 dark:text-gray-300">DES-004</div>
-                  <div className="text-center text-sm font-medium text-gray-700 dark:text-gray-300">DES-005</div>
-                </div>
+                ) : (
+                  <div>
+                    <div
+                      className="grid gap-2 mb-4 items-center"
+                      style={{ gridTemplateColumns: `minmax(120px, 1.5fr) repeat(${Math.min(matrixViewData.targets.length, 10)}, 1fr)` }}
+                    >
+                      <div className="font-medium text-sm text-gray-700 dark:text-gray-300">
+                        {getTypeText(selectedSourceType)} \ {getTypeText(selectedTargetType)}
+                      </div>
+                      {matrixViewData.targets.slice(0, 10).map((target: any) => (
+                        <div key={target.id} className="text-center text-sm font-medium text-gray-700 dark:text-gray-300" title={target.title || ''}>
+                          {target.code || `${selectedTargetType}-${target.id}`}
+                        </div>
+                      ))}
+                    </div>
 
-                {/* 矩阵内容 */}
-                <div className="space-y-2">
-                  {['REQ-001', 'REQ-002', 'REQ-003', 'REQ-004'].map((reqCode, rowIndex) => (
-                    <div key={reqCode} className="grid grid-cols-6 gap-2 items-center">
-                      <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{reqCode}</div>
-                      {[0, 1, 2, 3, 4].map((colIndex) => {
-                        const hasTrace = (rowIndex + colIndex) % 3 !== 2
-                        const coverage = hasTrace ? 
-                          (rowIndex + colIndex) % 3 === 0 ? 'COVERED' : 'PARTIAL' : 
-                          'UNCOVERED'
-                        
+                    {/* 矩阵内容 */}
+                    <div className="space-y-2">
+                      {matrixViewData.requirements.slice(0, 10).map((req: any) => {
+                        const reqCode = req.requirement_code || `REQ-${req.id}`
                         return (
-                          <div key={colIndex} className="text-center">
-                            {hasTrace ? (
-                              <Tooltip content={`${reqCode} → DES-00${colIndex + 1}`}>
-                                <div className={`w-6 h-6 rounded-full mx-auto cursor-pointer ${
-                                  coverage === 'COVERED' ? 'bg-green-500' :
-                                  coverage === 'PARTIAL' ? 'bg-yellow-500' : 'bg-red-500'
-                                }`} />
-                              </Tooltip>
-                            ) : (
-                              <div className="w-6 h-6 rounded-full mx-auto bg-gray-200 dark:bg-gray-600" />
-                            )}
+                          <div
+                            key={req.id}
+                            className="grid gap-2 items-center"
+                            style={{ gridTemplateColumns: `minmax(120px, 1.5fr) repeat(${Math.min(matrixViewData.targets.length, 10)}, 1fr)` }}
+                          >
+                            <div className="text-sm font-medium text-gray-900 dark:text-gray-100" title={req.title || ''}>{reqCode}</div>
+                            {matrixViewData.targets.slice(0, 10).map((target: any) => {
+                              const linked = Boolean(matrixViewData.matrixData[String(req.id)]?.[String(target.id)])
+                              const targetCode = target.code || `${selectedTargetType}-${target.id}`
+                              return (
+                                <div key={target.id} className="text-center">
+                                  {linked ? (
+                                    <Tooltip content={`${reqCode} → ${targetCode}`}>
+                                      <div className="w-6 h-6 rounded-full mx-auto cursor-pointer bg-green-500" />
+                                    </Tooltip>
+                                  ) : (
+                                    <div className="w-6 h-6 rounded-full mx-auto bg-gray-200 dark:bg-gray-600" />
+                                  )}
+                                </div>
+                              )
+                            })}
                           </div>
                         )
                       })}
                     </div>
-                  ))}
-                </div>
+                  </div>
+                )}
 
                 {/* 图例 */}
                 <div className="mt-6 flex justify-center space-x-6">
                   <div className="flex items-center space-x-2">
                     <div className="w-4 h-4 rounded-full bg-green-500" />
                     <span className="text-sm text-gray-600 dark:text-gray-400">完全覆盖</span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <div className="w-4 h-4 rounded-full bg-yellow-500" />
-                    <span className="text-sm text-gray-600 dark:text-gray-400">部分覆盖</span>
                   </div>
                   <div className="flex items-center space-x-2">
                     <div className="w-4 h-4 rounded-full bg-red-500" />
