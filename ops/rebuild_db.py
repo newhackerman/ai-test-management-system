@@ -56,6 +56,16 @@ def create_tables() -> None:
     Base.metadata.create_all(bind=engine)
     names = sorted(inspect(engine).get_table_names())
     print(f"tables present after create_all: {len(names)}")
+    # 第 12 项：半建库自检——create_all 只建缺失的表，不修已存在
+    # 的表；若某张表建表失败，数量会对不上，必须 loud fail 而不是
+    # 静默继续去 seeding。
+    expected = len(Base.metadata.tables)
+    if len(names) != expected:
+        missing = sorted(set(Base.metadata.tables) - set(names))
+        raise SystemExit(
+            f"create_all incomplete: {len(names)} tables present, "
+            f"{expected} expected; missing: {missing}"
+        )
 
 
 def seed_permissions_and_roles(db) -> None:
@@ -97,6 +107,54 @@ def seed_admin(db) -> None:
         print(f"admin user created (id={admin.id}); role 'admin' not found, skipped link")
 
 
+def verify_seed(db) -> None:
+    """第 12 项：种子自检——半建库（权限/角色只种了一部分）必须被
+    发现，而不是静默当作成功。admin 角色必须持有全部权限的关联，
+    否则管理员登录后处处 403。"""
+    from sqlalchemy import func as _func
+    from src.models.permission import RolePermission as _RP
+
+    n_perm = db.query(Permission).count()
+    n_role = db.query(Role).count()
+    admin = db.query(User).filter(User.username == ADMIN_USERNAME).first()
+    admin_role = db.query(Role).filter(Role.code == "admin").first()
+    problems = []
+    if n_perm < 45:  # 种子权限数（见 PermissionService 种子列表）
+        problems.append(f"permissions={n_perm} (< 45)")
+    if n_role < 9:  # 种子角色数
+        problems.append(f"roles={n_role} (< 9)")
+    if admin is None:
+        problems.append("admin user missing")
+    if admin_role is None:
+        problems.append("admin role missing")
+    else:
+        n_links = (
+            db.query(_RP).filter(_RP.role_id == admin_role.id).count()
+        )
+        if n_links != n_perm:
+            problems.append(
+                f"admin role has {n_links} permission links, "
+                f"want {n_perm} (== permissions)"
+            )
+        if admin is not None:
+            linked = (
+                db.query(UserRole)
+                .filter(
+                    UserRole.user_id == admin.id,
+                    UserRole.role_id == admin_role.id,
+                )
+                .first()
+            )
+            if linked is None:
+                problems.append("admin user not linked to admin role")
+    if problems:
+        raise SystemExit(f"seed verification failed: {'; '.join(problems)}")
+    print(
+        f"seed verified: permissions={n_perm}, roles={n_role}, "
+        f"admin role links={n_links}"
+    )
+
+
 def main() -> int:
     print(f"database: {settings.DATABASE_URL.split('@')[-1]}")
     create_tables()
@@ -104,6 +162,7 @@ def main() -> int:
     try:
         seed_permissions_and_roles(db)
         seed_admin(db)
+        verify_seed(db)
     finally:
         db.close()
     print("database rebuild done")

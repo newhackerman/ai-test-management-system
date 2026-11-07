@@ -62,11 +62,47 @@ wait_apt_lock() { # wait up to 300s for the apt lists lock
     return 1
 }
 
+pkg_ok() { # pkg_ok PKG -> 0 iff dpkg status is "install ok installed"
+    # 第 12 项：只查二进制存在会漏掉 iU（已解包未配置）状态——此时
+    # mysqld/redis-server 二进制都在，但 mysql 用户、postinst 都没
+    # 跑，服务起不来，redis 的 systemd 单元还会报 217/USER。
+    local st
+    st="$(dpkg-query -W -f='${Status}' "$1" 2>/dev/null || echo unknown)"
+    [ "$st" = "install ok installed" ]
+}
+
+repair_broken_packages() {
+    # 修 iU/iF/半配置状态：先 --fix-broken，再 dpkg --configure -a。
+    log "repairing broken/unconfigured packages..."
+    wait_apt_lock || log "apt lock wait timed out, proceeding anyway"
+    sudo DEBIAN_FRONTEND=noninteractive apt-get --fix-broken install -y >/dev/null 2>&1 || true
+    sudo dpkg --configure -a >/dev/null 2>&1 || true
+}
+
 ensure_packages() {
-    local missing=()
-    command -v mysqld >/dev/null 2>&1 || missing+=("mysql-server")
-    command -v redis-server >/dev/null 2>&1 || missing+=("redis-server")
-    [ "${#missing[@]}" -eq 0 ] && return 0
+    local missing=() broken=()
+    for pkg in mysql-server redis-server; do
+        if ! pkg_ok "$pkg"; then
+            if dpkg-query -W -f='${Status}' "$pkg" 2>/dev/null | grep -qE 'unpacked|half-configured|half-installed|triggers-awaited|reinstreq'; then
+                broken+=("$pkg")
+            else
+                missing+=("$pkg")
+            fi
+        fi
+    done
+    [ "${#missing[@]}" -eq 0 ] && [ "${#broken[@]}" -eq 0 ] && return 0
+
+    if [ "${#broken[@]}" -gt 0 ]; then
+        log "unconfigured packages (iU/iF state), repairing: ${broken[*]}"
+        repair_broken_packages
+        # 重新评估：修好后从 missing 里去掉
+        local still_missing=()
+        for pkg in "${missing[@]}" "${broken[@]}"; do
+            pkg_ok "$pkg" || still_missing+=("$pkg")
+        done
+        missing=("${still_missing[@]}")
+        [ "${#missing[@]}" -eq 0 ] && { repaired "repaired unconfigured packages: ${broken[*]}"; return 0; }
+    fi
 
     log "missing binaries, installing: ${missing[*]}"
     wait_apt_lock || log "apt lock wait timed out, proceeding anyway"
@@ -84,11 +120,12 @@ ensure_packages() {
         failed "apt install ${missing[*]}"
         return 1
     fi
-    if command -v mysqld >/dev/null 2>&1 && command -v redis-server >/dev/null 2>&1; then
+    if pkg_ok mysql-server && pkg_ok redis-server \
+        && command -v mysqld >/dev/null 2>&1 && command -v redis-server >/dev/null 2>&1; then
         repaired "installed missing packages: ${missing[*]}"
         return 0
     fi
-    failed "binaries still missing after install: ${missing[*]}"
+    failed "packages still not installed after install: ${missing[*]}"
     return 1
 }
 
@@ -157,10 +194,21 @@ ensure_tables() {
     admin="$(MYSQL_PWD="$(env_val MYSQL_PASSWORD)" mysql -u "$DB_USER" -h 127.0.0.1 \
         -P "$DB_PORT" -N -e \
         "SELECT COUNT(*) FROM \`$DB_NAME\`.users WHERE username='admin';" 2>/dev/null || echo 0)"
-    if [ "${tables:-0}" -ge 100 ] && [ "${admin:-0}" -ge 1 ]; then
+    # 第 12 项：只看表数+admin 会漏掉“半种子库”（表全、admin 在，
+    # 但权限/角色只种了一部分）。种子数是 PermissionService 里的
+    # 固定种子规模：45 个权限、9 个角色。
+    local perms roles
+    perms="$(MYSQL_PWD="$(env_val MYSQL_PASSWORD)" mysql -u "$DB_USER" -h 127.0.0.1 \
+        -P "$DB_PORT" -N -e \
+        "SELECT COUNT(*) FROM \`$DB_NAME\`.permissions;" 2>/dev/null || echo 0)"
+    roles="$(MYSQL_PWD="$(env_val MYSQL_PASSWORD)" mysql -u "$DB_USER" -h 127.0.0.1 \
+        -P "$DB_PORT" -N -e \
+        "SELECT COUNT(*) FROM \`$DB_NAME\`.roles;" 2>/dev/null || echo 0)"
+    if [ "${tables:-0}" -ge 100 ] && [ "${admin:-0}" -ge 1 ] \
+        && [ "${perms:-0}" -ge 45 ] && [ "${roles:-0}" -ge 9 ]; then
         return 0
     fi
-    log "tables=$tables admin=$admin, rebuilding database..."
+    log "tables=$tables admin=$admin permissions=$perms roles=$roles, rebuilding database..."
     if "$BACKEND_DIR/venv/bin/python" "$SCRIPT_DIR/rebuild_db.py" >>"$LOG_FILE" 2>&1; then
         repaired "rebuilt database (tables + seed)"
         return 0
@@ -170,20 +218,65 @@ ensure_tables() {
 }
 
 # --- Redis ------------------------------------------------------------------
+ensure_redis_unit_override() {
+    # 第 12 项：发行版 redis-server 单元含 PrivateUsers=true，在本机
+    # VM 上建用户命名空间失败（217/USER），与 redis 用户是否存在无关。
+    # 用 drop-in 只关掉 PrivateUsers，其余沙箱不动。/etc 不随虚拟机
+    # 替换持久化，所以每次运行都检查安装（源文件在 ops/systemd 下）。
+    local src="$SCRIPT_DIR/systemd/redis-server.service.d/override.conf"
+    local dst="/etc/systemd/system/redis-server.service.d/override.conf"
+    [ -f "$src" ] || return 0
+    if [ ! -f "$dst" ] || ! cmp -s "$src" "$dst"; then
+        sudo mkdir -p /etc/systemd/system/redis-server.service.d
+        sudo cp "$src" "$dst" 2>/dev/null \
+            && sudo systemctl daemon-reload >/dev/null 2>&1 \
+            && log "installed redis-server unit override (PrivateUsers=false)"
+    fi
+}
+
 ensure_redis() {
     if redis-cli ping 2>/dev/null | grep -qx PONG; then
         return 0
     fi
     log "redis not responding, starting redis-server..."
+    # 第 12 项：先走发行版 systemd 单元（正常路径；PrivateUsers
+    # 导致的 217/USER 由 ensure_redis_unit_override 的 drop-in 解决，
+    # 仍失败则可能是包未配置、redis 用户缺失——修包再重试；单元再
+    # 失败才退回直接拉起（旧行为），并在日志里写明。
+    local i
+    if sudo systemctl start redis-server >/dev/null 2>&1; then
+        for i in $(seq 1 10); do
+            redis-cli ping 2>/dev/null | grep -qx PONG && break
+            sleep 1
+        done
+    fi
+    if redis-cli ping 2>/dev/null | grep -qx PONG; then
+        repaired "started redis-server (systemd unit)"
+        return 0
+    fi
+    if ! id redis >/dev/null 2>&1; then
+        log "redis user missing, package likely unconfigured; repairing..."
+        repair_broken_packages
+        if sudo systemctl start redis-server >/dev/null 2>&1; then
+            for i in $(seq 1 10); do
+                redis-cli ping 2>/dev/null | grep -qx PONG && break
+                sleep 1
+            done
+        fi
+        if redis-cli ping 2>/dev/null | grep -qx PONG; then
+            repaired "started redis-server (systemd unit, after package repair)"
+            return 0
+        fi
+    fi
+    log "systemd unit failed, falling back to direct redis-server start"
     pkill -x redis-server 2>/dev/null || true
     redis-server --daemonize yes 9>&- >/dev/null 2>&1
-    local i
     for i in $(seq 1 15); do
         redis-cli ping 2>/dev/null | grep -qx PONG && break
         sleep 1
     done
     if redis-cli ping 2>/dev/null | grep -qx PONG; then
-        repaired "started redis-server"
+        repaired "started redis-server (direct fallback; systemd unit still broken)"
         return 0
     fi
     failed "redis-server did not come up"
@@ -296,6 +389,7 @@ main() {
         ensure_mysql_db_user
         ensure_tables
     fi
+    ensure_redis_unit_override
     ensure_redis
     ensure_systemd_units
     ensure_backend
