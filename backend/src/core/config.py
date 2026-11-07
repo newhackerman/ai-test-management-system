@@ -95,6 +95,12 @@ class Settings(BaseSettings):
     # 服务器配置
     HOST: str = "0.0.0.0"
     PORT: int = 8000
+
+    # API 文档访问控制：默认 False（公开访问，保持现状）。
+    # 设为 true 后 /api/v1/docs、/api/v1/redoc、/api/v1/openapi.json
+    # 均需登录（Bearer token）；浏览器端 Swagger UI 会从 localStorage
+    # 取 token 自动带上，curl 需自行加 -H "Authorization: Bearer <token>"。
+    DOCS_REQUIRE_AUTH: bool = False
     
     # API路由前缀配置（可从环境变量覆盖）
     API_AUTH_PREFIX: str = "/auth"

@@ -83,6 +83,19 @@ start_frontend.bat
 - 后端 API: http://localhost:8000
 - API 文档: http://localhost:8000/api/v1/docs （Swagger）/ `/api/v1/redoc` （ReDoc）
 
+### API 文档访问控制
+
+默认情况下文档是公开访问的（无需登录）。如需收紧，在 `backend/.env` 中设置后重启后端：
+
+```bash
+DOCS_REQUIRE_AUTH=true
+```
+
+开启后 `/api/v1/docs`、`/api/v1/redoc`、`/api/v1/openapi.json` 均需登录（匿名访问返回 401）：
+- 浏览器：先在前端登录一次，Swagger UI 会自动从 localStorage 取 token 带上；ReDoc 的 spec 直接内嵌在页面里，无需二次请求。
+- curl / 脚本：自行加请求头 `-H "Authorization: Bearer <token>"`。
+- 关掉只需把该变量改回 `false`（或删掉）并重启，默认行为不变。
+
 默认账户：`admin` / `TEST@test1`
 
 ## 项目结构

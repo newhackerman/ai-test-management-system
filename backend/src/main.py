@@ -1,6 +1,7 @@
-from fastapi import FastAPI, HTTPException, Request, Response
+from fastapi import Depends, FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse
+import json
 from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
 import uvicorn
@@ -17,6 +18,7 @@ from .middleware.performance_middleware import setup_performance_monitoring
 from .utils.config_manager import get_config_manager
 from .utils.jwt import jwt_service
 from .api import api_router
+from .api.auth import get_current_user
 
 # 获取配置管理器
 config_manager = get_config_manager()
@@ -41,6 +43,8 @@ class AuthMiddleware(BaseHTTPMiddleware):
     collections_reject_anonymous_requests` 即为此回归）。中间件层兜底拦截。
     """
 
+    # 文档路径默认公开；DOCS_REQUIRE_AUTH=true 时从白名单移除，匿名访问返回 401。
+    _DOCS_PATHS = ("/api/v1/openapi.json", "/api/v1/docs", "/api/v1/redoc")
     WHITELIST_PREFIXES = (
         "/api/v1/auth/login",
         "/api/v1/auth/register",
@@ -49,14 +53,11 @@ class AuthMiddleware(BaseHTTPMiddleware):
         "/api/v1/auth/reset-password",
         "/api/v1/auth/verify-email",
         "/api/v1/auth/refresh",
-        "/api/v1/openapi.json",
-        "/api/v1/docs",
-        "/api/v1/redoc",
         # 健康检查端点需公开访问（监控/探活），不应要求认证
         "/api/v1/health",
         # AI 文件分享链接需匿名访问（端点内自行校验分享令牌/密码/有效期/次数）
         "/api/v1/ai/files/share/",
-    )
+    ) + (() if settings.DOCS_REQUIRE_AUTH else _DOCS_PATHS)
 
     async def dispatch(self, request: Request, call_next):
         path = request.url.path
@@ -64,7 +65,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
         if (
             not path.startswith("/api/v1")
             or request.method == "OPTIONS"
-            or path == "/api/v1/openapi.json"
+            or (path == "/api/v1/openapi.json" and not settings.DOCS_REQUIRE_AUTH)
             or path.startswith(self.WHITELIST_PREFIXES)
         ):
             return await call_next(request)
@@ -215,9 +216,11 @@ app = FastAPI(
     title=api_config["project_name"],
     description="AI测试管理系统 - 用户管理模块API",
     version="1.0.0",
-    openapi_url=f"{api_config['v1_str']}/openapi.json",
-    docs_url=f"{api_config['v1_str']}/docs",
-    redoc_url=f"{api_config['v1_str']}/redoc",
+    # DOCS_REQUIRE_AUTH=true 时关闭 FastAPI 内置公开文档路由，改由下方
+    # 带 get_current_user 依赖的自定义路由提供（否则内置路由会绕过鉴权）
+    openapi_url=None if settings.DOCS_REQUIRE_AUTH else f"{api_config['v1_str']}/openapi.json",
+    docs_url=None if settings.DOCS_REQUIRE_AUTH else f"{api_config['v1_str']}/docs",
+    redoc_url=None if settings.DOCS_REQUIRE_AUTH else f"{api_config['v1_str']}/redoc",
     lifespan=lifespan
 )
 
@@ -251,7 +254,10 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["Strict-Transport-Security"] = (
             "max-age=31536000; includeSubDomains"
         )
-        if request.url.path not in ("/docs", "/redoc", "/openapi.json"):
+        # 注意：实际路径带 /api/v1 前缀，旧元组 ("/docs", ...) 永远匹配不到，
+        # CSP 一直下发到文档页、拦住了 Swagger UI 的 CDN 脚本；这里补上带前缀的路径。
+        if request.url.path not in ("/docs", "/redoc", "/openapi.json",
+                                  "/api/v1/docs", "/api/v1/redoc", "/api/v1/openapi.json"):
             response.headers["Content-Security-Policy"] = (
                 "default-src 'self'; frame-ancestors 'none'"
             )
@@ -284,6 +290,71 @@ async def global_exception_handler(request: Request, exc: Exception):
 
 # 注册路由
 app.include_router(api_router, prefix=api_config["v1_str"])
+
+
+if settings.DOCS_REQUIRE_AUTH:
+    # DOCS_REQUIRE_AUTH=true 时的文档路由：全部要求登录。
+    # Swagger UI 用 requestInterceptor 从浏览器 localStorage 取 token，
+    # 随每次请求（含初始加载 openapi.json）自动带上 Authorization；
+    # ReDoc 把 spec 内嵌进页面（它自己发请求时带不上 token）。
+    _SWAGGER_UI_HTML = """<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link type="text/css" rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui.css">
+<link rel="shortcut icon" href="https://fastapi.tiangolo.com/img/favicon.png">
+<title>AI测试管理系统 - Swagger UI</title>
+</head>
+<body>
+<div id="swagger-ui"></div>
+<script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
+<script>
+const ui = SwaggerUIBundle({
+    url: '/api/v1/openapi.json',
+    dom_id: '#swagger-ui',
+    layout: 'BaseLayout',
+    deepLinking: true,
+    requestInterceptor: (request) => {
+        try {
+            const stored = JSON.parse(localStorage.getItem('auth-storage') || '{}');
+            const token = stored?.state?.token
+                || localStorage.getItem('token')
+                || localStorage.getItem('auth_token')
+                || localStorage.getItem('auth-access-token');
+            if (token) { request.headers['Authorization'] = 'Bearer ' + token; }
+        } catch (e) {}
+        return request;
+    }
+});
+</script>
+</body>
+</html>"""
+
+    @app.get("/api/v1/openapi.json", include_in_schema=False)
+    async def _protected_openapi(current_user=Depends(get_current_user)):
+        return JSONResponse(app.openapi())
+
+    @app.get("/api/v1/docs", include_in_schema=False)
+    async def _protected_docs(current_user=Depends(get_current_user)):
+        return HTMLResponse(_SWAGGER_UI_HTML)
+
+    @app.get("/api/v1/redoc", include_in_schema=False)
+    async def _protected_redoc(current_user=Depends(get_current_user)):
+        spec_json = json.dumps(app.openapi())
+        return HTMLResponse(f"""<!DOCTYPE html>
+<html>
+<head>
+<title>AI测试管理系统 - ReDoc</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>body {{ margin: 0; padding: 0; }}</style>
+</head>
+<body>
+<div id="redoc-container"></div>
+<script src="https://cdn.jsdelivr.net/npm/redoc@2/bundles/redoc.standalone.js"></script>
+<script>Redoc.init({spec_json}, {{}}, document.getElementById('redoc-container'));</script>
+</body>
+</html>""")
+
 
 # 头像等运行时静态资源
 static_dir = Path(__file__).resolve().parents[2] / "static"
