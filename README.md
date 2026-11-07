@@ -82,6 +82,7 @@ start_frontend.bat
 - 前端地址: http://localhost:3000
 - 后端 API: http://localhost:8000
 - API 文档: http://localhost:8000/api/v1/docs （Swagger）/ `/api/v1/redoc` （ReDoc）
+- 仓库根目录的 `openapi.json` 是从运行中的后端重新生成的快照（651 个接口），刷新方法：`curl -s http://localhost:8000/api/v1/openapi.json | python3 -m json.tool > openapi.json`
 
 ### API 文档访问控制
 
