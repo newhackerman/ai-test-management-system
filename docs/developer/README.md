@@ -247,6 +247,10 @@ Common HTTP status codes:
 - 403: Forbidden
 - 404: Not Found
 - 422: Validation Error
+- 423: Locked — the account is locked after repeated failed logins
+  (3 failures lock 15 minutes, 5 lock 24 hours). A correct password
+  also returns 423 while locked; a wrong password or unknown user
+  still returns 401.
 - 500: Internal Server Error
 
 ## Database Schema
@@ -711,6 +715,14 @@ class Project(Base):
 ```
 
 ## Testing
+
+The project uses a self-built black-box framework in `qa-automation/`
+(API + E2E, never the repository's own `pytest/` suite): API 275/275
++ E2E 23/23 after round 6, full report in
+`qa-automation/reports/TEST_REPORT.md`. Performance baselines from the
+same round: login median 0.53s, list 0.018–0.044s, 10MB upload 0.12s.
+Reusable step skills for the same pipeline (deploy, casegen, execute,
+fix, submit) live in `qa-skills/` with a usage guide.
 
 ### Backend Testing
 

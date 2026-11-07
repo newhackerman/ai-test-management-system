@@ -37,6 +37,11 @@ docker compose --profile development up -d  # 另加 phpMyAdmin :8080、redis-co
 
 ## 其他方式
 
+本地开发环境的自愈（测试虚拟机在用）：`ops/recover.sh` 每 10 分钟
+由看护任务跑一次，服务挂了自动拉起、库丢了自动重建；还带空闲事务
+兜底清理、软删物理清理与干净安装验证三个脚本。细节见
+[`ops/README.md`](../../ops/README.md)。
+
 | 方式 | 场景 | 说明 |
 | --- | --- | --- |
 | `scripts/deploy.sh <env> [version]` | 单机、想拉取已构建镜像而不是本地构建 | 同样走 `backend/docker-compose.yml`（脚本内先 `cd backend`）；用 `--env-file .env.<env>`；`production` 用 production profile。 |
