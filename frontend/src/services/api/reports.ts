@@ -68,6 +68,11 @@ export const reportsApi = {
       responseType: 'blob',
     }).then((response) => response.data),
 
+  downloadImportedReport: (importId: string) =>
+    apiClient.get(`/reports/imported/${importId}/download`, {
+      responseType: 'blob',
+    }).then((response) => response.data),
+
   previewReport: (reportId: string, format: string) =>
     apiClient.get(`/reports/preview/${reportId}/${format}`, {
       responseType: 'text',

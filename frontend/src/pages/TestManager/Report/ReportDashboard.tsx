@@ -221,19 +221,44 @@ const ReportDashboard: React.FC = () => {
     }
   }, [reports, total, analytics])
 
+  const triggerBlobDownload = (blob: Blob, filename: string) => {
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = filename
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    window.URL.revokeObjectURL(url)
+  }
+
+  const blobErrorMessage = async (err: any) => {
+    // 下载接口出错时 axios 也把错误体当成 blob，读出来再解析
+    const data = err?.response?.data
+    if (data instanceof Blob) {
+      try {
+        const text = await data.text()
+        return JSON.parse(text)?.detail || text
+      } catch {
+        return ''
+      }
+    }
+    return err?.response?.data?.detail || err?.message || ''
+  }
+
   const handleDownload = async (report: any) => {
-    if (report.type !== 'generated') return
     setDownloadingId(report.id)
     try {
-      const blob = await reportsApi.downloadReport(report.id, report.format)
-      const url = window.URL.createObjectURL(blob)
-      const link = document.createElement('a')
-      link.href = url
-      link.download = `${report.name || report.id}.${report.format}`
-      document.body.appendChild(link)
-      link.click()
-      link.remove()
-      window.URL.revokeObjectURL(url)
+      if (report.type === 'imported') {
+        // 导入报告：下载导入时保留的原始文件（老记录则下载解析保存的原始内容）
+        const blob = await reportsApi.downloadImportedReport(report.id)
+        triggerBlobDownload(blob, report.name || `${report.id}`)
+      } else if (report.type === 'generated') {
+        const blob = await reportsApi.downloadReport(report.id, report.format)
+        triggerBlobDownload(blob, `${report.name || report.id}.${report.format || 'html'}`)
+      }
+    } catch (err: any) {
+      setError((await blobErrorMessage(err)) || '下载报告失败')
     } finally {
       setDownloadingId('')
     }
@@ -533,7 +558,7 @@ const ReportDashboard: React.FC = () => {
                             variant="ghost"
                             size="sm"
                             title="下载"
-                            disabled={report.type !== 'generated' || downloadingId === report.id}
+                            disabled={downloadingId === report.id}
                             onClick={() => handleDownload(report)}
                           >
                             <Download className="h-4 w-4" />
@@ -604,7 +629,7 @@ const ReportDashboard: React.FC = () => {
       </Dialog>
 
       <Dialog open={Boolean(previewReport)} onOpenChange={(open) => !open && setPreviewReport(null)}>
-        <DialogContent className="w-[92vw] max-w-[1600px] max-h-[92vh] overflow-hidden flex flex-col p-0">
+        <DialogContent className="w-[96vw] max-w-5xl max-h-[92vh] overflow-hidden flex flex-col p-0">
           {previewReport && (() => {
             const m = reportMetrics(previewReport)
             const isImported = previewReport.type === 'imported'
@@ -658,7 +683,7 @@ const ReportDashboard: React.FC = () => {
                   {isImported ? (
                     <div className="space-y-5 p-6">
                       {/* 顶部：通过率环 + 关键指标 */}
-                      <div className="grid gap-4 md:grid-cols-[220px_1fr]">
+                      <div className="grid gap-5 lg:grid-cols-[240px_minmax(0,1fr)]">
                         <div className={`flex flex-col items-center justify-center rounded-xl border ${qualityBorder} ${qualityBg} p-5`}>
                           <div className="relative h-32 w-32">
                             <svg className="h-full w-full -rotate-90" viewBox="0 0 100 100">
@@ -695,25 +720,31 @@ const ReportDashboard: React.FC = () => {
                         </div>
                       </div>
 
-                      {/* 通过率条 */}
-                      <div className="rounded-lg border bg-card p-4">
-                        <div className="mb-2 flex items-center justify-between text-xs">
-                          <span className="font-medium text-foreground">执行结果分布</span>
-                          <span className="text-muted-foreground">通过 {m.passed} · 失败 {m.failed} · 跳过/阻塞 {m.skipped + m.blocked}</span>
+                      {/* 执行结果分布：每类一行，标签 + 进度条 + 数量/占比 */}
+                      <div className="rounded-lg border bg-card p-5">
+                        <div className="mb-4 flex items-center justify-between">
+                          <span className="text-sm font-medium text-foreground">执行结果分布</span>
+                          <span className="text-xs text-muted-foreground">共 {m.total} 条</span>
                         </div>
-                        <div className="flex h-3 w-full overflow-hidden rounded-full bg-muted">
-                          {m.total > 0 && (
-                            <>
-                              <div className="h-full bg-emerald-500 transition-all" style={{ width: `${(m.passed / m.total) * 100}%` }} title={`通过 ${m.passed}`} />
-                              <div className="h-full bg-rose-500 transition-all" style={{ width: `${(m.failed / m.total) * 100}%` }} title={`失败 ${m.failed}`} />
-                              <div className="h-full bg-amber-400 transition-all" style={{ width: `${((m.skipped + m.blocked) / m.total) * 100}%` }} title={`跳过/阻塞 ${m.skipped + m.blocked}`} />
-                            </>
-                          )}
-                        </div>
-                        <div className="mt-2 flex flex-wrap gap-3 text-[11px] text-muted-foreground">
-                          <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-emerald-500" />通过 {m.total ? ((m.passed / m.total) * 100).toFixed(1) : 0}%</span>
-                          <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-rose-500" />失败 {m.total ? ((m.failed / m.total) * 100).toFixed(1) : 0}%</span>
-                          <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-amber-400" />跳过/阻塞 {m.total ? (((m.skipped + m.blocked) / m.total) * 100).toFixed(1) : 0}%</span>
+                        <div className="space-y-3">
+                          {[
+                            { label: '通过', value: m.passed, bar: 'bg-emerald-500' },
+                            { label: '失败', value: m.failed, bar: 'bg-rose-500' },
+                            { label: '跳过/阻塞', value: m.skipped + m.blocked, bar: 'bg-amber-400' },
+                          ].map((item) => (
+                            <div key={item.label} className="flex items-center gap-3">
+                              <span className="w-16 shrink-0 text-xs font-medium text-foreground">{item.label}</span>
+                              <div className="h-2.5 min-w-0 flex-1 overflow-hidden rounded-full bg-muted">
+                                <div
+                                  className={`h-full ${item.bar} transition-all`}
+                                  style={{ width: `${m.total ? (item.value / m.total) * 100 : 0}%` }}
+                                />
+                              </div>
+                              <span className="w-28 shrink-0 text-right text-xs tabular-nums text-muted-foreground">
+                                {item.value} 条 · {m.total ? ((item.value / m.total) * 100).toFixed(1) : '0.0'}%
+                              </span>
+                            </div>
+                          ))}
                         </div>
                       </div>
 
@@ -815,14 +846,20 @@ const ReportDashboard: React.FC = () => {
                   )}
                 </div>
 
-                <DialogFooter className="flex-shrink-0 border-t bg-muted/30 px-6 py-3">
-                  <Button variant="outline" onClick={() => setPreviewReport(null)}>关闭</Button>
-                  {isImported && (
-                    <Button onClick={() => handleDownload(previewReport)} disabled={downloadingId === previewReport.id}>
-                      <Download className="mr-2 h-4 w-4" />
-                      {downloadingId === previewReport.id ? '下载中...' : '下载'}
-                    </Button>
-                  )}
+                <DialogFooter className="flex-shrink-0 justify-between gap-4 border-t bg-muted/30 px-6 py-3">
+                  <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                    <span>{formatLabel(previewReport.format)}{previewReport.size ? ` · ${sizeLabel(previewReport.size)}` : ''}</span>
+                    <span>通过 {m.passed} · 失败 {m.failed} · 阻塞/跳过 {m.blocked + m.skipped}</span>
+                  </div>
+                  <div className="flex shrink-0 gap-2">
+                    <Button variant="outline" onClick={() => setPreviewReport(null)}>关闭</Button>
+                    {isImported && (
+                      <Button onClick={() => handleDownload(previewReport)} disabled={downloadingId === previewReport.id}>
+                        <Download className="mr-2 h-4 w-4" />
+                        {downloadingId === previewReport.id ? '下载中...' : '下载'}
+                      </Button>
+                    )}
+                  </div>
                 </DialogFooter>
               </>
             )

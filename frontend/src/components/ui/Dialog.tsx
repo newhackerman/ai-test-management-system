@@ -1,5 +1,6 @@
 import React from 'react'
 import { X } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
 const DialogContext = React.createContext<{
   open: boolean
@@ -18,6 +19,7 @@ interface DialogContentProps {
 }
 
 interface DialogHeaderProps {
+  className?: string
   children: React.ReactNode
 }
 
@@ -30,6 +32,7 @@ interface DialogDescriptionProps {
 }
 
 interface DialogFooterProps {
+  className?: string
   children: React.ReactNode
 }
 
@@ -51,7 +54,12 @@ export const DialogContent: React.FC<DialogContentProps> = ({ className = '', ch
         className="fixed inset-0 bg-black/50"
         onClick={() => context?.onOpenChange(false)}
       />
-      <div className={`relative z-10 mx-4 max-h-[calc(100vh-2rem)] w-full max-w-md overflow-auto rounded-lg border bg-card p-4 text-card-foreground shadow-lg ${className}`}>
+      <div
+        className={cn(
+          'relative z-10 mx-4 max-h-[calc(100vh-2rem)] w-full max-w-md overflow-auto rounded-lg border bg-card p-4 text-card-foreground shadow-lg',
+          className,
+        )}
+      >
         {children}
       </div>
     </div>
@@ -69,9 +77,9 @@ export const DialogTrigger: React.FC<{ asChild?: boolean; children: React.ReactE
   return <button type="button" onClick={onClick}>{children}</button>
 }
 
-export const DialogHeader: React.FC<DialogHeaderProps> = ({ children }) => {
+export const DialogHeader: React.FC<DialogHeaderProps> = ({ className = '', children }) => {
   return (
-    <div className="mb-3">
+    <div className={cn('mb-3', className)}>
       {children}
     </div>
   )
@@ -93,9 +101,9 @@ export const DialogDescription: React.FC<DialogDescriptionProps> = ({ children }
   )
 }
 
-export const DialogFooter: React.FC<DialogFooterProps> = ({ children }) => {
+export const DialogFooter: React.FC<DialogFooterProps> = ({ className = '', children }) => {
   return (
-    <div className="mt-4 flex justify-end space-x-2">
+    <div className={cn('mt-4 flex justify-end space-x-2', className)}>
       {children}
     </div>
   )
