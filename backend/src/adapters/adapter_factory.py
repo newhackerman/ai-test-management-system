@@ -4,18 +4,19 @@ AI适配器工厂
 负责创建和管理不同类型的AI适配器实例。
 """
 
+import asyncio
 import logging
 from typing import Dict, Type, Optional
 
 from .base import BaseAIAdapter, AdapterConfig, AIProvider
 from .openai_adapter import OpenAIAdapter
 from .anthropic_adapter import AnthropicAdapter
-from .baidu_adapter import BaiduWenxinAdapter
-from .aliyun_adapter import AliyunTongyiAdapter
-from .google_adapter import GoogleGeminiAdapter
-from .zhipu_adapter import ZhipuChatGLMAdapter
-from .xunfei_adapter import XunfeiXinghuoAdapter
-from .custom_adapter import CustomAIAdapter
+from .baidu_adapter import BaiduAdapter
+from .aliyun_adapter import AliyunAdapter
+from .google_adapter import GoogleAdapter
+from .zhipu_adapter import ZhipuAdapter
+from .xunfei_adapter import XunfeiAdapter
+from .custom_adapter import CustomAdapter
 
 logger = logging.getLogger(__name__)
 
@@ -35,12 +36,12 @@ class AIAdapterFactory:
     _builtin_adapters: Dict[AIProvider, Type[BaseAIAdapter]] = {
         AIProvider.OPENAI: OpenAIAdapter,
         AIProvider.ANTHROPIC: AnthropicAdapter,
-        AIProvider.BAIDU_WENXIN: BaiduWenxinAdapter,
-        AIProvider.ALIYUN_TONGYI: AliyunTongyiAdapter,
-        AIProvider.GOOGLE_GEMINI: GoogleGeminiAdapter,
-        AIProvider.ZHIPU_CHATGLM: ZhipuChatGLMAdapter,
-        AIProvider.XUNFEI_XINGHUO: XunfeiXinghuoAdapter,
-        AIProvider.CUSTOM: CustomAIAdapter
+        AIProvider.BAIDU_WENXIN: BaiduAdapter,
+        AIProvider.ALIYUN_TONGYI: AliyunAdapter,
+        AIProvider.GOOGLE_GEMINI: GoogleAdapter,
+        AIProvider.ZHIPU_CHATGLM: ZhipuAdapter,
+        AIProvider.XUNFEI_XINGHUO: XunfeiAdapter,
+        AIProvider.CUSTOM: CustomAdapter
     }
     
     # 自定义适配器注册表
@@ -145,40 +146,66 @@ class AIAdapterFactory:
     @classmethod
     def clear_cache(cls, provider: Optional[AIProvider] = None):
         """
-        清理适配器缓存
-        
-        Args:
-            provider: 指定提供商，None表示清理所有缓存
+        清理适配器缓存。
+
+        缓存字典同步清空（调用返回后缓存即为空）；被清出的适配器
+        用后台任务异步 shutdown（关闭 aiohttp 会话等资源）。
+        若当前没有运行中的事件循环，无法调度关闭任务，会记一条
+        warning——这种情况下会话要等 GC 回收，不保证立即关闭。
+        需要在 async 上下文中确保关闭完成时，改用 clear_cache_async。
         """
         if provider is None:
-            # 清理所有缓存
-            for adapter in cls._adapter_cache.values():
-                try:
-                    # 异步关闭适配器，这里简化处理
-                    if hasattr(adapter, 'shutdown'):
-                        # 在实际项目中应该使用异步方式
-                        pass
-                except Exception as e:
-                    logger.error(f"Error shutting down adapter: {str(e)}")
-            
+            adapters = list(cls._adapter_cache.values())
             cls._adapter_cache.clear()
             logger.info("Cleared all adapter cache")
         else:
-            # 清理指定提供商的缓存
-            keys_to_remove = [key for key in cls._adapter_cache.keys() 
+            keys_to_remove = [key for key in cls._adapter_cache.keys()
                             if key.startswith(f"{provider.value}_")]
-            
-            for key in keys_to_remove:
-                adapter = cls._adapter_cache[key]
+            adapters = [cls._adapter_cache.pop(key) for key in keys_to_remove]
+            logger.info(f"Cleared cache for provider: {provider.value}")
+        cls._schedule_shutdown(adapters)
+
+    @classmethod
+    async def clear_cache_async(cls, provider: Optional[AIProvider] = None):
+        """异步版清理：await 每个被清出适配器的 shutdown，确认资源已释放。"""
+        if provider is None:
+            adapters = list(cls._adapter_cache.values())
+            cls._adapter_cache.clear()
+            logger.info("Cleared all adapter cache")
+        else:
+            keys_to_remove = [key for key in cls._adapter_cache.keys()
+                            if key.startswith(f"{provider.value}_")]
+            adapters = [cls._adapter_cache.pop(key) for key in keys_to_remove]
+            logger.info(f"Cleared cache for provider: {provider.value}")
+        for adapter in adapters:
+            try:
+                await adapter.shutdown()
+            except Exception as e:
+                logger.error(f"Error shutting down adapter: {str(e)}")
+
+    @classmethod
+    def _schedule_shutdown(cls, adapters):
+        """把一批适配器的 shutdown 调度为后台任务；无运行中循环时只记 warning。"""
+        if not adapters:
+            return
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            logger.warning(
+                "No running event loop: %d cached adapter(s) dropped without shutdown; "
+                "their HTTP sessions will only be released by GC", len(adapters)
+            )
+            return
+
+        async def _shutdown_all():
+            for adapter in adapters:
                 try:
-                    if hasattr(adapter, 'shutdown'):
-                        pass  # 简化处理
+                    await adapter.shutdown()
                 except Exception as e:
                     logger.error(f"Error shutting down adapter: {str(e)}")
-                del cls._adapter_cache[key]
-            
-            logger.info(f"Cleared cache for provider: {provider.value}")
-    
+
+        loop.create_task(_shutdown_all())
+
     @classmethod
     def get_adapter_stats(cls) -> Dict[str, Dict]:
         """
@@ -345,7 +372,7 @@ def create_anthropic_adapter(api_key: str, **kwargs) -> AnthropicAdapter:
     return AIAdapterFactory.create_adapter(config)
 
 
-def create_baidu_adapter(api_key: str, secret_key: str, **kwargs) -> BaiduWenxinAdapter:
+def create_baidu_adapter(api_key: str, secret_key: str, **kwargs) -> BaiduAdapter:
     """创建百度文心一言适配器的便捷函数"""
     config = AdapterConfig(
         provider=AIProvider.BAIDU_WENXIN,
@@ -356,7 +383,7 @@ def create_baidu_adapter(api_key: str, secret_key: str, **kwargs) -> BaiduWenxin
     return AIAdapterFactory.create_adapter(config)
 
 
-def create_custom_adapter(api_endpoint: str, api_key: str = "", **kwargs) -> CustomAIAdapter:
+def create_custom_adapter(api_endpoint: str, api_key: str = "", **kwargs) -> CustomAdapter:
     """创建自定义适配器的便捷函数"""
     config = AdapterConfig(
         provider=AIProvider.CUSTOM,
