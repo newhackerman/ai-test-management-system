@@ -74,10 +74,42 @@ jobs:
       run: |
         mypy src/ --ignore-missing-imports
 
+  # 依赖验证（第17项）：干净环境从 requirements.txt 安装 + 冲突检查 +
+  # 后端应用导入检查。backend/requirements.txt 大多未 pin 版本，干净安装
+  # 是唯一能发现"新版依赖装不上 / 互相冲突 / 导入失败"的地方；本地复现：
+  # ops/verify_clean_install.sh
+  dependency-check:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.12'
+
+    - name: Clean install from requirements.txt
+      run: |
+        python -m venv /tmp/cleanvenv
+        /tmp/cleanvenv/bin/pip install --upgrade pip
+        /tmp/cleanvenv/bin/pip install -r backend/requirements.txt
+
+    - name: Check for dependency conflicts
+      run: /tmp/cleanvenv/bin/pip check
+
+    - name: Verify the backend app imports
+      working-directory: ./backend
+      env:
+        DATABASE_URL: mysql+asyncmy://test_user:test_password@localhost:3306/test_db
+        REDIS_URL: redis://localhost:6379/15
+        SECRET_KEY: test-secret-key-for-ci
+      run: |
+        /tmp/cleanvenv/bin/python -c "from src.main import app; print('app imports OK:', type(app).__name__)"
+
   # 单元测试
   unit-tests:
     runs-on: ubuntu-latest
-    needs: code-quality
+    needs: [code-quality, dependency-check]
     
     strategy:
       matrix:
@@ -109,7 +141,7 @@ jobs:
       working-directory: ./backend
       env:
         TESTING: true
-        DATABASE_URL: sqlite:///:memory:
+        DATABASE_URL: "sqlite:///:memory:"
         REDIS_URL: redis://localhost:6379/15
         SECRET_KEY: test-secret-key-for-ci
         AI_SERVICE_MOCK: true
@@ -228,7 +260,7 @@ jobs:
       working-directory: ./backend
       env:
         TESTING: true
-        DATABASE_URL: sqlite:///:memory:
+        DATABASE_URL: "sqlite:///:memory:"
         REDIS_URL: redis://localhost:6379/1
         SECRET_KEY: test-secret-key-for-ci
         AI_SERVICE_MOCK: true
@@ -391,7 +423,7 @@ jobs:
       working-directory: ./backend
       env:
         TESTING: true
-        DATABASE_URL: sqlite:///:memory:
+        DATABASE_URL: "sqlite:///:memory:"
         REDIS_URL: redis://localhost:6379/4
         SECRET_KEY: test-secret-key-for-ci
         AI_SERVICE_MOCK: true
@@ -588,8 +620,11 @@ jobs:
         sarif_file: 'trivy-results.sarif'
 
   # Build and push Docker images
+  # NOTE: needs used to list a non-existent "test-backend" job, which made
+  # the whole workflow invalid on GitHub; the real gate is test-report
+  # (which already waits for all test jobs) + test-frontend + security-scan.
   build-and-push:
-    needs: [test-backend, test-frontend, security-scan]
+    needs: [test-report, test-frontend, security-scan]
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     
