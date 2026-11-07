@@ -211,6 +211,14 @@ class ServiceContainer:
             return service_config['factory']()
 
 
+def _parse_model_list(value: Optional[str], fallback: List[str]) -> List[str]:
+    """将逗号分隔的模型字符串解析为列表。"""
+    if not value:
+        return fallback
+    models = [m.strip() for m in value.split(",") if m.strip()]
+    return models if models else fallback
+
+
 class AIAssistantService:
     """
     AI助手核心服务类
@@ -1410,14 +1418,6 @@ class AIAssistantService:
         if preferred and isinstance(preferred, str) and preferred.strip():
             return preferred.strip()
         return (config.get("models") or ["gpt-4"])[0]
-
-
-def _parse_model_list(value: Optional[str], fallback: List[str]) -> List[str]:
-    """将逗号分隔的模型字符串解析为列表。"""
-    if not value:
-        return fallback
-    models = [m.strip() for m in value.split(",") if m.strip()]
-    return models if models else fallback
 
     @staticmethod
     def _raise_openai_http_error(status_code: int, response_text: str) -> None:

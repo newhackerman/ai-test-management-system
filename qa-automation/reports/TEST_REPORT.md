@@ -1,19 +1,19 @@
 # AI 测试管理系统 — 自动化测试报告
 
-生成时间：2026-11-07（第六轮优化：18 项 + 事务泄漏根因修复后更新）
+生成时间：2026-11-07（第六轮后补：AI 助手 AttributeError 修复 + 4 个回归用例后更新）
 被测部署：后端 http://localhost:8000（FastAPI + MySQL 8.0.46 + Redis 7.0.15，干净库重建后 120 张表，**外键约束已保留**）、前端 http://localhost:3000（Vite + React 18）
-分支：`qa/automation-framework`（PR #1 开着，目标 main，未合并；第六轮新增 22 个已推送提交，含本报告更新；另有 2 个只改 workflow 文件的提交因 token 缺 `workflow` scope 暂留本地分支 `qa/workflow-ci-local`）
+分支：`main`（PR #1/#2/#3 均已合并；本修复在分支 `fix/ai-assistant-class-break`，待 PR）
 
 ## 总览
 
 | 套件 | 用例总数 | 通过 | 失败 | 错误 | 跳过 | 通过率 |
 | --- | --- | --- | --- | --- | --- | --- |
-| API（`tests/`） | 275 | 275 | 0 | 0 | 0 | 100% |
-| E2E（`e2e/`，Playwright + Chromium 真实浏览器） | 23 | 23 | 0 | 0 | 0 | 100% |
-| **合计** | **298** | **298** | **0** | **0** | **0** | **100%** |
+| API（`tests/`） | 278 | 278 | 0 | 0 | 0 | 100% |
+| E2E（`e2e/`，Playwright + Chromium 真实浏览器） | 24 | 24 | 0 | 0 | 0 | 100% |
+| **合计** | **302** | **302** | **0** | **0** | **0** | **100%** |
 
-- API 275 = 第五轮 251 + 第六轮 24（`test_round6_items.py` 20 + `test_round6_perf.py` 4）；E2E 23 = 第五轮 21 + 第六轮 2（`test_e2e_round6.py`）。
-- 全量最后一次执行：API 275/275、E2E 23/23（第六轮最终回归），在干净库（`DROP DATABASE` 后 `ops/rebuild_db.py` 重建，120 张表、种子 45 权限/9 角色）上跑出。
+- API 278 = 第六轮 275 + AI 助手回归 3（`test_ai_assistant_regression.py`）；E2E 24 = 第六轮 23 + AI 助手回归 1（`test_e2e_ai_assistant.py`）。
+- 全量最后一次执行：API 278/278、E2E 24/24（AI 助手修复后回归），在干净库（`DROP DATABASE` 后 `ops/rebuild_db.py` 重建，120 张表、种子 45 权限/9 角色）上跑出。
 - 本报告回答用户质疑“只发现 2 个问题不可信”：第一阶段的 108 个 API 用例确实只证实了 2 个缺陷；深化 + E2E + 安全三轮补测后，**新发现 12 个真实缺陷，全部修复并回归验证通过**（见下表 #3–#14）。失败就是失败，如实写：中途的失败全部记录在各轮执行小结里，本报告的 100% 是修复后的最终回归结果，不是放水。
 
 ## 按模块统计（API）
@@ -237,6 +237,25 @@
 
 - API/E2E 夹具的清理为“尽力而为”：项目删除是软删除（`deleted_at`），列表接口不可见，但行仍留在表里；多轮执行后表里曾积到 140 个软删项目与 8 个测试用户。
 - 本报告定稿前已物理清理全部测试数据：项目/需求/用例/计划/执行/缺陷/风险/会议/会议文件/会议任务关联/任务/里程碑/用户（除 admin）/会话/审计日志等表均清空，`uploads/meetings/` 测试文件已删除。最终状态：项目 0、用户 1（admin）、会议 0、会议任务关联 0；后端 `/api/v1/health` 正常，前端首页 200。
+
+## AI 助手 AttributeError 缺陷修复（2026-11-07，用户上报）
+
+**现象**：前端 AI 助手页面提问时报错 `AIAssistantService' object has no attribute '_call_openai_compatible_service'`。
+
+**根因**：提交 `c206253`（流式输出、多模型选择、远程模型拉取与会话持久化）把模块级小函数 `_parse_model_list` 插进了 `AIAssistantService` 类体中间。一个顶格的 `def` 会终结类体，所以它之后定义的 42 个方法（含 `_call_openai_compatible_service`、`_stream_openai_compatible_service`、`_post_process_response`、全部业务分析与健康评估方法）都成了该小函数里永远执行不到的嵌套函数，类上根本不存在。文件照样能编译、服务照样能启动；只有配了 API Key 真正发起提问时，`_call_ai_service` 走到 `self._call_openai_compatible_service(...)` 才触发报错。复现脚本（配 dummy Key 直接调 `_call_ai_service`）复现了完全相同的 AttributeError。
+
+**修复**：把 `_parse_model_list` 移到类定义之前（仍为模块级函数，`__init__` 里 5 处调用不变），`_raise_openai_http_error` 的 `@staticmethod` 随之回到类里。修复后 42 个方法全部恢复，同一条调用链（mock 上游 HTTP）正常返回 `AIResponse`。
+
+**为什么套件没拦住（用户质疑的回答）**：旧套件里 AI 助手页面一个 E2E 用例都没有；API 测试只覆盖了“没配 Key 时优雅降级”（`generate_test_strategy` 返回空结构），从没带 Key 真正发过一次提问。无 Key 时 `_call_ai_service` 在走到缺失方法前就因“未配置 API Key”抛错，缺陷被掩盖。也就是说此前的 E2E 对这条链路不是真正的覆盖。
+
+**新增回归用例（4 个，全部通过）**：
+
+- `tests/test_ai_assistant_regression.py::test_service_exposes_every_method_defined_in_source`——解析源码中类体内定义的方法名，逐个断言类上存在；以后类体再被截断会立刻失败。
+- `tests/test_ai_assistant_regression.py::test_call_ai_service_returns_response_with_mocked_http`——mock 上游 HTTP，断言完整调用链返回正常 `AIResponse`。
+- `tests/test_ai_assistant_regression.py::test_query_endpoint_never_returns_attribute_error`——真实接口调用（一次短提问），接受 200 真实回答或干净的上游错误，唯一不接受 AttributeError。
+- `e2e/test_e2e_ai_assistant.py::test_ai_assistant_answers_without_attribute_error`——真实浏览器走完整用户流程：打开 AI 助手页、输入提问、发送、等回复渲染，断言页面上不出现 AttributeError 文本。
+
+**回归**：全量 API 278/278 + E2E 24/24 = 302/302；后端已重启（`systemctl restart ai-test-backend`），健康检查 200。修复分支 `fix/ai-assistant-class-break`，待 PR。
 
 ## 框架使用
 
