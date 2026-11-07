@@ -161,6 +161,36 @@ ensure_mysql_running() {
     return 1
 }
 
+clear_idle_transactions() {
+    # 第 13 项（兜底清理；源头已在两服务工厂修掉，见对应提交）：
+    # 后端连接池空闲连接持未提交事务时，会卡住建库步骤（CREATE
+    # DATABASE 要元数据锁）。MySQL 起好后、建库前，只 KILL 同时
+    # 满足的线程：USER=后端 DB 用户、COMMAND='Sleep'、TIME>60 且
+    # 有未提交事务（INNODB_TRX ⋈ PROCESSLIST）。绝不杀 root/系统
+    # 线程（WHERE 已限定为 $DB_USER；DB_USER 为 root 时直接跳过）；
+    # 每条 kill 记日志。
+    [ "$DB_USER" = "root" ] && return 0
+    local ids
+    ids="$(sudo mysql -u root -N -e "
+        SELECT p.ID FROM information_schema.PROCESSLIST p
+        JOIN information_schema.INNODB_TRX t
+          ON t.trx_mysql_thread_id = p.ID
+        WHERE p.USER = '$DB_USER'
+          AND p.COMMAND = 'Sleep'
+          AND p.TIME > 60;" 2>/dev/null)"
+    [ -z "$ids" ] && return 0
+    local id killed=""
+    for id in $ids; do
+        if sudo mysql -u root -e "KILL $id;" >/dev/null 2>&1; then
+            log "clear_idle_transactions: killed idle transaction thread $id (user=$DB_USER, Sleep>60s)"
+            killed="$killed $id"
+        else
+            log "clear_idle_transactions: failed to kill thread $id"
+        fi
+    done
+    [ -n "$killed" ] && repaired "cleared idle transactions:$killed"
+}
+
 ensure_mysql_db_user() {
     local db_pass
     db_pass="$(env_val MYSQL_PASSWORD)"
@@ -386,6 +416,7 @@ main() {
     if ! ensure_mysql_running; then
         log "mysql unavailable, skipping db/table checks"
     else
+        clear_idle_transactions
         ensure_mysql_db_user
         ensure_tables
     fi
