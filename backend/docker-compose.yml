@@ -73,8 +73,11 @@ services:
       - "${MYSQL_PORT:-3306}:3306"
     volumes:
       - mysql-data:/var/lib/mysql
-      - ./sql/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
-      - ./sql/migrations:/docker-entrypoint-initdb.d/migrations:ro
+    # NOTE: no ./sql/init.sql mount — that file does not exist. The database
+    # itself is created by the mysql image (MYSQL_DATABASE), and the schema
+    # is created by the backend on startup (create_all); migrations run via
+    # `alembic upgrade head` (covers the 45-table migration chain only —
+    # see docs/deployment/README.md).
     networks:
       - app-network
     restart: unless-stopped

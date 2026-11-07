@@ -10,6 +10,15 @@ set -o pipefail  # 管道命令中任何一个失败都退出
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_NAME="ai-test-management-system"
 COMPOSE_PROJECT_NAME="ai_test_mgmt"
+# Compose file lives under backend/ (there is no docker-compose.yml at the
+# repo root); all compose calls must pass -f explicitly.
+COMPOSE_FILE="backend/docker-compose.yml"
+# Prefer Compose v2 ("docker compose"); fall back to the v1 binary.
+if docker compose version &> /dev/null; then
+    COMPOSE_CMD=(docker compose)
+else
+    COMPOSE_CMD=(docker-compose)
+fi
 
 # 颜色输出
 RED='\033[0;31m'
@@ -80,7 +89,7 @@ check_dependencies() {
         missing_deps+=("docker")
     fi
     
-    # 检查Docker Compose
+    # 检查Docker Compose（v2 "docker compose" 或 v1 "docker-compose" 均可）
     if ! command -v docker-compose &> /dev/null && ! docker compose version &> /dev/null; then
         missing_deps+=("docker-compose")
     fi
@@ -140,11 +149,9 @@ create_directories() {
     log_info "创建必要目录..."
     
     local dirs=(
-        "logs"
-        "uploads" 
+        "backend/logs"
+        "backend/uploads"
         "backups"
-        "data/mysql"
-        "data/redis"
     )
     
     for dir in "${dirs[@]}"; do
@@ -167,9 +174,9 @@ backup_database() {
     log_info "创建数据库备份..."
     
     # 检查数据库服务是否运行
-    if docker-compose -p "$COMPOSE_PROJECT_NAME" ps mysql | grep -q "Up"; then
+    if "${COMPOSE_CMD[@]}" -f "$COMPOSE_FILE" -p "$COMPOSE_PROJECT_NAME" ps mysql | grep -q "Up"; then
         local backup_name="backup_$(date +%Y%m%d_%H%M%S).sql"
-        docker-compose -p "$COMPOSE_PROJECT_NAME" exec -T mysql mysqldump \
+        "${COMPOSE_CMD[@]}" -f "$COMPOSE_FILE" -p "$COMPOSE_PROJECT_NAME" exec -T mysql mysqldump \
             -u root -p"${MYSQL_ROOT_PASSWORD:-rootpassword}" \
             "${MYSQL_DATABASE:-ai_test_management}" > "backups/$backup_name"
         
@@ -214,7 +221,7 @@ run_migrations() {
     
     # 等待数据库服务启动
     log_info "等待数据库服务启动..."
-    docker-compose -p "$COMPOSE_PROJECT_NAME" exec -T mysql bash -c '
+    "${COMPOSE_CMD[@]}" -f "$COMPOSE_FILE" -p "$COMPOSE_PROJECT_NAME" exec -T mysql bash -c '
         until mysqladmin ping -h localhost --silent; do
             echo "等待MySQL启动..."
             sleep 2
@@ -244,10 +251,10 @@ start_services() {
     local env=$1
     log_info "启动服务..."
     
-    # 选择合适的compose文件
-    local compose_file="docker-compose.yml"
-    if [[ -f "docker-compose.$env.yml" ]]; then
-        compose_file="docker-compose.$env.yml"
+    # 选择合适的compose文件（在 backend/ 下；仓库根目录没有 compose 文件）
+    local compose_file="$COMPOSE_FILE"
+    if [[ -f "backend/docker-compose.$env.yml" ]]; then
+        compose_file="backend/docker-compose.$env.yml"
     fi
     
     # 设置环境变量
@@ -255,7 +262,7 @@ start_services() {
     export ENVIRONMENT="$env"
     
     # 启动服务
-    docker-compose -f "$compose_file" -p "$COMPOSE_PROJECT_NAME" up -d
+    "${COMPOSE_CMD[@]}" -f "$compose_file" -p "$COMPOSE_PROJECT_NAME" up -d
     
     log_info "服务启动完成"
 }
@@ -285,29 +292,29 @@ health_check() {
 # 显示部署状态
 show_status() {
     log_info "=== 部署状态 ==="
-    docker-compose -p "$COMPOSE_PROJECT_NAME" ps
+    "${COMPOSE_CMD[@]}" -f "$COMPOSE_FILE" -p "$COMPOSE_PROJECT_NAME" ps
     
     log_info "=== 服务日志（最近20行）==="
-    docker-compose -p "$COMPOSE_PROJECT_NAME" logs --tail=20
+    "${COMPOSE_CMD[@]}" -f "$COMPOSE_FILE" -p "$COMPOSE_PROJECT_NAME" logs --tail=20
 }
 
 # 显示服务日志
 show_logs() {
     log_info "显示服务日志..."
-    docker-compose -p "$COMPOSE_PROJECT_NAME" logs -f
+    "${COMPOSE_CMD[@]}" -f "$COMPOSE_FILE" -p "$COMPOSE_PROJECT_NAME" logs -f
 }
 
 # 重启服务
 restart_services() {
     log_info "重启服务..."
-    docker-compose -p "$COMPOSE_PROJECT_NAME" restart
+    "${COMPOSE_CMD[@]}" -f "$COMPOSE_FILE" -p "$COMPOSE_PROJECT_NAME" restart
     log_info "服务重启完成"
 }
 
 # 停止服务
 stop_services() {
     log_info "停止服务..."
-    docker-compose -p "$COMPOSE_PROJECT_NAME" down
+    "${COMPOSE_CMD[@]}" -f "$COMPOSE_FILE" -p "$COMPOSE_PROJECT_NAME" down
     log_info "服务停止完成"
 }
 

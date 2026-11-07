@@ -11,6 +11,13 @@ PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 ENVIRONMENT=${1:-production}
 VERSION=${2:-latest}
 
+# Prefer Compose v2 ("docker compose"); fall back to the v1 binary.
+if docker compose version &> /dev/null; then
+    COMPOSE_CMD=(docker compose)
+else
+    COMPOSE_CMD=(docker-compose)
+fi
+
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -45,8 +52,8 @@ check_prerequisites() {
         exit 1
     fi
     
-    # Check if Docker Compose is installed
-    if ! command -v docker-compose &> /dev/null; then
+    # Check if Docker Compose is installed (v2 "docker compose" or v1 binary)
+    if ! command -v docker-compose &> /dev/null && ! docker compose version &> /dev/null; then
         log_error "Docker Compose is not installed. Please install Docker Compose first."
         exit 1
     fi
@@ -70,7 +77,7 @@ backup_database() {
         
         BACKUP_FILE="$BACKUP_DIR/backup_$(date +%Y%m%d_%H%M%S).sql"
         
-        docker-compose -f "$PROJECT_ROOT/backend/docker-compose.yml" exec mysql \
+        "${COMPOSE_CMD[@]}" -f "$PROJECT_ROOT/backend/docker-compose.yml" exec mysql \
             mysqldump -u root -p"${MYSQL_ROOT_PASSWORD}" ai_test_db > "$BACKUP_FILE"
         
         log_success "Database backup created: $BACKUP_FILE"
@@ -82,7 +89,7 @@ pull_images() {
     log_info "Pulling latest Docker images..."
     
     cd "$PROJECT_ROOT/backend"
-    docker-compose --env-file ".env.$ENVIRONMENT" pull
+    "${COMPOSE_CMD[@]}" --env-file ".env.$ENVIRONMENT" pull
     
     log_success "Docker images pulled successfully"
 }
@@ -92,7 +99,7 @@ build_images() {
     log_info "Building Docker images..."
     
     cd "$PROJECT_ROOT/backend"
-    docker-compose --env-file ".env.$ENVIRONMENT" build --no-cache
+    "${COMPOSE_CMD[@]}" --env-file ".env.$ENVIRONMENT" build --no-cache
     
     log_success "Docker images built successfully"
 }
@@ -102,7 +109,7 @@ run_migrations() {
     log_info "Running database migrations..."
     
     cd "$PROJECT_ROOT/backend"
-    docker-compose --env-file ".env.$ENVIRONMENT" run --rm backend \
+    "${COMPOSE_CMD[@]}" --env-file ".env.$ENVIRONMENT" run --rm backend \
         alembic upgrade head
     
     log_success "Database migrations completed"
@@ -115,13 +122,13 @@ deploy_services() {
     cd "$PROJECT_ROOT/backend"
     
     # Stop existing services
-    docker-compose --env-file ".env.$ENVIRONMENT" down
+    "${COMPOSE_CMD[@]}" --env-file ".env.$ENVIRONMENT" down
     
     # Start services
     if [ "$ENVIRONMENT" = "production" ]; then
-        docker-compose --env-file ".env.$ENVIRONMENT" --profile production up -d
+        "${COMPOSE_CMD[@]}" --env-file ".env.$ENVIRONMENT" --profile production up -d
     else
-        docker-compose --env-file ".env.$ENVIRONMENT" --profile development up -d
+        "${COMPOSE_CMD[@]}" --env-file ".env.$ENVIRONMENT" --profile development up -d
     fi
     
     log_success "Services deployed successfully"

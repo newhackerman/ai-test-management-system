@@ -27,21 +27,23 @@
 | --- | --- |
 | 后端 | Python 3.9+ / FastAPI / SQLAlchemy / MySQL / Redis / JWT |
 | 前端 | React 18 + TypeScript / Vite / Zustand / Radix UI / Tailwind CSS |
-| 测试 | pytest（独立仓库目录 `pytest/`，支持 Allure 报告） |
+| 测试 | 自建框架 `qa-automation/`（API + E2E，报告见 `qa-automation/reports/TEST_REPORT.md`）；仓库自带的 `pytest/` 是旧套件，仅作覆盖参考 |
 
 ## 快速启动
 
 ### 1. 环境准备
 
-- Python 3.9+
-- Node.js 16+
+- Python 3.11+
+- Node.js 18+
 - MySQL 8.0+
 - Redis 6.0+
 
 ### 2. 配置
 
-在项目根目录准备 `.env` 文件（数据库、Redis、JWT、AI 模型密钥等）。
-可使用配置 CLI 验证与生成模板：
+在 `backend/` 准备 `.env` 文件（数据库、Redis、JWT、AI 模型密钥等）。
+模板见 `backend/.env.example`。后端启动时读的是 `backend/.env`（systemd
+单元的工作目录就是 `backend/`），不要放在仓库根目录。
+可用配置 CLI 验证与生成模板：
 
 ```bash
 cd backend
@@ -98,6 +100,12 @@ DOCS_REQUIRE_AUTH=true
 - 关掉只需把该变量改回 `false`（或删掉）并重启，默认行为不变。
 
 默认账户：`admin` / `TEST@test1`
+
+## 部署
+
+主推 `./deploy.sh` + `backend/docker-compose.yml`（单机 Compose）；
+其他方式（`scripts/deploy.sh`、Kubernetes、本地开发）与已知缺口见
+[部署指南](docs/deployment/README.md)。
 
 ## 项目结构
 
