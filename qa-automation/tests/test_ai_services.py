@@ -53,7 +53,11 @@ def test_usage_statistics_factory_and_overview():
 
     async def run():
         stats = await get_usage_statistics_service()
-        return await stats.get_system_overview()
+        try:
+            return await stats.get_system_overview()
+        finally:
+            # 工厂返回短生命周期会话，用完须关闭（根因修复后）
+            await stats.aclose()
 
     overview = asyncio.run(run())
     assert overview["period"] == "daily"

@@ -246,8 +246,12 @@ class CachePreheatingScheduler:
         
         try:
             stats_service = await get_usage_statistics_service()
-            # 触发统计数据计算和缓存
-            await stats_service.get_system_overview()
+            try:
+                # 触发统计数据计算和缓存
+                await stats_service.get_system_overview()
+            finally:
+                # 短生命周期会话：用完回滚并关闭，不留空闲事务
+                await stats_service.aclose()
             logger.debug("系统统计数据预热完成")
         except Exception as e:
             logger.warning(f"系统统计数据预热失败: {e}")

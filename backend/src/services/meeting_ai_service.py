@@ -955,19 +955,23 @@ class MeetingAIService:
         """
 
 
-# 全局服务实例
-_meeting_ai_service = None
+async def get_meeting_ai_service():
+    """获取会议AI服务实例（FastAPI 依赖）。
 
-
-async def get_meeting_ai_service() -> MeetingAIService:
-    """获取会议AI服务实例"""
-    global _meeting_ai_service
-    if _meeting_ai_service is None:
-        from ..core.database import AsyncSessionLocal
-        if AsyncSessionLocal is None:
-            raise RuntimeError("Async database engine not available")
-        _meeting_ai_service = MeetingAIService(AsyncSessionLocal())
-    return _meeting_ai_service
+    短生命周期会话（根因修复）：每请求新建一个会话，请求结束回滚
+    并关闭，不再返回进程级单例——单例会话的首个读会隐式开启事务
+    并挂在进程生命周期内，阻塞 recover.sh 的建库步骤（与
+    get_usage_statistics_service 同一根因）。生成器依赖：yield 后
+    的清理在响应返回后执行；本服务的方法均为读操作（写路径由
+    meeting_ai_integration_service 负责提交），回滚不影响已提交
+    的数据。
+    """
+    from ..core.database import AsyncSessionLocal
+    if AsyncSessionLocal is None:
+        raise RuntimeError("Async database engine not available")
+    async with AsyncSessionLocal() as session:
+        yield MeetingAIService(session)
+        await session.rollback()
 
 
 # 简化版本的会议纪要生成函数，用于向后兼容
