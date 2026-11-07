@@ -17,6 +17,7 @@ import {
   AlertTriangle
 } from 'lucide-react'
 import { RequirementChangeRequest, ChangeStatus } from '@/types/requirement'
+import { useAuthStore } from '@/stores/auth'
 import { formatDate } from '@/utils/date'
 
 interface ApprovalStep {
@@ -117,10 +118,14 @@ export function ChangeApprovalWorkflow({
     return approvalSteps.find(step => step.status === 'PENDING')
   }
 
-  const canCurrentUserApprove = () => {
-    const currentStep = getCurrentStep()
-    // TODO: 检查当前用户是否有权限审批当前步骤
-    return currentStep && ['SUBMITTED', 'UNDER_REVIEW'].includes(changeRequest.status)
+  // 当前登录用户取自认证 store；审批权限 = 当前步骤的指定审批人，超级管理员可代审任意步骤
+  const currentUser = useAuthStore((state) => state.user)
+
+  const canCurrentUserApprove = (step?: ApprovalStep) => {
+    const target = step ?? getCurrentStep()
+    if (!target) return false
+    if (!['SUBMITTED', 'UNDER_REVIEW'].includes(changeRequest.status)) return false
+    return currentUser?.id === target.approver.id || currentUser?.is_super_admin === true
   }
 
   const handleApprove = async () => {
@@ -254,7 +259,7 @@ export function ChangeApprovalWorkflow({
                   )}
 
                   {/* 当前步骤的操作按钮 */}
-                  {step.status === 'PENDING' && canCurrentUserApprove() && (
+                  {step.status === 'PENDING' && canCurrentUserApprove(step) && (
                     <div className="mt-3 flex space-x-2">
                       <Dialog open={showApprovalDialog} onOpenChange={setShowApprovalDialog}>
                         <DialogTrigger asChild>

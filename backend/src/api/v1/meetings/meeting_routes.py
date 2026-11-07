@@ -14,6 +14,7 @@ from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Path, status
 from fastapi.responses import JSONResponse
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ....core.database import get_async_session
@@ -21,6 +22,9 @@ from ....core.exceptions import ValidationError, NotFoundError, PermissionError
 from ....services.meeting_service import MeetingService, get_meeting_service
 from ....api.auth import get_current_user
 from ....models.user import User
+from ....models.meeting import (
+    Meeting, MeetingParticipant, MeetingRecording, ParticipantRole, RecordingStatus
+)
 from ....schemas.meeting_schemas import (
     CreateMeetingRequest, UpdateMeetingRequest, MeetingQueryParams,
     MeetingResponse, MeetingListResponse, CreateMeetingResponse,
@@ -362,3 +366,54 @@ async def delete_meeting(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="会议删除失败"
         )
+
+
+@router.get(
+    "/{meeting_id}/recording-permissions",
+    summary="获取录制权限",
+    description="返回当前用户对该会议的录制权限：能否录制/开始/停止/暂停（暂停与恢复共用 canPause）"
+)
+async def get_recording_permissions(
+    meeting_id: int = Path(..., description="会议ID"),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_session)
+):
+    """录制权限：组织者/主持人/可录制参与者/录制创建者才有权限；开始要求当前无进行中录制。"""
+    meeting = (await db.execute(
+        select(Meeting).where(Meeting.id == meeting_id)
+    )).scalar_one_or_none()
+    if not meeting:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="会议不存在")
+
+    participant = (await db.execute(
+        select(MeetingParticipant).where(
+            MeetingParticipant.meeting_id == meeting_id,
+            MeetingParticipant.user_id == current_user.id
+        )
+    )).scalar_one_or_none()
+    is_organizer = meeting.organizer_id == current_user.id
+    is_privileged_participant = bool(participant) and (
+        participant.participant_role in (ParticipantRole.ORGANIZER, ParticipantRole.MODERATOR)
+        or participant.can_record
+    )
+    can_record = is_organizer or is_privileged_participant
+
+    active = (await db.execute(
+        select(MeetingRecording).where(
+            MeetingRecording.meeting_id == meeting_id,
+            MeetingRecording.recording_status.in_(
+                [RecordingStatus.RECORDING, RecordingStatus.PAUSED]
+            )
+        ).order_by(MeetingRecording.id.desc()).limit(1)
+    )).scalar_one_or_none()
+    can_manage_active = bool(active) and (
+        active.created_by == current_user.id or is_organizer or is_privileged_participant
+    )
+
+    return {
+        "canRecord": can_record,
+        "canStart": can_record and active is None,
+        "canStop": can_manage_active,
+        "canPause": can_manage_active,
+        "reason": None if can_record else "您不是会议参与者或无录制权限",
+    }

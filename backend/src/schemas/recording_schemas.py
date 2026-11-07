@@ -23,6 +23,7 @@ class RecordingTypeEnum(str, Enum):
 class RecordingStatusEnum(str, Enum):
     """录制状态枚举"""
     RECORDING = "RECORDING"
+    PAUSED = "PAUSED"
     PROCESSING = "PROCESSING"
     COMPLETED = "COMPLETED"
     FAILED = "FAILED"
@@ -61,17 +62,17 @@ class RecordingResponse(BaseModel):
     recording_type: str = Field(..., description="录制类型")
     file_format: str = Field(..., description="文件格式")
     file_path: str = Field(..., description="文件路径")
-    file_size: int = Field(..., description="文件大小(字节)")
-    duration_seconds: int = Field(..., description="录制时长(秒)")
+    file_size: Optional[int] = Field(None, description="文件大小(字节)")
+    duration_seconds: Optional[int] = Field(None, description="录制时长(秒)")
     resolution: Optional[str] = Field(None, description="视频分辨率")
     recording_status: str = Field(..., description="录制状态")
-    processing_progress: int = Field(..., description="处理进度(百分比)")
+    processing_progress: Optional[int] = Field(None, description="处理进度(百分比)")
     start_time: datetime = Field(..., description="录制开始时间")
     end_time: Optional[datetime] = Field(None, description="录制结束时间")
-    is_public: bool = Field(..., description="是否公开")
+    is_public: Optional[bool] = Field(None, description="是否公开")
     access_password: Optional[str] = Field(None, description="访问密码")
-    download_count: int = Field(..., description="下载次数")
-    view_count: int = Field(..., description="观看次数")
+    download_count: Optional[int] = Field(None, description="下载次数")
+    view_count: Optional[int] = Field(None, description="观看次数")
     created_by: int = Field(..., description="创建者ID")
     created_at: datetime = Field(..., description="创建时间")
     updated_at: datetime = Field(..., description="更新时间")
@@ -141,6 +142,13 @@ class StartRecordingResponse(BaseModel):
     success: bool = Field(..., description="是否成功")
     recording_id: Optional[int] = Field(None, description="录制ID")
     message: str = Field(..., description="响应消息")
+
+
+class PauseRecordingResponse(BaseModel):
+    """暂停/恢复录制响应模型：data 为更新后的录制记录"""
+    success: bool = Field(..., description="是否成功")
+    message: str = Field(..., description="响应消息")
+    data: RecordingResponse = Field(..., description="更新后的录制记录")
 
 
 class StopRecordingResponse(BaseModel):

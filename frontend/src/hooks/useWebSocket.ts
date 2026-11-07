@@ -4,6 +4,7 @@
  */
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { WSMessage, WSMessageType, ConnectionStatus } from '../types/ai-assistant';
+import { useAuthStore } from '@/stores/auth';
 
 interface UseWebSocketOptions {
   url?: string;
@@ -258,13 +259,8 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
  * 简化版WebSocket Hook - 仅用于AI助手
  */
 export function useAIWebSocket() {
-  const [userId, setUserId] = useState<number | null>(null);
-
-  // 获取当前用户ID（这里应该从认证状态获取）
-  useEffect(() => {
-    // TODO: 从认证状态获取用户ID
-    setUserId(1); // 临时硬编码
-  }, []);
+  // 用户 ID 取自认证状态（登录后为当前用户，退出后为 null）；不再硬编码
+  const userId = useAuthStore((state) => state.user?.id ?? null);
 
   const webSocket = useWebSocket({
     url: userId ? `${getDefaultWebSocketUrl()}?user_id=${userId}` : undefined,

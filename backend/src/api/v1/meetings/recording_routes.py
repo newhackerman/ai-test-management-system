@@ -26,7 +26,7 @@ from ....models.user import User
 from ....schemas.recording_schemas import (
     StartRecordingRequest, StopRecordingRequest, RecordingQueryParams,
     RecordingResponse, RecordingListResponse, StartRecordingResponse,
-    StopRecordingResponse, DeleteRecordingResponse, PlaybackInfoResponse,
+    StopRecordingResponse, PauseRecordingResponse, DeleteRecordingResponse, PlaybackInfoResponse,
     RecordingShareRequest, RecordingShareResponse, RecordingStatistics,
     RecordingTypeEnum, RecordingStatusEnum, FileFormatEnum
 )
@@ -129,14 +129,14 @@ async def stop_recording(
         logger.info(f"用户 {current_user.id} 停止录制: {recording_id}")
         
         # 停止录制
-        recording = await recording_service.stop_recording(recording_id, current_user.id, request)
+        recording = await recording_service.stop_recording(recording_id, current_user.id)
         
         logger.info(f"录制停止成功: 录制ID {recording_id}")
         
         return StopRecordingResponse(
             success=True,
-            message="录制停止成功",
-            data=RecordingResponse.from_orm(recording)
+            recording_id=recording.id,
+            message="录制停止成功"
         )
         
     except NotFoundError as e:
@@ -162,6 +162,122 @@ async def stop_recording(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="停止录制失败"
+        )
+
+
+@router.post(
+    "/{recording_id}/pause",
+    response_model=PauseRecordingResponse,
+    summary="暂停录制",
+    description="暂停指定的录制：仅进行中的录制可暂停；采集进程用 SIGSTOP 冻结，恢复后继续写入同一文件"
+)
+async def pause_recording(
+    recording_id: int = Path(..., description="录制ID"),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_session),
+    recording_service: RecordingService = Depends(get_recording_service)
+):
+    """
+    暂停录制
+
+    - **recording_id**: 录制ID（必填）
+
+    注意：只有录制创建者和会议主持人可以暂停录制（与停止同一权限）
+    """
+    try:
+        logger.info(f"用户 {current_user.id} 暂停录制: {recording_id}")
+
+        recording = await recording_service.pause_recording(recording_id, current_user.id)
+
+        logger.info(f"录制暂停成功: 录制ID {recording_id}")
+
+        return PauseRecordingResponse(
+            success=True,
+            message="录制已暂停",
+            data=RecordingResponse.from_orm(recording)
+        )
+
+    except NotFoundError as e:
+        logger.warning(f"录制不存在: {recording_id}")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
+        )
+    except ValidationError as e:
+        logger.warning(f"暂停录制验证失败: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except PermissionError as e:
+        logger.warning(f"暂停录制权限不足: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=str(e)
+        )
+    except Exception as e:
+        logger.error(f"暂停录制失败: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="暂停录制失败"
+        )
+
+
+@router.post(
+    "/{recording_id}/resume",
+    response_model=PauseRecordingResponse,
+    summary="恢复录制",
+    description="恢复已暂停的录制：仅已暂停的录制可恢复；采集进程用 SIGCONT 解冻"
+)
+async def resume_recording(
+    recording_id: int = Path(..., description="录制ID"),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_session),
+    recording_service: RecordingService = Depends(get_recording_service)
+):
+    """
+    恢复录制
+
+    - **recording_id**: 录制ID（必填）
+
+    注意：只有录制创建者和会议主持人可以恢复录制（与停止同一权限）
+    """
+    try:
+        logger.info(f"用户 {current_user.id} 恢复录制: {recording_id}")
+
+        recording = await recording_service.resume_recording(recording_id, current_user.id)
+
+        logger.info(f"录制恢复成功: 录制ID {recording_id}")
+
+        return PauseRecordingResponse(
+            success=True,
+            message="录制已恢复",
+            data=RecordingResponse.from_orm(recording)
+        )
+
+    except NotFoundError as e:
+        logger.warning(f"录制不存在: {recording_id}")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
+        )
+    except ValidationError as e:
+        logger.warning(f"恢复录制验证失败: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except PermissionError as e:
+        logger.warning(f"恢复录制权限不足: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=str(e)
+        )
+    except Exception as e:
+        logger.error(f"恢复录制失败: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="恢复录制失败"
         )
 
 

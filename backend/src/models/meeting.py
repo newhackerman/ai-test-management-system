@@ -240,6 +240,7 @@ class RecordingType(PyEnum):
 class RecordingStatus(PyEnum):
     """录制状态枚举"""
     RECORDING = "RECORDING"      # 录制中
+    PAUSED = "PAUSED"            # 已暂停（采集进程 SIGSTOP，恢复时 SIGCONT）
     PROCESSING = "PROCESSING"    # 处理中
     COMPLETED = "COMPLETED"      # 已完成
     FAILED = "FAILED"           # 失败

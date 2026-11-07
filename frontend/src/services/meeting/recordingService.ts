@@ -47,7 +47,7 @@ export class RecordingService {
   // 录制控制
   async startRecording(meetingId: number, config: StartRecordingRequest): Promise<MeetingRecording> {
     const response = await apiClient.post<MeetingRecording>(
-      `${this.baseUrl}/${meetingId}/recordings/start`,
+      `${this.baseUrl}/recordings/${meetingId}/recordings/start`,
       config
     )
     return response.data
@@ -55,21 +55,21 @@ export class RecordingService {
 
   async stopRecording(recordingId: number): Promise<MeetingRecording> {
     const response = await apiClient.post<MeetingRecording>(
-      `/api/v1/recordings/${recordingId}/stop`
+      `/api/v1/meetings/recordings/${recordingId}/stop`
     )
     return response.data
   }
 
   async pauseRecording(recordingId: number): Promise<MeetingRecording> {
     const response = await apiClient.post<MeetingRecording>(
-      `/api/v1/recordings/${recordingId}/pause`
+      `/api/v1/meetings/recordings/${recordingId}/pause`
     )
     return response.data
   }
 
   async resumeRecording(recordingId: number): Promise<MeetingRecording> {
     const response = await apiClient.post<MeetingRecording>(
-      `/api/v1/recordings/${recordingId}/resume`
+      `/api/v1/meetings/recordings/${recordingId}/resume`
     )
     return response.data
   }
@@ -77,14 +77,14 @@ export class RecordingService {
   // 录制管理
   async getRecording(recordingId: number): Promise<MeetingRecording> {
     const response = await apiClient.get<MeetingRecording>(
-      `/api/v1/recordings/${recordingId}`
+      `/api/v1/meetings/recordings/${recordingId}`
     )
     return response.data
   }
 
   async getMeetingRecordings(meetingId: number): Promise<MeetingRecording[]> {
     const response = await apiClient.get<MeetingRecording[]>(
-      `${this.baseUrl}/${meetingId}/recordings`
+      `${this.baseUrl}/recordings/${meetingId}/recordings`
     )
     return response.data
   }
@@ -103,6 +103,7 @@ export class RecordingService {
     page: number
     pageSize: number
   }> {
+    // 注意：后端没有裸 /recordings 列表接口，列表在 /meetings/recordings/{meeting_id}/recordings；此处保留原路径待后端补齐
     const response = await apiClient.get('/api/v1/recordings', { params })
     return response.data
   }
@@ -114,20 +115,20 @@ export class RecordingService {
     access_password?: string
   }): Promise<MeetingRecording> {
     const response = await apiClient.put<MeetingRecording>(
-      `/api/v1/recordings/${recordingId}`,
+      `/api/v1/meetings/recordings/${recordingId}`,
       updates
     )
     return response.data
   }
 
   async deleteRecording(recordingId: number): Promise<void> {
-    await apiClient.delete(`/api/v1/recordings/${recordingId}`)
+    await apiClient.delete(`/api/v1/meetings/recordings/${recordingId}`)
   }
 
   // 录制回放
   async getPlaybackInfo(recordingId: number): Promise<RecordingPlaybackInfo> {
     const response = await apiClient.get<RecordingPlaybackInfo>(
-      `/api/v1/recordings/${recordingId}/playback`
+      `/api/v1/meetings/recordings/${recordingId}/playback`
     )
     return response.data
   }
