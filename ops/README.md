@@ -16,7 +16,9 @@
 | 文件 | 用途 |
 | --- | --- |
 | `recover.sh` | 幂等恢复脚本：逐个检查并补齐缺失的环节 |
-| `rebuild_db.py` | 建表（外键约束剥离，见报告 U1）+ 种子数据，供 `recover.sh` 调用 |
+| `rebuild_db.py` | 建表（保留外键约束，120 张表）+ 种子数据，供 `recover.sh` 调用 |
+| `cleanup_soft_deleted.py` | 物理清理软删除残留行与孤儿文件（默认 dry-run，只看不删） |
+| `verify_clean_install.sh` | 干净环境验证：全新 venv 里 `pip install -r requirements.txt` 并导入检查 |
 | `systemd/*.service` | 后端/前端的 systemd 单元（进程内自启），由 `recover.sh` 负责链接与启用 |
 | `README.md` | 本文件 |
 
@@ -29,12 +31,21 @@
    后安装；apt 锁被占时最多等 5 分钟）。
 2. **MySQL 进程**：没跑则启动（先试 `systemctl start mysql`，
    失败则直接 `mysqld --daemonize`；数据目录缺失则先
-   `mysqld --initialize-insecure`）。
+   `mysqld --initialize-insecure`）。包处于已解包未配置（iU）状态时
+   先用缓存的 `.deb` 补装，`dpkg` 认得出缺失的系统用户并补建。
+3. **空闲事务清理**：MySQL 起好后、建库前，只清理后端数据库用户
+   的超时空闲事务（`COMMAND='Sleep'`、超过 60 秒且持有未提交事务），
+   绝不碰 root 与系统线程；每条清理都记日志。这是兜底：事务泄漏
+   的源头（两个进程级单例会话）已在后端修掉，见下。
 3. **库与用户**：库 `ai_test_db`、用户 `ai_test_user` 缺失则重建，
    密码运行时从 `backend/.env` 读取。
 4. **表与种子**：表少于 100 张或 admin 用户缺失则跑 `rebuild_db.py`
-  （外键约束剥离建表 + 权限/角色/admin 种子，幂等）。
-5. **Redis 进程**：`redis-cli ping` 不通则 `redis-server --daemonize yes` 拉起。
+  （保留外键约束建表 + 权限/角色/admin 种子，幂等；半建成的库会
+  先自检再重建，不会卡在“表已存在”上）。
+5. **Redis 进程**：`redis-cli ping` 不通则拉起——先走 systemd 单元
+  （`redis-server.service` 带 `PrivateUsers=false` 的 drop-in，
+  之前 217/USER 起不来的问题已修），单元不可用时回退到
+  `redis-server --daemonize yes` 直接启动。
 6. **systemd 单元**：把 `systemd/*.service` 链接到
    `/etc/systemd/system/` 并 enable（进程内 `Restart=always`）。
 7. **后端/前端**：健康检查不通则重启——单元已启用时走
@@ -68,6 +79,28 @@ bash ~/workspace/ai-test-management-system/ops/recover.sh
 tail -20 /tmp/ai-test-recover.log
 ```
 
+## 另外两个脚本
+
+```bash
+# 物理清理软删除残留（默认只看不删，加 --apply 才真删）
+python3 ops/cleanup_soft_deleted.py            # dry-run，看会删多少
+python3 ops/cleanup_soft_deleted.py --apply    # 真删（含孤儿文件）
+
+# 干净环境依赖验证（全新 venv，装 requirements.txt 并导入检查）
+bash ops/verify_clean_install.sh
+```
+
+清理脚本首跑删过 1666 行软删残留 + 50 个孤儿文件（21MB），再跑
+就是 nothing to purge。两个脚本都不碰应用代码。
+
+## 事务泄漏是怎么修的
+
+后端曾有两个进程级单例会话（统计服务与会议 AI 服务的工厂函数）
+建好后永不提交、回滚或关闭，启动预热一读就挂起一个事务直到进程
+结束，看护重建库时会被表锁卡住几分钟。第六轮已把两个工厂改成
+每次调用开短会话、用完回滚关闭（`INNODB_TRX` 归零，重建约 0.6 秒）。
+`recover.sh` 里的空闲事务清理只是兜底，源头已不在。
+
 ## 已验证 / 未验证
 
 - 已验证：kill 掉 MySQL、Redis、后端、前端四个服务后跑
@@ -79,8 +112,8 @@ tail -20 /tmp/ai-test-recover.log
   占用；全部正常时立即复跑返回 `RECOVER OK`（约 1 秒）。
 - 已验证：恢复脚本的修复历史——本次会话中已用它从“二进制丢失、
   数据目录清空、库/用户丢失”的状态完整重建过一次（apt 缓存
-  安装 → 建库建用户 → 112 张表 + 45 权限/9 角色/1 admin 种子 →
-  API 全量 241/241 通过）。
+  安装 → 建库建用户 → 120 张表 + 45 权限/9 角色/1 admin 种子 →
+  API 全量 275/275 + E2E 23/23 通过）。
 - 未验证：**完整虚拟机替换**无法主动模拟；替换后首次恢复依赖
   cron 在 10 分钟内触发、`apt` 缓存里有 MySQL/Redis 的 `.deb`
   （当前缓存有 8.0.46/7.0.15 的完整闭包），以及平台 apt 索引

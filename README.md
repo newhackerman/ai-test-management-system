@@ -27,7 +27,7 @@
 | --- | --- |
 | 后端 | Python 3.9+ / FastAPI / SQLAlchemy / MySQL / Redis / JWT |
 | 前端 | React 18 + TypeScript / Vite / Zustand / Radix UI / Tailwind CSS |
-| 测试 | 自建框架 `qa-automation/`（API + E2E，报告见 `qa-automation/reports/TEST_REPORT.md`）；仓库自带的 `pytest/` 是旧套件，仅作覆盖参考 |
+| 测试 | 自建框架 `qa-automation/`（API + E2E，报告见 `qa-automation/reports/TEST_REPORT.md`）；仓库自带的 `pytest/` 是旧套件，仅作覆盖参考。第六轮后 API 275/275 + E2E 23/23；性能基线：登录中位 0.53s、列表 0.018–0.044s、10MB 上传 0.12s |
 
 ## 快速启动
 
@@ -99,6 +99,13 @@ DOCS_REQUIRE_AUTH=true
 - curl / 脚本：自行加请求头 `-H "Authorization: Bearer <token>"`。
 - 关掉只需把该变量改回 `false`（或删掉）并重启，默认行为不变。
 
+### 登录锁定
+
+连续输错密码会锁账号：3 次失败锁 15 分钟，5 次后锁 24 小时
+（账号状态变为 `LOCKED`）。**锁定后用正确密码登录也返回 423**
+（不是 401）；错密码、未知用户仍返回 401。锁定时长到后自动解锁，
+或管理员在用户管理里解锁。
+
 默认账户：`admin` / `TEST@test1`
 
 ## 部署
@@ -119,6 +126,9 @@ DOCS_REQUIRE_AUTH=true
 ├── frontend/           # React 前端应用
 │   └── src/pages/      # 业务页面
 ├── docs/               # 项目文档（API / 部署 / 开发 / 用户手册）
+├── ops/                # 环境恢复与运维脚本（自愈、软删清理、干净安装验证），见 [ops/README.md](ops/README.md)
+├── qa-automation/      # 自建黑盒测试框架（API + E2E），报告见 [qa-automation/reports/TEST_REPORT.md](qa-automation/reports/TEST_REPORT.md)
+├── qa-skills/          # 测试自动化 skill（部署、分析、用例生成、执行、修复、提交）+ 通用框架模板，使用指南见 [qa-skills/README.md](qa-skills/README.md)
 ├── pytest/             # 外部化 pytest 测试工程
 ├── k8s/                # Kubernetes 部署配置
 ├── scripts/            # 辅助脚本
