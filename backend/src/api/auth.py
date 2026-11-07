@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Request, UploadFile, File
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional
 from urllib.parse import urlparse
@@ -13,7 +14,9 @@ from ..services.auth import AuthService
 from ..services.user import UserService
 from ..schemas.auth import LoginRequest, LoginResponse, RegisterRequest
 from ..schemas.user import UserCreate, UserResponse
-from ..models.user import User
+from ..models.user import User, UserRole
+from ..models.role import Role
+from ..models.permission import Permission, RolePermission, UserPermission
 from ..utils.ip import IPUtils
 from ..utils.jwt import jwt_service
 from ..utils.auth_rate_limit import (
@@ -247,9 +250,42 @@ async def logout(
             detail="登出失败"
         )
 
+async def _get_user_roles_permissions(db: AsyncSession, user_id: int):
+    """查用户真实的角色与权限。
+
+    角色来自 user_roles；权限是角色权限（role_permissions）与用户直接
+    授权（user_permissions）的并集，只取已激活的权限，按 code 去重排序。
+    """
+    role_rows = await db.execute(
+        select(Role.code, Role.name)
+        .join(UserRole, UserRole.role_id == Role.id)
+        .where(UserRole.user_id == user_id, Role.is_active == True)  # noqa: E712
+        .order_by(Role.code)
+    )
+    roles = [{"code": code, "name": name} for code, name in role_rows.all()]
+
+    perm_rows = await db.execute(
+        select(Permission.code, Permission.name, Permission.module, Permission.action)
+        .join(RolePermission, RolePermission.permission_id == Permission.id)
+        .join(UserRole, UserRole.role_id == RolePermission.role_id)
+        .where(UserRole.user_id == user_id, Permission.is_active == True)  # noqa: E712
+    )
+    direct_rows = await db.execute(
+        select(Permission.code, Permission.name, Permission.module, Permission.action)
+        .join(UserPermission, UserPermission.permission_id == Permission.id)
+        .where(UserPermission.user_id == user_id, Permission.is_active == True)  # noqa: E712
+    )
+    by_code = {}
+    for code, name, module, action in list(perm_rows.all()) + list(direct_rows.all()):
+        by_code[code] = {"code": code, "name": name, "module": module, "action": action}
+    permissions = [by_code[code] for code in sorted(by_code)]
+    return roles, permissions
+
+
 @router.get("/me")
 async def get_current_user_info(
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_session)
 ):
     """获取当前用户信息"""
     if not current_user:
@@ -257,7 +293,9 @@ async def get_current_user_info(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="未登录用户"
         )
-    
+
+    roles, permissions = await _get_user_roles_permissions(db, current_user.id)
+
     return {
         "user_info": {
             "user_id": str(current_user.id),
@@ -287,13 +325,14 @@ async def get_current_user_info(
             "created_at": current_user.created_at,
             "updated_at": current_user.updated_at
         },
-        "permissions": [],  # TODO: 实现权限查询
-        "roles": []  # TODO: 实现角色查询
+        "permissions": permissions,
+        "roles": roles
     }
 
 @router.get("/profile")
 async def get_user_profile(
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_session)
 ):
     """获取用户档案信息（与/me相同，为前端兼容性）"""
     if not current_user:
@@ -301,7 +340,9 @@ async def get_user_profile(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="未登录用户"
         )
-    
+
+    roles, permissions = await _get_user_roles_permissions(db, current_user.id)
+
     return {
         "user_info": {
             "user_id": str(current_user.id),
@@ -331,8 +372,8 @@ async def get_user_profile(
             "created_at": current_user.created_at,
             "updated_at": current_user.updated_at
         },
-        "permissions": [],  # TODO: 实现权限查询
-        "roles": []  # TODO: 实现角色查询
+        "permissions": permissions,
+        "roles": roles
     }
 
 @router.put("/profile")
