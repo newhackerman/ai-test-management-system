@@ -8,9 +8,13 @@ import sys
 # 添加项目根目录到Python路径
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
-# 导入模型
-from src.core.database import Base
+# 导入模型（第 11 项收敛：autogenerate 的目标元数据改用共享 Base，
+# 此前是 core.database 的独立 Base，只含 6 张仪表板表，导致自动
+# 生成的迁移看不到其余 110+ 张表）
+from src.models.base import Base
 from src.models import *  # 导入所有模型
+import src.models.audit  # noqa: F401 — 注册 audit_logs / security_events
+import src.models.dashboard  # noqa: F401 — 注册 6 张仪表板表
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

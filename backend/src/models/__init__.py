@@ -98,6 +98,11 @@ from .websocket_connection import (
     WebSocketConnection, WebSocketEvent, ConnectionPool,
     ConnectionStatus, EventType, ClientType
 )
+
+# 注册用 import：dashboard.py 的 6 张表（与单文件版同名，不导出，
+# 避免与上面导出的同名类冲突）。只 import 模块即可把表注册进
+# 共享 Base，供 create_all / alembic autogenerate 覆盖。
+from . import dashboard  # noqa: F401
 from .requirement_priority import (
     RequirementPriorityConfig, RequirementPriorityEvaluation,
     RequirementPriorityConflict, RequirementPriorityHistory,

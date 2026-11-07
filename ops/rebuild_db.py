@@ -34,6 +34,8 @@ from sqlalchemy import inspect  # noqa: E402
 from src.core.config import settings  # noqa: E402
 from src.core.database import SessionLocal, engine  # noqa: E402
 import src.models  # noqa: E402,F401  (import registers every model)
+import src.models.audit  # noqa: E402,F401  (register audit_logs/security_events)
+import src.models.dashboard  # noqa: E402,F401  (register 6 dashboard tables)
 from src.models.base import Base  # noqa: E402
 from src.models.permission import Permission  # noqa: E402
 from src.models.role import Role  # noqa: E402

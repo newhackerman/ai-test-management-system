@@ -193,16 +193,18 @@ def get_db_session_sync():
 async def init_database():
     """初始化数据库连接和表结构"""
     try:
-        # 导入所有模型以确保表被创建
-        from ..models import (
-            user, role, permission, config, 
-            config_template, advanced_permissions,
-            project, requirement, test_plan, test_case
-        )
+        # 导入所有模型以确保表被创建（import src.models 会注册全部
+        # 模型；audit / dashboard 不在 __init__ 的导出列表里，显式
+        # import 子模块以注册 audit_logs / security_events 与 6 张
+        # 仪表板表）。第 11 项收敛：启动建表与 rebuild_db.py 现在用
+        # 同一份共享元数据做全量 create_all，不再分三处拼表。
+        import src.models  # noqa: F401
+        from ..models import audit as _audit_models  # noqa: F401
+        from ..models import dashboard as _dashboard_models  # noqa: F401
         from ..models.base import Base as ModelBase
-        
-        # 创建所有表
-        Base.metadata.create_all(bind=engine)
+
+        # 创建所有表（与 ops/rebuild_db.py 的 create_all 同源）
+        ModelBase.metadata.create_all(bind=engine)
         testmanager_table_names = [
             "test_plans",
             "test_phases",
@@ -214,19 +216,6 @@ async def init_database():
             "defect_comments",
             "test_coverage",
         ]
-        testmanager_tables = [
-            ModelBase.metadata.tables[name]
-            for name in testmanager_table_names
-            if name in ModelBase.metadata.tables
-        ]
-        ModelBase.metadata.create_all(bind=engine, tables=testmanager_tables)
-        app_table_names = ["system_notifications"]
-        app_tables = [
-            ModelBase.metadata.tables[name]
-            for name in app_table_names
-            if name in ModelBase.metadata.tables
-        ]
-        ModelBase.metadata.create_all(bind=engine, tables=app_tables)
         _ensure_test_execution_charset()
         for table_name in testmanager_table_names:
             _ensure_table_utf8mb4(table_name)
