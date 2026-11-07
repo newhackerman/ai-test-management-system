@@ -508,7 +508,7 @@ class ProjectMetrics(ProjectBaseModel):
     __tablename__ = 'project_metrics'
     
     id = Column(Integer, primary_key=True, comment='指标ID')
-    project_id = Column(Integer, ForeignKey('projects.id'), nullable=False, comment='项目ID')
+    project_id = Column(BigInteger, ForeignKey('projects.id'), nullable=False, comment='项目ID')
     metric_date = Column(DateTime, default=datetime.utcnow, comment='指标日期')
     
     # 需求指标

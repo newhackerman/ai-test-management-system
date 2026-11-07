@@ -555,7 +555,68 @@ class AIAssistantService:
                 config.pop("temperature", None)
             else:
                 config["temperature"] = previous_temperature
-    
+
+    async def generate_test_strategy(self, prompt: str) -> Dict[str, Any]:
+        """Generate a structured test strategy from a prompt.
+
+        Compatibility entrypoint for TestPlanService / TestStrategyService,
+        which call ``await ai_service.generate_test_strategy(prompt)`` and
+        expect a dict with keys ``strategy``/``overview``, ``key_points``,
+        ``risks``, ``resource_suggestions``, ``approach`` and ``levels``.
+        The model reply is parsed as JSON when possible; otherwise the raw
+        text is returned under ``strategy``/``overview``. Without a
+        configured AI provider this returns the empty structure instead of
+        raising, so strategy generation degrades gracefully.
+        """
+        empty: Dict[str, Any] = {
+            "strategy": "",
+            "overview": "",
+            "key_points": [],
+            "risks": [],
+            "resource_suggestions": [],
+            "approach": {},
+            "levels": [],
+        }
+        if not prompt or not prompt.strip():
+            return empty
+        try:
+            text = await self.generate_content(prompt)
+        except Exception as e:
+            logger.warning(f"AI test strategy generation failed: {e}")
+            return empty
+        parsed = self._parse_strategy_json(text)
+        if parsed:
+            for key in empty:
+                if key in parsed:
+                    empty[key] = parsed[key]
+            if not empty["strategy"] and not empty["overview"]:
+                empty["strategy"] = text
+                empty["overview"] = text
+            return empty
+        empty["strategy"] = text
+        empty["overview"] = text
+        return empty
+
+    @staticmethod
+    def _parse_strategy_json(text: str) -> Optional[Dict[str, Any]]:
+        """Best-effort parse of a model reply as a JSON object."""
+        if not text:
+            return None
+        try:
+            parsed = json.loads(text)
+            return parsed if isinstance(parsed, dict) else None
+        except (ValueError, TypeError):
+            pass
+        start = text.find("{")
+        end = text.rfind("}")
+        if start >= 0 and end > start:
+            try:
+                parsed = json.loads(text[start : end + 1])
+                return parsed if isinstance(parsed, dict) else None
+            except (ValueError, TypeError):
+                return None
+        return None
+
     @log_ai_model_call(
         operation_name="process_user_query",
         extract_user_id="user_id",

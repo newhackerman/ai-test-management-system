@@ -880,15 +880,21 @@ npm run test:coverage
 
 ### Docker Deployment
 
+compose 文件在 `backend/docker-compose.yml`，以下命令在 `backend/` 目录下执行
+（或在根目录加 `-f backend/docker-compose.yml`）：
+
 **Development**
 ```bash
-docker-compose --profile development up -d
+docker compose --profile development up -d
 ```
 
 **Production**
 ```bash
-docker-compose --profile production up -d
+docker compose --profile production up -d
 ```
+注意：`--profile production` 需要 `backend/nginx/` 配置文件，该目录目前不存在，
+见[部署指南](../deployment/README.md)里的已知缺口。也可以用根目录的
+`./deploy.sh dev|test|prod`，它会自动处理 compose 文件路径与健康检查。
 
 ### Kubernetes Deployment
 

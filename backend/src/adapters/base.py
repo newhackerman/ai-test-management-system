@@ -335,9 +335,14 @@ class AdapterConfig:
 class BaseAIAdapter(ABC):
     """
     AI适配器基础类
-    
+
     定义了所有AI服务提供商适配器必须实现的接口，
     确保不同AI服务的调用方式保持一致。
+
+    注意：下面 4 个抽象方法的实现在各厂商适配器里
+    （openai/anthropic/baidu/tongyi/google/zhipu/xunfei/custom），
+    基类只定契约。方法体用 raise NotImplementedError 而不用 pass，
+    这样一旦某个子类绕过 ABC 检查被实例化，调用时会明确报错而不是静默返回 None。
     """
     
     def __init__(self, config: AdapterConfig):
@@ -387,8 +392,8 @@ class BaseAIAdapter(ABC):
         Returns:
             AIResponse: AI响应对象
         """
-        pass
-    
+        raise NotImplementedError("Subclasses must implement chat_completion")
+
     @abstractmethod
     async def stream_chat_completion(self, request: AIRequest) -> AsyncGenerator[StreamChunk, None]:
         """
@@ -400,7 +405,7 @@ class BaseAIAdapter(ABC):
         Yields:
             StreamChunk: 流式响应数据块
         """
-        pass
+        raise NotImplementedError("Subclasses must implement stream_chat_completion")
     
     @abstractmethod
     async def get_available_models(self) -> List[str]:
@@ -410,7 +415,7 @@ class BaseAIAdapter(ABC):
         Returns:
             List[str]: 模型名称列表
         """
-        pass
+        raise NotImplementedError("Subclasses must implement get_available_models")
     
     @abstractmethod
     async def health_check(self) -> bool:
@@ -420,7 +425,7 @@ class BaseAIAdapter(ABC):
         Returns:
             bool: 是否健康
         """
-        pass
+        raise NotImplementedError("Subclasses must implement health_check")
     
     async def process_request(self, request: AIRequest) -> AIResponse:
         """

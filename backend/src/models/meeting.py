@@ -70,7 +70,7 @@ class Meeting(BaseModel):
     meeting_password = Column(String(100), comment='会议密码')
     
     # 关联信息
-    project_id = Column(Integer, ForeignKey('projects.id'), index=True, comment='关联项目ID')
+    project_id = Column(BigInteger, ForeignKey('projects.id'), index=True, comment='关联项目ID')
     organizer_id = Column(Integer, ForeignKey('users.id'), nullable=False, index=True, comment='组织者ID')
     
     # 会议设置 (JSON格式存储)
@@ -240,6 +240,7 @@ class RecordingType(PyEnum):
 class RecordingStatus(PyEnum):
     """录制状态枚举"""
     RECORDING = "RECORDING"      # 录制中
+    PAUSED = "PAUSED"            # 已暂停（采集进程 SIGSTOP，恢复时 SIGCONT）
     PROCESSING = "PROCESSING"    # 处理中
     COMPLETED = "COMPLETED"      # 已完成
     FAILED = "FAILED"           # 失败
@@ -259,7 +260,7 @@ class MeetingRecording(BaseModel):
     __tablename__ = 'meeting_recordings'
     
     # 基本信息 (id inherited from BaseModel)
-    meeting_id = Column(BigInteger, ForeignKey('meetings.id', ondelete='CASCADE'), nullable=False, index=True, comment='会议ID')
+    meeting_id = Column(Integer, ForeignKey('meetings.id', ondelete='CASCADE'), nullable=False, index=True, comment='会议ID')
     recording_name = Column(String(200), nullable=False, comment='录制名称')
     recording_type = Column(Enum(RecordingType), default=RecordingType.FULL_MEETING, nullable=False, index=True, comment='录制类型')
     file_format = Column(Enum(FileFormat), default=FileFormat.MP4, nullable=False, comment='文件格式')
@@ -347,7 +348,7 @@ class MeetingMinutes(BaseModel):
     __tablename__ = 'meeting_minutes'
     
     # 基本信息 (id inherited from BaseModel)
-    meeting_id = Column(BigInteger, ForeignKey('meetings.id', ondelete='CASCADE'), nullable=False, index=True, comment='会议ID')
+    meeting_id = Column(Integer, ForeignKey('meetings.id', ondelete='CASCADE'), nullable=False, index=True, comment='会议ID')
     title = Column(String(200), nullable=False, comment='纪要标题')
     content = Column(Text, comment='纪要内容')
     summary = Column(Text, comment='会议摘要')
@@ -369,10 +370,10 @@ class MeetingMinutes(BaseModel):
     
     # 版本管理
     version = Column(String(20), default='1.0', comment='版本号')
-    parent_minute_id = Column(BigInteger, ForeignKey('meeting_minutes.id'), comment='父纪要ID')
+    parent_minute_id = Column(Integer, ForeignKey('meeting_minutes.id'), comment='父纪要ID')
     
     # 审批信息
-    approved_by = Column(BigInteger, ForeignKey('users.id'), comment='审批者ID')
+    approved_by = Column(Integer, ForeignKey('users.id'), comment='审批者ID')
     approved_at = Column(DateTime, comment='审批时间')
     
     def to_dict(self) -> Dict[str, Any]:
@@ -426,8 +427,8 @@ class MeetingChat(BaseModel):
     __tablename__ = 'meeting_chats'
     
     # 基本信息 (id inherited from BaseModel)
-    meeting_id = Column(BigInteger, ForeignKey('meetings.id', ondelete='CASCADE'), nullable=False, index=True, comment='会议ID')
-    sender_id = Column(BigInteger, ForeignKey('users.id'), nullable=False, index=True, comment='发送者ID')
+    meeting_id = Column(Integer, ForeignKey('meetings.id', ondelete='CASCADE'), nullable=False, index=True, comment='会议ID')
+    sender_id = Column(Integer, ForeignKey('users.id'), nullable=False, index=True, comment='发送者ID')
     
     # 消息内容
     message_type = Column(Enum(MessageType), default=MessageType.TEXT, nullable=False, comment='消息类型')
@@ -435,7 +436,7 @@ class MeetingChat(BaseModel):
     
     # 消息属性
     is_private = Column(Boolean, default=False, comment='是否私聊')
-    recipient_id = Column(BigInteger, ForeignKey('users.id'), comment='接收者ID(私聊时使用)')
+    recipient_id = Column(Integer, ForeignKey('users.id'), comment='接收者ID(私聊时使用)')
     
     # 附加信息 (JSON格式存储)
     message_metadata = Column(JSON, comment='消息元数据')
@@ -484,8 +485,8 @@ class MeetingFile(BaseModel):
     __tablename__ = 'meeting_files'
     
     # 基本信息 (id inherited from BaseModel)
-    meeting_id = Column(BigInteger, ForeignKey('meetings.id', ondelete='CASCADE'), nullable=False, index=True, comment='会议ID')
-    uploader_id = Column(BigInteger, ForeignKey('users.id'), nullable=False, index=True, comment='上传者ID')
+    meeting_id = Column(Integer, ForeignKey('meetings.id', ondelete='CASCADE'), nullable=False, index=True, comment='会议ID')
+    uploader_id = Column(Integer, ForeignKey('users.id'), nullable=False, index=True, comment='上传者ID')
     
     # 文件信息
     file_name = Column(String(255), nullable=False, comment='文件名')
@@ -541,12 +542,35 @@ class MeetingFile(BaseModel):
         return f"<MeetingFile(id={self.id}, meeting_id={self.meeting_id}, file_name='{self.file_name}', status='{self.status}')>"
 
 
+class MeetingTask(BaseModel):
+    """会议任务关联模型
+
+    会议与项目任务的多对多关联：Task 模型本身没有 meeting_id 列，
+    会议-任务的关联关系由本表承载（会议项目集成的 6 个方法
+    link/sync/update-progress 均读写本表）。
+    """
+    __tablename__ = 'meeting_tasks'
+
+    meeting_id = Column(Integer, ForeignKey('meetings.id', ondelete='CASCADE'), nullable=False, index=True, comment='会议ID')
+    task_id = Column(BigInteger, ForeignKey('project_tasks.id', ondelete='CASCADE'), nullable=False, index=True, comment='任务ID')
+    linked_by = Column(Integer, comment='关联人ID')
+    linked_at = Column(DateTime, default=datetime.utcnow, comment='关联时间')
+
+    __table_args__ = (
+        UniqueConstraint('meeting_id', 'task_id', name='uk_meeting_task'),
+        {'mysql_engine': 'InnoDB', 'mysql_charset': 'utf8mb4'},
+    )
+
+    def __repr__(self):
+        return f"<MeetingTask(meeting_id={self.meeting_id}, task_id={self.task_id})>"
+
+
 class MeetingAnalytics(BaseModel):
     """会议分析数据模型"""
     __tablename__ = 'meeting_analytics'
     
     # 基本信息 (id inherited from BaseModel)
-    meeting_id = Column(BigInteger, ForeignKey('meetings.id', ondelete='CASCADE'), nullable=False, unique=True, comment='会议ID')
+    meeting_id = Column(Integer, ForeignKey('meetings.id', ondelete='CASCADE'), nullable=False, unique=True, comment='会议ID')
     
     # 参与度分析
     total_participants = Column(Integer, default=0, comment='总参与人数')

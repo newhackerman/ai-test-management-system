@@ -228,6 +228,8 @@ class RequirementService:
             )
             return updated_requirement
             
+        except (NotFoundError, ValidationError):
+            raise
         except Exception as e:
             logger.error(f"更新需求失败: {str(e)}")
             raise BusinessLogicError(f"更新需求失败: {str(e)}")
@@ -281,6 +283,8 @@ class RequirementService:
             logger.info(f"需求删除成功: {requirement.requirement_code}")
             return deleted
             
+        except (NotFoundError, ValidationError):
+            raise
         except Exception as e:
             logger.error(f"删除需求失败: {str(e)}")
             raise BusinessLogicError(f"删除需求失败: {str(e)}")
@@ -347,6 +351,8 @@ class RequirementService:
             logger.info(f"需求状态更新成功: {requirement.requirement_code} {requirement.status.value} -> {new_status.value}")
             return updated_requirement
             
+        except (NotFoundError, ValidationError):
+            raise
         except Exception as e:
             logger.error(f"更新需求状态失败: {str(e)}")
             raise BusinessLogicError(f"更新需求状态失败: {str(e)}")
@@ -479,6 +485,15 @@ class RequirementService:
             if field not in requirement_data or not requirement_data[field]:
                 raise ValidationError(f"必填字段缺失: {field}")
         
+        # 验证项目存在性（不存在的项目下不得创建需求，避免产生孤儿需求）
+        project = (
+            await self.db.execute(
+                select(Project).where(Project.id == requirement_data['project_id'])
+            )
+        ).scalar_one_or_none()
+        if not project:
+            raise ValidationError(f"项目不存在: {requirement_data['project_id']}")
+
         # 验证枚举值
         if 'requirement_type' in requirement_data:
             try:

@@ -4,7 +4,7 @@
 import logging
 from datetime import datetime, timedelta, date
 from typing import Dict, List, Optional, Any, Tuple
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
 from decimal import Decimal
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -92,9 +92,23 @@ class UsagePattern:
 class EnhancedUsageStatisticsService:
     """增强使用统计服务"""
     
-    def __init__(self, db: AsyncSession):
+    def __init__(self, db: AsyncSession, _owns_session: bool = False):
         self.db = db
+        self._owns_session = _owns_session
         self.logger = logging.getLogger(__name__)
+
+    async def aclose(self) -> None:
+        """关闭自有会话（工厂创建的短生命周期会话：回滚并关闭）。
+
+        调用方传入的会话（_owns_session=False）不由本服务关闭。
+        """
+        if not self._owns_session or self.db is None:
+            return
+        try:
+            await self.db.rollback()
+        finally:
+            await self.db.close()
+            self.db = None
     
     async def get_time_series_data(
         self, 
@@ -798,3 +812,47 @@ class EnhancedUsageStatisticsService:
             
         except Exception:
             return 0
+
+    async def get_system_overview(self, period: str = "daily") -> Dict[str, Any]:
+        """系统总览：聚合模型使用、用户活跃与性能指标。
+
+        Called by the cache-preheating scheduler (``_preheat_system_stats``)
+        to warm the statistics cache. Aggregates the existing metric
+        methods; no new queries are introduced here.
+        """
+        models = await self.get_model_usage_metrics(period=period, limit=20)
+        users = await self.get_user_activity_metrics(period=period, limit=50)
+        performance = await self.get_performance_metrics(period=period)
+        return {
+            "period": period,
+            "total_requests": sum(m.requests for m in models),
+            "total_tokens": sum(m.tokens for m in models),
+            "total_cost": round(sum(m.cost for m in models), 4),
+            "active_users": len(users),
+            "avg_response_time": performance.avg_response_time,
+            "error_rate": performance.error_rate,
+            "availability": performance.availability,
+            "models": [asdict(m) for m in models],
+            "top_users": [asdict(u) for u in users[:10]],
+            "performance": asdict(performance),
+        }
+
+
+async def get_usage_statistics_service(
+    db: AsyncSession = None,
+) -> EnhancedUsageStatisticsService:
+    """获取增强使用统计服务实例（供缓存预热等后台任务使用）。
+
+    短生命周期会话（根因修复）：无显式会话时每次调用新建一个会话，
+    调用方用完须 ``await service.aclose()``（回滚并关闭）。不再返回
+    进程级单例——单例会话的首个读会隐式开启事务并挂在进程生命周期
+    内，阻塞 recover.sh 的建库步骤（2026-11-07 14:20 看护重建卡约
+    4 分钟即因此）。显式传入会话时调用方拥有该会话（行为不变）。
+    """
+    if db is not None:
+        return EnhancedUsageStatisticsService(db)
+    from ..core.database import AsyncSessionLocal
+
+    if AsyncSessionLocal is None:
+        raise RuntimeError("Async database engine not available")
+    return EnhancedUsageStatisticsService(AsyncSessionLocal(), _owns_session=True)

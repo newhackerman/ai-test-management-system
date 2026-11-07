@@ -1,12 +1,25 @@
 """
 仪表板管理数据模型
+
+建表归属说明（第 11 项收敛后）：本文件的 6 张表（dashboard_configs /
+widget_definitions / color_schemes / user_color_preferences /
+dashboard_data_cache / websocket_connections）挂在共享 Base
+（models.base）上，由 init_database 与 rebuild_db.py 的 create_all
+统一创建。此前它们挂在 core.database 的独立 Base 上，只能靠启动
+建表，与迁移链 / create_all 各走各的。
+
+注意：color_scheme.py / dashboard_config.py / dashboard_data_cache.py /
+widget_definition.py / websocket_connection.py 里还有同名表的第二套
+定义（各自独立的 declarative_base，仅供 ORM 查询用，未参与建表），
+且列并不完全相同（例如单文件版 dashboard_data_cache 多 10 列、
+widget_definitions 多 5 列）。合并它们需要先对齐列并改所有 import，
+风险大于收益，故保留现状、此处只收敛建表路径。
 """
 from sqlalchemy import Column, BigInteger, String, Text, Enum, DateTime, JSON, Integer, Boolean, DECIMAL
-from sqlalchemy.ext.declarative import declarative_base
 from datetime import datetime
 from enum import Enum as PyEnum
 
-from ..core.database import Base
+from ..models.base import Base
 
 class RoleType(PyEnum):
     """角色类型枚举"""

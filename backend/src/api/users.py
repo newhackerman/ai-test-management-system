@@ -28,6 +28,29 @@ from ..api.auth import get_current_user
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
+
+def _require_user_permission(current_user: User, permission: str) -> None:
+    """用户管理端点的权限守卫。
+
+    与 src/decorators/permission.py 的 require_permission 语义一致：
+    超级用户拥有全部权限，否则需要对应权限码（user:view /
+    user:create / user:edit / user:delete / user:lock /
+    user:reset_password）。此前各端点只有 "# TODO: 添加权限检查逻辑"
+    占位，任意登录用户均可调用（特权提升）。
+    """
+    if getattr(current_user, "is_superuser", False):
+        return
+    try:
+        perms = getattr(current_user, "permissions", None) or []
+    except Exception:
+        perms = []
+    codes = {c if isinstance(c, str) else getattr(c, "code", "") for c in perms}
+    if permission not in codes:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"需要权限: {permission}",
+        )
+
 async def get_user_service(session: AsyncSession = Depends(get_async_session)) -> UserService:
     """获取用户服务实例"""
     return UserService(session)
@@ -46,8 +69,7 @@ async def get_users(
 ):
     """获取用户列表"""
     try:
-        # 检查权限
-        # TODO: 添加权限检查逻辑
+        _require_user_permission(current_user, "user:view")
         
         result = await user_service.get_users_paginated(
             skip=skip,
@@ -67,6 +89,8 @@ async def get_users(
             total_pages=(result["total"] + limit - 1) // limit
         )
         
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"获取用户列表失败: {e}")
         raise internal_server_error("获取用户列表失败", str(e))
@@ -79,6 +103,7 @@ async def batch_update_users_static(
 ):
     """批量操作用户"""
     try:
+        _require_user_permission(current_user, "user:edit")
         result = await user_service.batch_operation(
             user_ids=operation.user_ids,
             action=operation.action,
@@ -102,6 +127,7 @@ async def export_users_static(
 ):
     """导出用户数据"""
     try:
+        _require_user_permission(current_user, "user:view")
         users = await user_service.export_users(search=search, status=status, role=role)
         output = io.StringIO()
         writer = csv.writer(output)
@@ -127,6 +153,8 @@ async def export_users_static(
             media_type="text/csv",
             headers={"Content-Disposition": f"attachment; filename=users_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"}
         )
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"导出用户数据失败: {e}")
         raise internal_server_error("导出用户数据失败", str(e))
@@ -139,6 +167,7 @@ async def import_users_static(
 ):
     """导入用户数据"""
     try:
+        _require_user_permission(current_user, "user:create")
         if not file.filename or not file.filename.lower().endswith((".csv", ".xlsx")):
             raise bad_request_error("只支持 CSV、XLSX 文件")
 
@@ -165,6 +194,8 @@ async def get_user(
 ):
     """获取用户详情"""
     try:
+        if current_user.id != user_id:
+            _require_user_permission(current_user, "user:view")
         user = await user_service.get_user_by_id(user_id)
         if not user:
             raise not_found_error("用户不存在")
@@ -190,14 +221,15 @@ async def create_user(
 ):
     """创建用户"""
     try:
-        # 检查权限
-        # TODO: 添加权限检查逻辑
+        _require_user_permission(current_user, "user:create")
         
         new_user = await user_service.create_user(user_data.dict())
         return UserResponse.from_orm(new_user)
         
     except ValueError as e:
         raise bad_request_error(str(e))
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"创建用户失败: {e}")
         raise internal_server_error("创建用户失败", str(e))
@@ -211,10 +243,9 @@ async def update_user(
 ):
     """更新用户信息"""
     try:
-        # 检查权限
-        if current_user.id != user_id and not current_user.is_superuser:
-            # TODO: 检查是否有管理权限
-            pass
+        # 检查权限：本人可改自己的资料，改他人需要 user:edit 权限
+        if current_user.id != user_id:
+            _require_user_permission(current_user, "user:edit")
         
         user = await user_service.get_user_by_id(user_id)
         if not user:
@@ -239,8 +270,7 @@ async def delete_user(
 ):
     """删除用户"""
     try:
-        # 检查权限
-        # TODO: 添加权限检查逻辑
+        _require_user_permission(current_user, "user:delete")
         
         # 不能删除自己
         if current_user.id == user_id:
@@ -268,8 +298,7 @@ async def lock_user(
 ):
     """锁定用户"""
     try:
-        # 检查权限
-        # TODO: 添加权限检查逻辑
+        _require_user_permission(current_user, "user:lock")
         
         # 不能锁定自己
         if current_user.id == user_id:
@@ -296,8 +325,7 @@ async def unlock_user(
 ):
     """解锁用户"""
     try:
-        # 检查权限
-        # TODO: 添加权限检查逻辑
+        _require_user_permission(current_user, "user:lock")
         
         user = await user_service.get_user_by_id(user_id)
         if not user:
@@ -321,8 +349,7 @@ async def reset_user_password(
 ):
     """重置用户密码"""
     try:
-        # 检查权限
-        # TODO: 添加权限检查逻辑
+        _require_user_permission(current_user, "user:reset_password")
         
         user = await user_service.get_user_by_id(user_id)
         if not user:
@@ -372,8 +399,7 @@ async def assign_roles_to_user(
 ):
     """为用户分配角色"""
     try:
-        # 检查权限
-        # TODO: 添加权限检查逻辑
+        _require_user_permission(current_user, "user:assign_role")
         
         user = await user_service.get_user_by_id(user_id)
         if not user:
@@ -402,8 +428,7 @@ async def remove_role_from_user(
 ):
     """移除用户角色"""
     try:
-        # 检查权限
-        # TODO: 添加权限检查逻辑
+        _require_user_permission(current_user, "user:assign_role")
         
         user = await user_service.get_user_by_id(user_id)
         if not user:
@@ -427,11 +452,13 @@ async def get_user_statistics(
 ):
     """获取用户统计信息"""
     try:
-        # TODO: 检查权限
+        _require_user_permission(current_user, "user:view")
         
         stats = await user_service.get_user_statistics()
         return stats
         
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"获取用户统计失败: {e}")
         raise internal_server_error("获取用户统计失败", str(e))
@@ -446,7 +473,7 @@ async def advanced_user_search(
 ):
     """高级用户搜索"""
     try:
-        # TODO: 检查权限
+        _require_user_permission(current_user, "user:view")
         
         result = await user_service.search_users_advanced(
             filters=filters,
@@ -460,6 +487,8 @@ async def advanced_user_search(
             "filters_applied": result["filters_applied"]
         }
         
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"高级用户搜索失败: {e}")
         raise internal_server_error("高级用户搜索失败", str(e))
@@ -473,14 +502,15 @@ async def get_user_activity(
 ):
     """获取用户活动日志"""
     try:
-        # 检查权限：只能查看自己的活动或管理员权限
-        if current_user.id != user_id and not current_user.is_superuser:
-            # TODO: 检查管理权限
-            pass
+        # 检查权限：只能查看自己的活动，查看他人需要 user:view 权限
+        if current_user.id != user_id:
+            _require_user_permission(current_user, "user:view")
         
         activity_logs = await user_service.get_user_activity_log(user_id, limit)
         return {"activity_logs": activity_logs}
         
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"获取用户活动失败: {e}")
         raise internal_server_error("获取用户活动失败", str(e))

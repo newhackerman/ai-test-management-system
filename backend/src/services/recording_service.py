@@ -16,6 +16,7 @@ import logging
 import os
 import json
 import uuid
+import signal
 import subprocess
 import tempfile
 from datetime import datetime, timedelta
@@ -28,11 +29,11 @@ from sqlalchemy import select, and_, or_, func, desc, asc, text, update, delete
 from sqlalchemy.orm import selectinload, joinedload
 from fastapi import Depends
 
-from ..core.database import get_async_session
+from ..core.database import AsyncSessionLocal, get_async_session
 from ..core.exceptions import ValidationError, NotFoundError, PermissionError
 from ..models.meeting import (
     Meeting, MeetingRecording, RecordingType, RecordingStatus, FileFormat,
-    MeetingParticipant, ParticipantRole
+    MeetingParticipant, ParticipantRole, MeetingStatus
 )
 from ..models.user import User
 from ..services.permission_service import PermissionService
@@ -105,12 +106,38 @@ class RecordingProcess:
                 self.status = "STOPPED"
                 logger.info(f"Recording process stopped for recording {self.recording_id}")
                 return True
-            
+
             return False
-            
+
         except Exception as e:
             logger.error(f"Failed to stop recording process: {e}")
             self.status = "FAILED"
+            return False
+
+    async def pause(self) -> bool:
+        """暂停采集进程：SIGSTOP 冻结 ffmpeg，输出文件保持打开，恢复时继续写入同一文件。"""
+        try:
+            if self.process and self.process.poll() is None:
+                self.process.send_signal(signal.SIGSTOP)
+                self.status = "PAUSED"
+                logger.info(f"Recording process paused for recording {self.recording_id}")
+                return True
+            return False
+        except Exception as e:
+            logger.error(f"Failed to pause recording process: {e}")
+            return False
+
+    async def resume(self) -> bool:
+        """恢复采集进程：SIGCONT 解冻 ffmpeg。"""
+        try:
+            if self.process and self.process.poll() is None:
+                self.process.send_signal(signal.SIGCONT)
+                self.status = "RECORDING"
+                logger.info(f"Recording process resumed for recording {self.recording_id}")
+                return True
+            return False
+        except Exception as e:
+            logger.error(f"Failed to resume recording process: {e}")
             return False
     
     def _build_ffmpeg_command(self) -> List[str]:
@@ -186,6 +213,19 @@ class RecordingService:
         
         # 活跃录制进程管理
         self.active_recordings: Dict[int, RecordingProcess] = {}
+
+    async def _notify_best_effort(self, method_name: str, *args) -> None:
+        """录制通知是尽力而为的：MeetingNotificationService 目前没有
+        notify_recording_* 系列方法，缺失时只记日志，不让通知失败
+        拖垮录制的状态流转。"""
+        method = getattr(self.notification_service, method_name, None)
+        if method is None:
+            logger.warning(f"跳过录制通知：{method_name} 未实现")
+            return
+        try:
+            await method(*args)
+        except Exception as e:
+            logger.warning(f"录制通知 {method_name} 失败（已忽略）: {e}")
         
         # 存储配置
         self.storage_config = {
@@ -223,7 +263,10 @@ class RecordingService:
             
             # 2. 验证会议状态
             meeting = await self._get_meeting(meeting_id)
-            if meeting.status != 'IN_PROGRESS':
+            # 注意：MeetingStatus 是普通 PyEnum（非 str 枚举），成员与
+            # 字符串永远不相等；此前这里写 'IN_PROGRESS' 导致任何会议
+            # 都无法开始录制（第 14 项补用例时发现的真缺陷）。
+            if meeting.status != MeetingStatus.IN_PROGRESS:
                 raise ValidationError("只能在进行中的会议中开始录制")
             
             # 3. 检查是否已有录制
@@ -246,7 +289,7 @@ class RecordingService:
                 recording_name=recording_name,
                 recording_type=RecordingType(validated_config.get('type', 'FULL_MEETING')),
                 file_format=FileFormat(validated_config.get('format', 'MP4')),
-                file_path='',  # 将在录制完成后设置
+                file_path='',  # 进程启动成功后回填 output_file（见下）
                 recording_status=RecordingStatus.RECORDING,
                 start_time=datetime.utcnow(),
                 created_by=user_id,
@@ -270,12 +313,23 @@ class RecordingService:
             
             # 10. 存储活跃录制信息
             self.active_recordings[recording.id] = recording_process
+
+            # 10b. 持久化输出文件路径：此前 file_path 恒为 ''，停止后的后处理
+            # 永远报 "Recording file not found: "；回填后库里指向预期的输出路径
+            #（无头环境下 ffmpeg 因无 X11/PulseAudio 仍建不出文件，后处理仍会
+            # 失败，但报错会带出真实路径而非空串）。
+            if recording_process.output_file is not None:
+                recording.file_path = str(recording_process.output_file)
+                await self.db.commit()
+                # commit 后属性过期，需 refresh，否则路由层 from_orm 取值会
+                # 抛 MissingGreenlet（与 pause/resume 的同类修复一致）。
+                await self.db.refresh(recording)
             
             # 11. 缓存录制状态
             await self._cache_recording_status(recording.id, recording_process.get_status())
             
             # 12. 通知参与者录制开始
-            await self.notification_service.notify_recording_started(meeting_id, recording)
+            await self._notify_best_effort("notify_recording_started", meeting_id, recording)
             
             logger.info(f"Recording started successfully: {recording.id}")
             return recording
@@ -336,7 +390,7 @@ class RecordingService:
             await self._start_post_processing(recording)
             
             # 8. 通知参与者录制结束
-            await self.notification_service.notify_recording_stopped(recording.meeting_id, recording)
+            await self._notify_best_effort("notify_recording_stopped", recording.meeting_id, recording)
             
             logger.info(f"Recording stopped successfully: {recording_id}")
             return recording
@@ -346,6 +400,57 @@ class RecordingService:
             await self.db.rollback()
             raise
     
+    async def pause_recording(self, recording_id: int, user_id: int) -> MeetingRecording:
+        """暂停录制：仅 RECORDING -> PAUSED；与停止用同一权限（创建者/组织者/主持人）。
+
+        若采集进程在本后端进程内存中（active_recordings），SIGSTOP 冻结 ffmpeg；
+        若进程不在内存中（如后端重启后），仅翻转数据库状态并记日志——此时
+        底层采集实际仍在跑，调用方应以返回的状态为准，不保证已冻结。
+        """
+        try:
+            recording = await self._get_recording(recording_id)
+            await self._check_stop_permission(recording, user_id)
+            if recording.recording_status != RecordingStatus.RECORDING:
+                raise ValidationError("只有进行中的录制可以暂停")
+            if recording_id in self.active_recordings:
+                await self.active_recordings[recording_id].pause()
+            else:
+                logger.warning(f"暂停录制 {recording_id}：采集进程不在本进程内存中，仅更新状态")
+            recording.recording_status = RecordingStatus.PAUSED
+            recording.updated_by = user_id
+            await self.db.commit()
+            # commit 后属性过期：立即 refresh，否则路由层 from_orm 同步读属性会报 MissingGreenlet
+            await self.db.refresh(recording)
+            logger.info(f"Recording paused successfully: {recording_id}")
+            return recording
+        except Exception as e:
+            logger.error(f"Failed to pause recording: {e}")
+            await self.db.rollback()
+            raise
+
+    async def resume_recording(self, recording_id: int, user_id: int) -> MeetingRecording:
+        """恢复录制：仅 PAUSED -> RECORDING；权限与暂停相同。"""
+        try:
+            recording = await self._get_recording(recording_id)
+            await self._check_stop_permission(recording, user_id)
+            if recording.recording_status != RecordingStatus.PAUSED:
+                raise ValidationError("只有已暂停的录制可以恢复")
+            if recording_id in self.active_recordings:
+                await self.active_recordings[recording_id].resume()
+            else:
+                logger.warning(f"恢复录制 {recording_id}：采集进程不在本进程内存中，仅更新状态")
+            recording.recording_status = RecordingStatus.RECORDING
+            recording.updated_by = user_id
+            await self.db.commit()
+            # 同上：commit 后 refresh，避免 from_orm 触发过期属性懒加载
+            await self.db.refresh(recording)
+            logger.info(f"Recording resumed successfully: {recording_id}")
+            return recording
+        except Exception as e:
+            logger.error(f"Failed to resume recording: {e}")
+            await self.db.rollback()
+            raise
+
     async def process_recording(self, recording_id: int):
         """
         处理录制文件
@@ -404,7 +509,7 @@ class RecordingService:
             await self._cleanup_temp_files(recording_id)
             
             # 11. 发送完成通知
-            await self.notification_service.notify_recording_completed(recording.meeting_id, recording)
+            await self._notify_best_effort("notify_recording_completed", recording.meeting_id, recording)
             
             logger.info(f"Recording processing completed: {recording_id}")
             
@@ -417,7 +522,7 @@ class RecordingService:
                 recording.recording_status = RecordingStatus.FAILED
                 await self.db.commit()
                 
-                await self.notification_service.notify_recording_failed(recording.meeting_id, recording, str(e))
+                await self._notify_best_effort("notify_recording_failed", recording.meeting_id, recording, str(e))
             except Exception as update_error:
                 logger.error(f"Failed to update recording status: {update_error}")   
  
@@ -866,8 +971,30 @@ class RecordingService:
         result = await self.db.execute(query)
         return result.scalar_one_or_none()
     
-    async def _validate_recording_config(self, config: Dict[str, Any]) -> Dict[str, Any]:
-        """验证录制配置"""
+    async def _validate_recording_config(self, config) -> Dict[str, Any]:
+        """验证录制配置
+
+        归一化（第 14 项补用例时发现的真缺陷）：路由传进来的是
+        StartRecordingRequest（Pydantic 模型），不是 dict——此前
+        直接调 config.get() 导致开始录制恒 500。先转 dict，再把
+        请求字段名映射为校验器要的键（recording_name→name、
+        recording_type→type、file_format→format）；quality 的
+        'standard'（请求模型的默认值）映射为校验器的 'medium'。
+        """
+        if hasattr(config, "model_dump"):
+            config = config.model_dump(mode="json")
+        if not isinstance(config, dict):
+            config = dict(config)
+        config = {
+            "type": config.get("type", config.get("recording_type", "FULL_MEETING")),
+            "format": config.get("format", config.get("file_format", "MP4")),
+            "quality": {"standard": "medium"}.get(
+                config.get("quality", "medium"), config.get("quality", "medium")
+            ),
+            "name": config.get("name", config.get("recording_name", "")),
+            "resolution": config.get("resolution", "1280x720"),
+            "framerate": config.get("framerate", 30),
+        }
         # 使用录制验证器
         is_valid, errors = recording_validator.validate_recording_config(config)
         
@@ -969,10 +1096,24 @@ class RecordingService:
         raise PermissionError("无权限删除录制")
     
     async def _start_post_processing(self, recording: MeetingRecording):
-        """启动后处理任务"""
-        # 这里可以使用Celery或其他任务队列
-        # 暂时使用异步任务
-        asyncio.create_task(self.process_recording(recording.id))
+        """启动后处理任务（独立会话）。
+
+        后处理必须用自己的会话：此前直接 create_task(self.process_recording(...))
+        与请求共享 self.db，会在请求结束时与 get_async_session 的 session.close()
+        并发使用同一条 MySQL 连接，触发 asyncmy 2014 'Command Out of Sync'，
+        close() 抛错 → "Exception in ASGI application" → uvicorn 关闭该 keep-alive
+        连接，客户端下一次复用该连接的请求直接失败（RemoteProtocolError/ReadTimeout）。
+        """
+        asyncio.create_task(self._run_post_processing_in_new_session(recording.id))
+
+    async def _run_post_processing_in_new_session(self, recording_id: int):
+        """以后处理专用会话执行 process_recording，与请求会话完全隔离。"""
+        if AsyncSessionLocal is None:
+            logger.error("AsyncSessionLocal 未初始化，跳过录制后处理")
+            return
+        async with AsyncSessionLocal() as session:
+            service = RecordingService(session)
+            await service.process_recording(recording_id)
     
     async def _process_video_file(self, recording: MeetingRecording) -> str:
         """处理视频文件"""

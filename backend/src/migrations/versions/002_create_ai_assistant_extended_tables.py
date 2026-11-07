@@ -22,10 +22,10 @@ def upgrade() -> None:
     # 1. Create ai_suggestions table
     op.create_table(
         'ai_suggestions',
-        sa.Column('id', sa.BigInteger(), nullable=False, comment='主键ID'),
-        sa.Column('session_id', sa.BigInteger(), nullable=True, comment='关联会话ID'),
-        sa.Column('user_id', sa.BigInteger(), nullable=False, comment='用户ID'),
-        sa.Column('project_id', sa.BigInteger(), nullable=True, comment='项目ID'),
+        sa.Column('id', sa.Integer(), nullable=False, comment='主键ID'),
+        sa.Column('session_id', sa.Integer(), nullable=True, comment='关联会话ID'),
+        sa.Column('user_id', sa.Integer(), nullable=False, comment='用户ID'),
+        sa.Column('project_id', sa.Integer(), nullable=True, comment='项目ID'),
         sa.Column('suggestion_type', sa.Enum('OPTIMIZATION', 'IMPROVEMENT', 'RISK_MITIGATION', 'BEST_PRACTICE', 'AUTOMATION', name='suggestiontype'), 
                  nullable=False, comment='建议类型'),
         sa.Column('category', sa.String(100), nullable=False, comment='建议分类'),
@@ -75,8 +75,8 @@ def upgrade() -> None:
                  server_default=sa.text('CURRENT_TIMESTAMP'), comment='创建时间'),
         sa.Column('updated_at', sa.DateTime(), nullable=False, 
                  server_default=sa.text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'), comment='更新时间'),
-        sa.Column('created_by', sa.BigInteger(), nullable=True, comment='创建人ID'),
-        sa.Column('updated_by', sa.BigInteger(), nullable=True, comment='更新人ID'),
+        sa.Column('created_by', sa.Integer(), nullable=True, comment='创建人ID'),
+        sa.Column('updated_by', sa.Integer(), nullable=True, comment='更新人ID'),
         sa.Column('deleted_at', sa.DateTime(), nullable=True, comment='删除时间'),
         
         sa.PrimaryKeyConstraint('id'),
@@ -106,10 +106,10 @@ def upgrade() -> None:
     # 2. Create ai_requirements_analysis table
     op.create_table(
         'ai_requirements_analysis',
-        sa.Column('id', sa.BigInteger(), nullable=False, comment='主键ID'),
-        sa.Column('session_id', sa.BigInteger(), nullable=True, comment='关联会话ID'),
-        sa.Column('user_id', sa.BigInteger(), nullable=False, comment='用户ID'),
-        sa.Column('project_id', sa.BigInteger(), nullable=True, comment='项目ID'),
+        sa.Column('id', sa.Integer(), nullable=False, comment='主键ID'),
+        sa.Column('session_id', sa.Integer(), nullable=True, comment='关联会话ID'),
+        sa.Column('user_id', sa.Integer(), nullable=False, comment='用户ID'),
+        sa.Column('project_id', sa.Integer(), nullable=True, comment='项目ID'),
         sa.Column('analysis_name', sa.String(200), nullable=False, comment='分析名称'),
         sa.Column('analysis_type', sa.Enum('QUALITY', 'COVERAGE', 'COMPLETENESS', 'CONSISTENCY', 'TRACEABILITY', name='analysistype'), 
                  nullable=False, comment='分析类型'),
@@ -154,8 +154,8 @@ def upgrade() -> None:
                  server_default=sa.text('CURRENT_TIMESTAMP'), comment='创建时间'),
         sa.Column('updated_at', sa.DateTime(), nullable=False, 
                  server_default=sa.text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'), comment='更新时间'),
-        sa.Column('created_by', sa.BigInteger(), nullable=True, comment='创建人ID'),
-        sa.Column('updated_by', sa.BigInteger(), nullable=True, comment='更新人ID'),
+        sa.Column('created_by', sa.Integer(), nullable=True, comment='创建人ID'),
+        sa.Column('updated_by', sa.Integer(), nullable=True, comment='更新人ID'),
         sa.Column('deleted_at', sa.DateTime(), nullable=True, comment='删除时间'),
         
         sa.PrimaryKeyConstraint('id'),
@@ -182,9 +182,9 @@ def upgrade() -> None:
     # 3. Create ai_usage_stats table
     op.create_table(
         'ai_usage_stats',
-        sa.Column('id', sa.BigInteger(), nullable=False, comment='主键ID'),
-        sa.Column('user_id', sa.BigInteger(), nullable=False, comment='用户ID'),
-        sa.Column('session_id', sa.BigInteger(), nullable=True, comment='会话ID'),
+        sa.Column('id', sa.Integer(), nullable=False, comment='主键ID'),
+        sa.Column('user_id', sa.Integer(), nullable=False, comment='用户ID'),
+        sa.Column('session_id', sa.Integer(), nullable=True, comment='会话ID'),
         sa.Column('ai_provider', sa.String(50), nullable=False, comment='AI服务提供商'),
         sa.Column('ai_model', sa.String(100), nullable=False, comment='AI模型名称'),
         sa.Column('operation_type', sa.Enum('CHAT', 'SUGGESTION', 'ANALYSIS', 'TEMPLATE', 'OTHER', name='operationtype'), 
@@ -245,10 +245,10 @@ def upgrade() -> None:
     # 4. Create ai_template_usage table
     op.create_table(
         'ai_template_usage',
-        sa.Column('id', sa.BigInteger(), nullable=False, comment='主键ID'),
-        sa.Column('template_id', sa.BigInteger(), nullable=False, comment='模板ID'),
-        sa.Column('user_id', sa.BigInteger(), nullable=False, comment='用户ID'),
-        sa.Column('session_id', sa.BigInteger(), nullable=True, comment='会话ID'),
+        sa.Column('id', sa.Integer(), nullable=False, comment='主键ID'),
+        sa.Column('template_id', sa.Integer(), nullable=False, comment='模板ID'),
+        sa.Column('user_id', sa.Integer(), nullable=False, comment='用户ID'),
+        sa.Column('session_id', sa.Integer(), nullable=True, comment='会话ID'),
         sa.Column('ai_provider', sa.String(50), nullable=True, comment='AI服务提供商'),
         sa.Column('ai_model', sa.String(100), nullable=True, comment='AI模型名称'),
         

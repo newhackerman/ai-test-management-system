@@ -92,7 +92,8 @@ export const useRecording = (options: UseRecordingOptions) => {
       setRecordings(recordingList)
       
       // 查找活跃的录制
-      const active = recordingList.find(r => r.recordingStatus === 'RECORDING')
+      // 已暂停的录制仍是活跃录制（可恢复或停止），不能只认 RECORDING
+      const active = recordingList.find(r => r.recordingStatus === 'RECORDING' || r.recordingStatus === 'PAUSED')
       setActiveRecording(active || null)
     } catch (err) {
       console.error('获取录制列表失败:', err)
@@ -360,7 +361,7 @@ export const useRecording = (options: UseRecordingOptions) => {
   // 计算录制状态
   const recordingState = {
     isRecording: activeRecording?.recordingStatus === 'RECORDING',
-    isPaused: activeRecording?.recordingStatus === 'RECORDING' && false, // TODO: 添加暂停状态支持
+    isPaused: activeRecording?.recordingStatus === 'PAUSED',
     isProcessing: activeRecording?.recordingStatus === 'PROCESSING',
     isCompleted: recordings.some(r => r.recordingStatus === 'COMPLETED'),
     hasError: recordings.some(r => r.recordingStatus === 'FAILED')

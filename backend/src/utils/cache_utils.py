@@ -14,8 +14,18 @@ from functools import wraps
 from datetime import datetime, timedelta
 import redis
 import asyncio
+# NOTE (round 5 / U2): the old code imported `aioredis` here. aioredis 2.0.1
+# (last release, 2021) cannot be imported on Python 3.12 at all:
+# without setuptools it raises ModuleNotFoundError (distutils removed);
+# with setuptools it raises TypeError (duplicate base class TimeoutError),
+# which the old ImportError-only guard did not catch, so importing this
+# module crashed backend startup (verified in a fresh venv, exit 1).
+# aioredis was merged into redis-py as `redis.asyncio` — the official
+# successor, shipped with the already-declared `redis` package — so the
+# async client now comes from there and `aioredis` is deliberately NOT
+# listed in requirements.txt.
 try:
-    import aioredis
+    import redis.asyncio as aioredis
     AIOREDIS_AVAILABLE = True
 except ImportError:
     aioredis = None

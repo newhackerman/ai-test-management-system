@@ -52,6 +52,17 @@ def unauthorized_error(message: str = "未授权访问", detail: Optional[str] =
     )
 
 
+def locked_error(message: str = "用户账户不可用", detail: Optional[str] = None) -> APIError:
+    """423 账户锁定错误（RFC 4918）：凭据正确但账户因多次失败登录被锁定，
+    与 401（凭据错误）区分开，客户端可据此提示“稍后再试”而非“密码错误”。"""
+    return APIError(
+        status_code=423,
+        message=message,
+        detail=detail,
+        error_code="ACCOUNT_LOCKED"
+    )
+
+
 def forbidden_error(message: str = "权限不足", detail: Optional[str] = None) -> APIError:
     """403 禁止访问错误"""
     return APIError(

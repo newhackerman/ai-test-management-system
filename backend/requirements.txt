@@ -65,3 +65,18 @@ black
 flake8
 isort
 mypy
+
+# Runtime dependencies (added 2026-11-05, round 5 / U2: previously missing,
+# imported by backend code but not declared; fresh installs failed to start)
+# NOTE: `aioredis` is deliberately NOT listed: its last release 2.0.1 cannot
+# be imported on Python 3.12 at all, and with setuptools present it crashes
+# backend startup. Its only consumer (src/utils/cache_utils.py) now uses
+# `redis.asyncio`, shipped with the already-declared `redis` package.
+pymysql
+requests
+apscheduler
+bleach
+PyJWT
+python-magic
+psutil
+scikit-learn

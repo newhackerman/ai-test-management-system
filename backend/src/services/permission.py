@@ -658,14 +658,15 @@ class PermissionService:
         return list(result.scalars().all())
     
     def initialize_default_permissions(self) -> None:
-        """初始化默认权限 - 根据需求文档的权限矩阵"""
-        # 检查是否已初始化
-        existing_count = self.db.execute(
-            select(func.count(Permission.id))
-        ).scalar()
-        
-        if existing_count > 0:
-            return
+        """初始化默认权限 - 根据需求文档的权限矩阵
+
+        幂等（第 12 项）：按 code 逐条跳过已存在的，只补缺失的。
+        此前是“表中已有任意行就直接返回”，半建库（例如只种了 10 条）
+        之后再跑重建也永远补不齐，admin 角色只能拿到部分权限。
+        """
+        existing_codes = {
+            code for (code,) in self.db.execute(select(Permission.code)).all()
+        }
         
         # 根据需求文档权限矩阵定义的权限列表
         default_permissions = [
@@ -735,24 +736,23 @@ class PermissionService:
             {"name": "数据清理", "code": "data:clean", "module": "data_management", "action": "clean", "description": "清理数据"},
         ]
         
-        # 创建默认权限
+        # 创建默认权限（只补缺失的 code，已存在的跳过）
         for perm_data in default_permissions:
+            if perm_data["code"] in existing_codes:
+                continue
             permission = Permission(**perm_data)
             self.db.add(permission)
-        
+
         self.db.commit()
     
     def initialize_default_roles(self) -> None:
-        """初始化默认角色 - 根据需求文档定义的9种系统角色"""
-        # 检查是否已初始化
-        existing_count = self.db.execute(
-            select(func.count(Role.id))
-        ).scalar()
-        
-        if existing_count > 0:
-            return
-        
-        # 初始化默认权限
+        """初始化默认角色 - 根据需求文档定义的9种系统角色
+
+        幂等（第 12 项）：按 code 逐个处理——已存在的角色跳过创建，
+        但仍补齐它缺失的权限关联；不存在的才创建。此前是“已有任意
+        角色就直接返回”，半建库后重建永远修不好角色权限。
+        """
+        # 初始化默认权限（本身已幂等：只补缺失的 code）
         self.initialize_default_permissions()
         
         # 获取所有权限
@@ -923,22 +923,36 @@ class PermissionService:
             }
         ]
         
-        # 创建默认角色
+        # 创建默认角色（已存在的按 code 复用，并补齐缺失的权限关联）
         for role_data in default_roles:
             permissions = role_data.pop("permissions")
-            role = Role(**role_data)
-            self.db.add(role)
-            self.db.flush()  # 获取角色ID
-            
-            # 分配权限（过滤掉None值）
+            role = self.db.execute(
+                select(Role).where(Role.code == role_data["code"])
+            ).scalar_one_or_none()
+            if role is None:
+                role = Role(**role_data)
+                self.db.add(role)
+                self.db.flush()  # 获取角色ID
+
+            # 分配权限（过滤掉None值；已有关联的跳过）
             for permission in permissions:
-                if permission:  # 确保权限存在
+                if not permission:  # 确保权限存在
+                    continue
+                existing_link = self.db.execute(
+                    select(RolePermission).where(
+                        and_(
+                            RolePermission.role_id == role.id,
+                            RolePermission.permission_id == permission.id,
+                        )
+                    )
+                ).scalar_one_or_none()
+                if existing_link is None:
                     role_permission = RolePermission(
                         role_id=role.id,
                         permission_id=permission.id
                     )
                     self.db.add(role_permission)
-        
+
         self.db.commit()
     
     def _check_role_name_exists(self, name: str) -> bool:

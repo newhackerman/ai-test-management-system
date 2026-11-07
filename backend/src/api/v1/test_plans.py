@@ -119,7 +119,7 @@ class TestPlanResponse(BaseModel):
     planned_end_date: Optional[date] = Field(None, description="计划结束日期")
     actual_start_date: Optional[date] = Field(None, description="实际开始日期")
     actual_end_date: Optional[date] = Field(None, description="实际结束日期")
-    test_manager_id: int = Field(..., description="测试经理ID")
+    test_manager_id: Optional[int] = Field(None, description="测试经理ID")
     created_by: int = Field(..., description="创建人ID")
     total_cases: int = Field(..., description="总用例数")
     executed_cases: int = Field(..., description="已执行用例数")
@@ -215,6 +215,8 @@ async def create_test_plan(
         raise HTTPException(status_code=400, detail=str(e))
     except PermissionError as e:
         raise HTTPException(status_code=403, detail=str(e))
+    except NotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
     except BusinessLogicError as e:
         raise HTTPException(status_code=422, detail=str(e))
     except Exception as e:

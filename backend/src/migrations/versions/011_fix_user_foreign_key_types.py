@@ -2,7 +2,7 @@
 修复项目管理模块用户外键字段类型
 
 Revision ID: 011_fix_user_foreign_key_types
-Revises: 010_add_project_user_foreign_keys
+Revises: 010_add_project_user_fks
 Create Date: 2024-12-20 12:30:00.000000
 
 本迁移脚本修复项目管理模块中用户外键字段的数据类型，
@@ -20,7 +20,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = '011_fix_user_foreign_key_types'
-down_revision = '010_add_project_user_foreign_keys'
+down_revision = '010_add_project_user_fks'
 branch_labels = None
 depends_on = None
 

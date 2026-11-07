@@ -312,34 +312,34 @@ async def analyze_change_impact(
         )
         
         return ChangeImpactAnalysisResponse(
-            requirement_id=analysis.requirement_id,
-            change_description=analysis.change_description,
+            requirement_id=analysis["requirement_id"],
+            change_description=analysis["change_description"],
             direct_impacts=[
                 ImpactItem(
-                    object_type=impact.object_type,
-                    object_id=impact.object_id,
-                    object_title=impact.object_title,
-                    impact_type=impact.impact_type,
-                    impact_level=impact.impact_level,
-                    impact_description=impact.impact_description
-                ) for impact in analysis.direct_impacts
+                    object_type=impact["object_type"],
+                    object_id=impact["object_id"],
+                    object_title=impact["object_title"],
+                    impact_type=impact["impact_type"],
+                    impact_level=impact["impact_level"],
+                    impact_description=impact["impact_description"]
+                ) for impact in analysis["direct_impacts"]
             ],
             indirect_impacts=[
                 ImpactItem(
-                    object_type=impact.object_type,
-                    object_id=impact.object_id,
-                    object_title=impact.object_title,
-                    impact_type=impact.impact_type,
-                    impact_level=impact.impact_level,
-                    impact_description=impact.impact_description
-                ) for impact in analysis.indirect_impacts
+                    object_type=impact["object_type"],
+                    object_id=impact["object_id"],
+                    object_title=impact["object_title"],
+                    impact_type=impact["impact_type"],
+                    impact_level=impact["impact_level"],
+                    impact_description=impact["impact_description"]
+                ) for impact in analysis["indirect_impacts"]
             ],
-            affected_requirements=analysis.affected_requirements,
-            affected_test_cases=analysis.affected_test_cases,
-            affected_tasks=analysis.affected_tasks,
-            risk_level=analysis.risk_level,
-            recommendations=analysis.recommendations,
-            analyzed_at=analysis.analyzed_at
+            affected_requirements=analysis["affected_requirements"],
+            affected_test_cases=analysis["affected_test_cases"],
+            affected_tasks=analysis["affected_tasks"],
+            risk_level=analysis["risk_level"],
+            recommendations=analysis["recommendations"],
+            analyzed_at=analysis["analyzed_at"]
         )
     
     except NotFoundError as e:

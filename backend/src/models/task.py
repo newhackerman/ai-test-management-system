@@ -5,7 +5,7 @@
 """
 from datetime import datetime
 from typing import Dict, Any, Optional
-from sqlalchemy import Column, Integer, String, Text, DateTime, Enum, Boolean, ForeignKey
+from sqlalchemy import Column, BigInteger, Integer, String, Text, DateTime, Enum, Boolean, ForeignKey
 from sqlalchemy.orm import relationship
 from enum import Enum as PyEnum
 
@@ -39,7 +39,7 @@ class Task(Base):
     description = Column(Text, nullable=True)
     
     # 关联信息
-    project_id = Column(Integer, ForeignKey('projects.id'), nullable=False, index=True)
+    project_id = Column(BigInteger, ForeignKey('projects.id'), nullable=False, index=True)
     meeting_id = Column(Integer, ForeignKey('meetings.id'), nullable=True, index=True)  # 来源会议
     assignee_id = Column(Integer, ForeignKey('users.id'), nullable=True, index=True)
     creator_id = Column(Integer, ForeignKey('users.id'), nullable=False, index=True)

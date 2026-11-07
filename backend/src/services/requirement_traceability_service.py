@@ -21,7 +21,9 @@ from ..models.requirement import (
     Requirement, RequirementTraceabilityLink, TraceabilityLinkType,
     RequirementStatus, RequirementType
 )
-from ..models.project import Project
+from ..models.project import Project, Task
+from ..models.test_case import TestCase
+from ..models.test_plan import TestPlan
 from ..core.database import get_db
 from ..core.exceptions import NotFoundError
 import logging
@@ -78,6 +80,11 @@ class RequirementTraceabilityService:
                 description = link_data.get("description", description)
                 if creator_id is None:
                     creator_id = link_data.get("creator_id")
+
+            # API 层传的是 TraceabilityLinkTypeEnum，模型层用 TraceabilityLinkType：
+            # 两个枚举类不同但值相同，先统一成模型枚举再往下走
+            if link_type is not None and not isinstance(link_type, TraceabilityLinkType):
+                link_type = TraceabilityLinkType(link_type.value if hasattr(link_type, "value") else link_type)
 
             # 1. 验证链接数据
             await self._validate_link_data(source_type, source_id, target_type, target_id, link_type)
@@ -202,32 +209,37 @@ class RequirementTraceabilityService:
     async def analyze_change_impact(
         self,
         requirement_id: int,
-        change_description: str = None
+        change_description: str = None,
+        analysis_depth: int = 3
     ) -> Dict[str, Any]:
         """分析变更影响"""
         try:
             # 1. 获取需求追溯关系
             traceability = await self.get_requirement_traceability(requirement_id)
-            
+
             # 2. 分析直接影响
             direct_impacts = await self._analyze_direct_impacts(requirement_id)
-            
-            # 3. 分析间接影响
+
+            # 3. 分析间接影响（深度不超过 analysis_depth）
             indirect_impacts = await self._analyze_indirect_impacts(
-                traceability["downstream_links"]
+                traceability["downstream_links"], analysis_depth
             )
-            
-            # 4. 计算影响范围
+
+            # 4. 计算影响范围（用原始字典的 target_type/target_id）
             impact_scope = await self._calculate_impact_scope(
                 direct_impacts, indirect_impacts
             )
-            
-            # 5. 生成影响分析报告
+
+            # 5. 把原始影响项规范化为接口形状（含对象标题与描述），再返回
+            direct_items = await self._normalize_impacts(direct_impacts, direct=True)
+            indirect_items = await self._normalize_impacts(indirect_impacts, direct=False)
+
+            # 6. 生成影响分析报告
             impact_analysis = {
                 "requirement_id": requirement_id,
                 "change_description": change_description,
-                "direct_impacts": direct_impacts,
-                "indirect_impacts": indirect_impacts,
+                "direct_impacts": direct_items,
+                "indirect_impacts": indirect_items,
                 "impact_scope": impact_scope,
                 "affected_requirements": impact_scope.get("requirements", []),
                 "affected_test_cases": impact_scope.get("test_cases", []),
@@ -236,9 +248,9 @@ class RequirementTraceabilityService:
                 "recommendations": self._generate_impact_recommendations(impact_scope),
                 "analyzed_at": datetime.utcnow().isoformat()
             }
-            
+
             return impact_analysis
-            
+
         except Exception as e:
             logger.error(f"分析变更影响失败: {str(e)}")
             raise
@@ -530,7 +542,10 @@ class RequirementTraceabilityService:
         
         combination_key = (source_type, target_type)
         if combination_key in valid_combinations:
-            if link_type not in valid_combinations[combination_key]:
+            # 按枚举值比较：调用方可能传另一同值枚举类，直接比较成员会恒为 False
+            link_value = link_type.value if hasattr(link_type, "value") else str(link_type)
+            allowed = [t.value if hasattr(t, "value") else str(t) for t in valid_combinations[combination_key]]
+            if link_value not in allowed:
                 raise ValueError(f"链接类型 {link_type} 不适用于 {source_type} -> {target_type}")
     
     async def _has_circular_reference(
@@ -784,24 +799,82 @@ class RequirementTraceabilityService:
         
         return impacts
     
-    async def _analyze_indirect_impacts(self, downstream_links: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    async def _analyze_indirect_impacts(self, downstream_links: List[Dict[str, Any]], analysis_depth: int = 3) -> List[Dict[str, Any]]:
         """分析间接影响"""
         impacts = []
-        
-        # 分析深度大于1的链接
+
+        # 分析深度大于1且不超过 analysis_depth 的链接
         for link in downstream_links:
-            if link.get("depth", 0) > 1:
+            depth = link.get("depth", 0)
+            if 1 < depth <= analysis_depth:
                 impact = {
                     "type": "indirect",
                     "target_type": link["target_type"],
                     "target_id": link["target_id"],
                     "link_type": link["link_type"],
-                    "depth": link["depth"],
-                    "impact_level": "medium" if link["depth"] == 2 else "low"
+                    "depth": depth,
+                    "impact_level": "medium" if depth == 2 else "low"
                 }
                 impacts.append(impact)
-        
+
         return impacts
+
+    async def _normalize_impacts(self, impacts: List[Dict[str, Any]], direct: bool) -> List[Dict[str, Any]]:
+        """把内部影响字典规范化为接口的 ImpactItem 形状。
+
+        内部字典只有 target_type/target_id/link_type/impact_level，
+        这里按类型批量查标题，并把影响等级统一为大写。
+        """
+        titles = await self._resolve_object_titles(impacts)
+        items = []
+        for impact in impacts:
+            target_type = impact["target_type"]
+            target_id = impact["target_id"]
+            title = titles.get((target_type, target_id), f"{target_type} #{target_id}")
+            link_type = impact.get("link_type") or "DEPENDS_ON"
+            items.append({
+                "object_type": target_type,
+                "object_id": target_id,
+                "object_title": title,
+                "impact_type": link_type,
+                "impact_level": str(impact.get("impact_level", "low")).upper(),
+                "impact_description": (
+                    f"{'直接' if direct else '间接'}影响：通过 {link_type} 关联到「{title}」"
+                ),
+            })
+        return items
+
+    async def _resolve_object_titles(self, impacts: List[Dict[str, Any]]) -> Dict[Tuple[str, int], str]:
+        """按类型批量查影响对象的标题，避免逐个查询。"""
+        by_type: Dict[str, Set[int]] = defaultdict(set)
+        for impact in impacts:
+            by_type[impact["target_type"]].add(impact["target_id"])
+        titles: Dict[Tuple[str, int], str] = {}
+        if by_type.get("requirement"):
+            rows = (await self.db.execute(
+                select(Requirement.id, Requirement.requirement_code, Requirement.title).where(
+                    Requirement.id.in_(by_type["requirement"])
+                )
+            )).all()
+            for rid, code, title in rows:
+                titles[("requirement", rid)] = f"{code or ''} {title or ''}".strip() or f"需求 #{rid}"
+        if by_type.get("test_case"):
+            rows = (await self.db.execute(
+                select(TestCase.id, TestCase.case_code, TestCase.case_title).where(
+                    TestCase.id.in_(by_type["test_case"])
+                )
+            )).all()
+            for cid, code, title in rows:
+                titles[("test_case", cid)] = f"{code or ''} {title or ''}".strip() or f"用例 #{cid}"
+        if by_type.get("task"):
+            rows = (await self.db.execute(
+                select(Task.id, Task.task_code, Task.task_name).where(
+                    Task.id.in_(by_type["task"])
+                )
+            )).all()
+            for tid, code, name in rows:
+                titles[("task", tid)] = f"{code or ''} {name or ''}".strip() or f"任务 #{tid}"
+        return titles
     
     async def _calculate_impact_scope(
         self,
@@ -869,21 +942,44 @@ class RequirementTraceabilityService:
         return recommendations
     
     async def _get_test_cases_by_project(self, project_id: int) -> List[Dict[str, Any]]:
-        """获取项目测试用例（模拟实现）"""
-        # 这里应该调用测试管理模块的接口
-        # 暂时返回空列表
-        return []
-    
+        """获取项目测试用例：用例通过关联需求或所属测试计划归属项目。"""
+        rows = (await self.db.execute(
+            select(TestCase).distinct()
+            .outerjoin(Requirement, Requirement.id == TestCase.requirement_id)
+            .outerjoin(TestPlan, TestPlan.id == TestCase.test_plan_id)
+            .where(or_(Requirement.project_id == project_id, TestPlan.project_id == project_id))
+        )).scalars().all()
+        return [
+            {
+                "id": tc.id,
+                "code": tc.case_code,
+                "title": tc.case_title,
+                "status": tc.status.value if hasattr(tc.status, "value") else tc.status,
+            }
+            for tc in rows
+        ]
+
     async def _get_tasks_by_project(self, project_id: int) -> List[Dict[str, Any]]:
-        """获取项目任务（模拟实现）"""
-        # 这里应该调用任务管理模块的接口
-        # 暂时返回空列表
-        return []
-    
+        """获取项目任务。"""
+        rows = (await self.db.execute(
+            select(Task).where(Task.project_id == project_id)
+        )).scalars().all()
+        return [
+            {
+                "id": t.id,
+                "code": t.task_code,
+                "title": t.task_name,
+                "status": t.status.value if hasattr(t.status, "value") else t.status,
+            }
+            for t in rows
+        ]
+
     async def _get_designs_by_project(self, project_id: int) -> List[Dict[str, Any]]:
-        """获取项目设计文档（模拟实现）"""
-        # 这里应该调用设计管理模块的接口
-        # 暂时返回空列表
+        """获取项目设计文档。
+
+        目前没有设计文档模型/表，返回空列表；矩阵的 requirement_to_design
+        类型因此只有需求行、没有目标列。
+        """
         return []
     
     async def _get_requirement_to_test_links(self, project_id: int) -> List[Dict[str, Any]]:

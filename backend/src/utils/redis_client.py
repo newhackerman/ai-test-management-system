@@ -242,18 +242,26 @@ class RedisCache:
             logger.error(f"获取缓存失败 {key}: {e}")
             return default
     
-    async def set(self, key: str, value: Any, ttl: Optional[int] = None) -> bool:
+    async def set(
+        self, key: str, value: Any, ttl: Optional[int] = None, ex: Optional[int] = None
+    ) -> bool:
         """
         设置缓存值
-        
+
         Args:
             key: 缓存键
             value: 缓存值
             ttl: 过期时间（秒）
-            
+            ex: 过期时间（秒），redis-py 风格的别名——调用方多处用
+                ex=（recording_service、dashboard_integration 等）；
+                此前本方法只认 ttl，传 ex= 会 TypeError，开始录制
+                因此恒 500（第 14 项补用例时发现的真缺陷）。
+
         Returns:
             bool: 是否设置成功
         """
+        if ex is not None:
+            ttl = ex
         try:
             client = await self._get_client()
             

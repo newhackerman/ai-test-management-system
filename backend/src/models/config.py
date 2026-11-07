@@ -64,7 +64,7 @@ class SystemConfig(BaseModel):
     config_type = Column(SQLEnum(ConfigType), default=ConfigType.STRING, nullable=False, comment='配置类型')
     
     # 分组和环境
-    group_id = Column(BigInteger, ForeignKey('sys_config_group.id', ondelete='SET NULL'), comment='分组ID')
+    group_id = Column(Integer, ForeignKey('sys_config_group.id', ondelete='SET NULL'), comment='分组ID')
     environment = Column(SQLEnum(Environment), default=Environment.PROD, nullable=False, comment='环境标识')
     
     # 配置属性
@@ -135,7 +135,7 @@ class ConfigHistory(BaseModel):
     """配置变更历史表"""
     __tablename__ = 'sys_config_history'
     
-    config_id = Column(BigInteger, ForeignKey('sys_config.id', ondelete='CASCADE'), nullable=False, comment='配置ID')
+    config_id = Column(Integer, ForeignKey('sys_config.id', ondelete='CASCADE'), nullable=False, comment='配置ID')
     config_key = Column(String(200), nullable=False, comment='配置键名')
     environment = Column(SQLEnum(Environment), nullable=False, comment='环境标识')
     
@@ -163,7 +163,7 @@ class ConfigAudit(BaseModel):
     __tablename__ = 'sys_config_audit'
     
     audit_code = Column(String(50), nullable=False, unique=True, comment='审核编号')
-    config_id = Column(BigInteger, ForeignKey('sys_config.id', ondelete='SET NULL'), comment='配置ID')
+    config_id = Column(Integer, ForeignKey('sys_config.id', ondelete='SET NULL'), comment='配置ID')
     config_key = Column(String(200), nullable=False, comment='配置键名')
     environment = Column(SQLEnum(Environment), nullable=False, comment='环境标识')
     
@@ -201,6 +201,19 @@ class ConfigAudit(BaseModel):
         return f"<ConfigAudit(code={self.audit_code}, status={self.audit_status}, key={self.config_key})>"
 
 
+class ConfigAuditComment(BaseModel):
+    """配置审核意见表"""
+    __tablename__ = 'sys_config_audit_comments'
+
+    audit_id = Column(Integer, ForeignKey('sys_config_audit.id', ondelete='CASCADE'), nullable=False, comment='审核ID')
+    user_id = Column(BigInteger, nullable=False, comment='意见人ID')
+    username = Column(String(100), nullable=True, comment='意见人用户名')
+    comment = Column(Text, nullable=False, comment='意见内容')
+
+    def __repr__(self):
+        return f"<ConfigAuditComment(audit_id={self.audit_id}, user_id={self.user_id})>"
+
+
 class SystemEnvironment(BaseModel):
     """环境管理表"""
     __tablename__ = 'sys_environment'
@@ -228,8 +241,8 @@ class ConfigPermission(BaseModel):
     permission_type = Column(SQLEnum(PermissionType), nullable=False, comment='权限类型')
     
     # 权限目标（互斥）
-    config_id = Column(BigInteger, ForeignKey('sys_config.id', ondelete='CASCADE'), comment='配置ID')
-    group_id = Column(BigInteger, ForeignKey('sys_config_group.id', ondelete='CASCADE'), comment='分组ID')
+    config_id = Column(Integer, ForeignKey('sys_config.id', ondelete='CASCADE'), comment='配置ID')
+    group_id = Column(Integer, ForeignKey('sys_config_group.id', ondelete='CASCADE'), comment='分组ID')
     environment = Column(SQLEnum(Environment), comment='环境标识')
     
     # 权限操作列表

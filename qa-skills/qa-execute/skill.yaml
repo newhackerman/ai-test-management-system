@@ -1,0 +1,5 @@
+name: "qa-execute"
+title: "Run the test suites and write the report"
+description: "Run smoke, API and E2E suites against the deployed services, triage every failure into test bugs versus real defects, and write the Markdown test report. Runs after case generation."
+category: "Work and knowledge"
+include_in_prompt: false

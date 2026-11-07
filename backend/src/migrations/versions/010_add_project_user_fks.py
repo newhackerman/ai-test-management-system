@@ -1,8 +1,8 @@
 """
 添加项目管理模块用户外键约束
 
-Revision ID: 010_add_project_user_foreign_keys
-Revises: 009_add_project_management_tables
+Revision ID: 010_add_project_user_fks
+Revises: 009_add_project_tables
 Create Date: 2024-12-20 12:00:00.000000
 
 本迁移脚本为项目管理模块添加用户外键约束，确保数据完整性：
@@ -17,8 +17,8 @@ from alembic import op
 import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
-revision = '010_add_project_user_foreign_keys'
-down_revision = '009_add_project_management_tables'
+revision = '010_add_project_user_fks'
+down_revision = ('009_add_project_tables', '008_update_project_tables')
 branch_labels = None
 depends_on = None
 

@@ -95,6 +95,12 @@ class Settings(BaseSettings):
     # 服务器配置
     HOST: str = "0.0.0.0"
     PORT: int = 8000
+
+    # API 文档访问控制：默认 False（公开访问，保持现状）。
+    # 设为 true 后 /api/v1/docs、/api/v1/redoc、/api/v1/openapi.json
+    # 均需登录（Bearer token）；浏览器端 Swagger UI 会从 localStorage
+    # 取 token 自动带上，curl 需自行加 -H "Authorization: Bearer <token>"。
+    DOCS_REQUIRE_AUTH: bool = False
     
     # API路由前缀配置（可从环境变量覆盖）
     API_AUTH_PREFIX: str = "/auth"
@@ -113,6 +119,7 @@ class Settings(BaseSettings):
     API_AI_ALERT_CONFIG_PREFIX: str = "/ai-alert-config"
     API_HEALTH_WEBSOCKET_PREFIX: str = "/health-websocket"
     API_AI_PERMISSIONS_PREFIX: str = "/ai-permissions"
+    API_AI_FILES_PREFIX: str = "/ai/files"
     API_CACHE_PREHEATING_PREFIX: str = "/cache-preheating"
     API_BAIDU_WENXIN_PREFIX: str = "/baidu-wenxin"
     API_ALIYUN_TONGYI_PREFIX: str = "/aliyun-tongyi"
@@ -144,6 +151,7 @@ class Settings(BaseSettings):
     API_AI_ALERT_CONFIG_TAGS: str = "AI告警配置"
     API_HEALTH_WEBSOCKET_TAGS: str = "健康监控WebSocket"
     API_AI_PERMISSIONS_TAGS: str = "AI权限管理"
+    API_AI_FILES_TAGS: str = "AI文件存储"
     API_AI_OPERATION_LOGS_TAGS: str = "AI操作日志"
     API_CACHE_PREHEATING_TAGS: str = "缓存预热管理"
     API_BAIDU_WENXIN_TAGS: str = "百度文心一言"
@@ -394,6 +402,10 @@ def get_route_config(route_name: str) -> Dict[str, str]:
         "ai_permissions": {
             "prefix": settings.API_AI_PERMISSIONS_PREFIX,
             "tags": [settings.API_AI_PERMISSIONS_TAGS]
+        },
+        "ai_files": {
+            "prefix": settings.API_AI_FILES_PREFIX,
+            "tags": [settings.API_AI_FILES_TAGS]
         },
         "ai_operation_logs": {
             "prefix": "",

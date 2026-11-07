@@ -4,14 +4,18 @@ AI助手文件存储API接口
 from typing import List, Optional, Dict, Any
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Query, Form, Request
 from fastapi.responses import FileResponse, StreamingResponse
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from pathlib import Path
+from datetime import datetime
+import hashlib
 import aiofiles
 
-from ..core.database import get_db
+from ..core.database import get_async_session
 from ..services.auth import get_current_user
 from ..services.ai_file_storage_service import AIFileStorageService
-from ..models.ai_file_storage import FileCategory, FileType, FileStatus
+from ..models.ai_file_storage import FileCategory, FileType, FileStatus, AIFileShare, AIFileStorage
+from ..models.user import User
 from ..schemas.ai_file_storage import (
     FileUploadResponse, FileInfoResponse, FileListResponse, 
     FileShareResponse, StorageStatsResponse, FileShareRequest
@@ -33,7 +37,7 @@ async def upload_file(
     is_temporary: bool = Form(False, description="是否临时文件"),
     expires_hours: Optional[int] = Form(None, description="过期小时数"),
     current_user: dict = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_async_session)
 ):
     """上传文件"""
     try:
@@ -71,11 +75,28 @@ async def upload_file(
         )
 
 
+@router.get("/stats", response_model=StorageStatsResponse, summary="获取存储统计")
+async def get_storage_stats(
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_session)
+):
+    """获取存储统计信息"""
+    service = AIFileStorageService(db)
+    stats = await service.get_storage_stats(current_user.id)
+    
+    return StorageStatsResponse(
+        total_files=stats["total_files"],
+        total_size=stats["total_size"],
+        category_stats=stats["category_stats"],
+        type_stats=stats["type_stats"]
+    )
+
+
 @router.get("/{file_id}", response_model=FileInfoResponse, summary="获取文件信息")
 async def get_file_info(
     file_id: int,
     current_user: dict = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_async_session)
 ):
     """获取文件信息"""
     service = AIFileStorageService(db)
@@ -114,7 +135,7 @@ async def get_file_info(
 async def download_file(
     file_id: int,
     current_user: dict = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_async_session)
 ):
     """下载文件"""
     try:
@@ -144,7 +165,7 @@ async def download_file(
 async def preview_file(
     file_id: int,
     current_user: dict = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_async_session)
 ):
     """预览文件"""
     try:
@@ -184,7 +205,7 @@ async def delete_file(
     file_id: int,
     permanent: bool = Query(False, description="是否永久删除"),
     current_user: dict = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_async_session)
 ):
     """删除文件"""
     service = AIFileStorageService(db)
@@ -210,7 +231,7 @@ async def list_files(
     page: int = Query(1, ge=1, description="页码"),
     size: int = Query(20, ge=1, le=100, description="每页大小"),
     current_user: dict = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_async_session)
 ):
     """获取文件列表"""
     service = AIFileStorageService(db)
@@ -265,7 +286,7 @@ async def create_share_link(
     file_id: int,
     share_request: FileShareRequest,
     current_user: dict = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_async_session)
 ):
     """创建文件分享链接"""
     try:
@@ -311,42 +332,148 @@ async def access_shared_file(
     action: str = Query("preview", description="操作类型: preview/download"),
     password: Optional[str] = Query(None, description="分享密码"),
     request: Request = None,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_async_session)
 ):
-    """通过分享链接访问文件"""
-    # TODO: 实现分享链接访问逻辑
-    # 1. 验证分享令牌
-    # 2. 检查密码（如果需要）
-    # 3. 检查访问权限和次数限制
-    # 4. 记录访问日志
-    # 5. 返回文件内容
-    pass
+    """通过分享链接访问文件（无需登录）
 
+    按顺序校验：分享存在且启用、未过期、密码正确、操作被允许、
+    次数未达上限；然后按 action 返回文件元数据（preview）或文件流
+    （download），并更新浏览/下载计数与访问日志。
+    """
+    if action not in ("preview", "download"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="操作类型仅支持 preview 或 download"
+        )
+    try:
+        result = await db.execute(
+            select(AIFileShare).where(AIFileShare.share_token == share_token)
+        )
+        share = result.scalar_one_or_none()
+        if not share or not share.is_active:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="分享链接不存在或已失效"
+            )
+        if share.expires_at and share.expires_at < datetime.utcnow():
+            raise HTTPException(
+                status_code=status.HTTP_410_GONE,
+                detail="分享链接已过期"
+            )
+        if share.share_password:
+            if not password or hashlib.sha256(password.encode()).hexdigest() != share.share_password:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="分享密码错误"
+                )
+        if action == "download":
+            if not share.can_download:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="该分享不允许下载"
+                )
+            if share.max_downloads is not None and share.download_count >= share.max_downloads:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="下载次数已达上限"
+                )
+        else:
+            if not share.can_preview:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="该分享不允许预览"
+                )
+            if share.max_views is not None and share.view_count >= share.max_views:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="查看次数已达上限"
+                )
 
-@router.get("/stats", response_model=StorageStatsResponse, summary="获取存储统计")
-async def get_storage_stats(
-    current_user: dict = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
-):
-    """获取存储统计信息"""
-    service = AIFileStorageService(db)
-    stats = await service.get_storage_stats(current_user.id)
-    
-    return StorageStatsResponse(
-        total_files=stats["total_files"],
-        total_size=stats["total_size"],
-        category_stats=stats["category_stats"],
-        type_stats=stats["type_stats"]
-    )
+        file_result = await db.execute(
+            select(AIFileStorage).where(AIFileStorage.id == share.file_id)
+        )
+        file_record = file_result.scalar_one_or_none()
+        if not file_record:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="文件不存在"
+            )
+        file_path = Path(file_record.file_path)
+        if not file_path.exists():
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="文件不存在"
+            )
+
+        service = AIFileStorageService(db)
+        ip_address = request.client.host if request is not None and request.client else None
+        if action == "download":
+            share.download_count += 1
+            share.last_accessed_at = datetime.utcnow()
+            await db.commit()
+            await service._update_download_stats(file_record.id)
+            await service._log_file_access(
+                file_record.id, None, "download",
+                bytes_transferred=file_record.file_size,
+                ip_address=ip_address, share_id=share.id
+            )
+            return FileResponse(
+                path=file_path,
+                filename=file_record.original_filename,
+                media_type=file_record.mime_type,
+                headers={"Content-Disposition": f"attachment; filename={file_record.original_filename}"}
+            )
+
+        share.view_count += 1
+        share.last_accessed_at = datetime.utcnow()
+        await db.commit()
+        await service._update_access_stats(file_record.id)
+        await service._log_file_access(
+            file_record.id, None, "view", ip_address=ip_address, share_id=share.id
+        )
+        return {
+            "file": {
+                "id": file_record.id,
+                "original_filename": file_record.original_filename,
+                "mime_type": file_record.mime_type,
+                "file_size": file_record.file_size,
+                "file_type": file_record.file_type.value if hasattr(file_record.file_type, "value") else file_record.file_type,
+                "created_at": file_record.created_at.isoformat() if file_record.created_at else None,
+            },
+            "share": {
+                "can_download": share.can_download,
+                "can_preview": share.can_preview,
+                "expires_at": share.expires_at.isoformat() if share.expires_at else None,
+                "download_count": share.download_count,
+                "view_count": share.view_count,
+            },
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Access shared file error: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="访问分享文件失败"
+        )
 
 
 @router.post("/cleanup", summary="清理过期文件")
 async def cleanup_expired_files(
     current_user: dict = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_async_session)
 ):
     """清理过期文件（管理员功能）"""
-    # TODO: 添加管理员权限检查
+    # 仅超级管理员可以清理：JWT 里不含 is_superuser，必须查库判断
+    admin_result = await db.execute(
+        select(User.is_superuser).where(User.id == current_user.id)
+    )
+    if not admin_result.scalar():
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="仅管理员可以清理过期文件"
+        )
     service = AIFileStorageService(db)
     cleaned_count = await service.cleanup_expired_files()
     
@@ -364,7 +491,7 @@ async def batch_upload_files(
     category: FileCategory = Form(..., description="文件分类"),
     session_id: Optional[int] = Form(None, description="关联会话ID"),
     current_user: dict = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_async_session)
 ):
     """批量上传文件"""
     service = AIFileStorageService(db)
@@ -399,7 +526,7 @@ async def batch_delete_files(
     file_ids: List[int],
     permanent: bool = Query(False, description="是否永久删除"),
     current_user: dict = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_async_session)
 ):
     """批量删除文件"""
     service = AIFileStorageService(db)

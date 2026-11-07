@@ -1,0 +1,5 @@
+name: "qa-casegen"
+title: "Analyze an API with AI and generate test cases"
+description: "Read a deployed project's API surface, analyze every endpoint with AI, and generate categorized test cases into a fresh framework copied from the qa-template. This is where AI does the case writing."
+category: "Work and knowledge"
+include_in_prompt: false

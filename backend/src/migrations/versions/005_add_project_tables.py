@@ -24,7 +24,7 @@ def upgrade():
     
     # 创建项目表
     op.create_table('projects',
-        sa.Column('id', sa.Integer(), nullable=False, comment='项目ID'),
+        sa.Column('id', sa.BigInteger(), nullable=False, comment='项目ID'),
         sa.Column('name', sa.String(200), nullable=False, comment='项目名称'),
         sa.Column('description', sa.Text(), nullable=True, comment='项目描述'),
         sa.Column('project_type', sa.String(50), nullable=True, comment='项目类型'),
@@ -81,7 +81,7 @@ def upgrade():
     # 创建需求表
     op.create_table('requirements',
         sa.Column('id', sa.Integer(), nullable=False, comment='需求ID'),
-        sa.Column('project_id', sa.Integer(), nullable=False, comment='项目ID'),
+        sa.Column('project_id', sa.BigInteger(), nullable=False, comment='项目ID'),
         sa.Column('title', sa.String(300), nullable=False, comment='需求标题'),
         sa.Column('description', sa.Text(), nullable=True, comment='需求描述'),
         sa.Column('requirement_type', sa.String(50), nullable=True, comment='需求类型'),
@@ -132,7 +132,7 @@ def upgrade():
     # 创建测试用例表
     op.create_table('test_cases',
         sa.Column('id', sa.Integer(), nullable=False, comment='测试用例ID'),
-        sa.Column('project_id', sa.Integer(), nullable=False, comment='项目ID'),
+        sa.Column('project_id', sa.BigInteger(), nullable=False, comment='项目ID'),
         sa.Column('requirement_id', sa.Integer(), nullable=True, comment='关联需求ID'),
         sa.Column('title', sa.String(300), nullable=False, comment='测试用例标题'),
         sa.Column('description', sa.Text(), nullable=True, comment='测试用例描述'),
@@ -187,7 +187,7 @@ def upgrade():
     # 创建缺陷表
     op.create_table('defects',
         sa.Column('id', sa.Integer(), nullable=False, comment='缺陷ID'),
-        sa.Column('project_id', sa.Integer(), nullable=False, comment='项目ID'),
+        sa.Column('project_id', sa.BigInteger(), nullable=False, comment='项目ID'),
         sa.Column('test_case_id', sa.Integer(), nullable=True, comment='关联测试用例ID'),
         sa.Column('title', sa.String(300), nullable=False, comment='缺陷标题'),
         sa.Column('description', sa.Text(), nullable=True, comment='缺陷描述'),
@@ -247,7 +247,7 @@ def upgrade():
     # 创建项目指标表
     op.create_table('project_metrics',
         sa.Column('id', sa.Integer(), nullable=False, comment='指标ID'),
-        sa.Column('project_id', sa.Integer(), nullable=False, comment='项目ID'),
+        sa.Column('project_id', sa.BigInteger(), nullable=False, comment='项目ID'),
         sa.Column('metric_date', sa.DateTime(), nullable=True, default=sa.func.current_timestamp(), comment='指标日期'),
         
         # 需求指标
