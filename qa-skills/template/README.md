@@ -18,8 +18,11 @@ qa-automation/
   tests/test_smoke.py  health, docs, openapi, login smoke tests
   tools/report.py      Markdown report generator
   e2e/conftest.py      Playwright fixtures
-  e2e/helpers.py       login/logout/nav helpers
+  e2e/helpers.py       login/logout/nav helpers + page-error collection
+  e2e/page_tour_routes.py  page-tour inventory (every route in a bucket)
   e2e/test_e2e_smoke.py  login page smoke tests
+  e2e/test_e2e_page_tour.py  parametrized tour: every static route renders
+  tests/test_route_coverage.py  guard: no route without a coverage bucket
 ```
 
 ## Adapt in 5 steps
@@ -34,7 +37,11 @@ qa-automation/
    commented example in each file.
 4. Write one `tests/test_<module>.py` per API module, one
    `e2e/test_e2e_<flow>.py` per user flow. Cover smoke, auth, CRUD,
-   validation, boundary, security and E2E in that order.
+   validation, boundary, security and E2E in that order. Before the
+   flows, fill in `e2e/page_tour_routes.py` from the router file and
+   sidebar: every static route goes in the tour, every other route in
+   a coverage bucket with a reason. Run the tour first — a page no
+   test visits is a page nobody watches.
 5. Run `python -m pytest -q` and then `python tools/report.py` for the
    Markdown report.
 
@@ -53,3 +60,7 @@ python tools/report.py
 - Every payload carries a unique name so tests never collide.
 - Cleanup is best-effort and a leftover row never breaks other tests.
 - A passing run is only claimed after a clean-database final regression.
+- Every E2E page visit collects page errors, console errors and failed
+  API responses. A 200 never proves the page renders.
+- Every route sits in a coverage bucket (tour / module-covered /
+  excluded-with-reason). A new route with no bucket fails the suite.

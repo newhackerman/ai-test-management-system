@@ -1,19 +1,19 @@
 # AI 测试管理系统 — 自动化测试报告
 
-生成时间：2026-11-07（第六轮后补：AI 助手 AttributeError 修复 + 4 个回归用例后更新）
+生成时间：2026-11-07（E2E 加强轮更新：页面巡游 + 路由覆盖守卫；全量干净库回归 338/339，唯一失败为自动恢复统计接口 500，见新缺陷）
 被测部署：后端 http://localhost:8000（FastAPI + MySQL 8.0.46 + Redis 7.0.15，干净库重建后 120 张表，**外键约束已保留**）、前端 http://localhost:3000（Vite + React 18）
-分支：`main`（PR #1/#2/#3 均已合并；本修复在分支 `fix/ai-assistant-class-break`，待 PR）
+分支：`main`（PR #1/#2/#3 均已合并）；AI 助手修复在分支 `fix/ai-assistant-class-break`（待 PR）；报告下载修复在分支 `fix/report-download-layout`（已推送，待 PR）；E2E 加强在分支 `e2e/strengthen-page-tour`（待 PR）
 
 ## 总览
 
 | 套件 | 用例总数 | 通过 | 失败 | 错误 | 跳过 | 通过率 |
 | --- | --- | --- | --- | --- | --- | --- |
-| API（`tests/`） | 278 | 278 | 0 | 0 | 0 | 100% |
-| E2E（`e2e/`，Playwright + Chromium 真实浏览器） | 24 | 24 | 0 | 0 | 0 | 100% |
-| **合计** | **302** | **302** | **0** | **0** | **0** | **100%** |
+| API（`tests/`） | 281 | 281 | 0 | 0 | 0 | 100% |
+| E2E（`e2e/`，Playwright + Chromium 真实浏览器） | 58 | 57 | 1 | 0 | 0 | 98.3% |
+| **合计** | **339** | **338** | **1** | **0** | **0** | **99.7%** |
 
-- API 278 = 第六轮 275 + AI 助手回归 3（`test_ai_assistant_regression.py`）；E2E 24 = 第六轮 23 + AI 助手回归 1（`test_e2e_ai_assistant.py`）。
-- 全量最后一次执行：API 278/278、E2E 24/24（AI 助手修复后回归），在干净库（`DROP DATABASE` 后 `ops/rebuild_db.py` 重建，120 张表、种子 45 权限/9 角色）上跑出。
+- API 281 = 第六轮 275 + AI 助手回归 3（`test_ai_assistant_regression.py`）+ 路由覆盖守卫 3（`test_route_coverage.py`）；E2E 58 = 第六轮 23 + AI 助手回归 1（`test_e2e_ai_assistant.py`）+ 页面巡游 34（`test_e2e_page_tour.py`：33 个页面渲染 + 1 个主按钮抽查）。
+- 全量最后一次执行：API 281/281、E2E 57/58（唯一失败：自动恢复页，见下），在干净库（`DROP DATABASE` 后 `ops/recover.sh` 重建，120 张表、种子 45 权限/9 角色）上跑出。**这一次的 1 个失败是真实缺陷，不是测试问题**（见“E2E 加强”一节），未修复、未放水——报告不再宣称 100%。
 - 本报告回答用户质疑“只发现 2 个问题不可信”：第一阶段的 108 个 API 用例确实只证实了 2 个缺陷；深化 + E2E + 安全三轮补测后，**新发现 12 个真实缺陷，全部修复并回归验证通过**（见下表 #3–#14）。失败就是失败，如实写：中途的失败全部记录在各轮执行小结里，本报告的 100% 是修复后的最终回归结果，不是放水。
 
 ## 按模块统计（API）
@@ -36,6 +36,7 @@
 | test_ai_services | 2 | 2 | 0 |
 | test_round6_items | 20 | 20 | 0 |
 | test_round6_perf | 4 | 4 | 0 |
+| test_route_coverage | 3 | 3 | 0 |
 
 ## 按模块统计（E2E）
 
@@ -51,6 +52,8 @@
 | test_e2e_full_chain | 1 | 项目→需求→用例→计划→执行→缺陷→仪表盘→登出 全链路 |
 | test_e2e_security | 1 | 存储型 XSS payload 渲染为纯文本、不执行 |
 | test_e2e_round6 | 2 | 追溯分析视图真实数据：矩阵出现种子需求编号与绿色链接点、覆盖率 100% |
+| test_e2e_ai_assistant | 1 | 真实浏览器提问、等回复渲染、页面无 AttributeError |
+| test_e2e_page_tour | 34 | 页面巡游：登录后逐个打开 33 个静态路由（非空白、无错误边界、无控制台错误、无失败 API 响应）+ 主按钮抽查（新建项目开弹窗、创建计划进表单、报告预览开弹窗且下载按钮真下载出文件） |
 
 ## 失败用例
 
@@ -73,6 +76,9 @@
 | E2E 单测（定位器改 `.first` 后） | 通过 | — |
 | E2E 全量（定位器修复后） | 19 通过 / 1 失败 | `test_full_chain_via_ui` 一次闪失：提交时计划名称为空触发校验（疑似选项目后表单重渲染丢值，已加固 helper：填值后断言、选项目后复查补填） |
 | E2E 全量（最终，干净库） | **20 通过 / 0 失败** | — |
+| E2E 加强轮巡游首轮 | 28 通过 / 6 失败（34） | 4 个是测试阈值问题（空白判定 200 字符太严：空列表页“暂无项目数据”只有约 188 字符，实测页面渲染正常）+ 1 个真实缺陷（自动恢复统计接口 500）+ 1 个连带失败（主按钮抽查里调了 /projects 渲染断言） |
+| E2E 加强轮巡游第二轮（阈值改为 100 字符后） | 32 通过 / 2 失败（34） | 1 个真实缺陷（自动恢复 500）+ 1 个测试定位器问题（自研 Dialog 没有 `role="dialog"`，`[role="dialog"]` 找不到元素；已改用弹窗容器定位，并把下载按钮的断言升级为真下载） |
+| E2E 加强轮全量（干净库） | **API 281 通过 / 0 失败；E2E 57 通过 / 1 失败** | 唯一失败：自动恢复页（统计接口 500，真实缺陷，未修复，见“E2E 加强”一节） |
 
 ## 问题清单与修复记录
 
@@ -257,6 +263,27 @@
 
 **回归**：全量 API 278/278 + E2E 24/24 = 302/302；后端已重启（`systemctl restart ai-test-backend`），健康检查 200。修复分支 `fix/ai-assistant-class-break`，待 PR。
 
+## E2E 加强（2026-11-07，用户要求）
+
+**起因**：用户登录后随手点一点就找出两个缺陷（AI 助手 AttributeError、报告下载按钮无反应），而当时套件是 302/302 全绿。审计发现旧 E2E 只覆盖了 8 个页面（登录/项目/需求/用例/计划/执行/缺陷/AI 助手），61 条路由里约 25 个页面从未被任何用例打开过。用户原话：“如果我一登录稍做检查就有问题，怎么放心使用这个框架去测试代码呢。”
+
+**本轮改动**：
+
+- **页面巡游**（`e2e/test_e2e_page_tour.py`，34 个用例）：登录后逐个打开 33 个静态路由，逐页断言渲染成立（非空白、无错误边界“查询出错了”/“加载失败”、无控制台错误、无失败 API 响应）；另 1 个主按钮抽查：新建项目开弹窗、创建计划进表单、报告预览开弹窗且下载按钮真下载出文件（不是只看到按钮）。
+- **页面错误收集**（`e2e/helpers.py` 的 `PageErrorCollector` + `assert_page_renders`）：每次访问收集 pageerror、console 错误、≥400 的 API 响应。200 从不证明页面渲染——这是两次用户上报缺陷的共同教训。
+- **路由覆盖守卫**（`tests/test_route_coverage.py`，3 个用例）：解析 `frontend/src/routes/index.tsx`，要求每条路由落在且仅落在一个覆盖桶里（巡游 / 模块覆盖 / 注明理由的排除 / 参数化路由覆盖 / 注明理由的已知缺口）。清单在 `e2e/page_tour_routes.py`。守卫当场就抓到一条漏网路由 `/roles/eight`——写清单时人工漏掉的。以后前端加路由不进桶，套件直接变红。
+- **框架与 skill 同步更新**：`qa-automation/README.md` 加巡游与守卫章节；`qa-casegen` 要求先建前端路由清单、巡游优先；`qa-execute` 要求巡游为首轮 E2E、守卫进 API 套件、失败先读页面错误、报告加覆盖章节；`qa-template` 得到同样的巡游测试、守卫、helpers（独立目录双向验证：匹配清单通过、漏路由失败）；仓库内 `qa-skills/` 副本已同步。
+
+**巡游首轮就发现的真实缺陷（未修复，待用户决定是否修）**：
+
+- **自动恢复统计接口 500**：`GET /api/v1/auto-recovery/statistics` 返回 500，页面报“获取恢复统计失败”。根因已查明：`recovery_actions` 表不存在——模型在 `backend/src/models/infrastructure.py:129`（`RecoveryActions`，`__tablename__ = 'recovery_actions'`），服务用原生 SQL 查它，但 `models/__init__.py` 从不 import `infrastructure`，`ops/rebuild_db.py` 也只 import 了 `src.models`、`audit`、`dashboard`。所以任何一次干净库重建都建不出这张表（同文件里的 `system_metrics`、`system_alerts`、`lighthouse_results` 也一样），统计接口随即 500。拟修：一行——在 `models/__init__.py` 里 import `infrastructure`（所有 create_all 路径一次修好），或在 `rebuild_db.py` 里补 import；修后需重建库回归。**注意**：用户本地部署的库若也是这套重建流程建的，同样缺这张表，自动恢复页在本地也可能 500——值得在本地验证一次。
+
+**巡游中修掉的测试问题（测试 bug，非应用缺陷）**：空白判定阈值 200 字符太严（空列表页只有约 188 字符，实测渲染正常）→ 改为 100 字符（外壳本身约 150 字符，白屏约 0–20 字符）；antd 静态 message 警告以 console.error 形式出现 → 列入已知良性白名单（仅该一条）；自研 Dialog 没有 `role="dialog"` → 定位器改用弹窗容器，并把下载断言升级为真下载。
+
+**报告下载修复的端到端验证（与本轮无关，顺带核实）**：后端一半——重新导入一份测试 HTML（`602a8eea-af42-4429-a4b4-3ec8d04f8a4a`），`GET /imported/{id}/download` 返回 200、内容与上传文件一致（`_preserve_imported_original` 路径通）；前端一半——真实浏览器里点预览弹窗的下载按钮，确实下载出文件。两项均在 2026-11-07 晚间核实通过。另：本机虚拟机替换会清空数据库与 `backend/imported_reports/` 磁盘文件，导入报告在本机上是临时的（用户本地部署不受影响）。
+
+**覆盖现状**：61 条路由——33 条静态进巡游、3 条静态由其他 E2E 覆盖、4 条登录/找回密码路径注明排除、1 条重定向；16 条参数化路由里 3 条由全链路覆盖、13 条列为已知缺口（主要是会议详情/分析/录制页，无会议 fixture）。
+
 ## 框架使用
 
 ```bash
@@ -271,3 +298,4 @@ cd qa-automation
 
 - 配置：`config.py`（`QA_BASE_URL`、`QA_FRONTEND_URL`、`QA_ADMIN_USER`、`QA_ADMIN_PASSWORD`，均可由环境变量覆盖）。
 - 报告生成：`tools/report.py`（读 pytest JSON 报告产出本文件的总览与模块表；E2E/安全/问题清单章节为手工维护）。
+- 新增前端路由时，先在 `e2e/page_tour_routes.py` 里把它放进一个覆盖桶（巡游 / 模块覆盖 / 注明理由的排除），否则 `tests/test_route_coverage.py` 会让套件变红。覆盖缺口必须是明确写下的决定，不能是疏漏。

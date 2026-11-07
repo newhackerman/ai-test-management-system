@@ -54,3 +54,89 @@ def logout(page):
 def nav(page, label: str):
     """Navigate via the sidebar menu item."""
     page.get_by_role("link", name=label).first.click()
+
+
+class PageErrorCollector:
+    """Collect page errors while a page loads.
+
+    Captures uncaught page exceptions, console errors and failed API
+    responses — the three things an HTTP-status-only check misses.
+    Attach before ``goto``; read ``.problems`` after the page settles.
+    """
+
+    def __init__(self, page):
+        self.page = page
+        self.page_errors: list[str] = []
+        self.console_errors: list[str] = []
+        self.failed_responses: list[str] = []
+
+    def __enter__(self):
+        def _on_pageerror(err):
+            self.page_errors.append(str(err))
+
+        def _on_console(msg):
+            if msg.type == "error" and not any(
+                ignored in msg.text for ignored in IGNORED_CONSOLE_ERRORS
+            ):
+                self.console_errors.append(msg.text)
+
+        def _on_response(resp):
+            if resp.status >= 400 and "/api/" in resp.url:
+                self.failed_responses.append(f"{resp.status} {resp.url}")
+
+        self._handlers = {
+            "pageerror": _on_pageerror,
+            "console": _on_console,
+            "response": _on_response,
+        }
+        for event, handler in self._handlers.items():
+            self.page.on(event, handler)
+        return self
+
+    def __exit__(self, *args):
+        for event, handler in self._handlers.items():
+            self.page.remove_listener(event, handler)
+        return False
+
+    @property
+    def problems(self) -> list[str]:
+        out = [f"pageerror: {e}" for e in self.page_errors]
+        out += [f"console error: {e}" for e in self.console_errors]
+        out += [f"failed API response: {e}" for e in self.failed_responses]
+        return out
+
+
+# Text that must never appear in a rendered page. Override with
+# QA_FAILURE_MARKERS (comma-separated) when the app's own wording differs.
+FAILURE_MARKERS = tuple(
+    m.strip()
+    for m in os.environ.get(
+        "QA_FAILURE_MARKERS", "Something went wrong,Failed to fetch,Network Error"
+    ).split(",")
+    if m.strip()
+)
+
+
+def assert_page_renders(page, path: str, marker: str | None = None, timeout: int = 20000):
+    """Navigate to ``path`` and prove the page actually rendered.
+
+    Fails on: uncaught page exceptions, console errors, failed API
+    responses (>= 400), failure-marker text, or a (near-)blank page.
+    ``marker`` is page text that must be visible once loaded.
+    """
+    with PageErrorCollector(page) as collector:
+        page.goto(f"{FRONTEND_URL}{path}")
+        page.wait_for_load_state("load", timeout=timeout)
+        expect(page.locator("#root")).to_be_visible(timeout=timeout)
+        if marker:
+            expect(page.get_by_text(marker).first).to_be_visible(timeout=timeout)
+        else:
+            page.wait_for_timeout(1500)
+        body_text = page.locator("body").inner_text()
+        assert len(body_text.strip()) > 200, (
+            f"{path}: page looks blank ({len(body_text.strip())} chars of body text)"
+        )
+        for bad in FAILURE_MARKERS:
+            assert bad not in body_text, f"{path}: page shows failure text {bad!r}"
+        problems = collector.problems
+        assert not problems, f"{path}: page errors:\n" + "\n".join(problems)
