@@ -5,6 +5,14 @@
 - Take the defect list ordered by priority and the test report from the execute step.
 - Take the repository at the same commit the tests ran against.
 
+## Confirm before fixing
+
+- Fixing code changes the product, and a tester often only needs the report. Ask the user before fixing anything.
+- Present the defect list first: how many defects, their severity and priority, and which files each fix would touch.
+- Ask which defects to fix: all of them, only the highest priority ones, or none. Wait for the answer.
+- Skip this question only when the user already said to fix in the request, such as asking to fix the defects or to fix them all. A request to test alone is not approval to fix.
+- When the user chooses not to fix, stop here and hand the defect list and the report onward without touching application code.
+
 ## Fix in priority order
 
 - Fix the worst defects first. A defect that breaks login, shows a blank page or lets one user touch another user's data comes before anything else.
