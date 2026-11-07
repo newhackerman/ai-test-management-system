@@ -73,6 +73,7 @@ async def start_recording(
         return StartRecordingResponse(
             success=True,
             message="录制开始成功",
+            recording_id=recording.id,
             data=RecordingResponse.from_orm(recording)
         )
         

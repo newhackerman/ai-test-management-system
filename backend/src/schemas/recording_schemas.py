@@ -142,6 +142,10 @@ class StartRecordingResponse(BaseModel):
     success: bool = Field(..., description="是否成功")
     recording_id: Optional[int] = Field(None, description="录制ID")
     message: str = Field(..., description="响应消息")
+    # 第 14 项补用例时发现的真缺陷：此前模型没有 data 字段，路由传
+    # 的 data= 被 Pydantic 静默丢弃，且 recording_id 从未赋值，客
+    # 户端拿到 recording_id=null，无法暂停/停止刚开始的录制。
+    data: Optional[RecordingResponse] = Field(None, description="新建的录制记录")
 
 
 class PauseRecordingResponse(BaseModel):

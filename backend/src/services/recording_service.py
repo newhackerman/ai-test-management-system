@@ -29,11 +29,11 @@ from sqlalchemy import select, and_, or_, func, desc, asc, text, update, delete
 from sqlalchemy.orm import selectinload, joinedload
 from fastapi import Depends
 
-from ..core.database import get_async_session
+from ..core.database import AsyncSessionLocal, get_async_session
 from ..core.exceptions import ValidationError, NotFoundError, PermissionError
 from ..models.meeting import (
     Meeting, MeetingRecording, RecordingType, RecordingStatus, FileFormat,
-    MeetingParticipant, ParticipantRole
+    MeetingParticipant, ParticipantRole, MeetingStatus
 )
 from ..models.user import User
 from ..services.permission_service import PermissionService
@@ -263,7 +263,10 @@ class RecordingService:
             
             # 2. 验证会议状态
             meeting = await self._get_meeting(meeting_id)
-            if meeting.status != 'IN_PROGRESS':
+            # 注意：MeetingStatus 是普通 PyEnum（非 str 枚举），成员与
+            # 字符串永远不相等；此前这里写 'IN_PROGRESS' 导致任何会议
+            # 都无法开始录制（第 14 项补用例时发现的真缺陷）。
+            if meeting.status != MeetingStatus.IN_PROGRESS:
                 raise ValidationError("只能在进行中的会议中开始录制")
             
             # 3. 检查是否已有录制
@@ -286,7 +289,7 @@ class RecordingService:
                 recording_name=recording_name,
                 recording_type=RecordingType(validated_config.get('type', 'FULL_MEETING')),
                 file_format=FileFormat(validated_config.get('format', 'MP4')),
-                file_path='',  # 将在录制完成后设置
+                file_path='',  # 进程启动成功后回填 output_file（见下）
                 recording_status=RecordingStatus.RECORDING,
                 start_time=datetime.utcnow(),
                 created_by=user_id,
@@ -310,6 +313,17 @@ class RecordingService:
             
             # 10. 存储活跃录制信息
             self.active_recordings[recording.id] = recording_process
+
+            # 10b. 持久化输出文件路径：此前 file_path 恒为 ''，停止后的后处理
+            # 永远报 "Recording file not found: "；回填后库里指向预期的输出路径
+            #（无头环境下 ffmpeg 因无 X11/PulseAudio 仍建不出文件，后处理仍会
+            # 失败，但报错会带出真实路径而非空串）。
+            if recording_process.output_file is not None:
+                recording.file_path = str(recording_process.output_file)
+                await self.db.commit()
+                # commit 后属性过期，需 refresh，否则路由层 from_orm 取值会
+                # 抛 MissingGreenlet（与 pause/resume 的同类修复一致）。
+                await self.db.refresh(recording)
             
             # 11. 缓存录制状态
             await self._cache_recording_status(recording.id, recording_process.get_status())
@@ -957,8 +971,30 @@ class RecordingService:
         result = await self.db.execute(query)
         return result.scalar_one_or_none()
     
-    async def _validate_recording_config(self, config: Dict[str, Any]) -> Dict[str, Any]:
-        """验证录制配置"""
+    async def _validate_recording_config(self, config) -> Dict[str, Any]:
+        """验证录制配置
+
+        归一化（第 14 项补用例时发现的真缺陷）：路由传进来的是
+        StartRecordingRequest（Pydantic 模型），不是 dict——此前
+        直接调 config.get() 导致开始录制恒 500。先转 dict，再把
+        请求字段名映射为校验器要的键（recording_name→name、
+        recording_type→type、file_format→format）；quality 的
+        'standard'（请求模型的默认值）映射为校验器的 'medium'。
+        """
+        if hasattr(config, "model_dump"):
+            config = config.model_dump(mode="json")
+        if not isinstance(config, dict):
+            config = dict(config)
+        config = {
+            "type": config.get("type", config.get("recording_type", "FULL_MEETING")),
+            "format": config.get("format", config.get("file_format", "MP4")),
+            "quality": {"standard": "medium"}.get(
+                config.get("quality", "medium"), config.get("quality", "medium")
+            ),
+            "name": config.get("name", config.get("recording_name", "")),
+            "resolution": config.get("resolution", "1280x720"),
+            "framerate": config.get("framerate", 30),
+        }
         # 使用录制验证器
         is_valid, errors = recording_validator.validate_recording_config(config)
         
@@ -1060,10 +1096,24 @@ class RecordingService:
         raise PermissionError("无权限删除录制")
     
     async def _start_post_processing(self, recording: MeetingRecording):
-        """启动后处理任务"""
-        # 这里可以使用Celery或其他任务队列
-        # 暂时使用异步任务
-        asyncio.create_task(self.process_recording(recording.id))
+        """启动后处理任务（独立会话）。
+
+        后处理必须用自己的会话：此前直接 create_task(self.process_recording(...))
+        与请求共享 self.db，会在请求结束时与 get_async_session 的 session.close()
+        并发使用同一条 MySQL 连接，触发 asyncmy 2014 'Command Out of Sync'，
+        close() 抛错 → "Exception in ASGI application" → uvicorn 关闭该 keep-alive
+        连接，客户端下一次复用该连接的请求直接失败（RemoteProtocolError/ReadTimeout）。
+        """
+        asyncio.create_task(self._run_post_processing_in_new_session(recording.id))
+
+    async def _run_post_processing_in_new_session(self, recording_id: int):
+        """以后处理专用会话执行 process_recording，与请求会话完全隔离。"""
+        if AsyncSessionLocal is None:
+            logger.error("AsyncSessionLocal 未初始化，跳过录制后处理")
+            return
+        async with AsyncSessionLocal() as session:
+            service = RecordingService(session)
+            await service.process_recording(recording_id)
     
     async def _process_video_file(self, recording: MeetingRecording) -> str:
         """处理视频文件"""
