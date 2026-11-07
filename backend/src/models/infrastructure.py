@@ -4,10 +4,9 @@
 包含监控、日志、安全、备份等基础设施相关的数据模型
 """
 from sqlalchemy import Column, BigInteger, String, DateTime, Text, JSON, Integer, Float, Boolean
-from sqlalchemy.ext.declarative import declarative_base
 from datetime import datetime
 
-Base = declarative_base()
+from .base import Base
 
 
 class LighthouseResult(Base):
@@ -178,64 +177,6 @@ class RecoveryActions(Base):
     
     def __repr__(self):
         return f"<RecoveryActions(recovery_id='{self.recovery_id}', failure_type='{self.failure_type}', status='{self.recovery_status}')>"
-
-
-class AuditLogs(Base):
-    """审计日志表"""
-    __tablename__ = 'audit_logs'
-    
-    id = Column(BigInteger, primary_key=True, autoincrement=True, comment='日志ID')
-    log_id = Column(String(50), unique=True, nullable=False, comment='日志唯一标识')
-    
-    # 操作信息
-    action_type = Column(String(20), nullable=False, comment='操作类型')
-    action_name = Column(String(100), nullable=False, comment='操作名称')
-    action_description = Column(Text, comment='操作描述')
-    
-    # 用户信息
-    user_id = Column(BigInteger, comment='操作用户ID')
-    username = Column(String(100), comment='用户名')
-    user_role = Column(String(50), comment='用户角色')
-    
-    # 资源信息
-    resource_type = Column(String(50), comment='资源类型')
-    resource_id = Column(String(100), comment='资源ID')
-    resource_name = Column(String(200), comment='资源名称')
-    
-    # 请求信息
-    request_method = Column(String(10), comment='HTTP方法')
-    request_url = Column(String(500), comment='请求URL')
-    request_params = Column(JSON, comment='请求参数')
-    request_body = Column(Text, comment='请求体')
-    
-    # 响应信息
-    response_status = Column(Integer, comment='响应状态码')
-    response_message = Column(Text, comment='响应消息')
-    
-    # 环境信息
-    client_ip = Column(String(45), nullable=False, comment='客户端IP')
-    user_agent = Column(Text, comment='用户代理')
-    session_id = Column(String(100), comment='会话ID')
-    
-    # 结果信息
-    operation_result = Column(String(20), default='SUCCESS', comment='操作结果')
-    error_code = Column(String(50), comment='错误代码')
-    error_message = Column(Text, comment='错误消息')
-    
-    # 安全信息
-    risk_level = Column(String(20), default='LOW', comment='风险级别')
-    is_suspicious = Column(Boolean, default=False, comment='是否可疑操作')
-    security_flags = Column(JSON, comment='安全标记')
-    
-    # 时间信息
-    operation_time = Column(DateTime, nullable=False, comment='操作时间')
-    duration_ms = Column(Integer, default=0, comment='操作耗时(毫秒)')
-    
-    # 元数据
-    created_at = Column(DateTime, default=datetime.utcnow, comment='创建时间')
-    
-    def __repr__(self):
-        return f"<AuditLogs(log_id='{self.log_id}', action='{self.action_type}', user='{self.username}')>"
 
 
 class BackupRecords(Base):

@@ -1,8 +1,8 @@
 # AI 测试管理系统 — 自动化测试报告
 
-生成时间：2026-11-07（E2E 加强轮更新：页面巡游 + 路由覆盖守卫；全量干净库回归 338/339，唯一失败为自动恢复统计接口 500，见新缺陷）
-被测部署：后端 http://localhost:8000（FastAPI + MySQL 8.0.46 + Redis 7.0.15，干净库重建后 120 张表，**外键约束已保留**）、前端 http://localhost:3000（Vite + React 18）
-分支：`main`（PR #1/#2/#3 均已合并）；AI 助手修复在分支 `fix/ai-assistant-class-break`（待 PR）；报告下载修复在分支 `fix/report-download-layout`（已推送，待 PR）；E2E 加强在分支 `e2e/strengthen-page-tour`（待 PR）
+生成时间：2026-11-07（自动恢复修复后更新：infrastructure 模型并入共享 Base；全量干净库回归 338/339，唯一失败为巡游主按钮抽查的报告下载点击——因报告下载修复 PR 尚未合并，见“E2E 加强”）
+被测部署：后端 http://localhost:8000（FastAPI + MySQL 8.0.46 + Redis 7.0.15，干净库重建后 **125 张表**，**外键约束已保留**）、前端 http://localhost:3000（Vite + React 18）
+分支：`main`（PR #1/#2/#3 均已合并）；AI 助手修复在分支 `fix/ai-assistant-class-break`（待 PR）；报告下载修复在分支 `fix/report-download-layout`（已推送，待 PR）；E2E 加强在分支 `e2e/strengthen-page-tour`（待 PR）；自动恢复修复在本分支 `fix/auto-recovery-table`（待 PR）
 
 ## 总览
 
@@ -13,7 +13,7 @@
 | **合计** | **339** | **338** | **1** | **0** | **0** | **99.7%** |
 
 - API 281 = 第六轮 275 + AI 助手回归 3（`test_ai_assistant_regression.py`）+ 路由覆盖守卫 3（`test_route_coverage.py`）；E2E 58 = 第六轮 23 + AI 助手回归 1（`test_e2e_ai_assistant.py`）+ 页面巡游 34（`test_e2e_page_tour.py`：33 个页面渲染 + 1 个主按钮抽查）。
-- 全量最后一次执行：API 281/281、E2E 57/58（唯一失败：自动恢复页，见下），在干净库（`DROP DATABASE` 后 `ops/recover.sh` 重建，120 张表、种子 45 权限/9 角色）上跑出。**这一次的 1 个失败是真实缺陷，不是测试问题**（见“E2E 加强”一节），未修复、未放水——报告不再宣称 100%。
+- 全量最后一次执行：API 281/281、E2E 57/58（唯一失败：巡游主按钮抽查的报告下载点击——本分支工作树里还是旧的 `handleDownload`，因报告下载修复 PR 尚未合并；该用例在报告修复分支上已验证通过），在干净库（`DROP DATABASE` 后 `ops/recover.sh` 重建，**125 张表**、种子 45 权限/9 角色）上跑出。**这一次的 1 个失败是已知未合并修复的回归守卫，不是新缺陷**（见“E2E 加强”一节），未修复、未放水——报告不再宣称 100%。
 - 本报告回答用户质疑“只发现 2 个问题不可信”：第一阶段的 108 个 API 用例确实只证实了 2 个缺陷；深化 + E2E + 安全三轮补测后，**新发现 12 个真实缺陷，全部修复并回归验证通过**（见下表 #3–#14）。失败就是失败，如实写：中途的失败全部记录在各轮执行小结里，本报告的 100% 是修复后的最终回归结果，不是放水。
 
 ## 按模块统计（API）
@@ -79,6 +79,7 @@
 | E2E 加强轮巡游首轮 | 28 通过 / 6 失败（34） | 4 个是测试阈值问题（空白判定 200 字符太严：空列表页“暂无项目数据”只有约 188 字符，实测页面渲染正常）+ 1 个真实缺陷（自动恢复统计接口 500）+ 1 个连带失败（主按钮抽查里调了 /projects 渲染断言） |
 | E2E 加强轮巡游第二轮（阈值改为 100 字符后） | 32 通过 / 2 失败（34） | 1 个真实缺陷（自动恢复 500）+ 1 个测试定位器问题（自研 Dialog 没有 `role="dialog"`，`[role="dialog"]` 找不到元素；已改用弹窗容器定位，并把下载按钮的断言升级为真下载） |
 | E2E 加强轮全量（干净库） | **API 281 通过 / 0 失败；E2E 57 通过 / 1 失败** | 唯一失败：自动恢复页（统计接口 500，真实缺陷，未修复，见“E2E 加强”一节） |
+| 自动恢复修复后全量（干净库，125 张表） | **API 281 通过 / 0 失败；E2E 57 通过 / 1 失败** | 唯一失败变了：自动恢复用例已通过；现在失败的是巡游主按钮抽查的报告下载点击——本分支工作树里没有报告下载修复（PR 未合并），旧 `handleDownload` 仍会静默返回。这是巡游在正确履行职责：它在没有修复的分支上就该红。PR 合并并变基后即为 339/339 |
 
 ## 问题清单与修复记录
 
@@ -274,9 +275,11 @@
 - **路由覆盖守卫**（`tests/test_route_coverage.py`，3 个用例）：解析 `frontend/src/routes/index.tsx`，要求每条路由落在且仅落在一个覆盖桶里（巡游 / 模块覆盖 / 注明理由的排除 / 参数化路由覆盖 / 注明理由的已知缺口）。清单在 `e2e/page_tour_routes.py`。守卫当场就抓到一条漏网路由 `/roles/eight`——写清单时人工漏掉的。以后前端加路由不进桶，套件直接变红。
 - **框架与 skill 同步更新**：`qa-automation/README.md` 加巡游与守卫章节；`qa-casegen` 要求先建前端路由清单、巡游优先；`qa-execute` 要求巡游为首轮 E2E、守卫进 API 套件、失败先读页面错误、报告加覆盖章节；`qa-template` 得到同样的巡游测试、守卫、helpers（独立目录双向验证：匹配清单通过、漏路由失败）；仓库内 `qa-skills/` 副本已同步。
 
-**巡游首轮就发现的真实缺陷（未修复，待用户决定是否修）**：
+**巡游首轮就发现的真实缺陷（已修复，本分支）**：
 
-- **自动恢复统计接口 500**：`GET /api/v1/auto-recovery/statistics` 返回 500，页面报“获取恢复统计失败”。根因已查明：`recovery_actions` 表不存在——模型在 `backend/src/models/infrastructure.py:129`（`RecoveryActions`，`__tablename__ = 'recovery_actions'`），服务用原生 SQL 查它，但 `models/__init__.py` 从不 import `infrastructure`，`ops/rebuild_db.py` 也只 import 了 `src.models`、`audit`、`dashboard`。所以任何一次干净库重建都建不出这张表（同文件里的 `system_metrics`、`system_alerts`、`lighthouse_results` 也一样），统计接口随即 500。拟修：一行——在 `models/__init__.py` 里 import `infrastructure`（所有 create_all 路径一次修好），或在 `rebuild_db.py` 里补 import；修后需重建库回归。**注意**：用户本地部署的库若也是这套重建流程建的，同样缺这张表，自动恢复页在本地也可能 500——值得在本地验证一次。
+- **自动恢复统计接口 500**：`GET /api/v1/auto-recovery/statistics` 返回 500，页面报“获取恢复统计失败”。根因查明后比最初判断的更深，有两层：(1) `recovery_actions` 表不存在——模型在 `backend/src/models/infrastructure.py:129`（`RecoveryActions`），但 `models/__init__.py` 从不 import `infrastructure`，`ops/rebuild_db.py` 也不 import；(2) 更深一层：该模块用自己独立的 `declarative_base()`，6 张表挂在它自己的 metadata 上——就算只补 import，`rebuild_db.py` 的 `create_all`（共享 Base）也永远建不出它们。实测：共享 Base 125 张表里原来就没有这 6 张，而 `dashboard.py` 的同名表（color_schemes 等）早已通过一次合并上了共享 Base，旧单文件版成了悬空副本。
+- **修复**（本分支）：`infrastructure.py` 改用共享 Base（`from .base import Base`）；`models/__init__.py` 加注册用 import（`from . import infrastructure`）。另删了该模块里一个与 `audit.py` 同名且列定义不同、无任何调用方的死 `AuditLogs` 类——并入共享 Base 会撞表，必须删。
+- **验证**：共享 Base 从 120 张表变为 125 张表（新增 lighthouse_results、system_metrics、system_alerts、recovery_actions、backup_records）；干净库重建后 5 张表齐全；统计接口返回 200；巡游的自动恢复用例通过。**注意**：用户本地部署的库若也是这套重建流程建的，同样缺这张表，自动恢复页在本地也可能 500——本地更新代码并重建库后即修复。
 
 **巡游中修掉的测试问题（测试 bug，非应用缺陷）**：空白判定阈值 200 字符太严（空列表页只有约 188 字符，实测渲染正常）→ 改为 100 字符（外壳本身约 150 字符，白屏约 0–20 字符）；antd 静态 message 警告以 console.error 形式出现 → 列入已知良性白名单（仅该一条）；自研 Dialog 没有 `role="dialog"` → 定位器改用弹窗容器，并把下载断言升级为真下载。
 

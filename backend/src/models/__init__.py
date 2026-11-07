@@ -103,6 +103,13 @@ from .websocket_connection import (
 # 避免与上面导出的同名类冲突）。只 import 模块即可把表注册进
 # 共享 Base，供 create_all / alembic autogenerate 覆盖。
 from . import dashboard  # noqa: F401
+# 注册用 import：infrastructure.py 的 5 张表（lighthouse_results、
+# system_metrics、system_alerts、recovery_actions、backup_records）。
+# 此前该模块用自己独立的 declarative_base，create_all 建不出这些
+# 表，/api/v1/auto-recovery/statistics 在干净库上 500（2026-11-07
+# 巡游发现）。其旧 AuditLogs 类已删除：与 audit.py 的 audit_logs
+# 同名且列定义不同、无任何调用方。
+from . import infrastructure  # noqa: F401
 from .requirement_priority import (
     RequirementPriorityConfig, RequirementPriorityEvaluation,
     RequirementPriorityConflict, RequirementPriorityHistory,
