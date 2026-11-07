@@ -6,6 +6,7 @@
 
 import os
 import json
+import shutil
 import logging
 import html
 import uuid
@@ -100,6 +101,44 @@ def _find_generated_report_files(report_id: str, format_filter: Optional[str] = 
     if normalized_format:
         files = [path for path in files if path.suffix.lower().lstrip(".") == normalized_format]
     return files
+
+
+
+def _imported_media_type(file_type: str) -> str:
+    """导入报告按原始格式的 MIME 类型。"""
+    return {
+        "html": "text/html; charset=utf-8",
+        "pdf": "application/pdf",
+        "xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "json": "application/json; charset=utf-8",
+        "csv": "text/csv; charset=utf-8",
+    }.get(str(file_type).lower(), "application/octet-stream")
+
+
+def _preserve_imported_original(importer, imported_report, file_path: Path) -> None:
+    """把上传的原始文件从临时目录移到导入记录目录，供下载使用。
+
+    之前导入成功后 finally 直接删临时文件，导入记录里只剩解析出的
+    文本（raw_content.txt），原始文件无处可下，详情页的下载按钮
+    因此点了也没反应。删除导入报告时会整个删掉记录目录，保留的
+    原始文件会一并清理，不会留下孤儿文件。
+    """
+    try:
+        record_dir = Path(importer.import_dir) / imported_report.import_id
+        record_dir.mkdir(exist_ok=True)
+        target = record_dir / f"original{file_path.suffix.lower()}"
+        shutil.move(str(file_path), str(target))
+        # 元数据里的原始路径原来指向临时文件，更新为保留后的位置
+        metadata_path = record_dir / "metadata.json"
+        if metadata_path.exists():
+            with open(metadata_path, "r", encoding="utf-8") as f:
+                metadata = json.load(f)
+            metadata["original_file_path"] = str(target)
+            with open(metadata_path, "w", encoding="utf-8") as f:
+                json.dump(metadata, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        logger.error(f"保留导入原始文件失败: {e}")
 
 
 def _list_generated_reports() -> List[Any]:
@@ -618,6 +657,8 @@ async def import_report(
                 str(file_path),
                 ReportSourceType(source_type)
             )
+            # 保留上传的原始文件到导入记录目录，供下载使用
+            _preserve_imported_original(importer, imported_report, file_path)
             
             # 鏋勫缓鍝嶅簲
             response_data = ImportedReportResponse(
@@ -880,6 +921,57 @@ async def get_imported_report_test_results(
     except Exception as e:
         logger.error(f"鑾峰彇娴嬭瘯缁撴灉澶辫触: {e}")
         raise HTTPException(status_code=500, detail="鑾峰彇娴嬭瘯缁撴灉澶辫触")
+
+
+@router.get("/imported/{import_id}/download")
+async def download_imported_report(
+    import_id: str = PathParam(..., description="导入ID"),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    下载导入报告的原始文件
+
+    优先返回导入时保留的原始文件；老导入记录没有保留原始文件时，
+    返回解析时保存的原始内容（HTML 导入即原始 HTML 文本）。
+    """
+    try:
+        if not import_id or "/" in import_id or "\\" in import_id or ".." in import_id:
+            raise HTTPException(status_code=400, detail="invalid import id")
+
+        importer = ReportImporter()
+        imported_report = await importer.get_imported_report(import_id)
+        if not imported_report:
+            raise HTTPException(status_code=404, detail="imported report not found")
+
+        record_dir = Path(importer.import_dir) / import_id
+        media_type = _imported_media_type(imported_report.file_type.value)
+
+        # 1) 导入时保留的原始文件
+        originals = sorted(record_dir.glob("original.*"))
+        if originals:
+            return FileResponse(
+                path=str(originals[0]),
+                media_type=media_type,
+                headers={"Content-Disposition": _content_disposition("attachment", imported_report.file_name)},
+            )
+
+        # 2) 老记录：解析时保存的原始内容（HTML 即原始文件文本）
+        content_path = record_dir / "raw_content.txt"
+        if content_path.exists():
+            return FileResponse(
+                path=str(content_path),
+                media_type=media_type,
+                headers={"Content-Disposition": _content_disposition("attachment", imported_report.file_name)},
+            )
+
+        raise HTTPException(status_code=404, detail="该导入报告的原始文件已不存在，无法下载")
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"下载导入报告失败: {e}")
+        raise HTTPException(status_code=500, detail="下载导入报告失败")
 
 
 @router.get("/download/{report_id}/{format}")
