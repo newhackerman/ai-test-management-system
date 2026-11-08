@@ -8,6 +8,7 @@ here depends on any one project.
 
 ```text
 qa-automation/
+  PROJECT.md           project profile: stack, auth, envelope, rebuild
   config.py            settings, all env-overridable
   client.py            ApiClient: auth, HTTP verbs
   assertions.py        envelope and error assertions
@@ -16,7 +17,7 @@ qa-automation/
   pytest.ini           markers and paths
   requirements.txt     pytest, httpx, pytest-json-report, playwright
   tests/test_smoke.py  health, docs, openapi, login smoke tests
-  tools/report.py      Markdown report generator
+  tools/report.py      Markdown report generator (writes generated.md)
   e2e/conftest.py      Playwright fixtures
   e2e/helpers.py       login/logout/nav helpers + page-error collection
   e2e/page_tour_routes.py  page-tour inventory (every route in a bucket)
@@ -27,11 +28,18 @@ qa-automation/
 
 ## Adapt in 5 steps
 
-1. Set the environment: `QA_BASE_URL`, `QA_FRONTEND_URL`,
-   `QA_ADMIN_USER`, `QA_ADMIN_PASSWORD`, `QA_LOGIN_PATH`, `QA_HEALTH_PATH`.
-2. Match the auth and envelope: in `client.py` fix the token field names
-   and in `assertions.py` fix the success/error envelope shape. This is
-   the single most common adaptation.
+1. Fill in `PROJECT.md` first: stack, auth scheme, envelope shape,
+   app container, login selectors, health endpoints and how to rebuild
+   a clean database. Every later step reads it instead of guessing.
+2. Set the environment from `PROJECT.md`: `QA_BASE_URL`,
+   `QA_FRONTEND_URL`, `QA_ADMIN_USER`, `QA_ADMIN_PASSWORD`,
+   `QA_LOGIN_PATH`, `QA_HEALTH_PATH`, plus the three shape switches
+   `QA_AUTH_SCHEME` (bearer / cookie / apikey), `QA_ENVELOPE`
+   (success / code / bare) and `QA_APP_ROOT` (#root / #app /
+   app-root). Token field names go in `QA_TOKEN_FIELD`. Only when the
+   project uses a scheme the switches do not cover (basic auth, OAuth)
+   do you edit `client.py` — that is the one code adaptation point.
+   Set `QA_HAS_OPENAPI=0` when the backend serves no OpenAPI document.
 3. Add one `factories.<entity>_payload` builder and one
    `conftest.make_<entity>` fixture per domain entity, copying the
    commented example in each file.
@@ -51,8 +59,16 @@ qa-automation/
 cd qa-automation
 python -m pytest -q -m smoke
 python -m pytest --json-report --json-report-file=reports/latest.json
-python tools/report.py
+python tools/report.py   # writes reports/generated.md (this run's numbers)
 ```
+
+`tools/report.py` writes `reports/generated.md` only. The curated
+`reports/TEST_REPORT.md` keeps the round history and the defect list:
+merge the numbers from `generated.md` into it by hand. Never point
+the tool at the curated file — a wholesale rewrite would erase the
+history. For a fresh project with no curated history yet, pass the
+output path explicitly: `python tools/report.py reports/latest.json
+reports/TEST_REPORT.md`.
 
 ## Rules the template follows
 
@@ -64,3 +80,11 @@ python tools/report.py
   API responses. A 200 never proves the page renders.
 - Every route sits in a coverage bucket (tour / module-covered /
   excluded-with-reason). A new route with no bucket fails the suite.
+- Adaptation is configuration, not code: auth scheme, envelope shape,
+  token fields and the app container are env settings. Edit `client.py`
+  or `assertions.py` only when the project uses a scheme the switches
+  do not cover, and record the exception in `PROJECT.md`.
+- The generated report (`reports/generated.md`) and the curated report
+  (`reports/TEST_REPORT.md`) are different files. The generated one is
+  disposable numbers; the curated one is the history. Never let the
+  generator overwrite the curated file.

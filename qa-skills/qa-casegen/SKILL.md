@@ -2,7 +2,10 @@
 
 ## Input
 
-- Take the deployment note from the deploy step: the repository path, the running base URLs, the health endpoints and the test account.
+- Take the deployment note and the project profile from the deploy step
+  (`qa-automation/PROJECT.md`): the repository path, the running base
+  URLs, the health endpoints, the test account, the auth scheme, the
+  envelope shape and the deployment shape.
 - Take the OpenAPI document when the backend exposes one. When it does not, enumerate the route files and the data models instead.
 - Never use, import or copy the repository's own test framework or test code.
 
@@ -10,15 +13,43 @@
 
 - Build an endpoint inventory from the live OpenAPI document: one row per operation with its path, method, auth requirement, request shape and response shape.
 - Cross-check the inventory against the route files so undocumented endpoints are not missed.
+- When there is no OpenAPI document and no readable route table, use
+  these fallbacks in order: (1) GraphQL — run an introspection query
+  against the endpoint and build the inventory from the schema;
+  (2) frontend API calls — grep the frontend's API client/service
+  files for fetch/axios calls and build the inventory from the URLs
+  and payloads they use; (3) live probing — exercise the documented
+  entry points and record every endpoint the app actually calls.
+  Record which fallback was used in the project profile, because the
+  inventory from a fallback is partial by construction.
 - Read the data models for every entity and note the required fields, the enums and the foreign keys.
 - Read the auth module and note how login works, what roles exist and which endpoints check roles.
-- Build a frontend route inventory too: parse the router file for every path (static and parameterised) and the sidebar menu. The API inventory alone never proves a page was opened — a route with no test is a gap, not a pass.
+- Build a frontend route inventory too: parse the router file for every path (static and parameterised) and the sidebar menu. The API inventory alone never proves a page was opened — a route with no test is a gap, not a pass. For an API-only project there is no frontend inventory; say so in the analysis record and skip the tour.
 - Write the inventory down as the analysis record. Generate no cases before this record exists.
+
+## Scope a large API before generating
+
+- When the inventory is large (roughly 200 operations or more), do not
+  generate cases for every endpoint in one pass. Rank the endpoints by
+  risk first: auth and session handling, money and payment flows,
+  endpoints that write or delete data, endpoints with role checks, and
+  anything the analysis flagged as untested by the repository's own
+  suite. Generate the high-risk slice first, run it, then extend.
+- State the scope in the case inventory: how many endpoints are covered
+  in this round and which ones are deliberately deferred, with the
+  reason. A deferred endpoint is an explicit decision, never an
+  accident — the same rule as the route-coverage buckets.
 
 ## Set up the framework
 
 - Copy `~/workspace/custom-skills/qa-template/` into the repository as `qa-automation/`.
-- Adapt it in the five steps its README lists: set the environment, match the auth and envelope shapes, add one payload builder and one fixture per entity, then write the cases.
+- Adapt it in the five steps its README lists, driven by the project
+  profile: set the environment, match the auth and envelope shapes
+  through the env switches (`QA_AUTH_SCHEME`, `QA_ENVELOPE`,
+  `QA_TOKEN_FIELD`, `QA_APP_ROOT`, `QA_HAS_OPENAPI`) — edit `client.py`
+  or `assertions.py` only when the project uses a scheme the switches
+  do not cover, and record the exception in `PROJECT.md`. Then add one
+  payload builder and one fixture per entity, then write the cases.
 - Confirm the adaptation with the template smoke suite before writing any domain case. A red smoke suite means the client or the envelope is still wrong, not that the API is broken.
 
 ## Generate cases with AI

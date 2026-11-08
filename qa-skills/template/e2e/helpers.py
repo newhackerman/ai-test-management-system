@@ -7,6 +7,9 @@ Adaptation points for a new project (all env-overridable):
   QA_LOGIN_BTN        login button text, default the local word for login
   QA_DASHBOARD_MARKER text visible only after login, e.g. a dashboard metric
   QA_LOGOUT_BTN       logout button text
+  QA_APP_ROOT         frontend app container selector, default #root
+                      (React). Vue apps use #app; Angular apps use
+                      app-root. Set it per project, never hard-code it.
 
 Add one helper per UI creation flow of the new project, following the
 pattern in login(): goto the page, fill the form, submit, then expect a
@@ -18,7 +21,7 @@ import uuid
 
 from playwright.sync_api import expect
 
-from config import ADMIN_PASSWORD, ADMIN_USER, FRONTEND_URL
+from config import ADMIN_PASSWORD, ADMIN_USER, APP_ROOT, FRONTEND_URL
 
 LOGIN_PAGE = os.environ.get("QA_LOGIN_PAGE", "/login")
 USER_SELECTOR = os.environ.get("QA_USER_SELECTOR", "#username")
@@ -106,6 +109,14 @@ class PageErrorCollector:
         return out
 
 
+# Console errors that are known-benign and must not fail a page.
+# Example: the antd static-message warning, logged as console.error
+# on pages using message.* without the App wrapper — a dev-mode
+# warning, not a functional failure. Add entries only with a reason.
+IGNORED_CONSOLE_ERRORS = (
+    "[antd: message] Static function can not consume context",
+)
+
 # Text that must never appear in a rendered page. Override with
 # QA_FAILURE_MARKERS (comma-separated) when the app's own wording differs.
 FAILURE_MARKERS = tuple(
@@ -115,6 +126,12 @@ FAILURE_MARKERS = tuple(
     ).split(",")
     if m.strip()
 )
+
+# A page is "blank" below this many body characters. The app shell
+# (sidebar + header) alone is ~150 chars, so 100 still catches a
+# white screen (~0-20 chars) while allowing legitimately sparse
+# pages such as an empty list.
+BLANK_THRESHOLD = 100
 
 
 def assert_page_renders(page, path: str, marker: str | None = None, timeout: int = 20000):
@@ -127,13 +144,13 @@ def assert_page_renders(page, path: str, marker: str | None = None, timeout: int
     with PageErrorCollector(page) as collector:
         page.goto(f"{FRONTEND_URL}{path}")
         page.wait_for_load_state("load", timeout=timeout)
-        expect(page.locator("#root")).to_be_visible(timeout=timeout)
+        expect(page.locator(APP_ROOT)).to_be_visible(timeout=timeout)
         if marker:
             expect(page.get_by_text(marker).first).to_be_visible(timeout=timeout)
         else:
             page.wait_for_timeout(1500)
         body_text = page.locator("body").inner_text()
-        assert len(body_text.strip()) > 200, (
+        assert len(body_text.strip()) > BLANK_THRESHOLD, (
             f"{path}: page looks blank ({len(body_text.strip())} chars of body text)"
         )
         for bad in FAILURE_MARKERS:

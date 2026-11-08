@@ -12,6 +12,21 @@
 - Run the E2E suite in a real browser after the API suite passes, page tour first, then the module flows. The tour opens every static route; a page that fails the tour is a defect, not a flaky test, until proven otherwise.
 - Record the raw counts for every run: total, passed, failed, error and skipped.
 
+## Tell a flaky test from a defect
+
+- E2E tests are flaky by nature (slow render, a late API response, a
+  timing race). A failure is not a defect until it reproduces.
+- Rerun only the failures first: `python -m pytest --lf -q`. If a test
+  passes on the rerun with no code changed, run it alone once more;
+  if it passes again, mark it flaky in the report with the failure
+  text, do not file it as a defect, and do not delete it.
+- For a suite that is chronically flaky, run with
+  `python -m pytest --reruns 1 -q` so a single transient failure does
+  not fail the whole run — but the report must still list every test
+  that needed a rerun. A rerun is a warning, never a pass.
+- A failure that reproduces twice in a row, or that reproduces after
+  the app was restarted, is a defect. File it.
+
 ## Triage every failure
 
 - Reproduce each failure by hand before calling it a defect. A wrong token attribute, a missing fixture field or a stale selector is a test bug, not a product defect.
@@ -22,11 +37,12 @@
 
 ## Write the report
 
-- Generate the Markdown report with `tools/report.py` from the JSON report file.
+- Generate the numbers with `tools/report.py` from the JSON report file. It writes `reports/generated.md` — the fresh numbers for this run only.
+- Merge those numbers by hand into the curated `reports/TEST_REPORT.md`, which keeps the round history and the defect list. Never let the generator write over the curated file: a wholesale rewrite erases the history. For a fresh project with no curated history yet, the generated file may be used as the first report.
 - Add the per-module counts, the round history and the defect list with severity and priority.
 - Add a coverage section: routes visited by the tour vs total routes in the router, and the known gaps with their written reasons. A 100 percent pass rate with unvisited routes is reported as partial coverage, never as full.
 - Report the final regression only after a run on a clean database. A 100 percent pass rate is claimed only for that final clean run, never for a run that skipped the failing cases.
-- Write failures honestly. A failure that was fixed mid-round stays in the round history.
+- Write failures honestly. A failure that was fixed mid-round stays in the round history. A test that needed a rerun to pass is listed as flaky, not as a clean pass.
 
 ## Hand off
 

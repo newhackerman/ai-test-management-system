@@ -2,13 +2,15 @@
 
 Paths come from config.py. If the new project uses different paths,
 set QA_HEALTH_PATH (and QA_LOGIN_PATH for the login check) instead of
-editing this file.
+editing this file. The docs/openapi checks are skipped when
+QA_HAS_OPENAPI=0 — a project without an OpenAPI document is not a
+failure, it just has no docs to check.
 """
 import httpx
 import pytest
 
 from client import ApiClient
-from config import BASE_URL, HEALTH_PATH
+from config import BASE_URL, DOCS_PATH, HAS_OPENAPI, HEALTH_PATH, OPENAPI_PATH
 
 
 def _get(path: str) -> httpx.Response:
@@ -32,14 +34,18 @@ def test_root_returns_service_info():
 
 @pytest.mark.smoke
 def test_swagger_docs_reachable():
-    resp = _get("/api/v1/docs")
+    if not HAS_OPENAPI:
+        pytest.skip("no OpenAPI document for this project (QA_HAS_OPENAPI=0)")
+    resp = _get(DOCS_PATH)
     assert resp.status_code == 200
     assert "swagger" in resp.text.lower()
 
 
 @pytest.mark.smoke
 def test_openapi_json_lists_paths():
-    resp = _get("/api/v1/openapi.json")
+    if not HAS_OPENAPI:
+        pytest.skip("no OpenAPI document for this project (QA_HAS_OPENAPI=0)")
+    resp = _get(OPENAPI_PATH)
     assert resp.status_code == 200
     assert resp.json().get("paths"), "openapi.json has no paths"
 

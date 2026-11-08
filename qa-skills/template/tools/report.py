@@ -3,12 +3,23 @@
 
 Usage:
     python -m pytest --json-report --json-report-file=reports/latest.json
-    python tools/report.py [reports/latest.json] [reports/TEST_REPORT.md]
+    python tools/report.py [reports/latest.json] [output.md]
 
 The report contains: totals, pass rate, per-module counts, the full failure
 list with assertion messages, and a severity/priority table skeleton that
 the QA engineer fills in after triage (failures are NOT auto-severitised:
 severity needs a human/product judgement).
+
+Generated vs curated report — read this before pointing the output at
+the curated file:
+  - Default output is reports/generated.md: the fresh numbers for THIS
+    run only. It never touches the curated reports/TEST_REPORT.md.
+  - The curated TEST_REPORT.md keeps the round history, the defect list
+    and the hand-written sections. Merge the numbers from generated.md
+    into it by hand; never let this tool write over it wholesale, or
+    the history is lost.
+  - Pass an explicit output path only for a fresh project with no
+    curated history yet, or for a scratch file.
 """
 from __future__ import annotations
 
@@ -35,7 +46,7 @@ def module_of(nodeid: str) -> str:
 
 def main() -> int:
     src = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT / "reports" / "latest.json"
-    dst = Path(sys.argv[2]) if len(sys.argv) > 2 else ROOT / "reports" / "TEST_REPORT.md"
+    dst = Path(sys.argv[2]) if len(sys.argv) > 2 else ROOT / "reports" / "generated.md"
     data = load(src)
     summary = data.get("summary", {})
     total = summary.get("total", 0)
