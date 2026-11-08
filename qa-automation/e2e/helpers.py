@@ -6,7 +6,7 @@ import uuid
 
 from playwright.sync_api import expect
 
-from config import ADMIN_PASSWORD, ADMIN_USER, FRONTEND_URL
+from config import ADMIN_PASSWORD, ADMIN_USER, APP_ROOT, FRONTEND_URL
 
 FRONTEND_URL = FRONTEND_URL
 ADMIN_USER = ADMIN_USER
@@ -118,7 +118,7 @@ def assert_page_renders(page, path: str, marker: str | None = None, timeout: int
         page.goto(f"{FRONTEND_URL}{path}")
         page.wait_for_load_state("load", timeout=timeout)
         # The app shell (sidebar) must be present, not a blank document.
-        expect(page.locator("#root")).to_be_visible(timeout=timeout)
+        expect(page.locator(APP_ROOT)).to_be_visible(timeout=timeout)
         if marker:
             expect(page.get_by_text(marker).first).to_be_visible(timeout=timeout)
         else:
