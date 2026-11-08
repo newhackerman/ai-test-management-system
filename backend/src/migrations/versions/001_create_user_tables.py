@@ -20,7 +20,7 @@ def upgrade() -> None:
     # 创建用户表
     op.create_table(
         'users',
-        sa.Column('id', sa.Integer(), autoincrement=True, nullable=False, comment='用户ID'),
+        sa.Column('id', sa.BigInteger(), autoincrement=True, nullable=False, comment='用户ID'),
         sa.Column('username', sa.String(length=50), nullable=False, comment='用户名'),
         sa.Column('email', sa.String(length=100), nullable=False, comment='邮箱地址'),
         sa.Column('password_hash', sa.String(length=255), nullable=False, comment='密码哈希'),
@@ -45,8 +45,8 @@ def upgrade() -> None:
         sa.Column('created_at', sa.DateTime(), nullable=False, comment='创建时间'),
         sa.Column('updated_at', sa.DateTime(), nullable=False, comment='更新时间'),
         sa.Column('deleted_at', sa.DateTime(), nullable=True, comment='删除时间'),
-        sa.Column('created_by', sa.Integer(), nullable=True, comment='创建人ID'),
-        sa.Column('updated_by', sa.Integer(), nullable=True, comment='更新人ID'),
+        sa.Column('created_by', sa.BigInteger(), nullable=True, comment='创建人ID'),
+        sa.Column('updated_by', sa.BigInteger(), nullable=True, comment='更新人ID'),
         sa.PrimaryKeyConstraint('id'),
         sa.UniqueConstraint('username'),
         sa.UniqueConstraint('email'),
@@ -58,7 +58,7 @@ def upgrade() -> None:
     # 创建角色表
     op.create_table(
         'roles',
-        sa.Column('id', sa.Integer(), autoincrement=True, nullable=False, comment='角色ID'),
+        sa.Column('id', sa.BigInteger(), autoincrement=True, nullable=False, comment='角色ID'),
         sa.Column('name', sa.String(length=50), nullable=False, comment='角色名称'),
         sa.Column('code', sa.String(length=50), nullable=False, comment='角色代码'),
         sa.Column('description', sa.Text(), nullable=True, comment='角色描述'),
@@ -76,7 +76,7 @@ def upgrade() -> None:
     # 创建权限表
     op.create_table(
         'permissions',
-        sa.Column('id', sa.Integer(), autoincrement=True, nullable=False, comment='权限ID'),
+        sa.Column('id', sa.BigInteger(), autoincrement=True, nullable=False, comment='权限ID'),
         sa.Column('name', sa.String(length=100), nullable=False, comment='权限名称'),
         sa.Column('code', sa.String(length=100), nullable=False, comment='权限代码'),
         sa.Column('module', sa.String(length=50), nullable=False, comment='所属模块'),
@@ -92,9 +92,9 @@ def upgrade() -> None:
     # 创建用户角色关联表
     op.create_table(
         'user_roles',
-        sa.Column('id', sa.Integer(), autoincrement=True, nullable=False, comment='关联ID'),
-        sa.Column('user_id', sa.Integer(), nullable=False, comment='用户ID'),
-        sa.Column('role_id', sa.Integer(), nullable=False, comment='角色ID'),
+        sa.Column('id', sa.BigInteger(), autoincrement=True, nullable=False, comment='关联ID'),
+        sa.Column('user_id', sa.BigInteger(), nullable=False, comment='用户ID'),
+        sa.Column('role_id', sa.BigInteger(), nullable=False, comment='角色ID'),
         sa.Column('assigned_by', sa.Integer(), nullable=True, comment='分配人ID'),
         sa.Column('assigned_at', sa.DateTime(), nullable=False, comment='分配时间'),
         sa.Column('expires_at', sa.DateTime(), nullable=True, comment='过期时间'),
@@ -110,9 +110,9 @@ def upgrade() -> None:
     # 创建角色权限关联表
     op.create_table(
         'role_permissions',
-        sa.Column('id', sa.Integer(), autoincrement=True, nullable=False, comment='关联ID'),
-        sa.Column('role_id', sa.Integer(), nullable=False, comment='角色ID'),
-        sa.Column('permission_id', sa.Integer(), nullable=False, comment='权限ID'),
+        sa.Column('id', sa.BigInteger(), autoincrement=True, nullable=False, comment='关联ID'),
+        sa.Column('role_id', sa.BigInteger(), nullable=False, comment='角色ID'),
+        sa.Column('permission_id', sa.BigInteger(), nullable=False, comment='权限ID'),
         sa.Column('created_at', sa.DateTime(), nullable=False, comment='创建时间'),
         sa.PrimaryKeyConstraint('id'),
         sa.ForeignKeyConstraint(['role_id'], ['roles.id'], ondelete='CASCADE', name='fk_role_permissions_role_id'),
@@ -124,8 +124,8 @@ def upgrade() -> None:
     # 创建用户会话表
     op.create_table(
         'user_sessions',
-        sa.Column('id', sa.Integer(), autoincrement=True, nullable=False, comment='会话ID'),
-        sa.Column('user_id', sa.Integer(), nullable=False, comment='用户ID'),
+        sa.Column('id', sa.BigInteger(), autoincrement=True, nullable=False, comment='会话ID'),
+        sa.Column('user_id', sa.BigInteger(), nullable=False, comment='用户ID'),
         sa.Column('session_token', sa.String(length=255), nullable=False, comment='会话令牌'),
         sa.Column('refresh_token', sa.String(length=255), nullable=True, comment='刷新令牌'),
         sa.Column('ip_address', sa.String(length=45), nullable=False, comment='IP地址'),
@@ -145,8 +145,8 @@ def upgrade() -> None:
     # 创建审计日志表
     op.create_table(
         'audit_logs',
-        sa.Column('id', sa.Integer(), autoincrement=True, nullable=False, comment='日志ID'),
-        sa.Column('user_id', sa.Integer(), nullable=True, comment='操作用户ID'),
+        sa.Column('id', sa.BigInteger(), autoincrement=True, nullable=False, comment='日志ID'),
+        sa.Column('user_id', sa.BigInteger(), nullable=True, comment='操作用户ID'),
         sa.Column('action', mysql.ENUM('LOGIN', 'LOGOUT', 'CREATE', 'UPDATE', 'DELETE', 'VIEW', 
                                      'PERMISSION_CHANGE', 'PASSWORD_CHANGE', 'MFA_ENABLE', 
                                      'MFA_DISABLE', 'ROLE_ASSIGN', 'ROLE_REMOVE'), 

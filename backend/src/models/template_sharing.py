@@ -1,7 +1,7 @@
 """
 模板分享相关数据模型
 """
-from sqlalchemy import Column, Integer, String, Text, DateTime, Boolean, ForeignKey, JSON, Float, Enum as SQLEnum
+from sqlalchemy import Column, BigInteger, Integer, String, Text, DateTime, Boolean, ForeignKey, JSON, Float, Enum as SQLEnum
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from enum import Enum
@@ -29,8 +29,8 @@ class TemplateShare(BaseModel):
     __tablename__ = "template_shares"
     
     # 基本信息
-    template_id = Column(Integer, ForeignKey("ai_prompt_templates.id"), nullable=False, comment="模板ID")
-    owner_id = Column(Integer, ForeignKey("users.id"), nullable=False, comment="分享创建者ID")
+    template_id = Column(BigInteger, ForeignKey("ai_prompt_templates.id"), nullable=False, comment="模板ID")
+    owner_id = Column(BigInteger, ForeignKey("users.id"), nullable=False, comment="分享创建者ID")
     share_type = Column(String(20), nullable=False, comment="分享类型")
     share_token = Column(String(64), nullable=False, unique=True, comment="分享令牌")
     
@@ -70,8 +70,8 @@ class TemplateShareAccess(BaseModel):
     __tablename__ = "template_share_access"
     
     # 基本信息
-    share_id = Column(Integer, ForeignKey("template_shares.id"), nullable=False, comment="分享ID")
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=True, comment="访问用户ID（匿名访问时为空）")
+    share_id = Column(BigInteger, ForeignKey("template_shares.id"), nullable=False, comment="分享ID")
+    user_id = Column(BigInteger, ForeignKey("users.id"), nullable=True, comment="访问用户ID（匿名访问时为空）")
     
     # 访问信息
     access_ip = Column(String(45), nullable=True, comment="访问IP地址")
@@ -95,8 +95,8 @@ class TemplateFavorite(BaseModel):
     __tablename__ = "template_favorites"
     
     # 基本信息
-    template_id = Column(Integer, ForeignKey("ai_prompt_templates.id"), nullable=False, comment="模板ID")
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, comment="用户ID")
+    template_id = Column(BigInteger, ForeignKey("ai_prompt_templates.id"), nullable=False, comment="模板ID")
+    user_id = Column(BigInteger, ForeignKey("users.id"), nullable=False, comment="用户ID")
     folder_name = Column(String(100), nullable=False, default="默认收藏夹", comment="收藏夹名称")
     
     # 收藏设置
@@ -121,8 +121,8 @@ class TemplateRating(BaseModel):
     __tablename__ = "template_ratings"
     
     # 基本信息
-    template_id = Column(Integer, ForeignKey("ai_prompt_templates.id"), nullable=False, comment="模板ID")
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, comment="用户ID")
+    template_id = Column(BigInteger, ForeignKey("ai_prompt_templates.id"), nullable=False, comment="模板ID")
+    user_id = Column(BigInteger, ForeignKey("users.id"), nullable=False, comment="用户ID")
     
     # 评分信息
     rating = Column(Integer, nullable=False, comment="评分（1-5分）")
@@ -151,12 +151,12 @@ class TemplateComment(BaseModel):
     __tablename__ = "template_comments"
     
     # 基本信息
-    template_id = Column(Integer, ForeignKey("ai_prompt_templates.id"), nullable=False, comment="模板ID")
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, comment="用户ID")
+    template_id = Column(BigInteger, ForeignKey("ai_prompt_templates.id"), nullable=False, comment="模板ID")
+    user_id = Column(BigInteger, ForeignKey("users.id"), nullable=False, comment="用户ID")
     
     # 评论内容
     content = Column(Text, nullable=False, comment="评论内容")
-    parent_comment_id = Column(Integer, ForeignKey("template_comments.id"), nullable=True, comment="父评论ID")
+    parent_comment_id = Column(BigInteger, ForeignKey("template_comments.id"), nullable=True, comment="父评论ID")
     
     # 评论状态
     is_hidden = Column(Boolean, nullable=False, default=False, comment="是否隐藏")
@@ -180,8 +180,8 @@ class TemplateCommentLike(BaseModel):
     __tablename__ = "template_comment_likes"
     
     # 基本信息
-    comment_id = Column(Integer, ForeignKey("template_comments.id"), nullable=False, comment="评论ID")
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, comment="用户ID")
+    comment_id = Column(BigInteger, ForeignKey("template_comments.id"), nullable=False, comment="评论ID")
+    user_id = Column(BigInteger, ForeignKey("users.id"), nullable=False, comment="用户ID")
     
     # 点赞类型
     like_type = Column(String(20), nullable=False, default='LIKE', comment="点赞类型（LIKE/DISLIKE）")
@@ -204,9 +204,9 @@ class TemplateCollaborator(BaseModel):
     __tablename__ = "template_collaborators"
     
     # 基本信息
-    template_id = Column(Integer, ForeignKey("ai_prompt_templates.id"), nullable=False, comment="模板ID")
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, comment="协作者用户ID")
-    inviter_id = Column(Integer, ForeignKey("users.id"), nullable=False, comment="邀请者用户ID")
+    template_id = Column(BigInteger, ForeignKey("ai_prompt_templates.id"), nullable=False, comment="模板ID")
+    user_id = Column(BigInteger, ForeignKey("users.id"), nullable=False, comment="协作者用户ID")
+    inviter_id = Column(BigInteger, ForeignKey("users.id"), nullable=False, comment="邀请者用户ID")
     
     # 协作权限
     permission_level = Column(String(20), nullable=False, default='VIEW', comment="权限级别（VIEW/EDIT/ADMIN）")
@@ -237,8 +237,8 @@ class TemplateUsageReport(BaseModel):
     __tablename__ = "template_usage_reports"
     
     # 基本信息
-    template_id = Column(Integer, ForeignKey("ai_prompt_templates.id"), nullable=False, comment="模板ID")
-    reporter_id = Column(Integer, ForeignKey("users.id"), nullable=False, comment="举报者ID")
+    template_id = Column(BigInteger, ForeignKey("ai_prompt_templates.id"), nullable=False, comment="模板ID")
+    reporter_id = Column(BigInteger, ForeignKey("users.id"), nullable=False, comment="举报者ID")
     
     # 举报信息
     report_type = Column(String(50), nullable=False, comment="举报类型")
@@ -247,7 +247,7 @@ class TemplateUsageReport(BaseModel):
     
     # 处理状态
     status = Column(String(20), nullable=False, default='PENDING', comment="处理状态")
-    handler_id = Column(Integer, ForeignKey("users.id"), nullable=True, comment="处理者ID")
+    handler_id = Column(BigInteger, ForeignKey("users.id"), nullable=True, comment="处理者ID")
     handled_at = Column(DateTime, nullable=True, comment="处理时间")
     handler_note = Column(Text, nullable=True, comment="处理备注")
     

@@ -13,14 +13,14 @@ class TestReportTemplate(Base):
     """测试报告模板模型"""
     __tablename__ = "test_report_templates"
     
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(BigInteger, primary_key=True, index=True)
     name = Column(String(100), nullable=False, comment="模板名称")
     description = Column(Text, comment="模板描述")
     template_type = Column(String(50), nullable=False, comment="模板类型")
     template_content = Column(JSON, comment="模板内容")
     default_config = Column(JSON, comment="默认配置")
     is_active = Column(Boolean, default=True, comment="是否激活")
-    created_by = Column(Integer, ForeignKey("users.id"), nullable=False, comment="创建人ID")
+    created_by = Column(BigInteger, ForeignKey("users.id"), nullable=False, comment="创建人ID")
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False, comment="创建时间")
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, comment="更新时间")
     
@@ -34,12 +34,12 @@ class TestReportRecord(Base):
     """测试报告记录模型"""
     __tablename__ = "test_report_records"
     
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(BigInteger, primary_key=True, index=True)
     name = Column(String(200), nullable=False, comment="报告名称")
     description = Column(Text, comment="报告描述")
     report_type = Column(String(50), nullable=False, comment="报告类型")
     project_id = Column(BigInteger, ForeignKey("projects.id"), comment="项目ID")
-    template_id = Column(Integer, ForeignKey("test_report_templates.id"), comment="模板ID")
+    template_id = Column(BigInteger, ForeignKey("test_report_templates.id"), comment="模板ID")
     
     # 报告配置
     report_config = Column(JSON, comment="报告配置")
@@ -60,7 +60,7 @@ class TestReportRecord(Base):
     view_count = Column(Integer, default=0, comment="查看次数")
     download_count = Column(Integer, default=0, comment="下载次数")
     
-    created_by = Column(Integer, ForeignKey("users.id"), nullable=False, comment="创建人ID")
+    created_by = Column(BigInteger, ForeignKey("users.id"), nullable=False, comment="创建人ID")
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False, comment="创建时间")
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, comment="更新时间")
     
@@ -76,13 +76,13 @@ class TestReportSchedule(Base):
     """测试报告调度模型"""
     __tablename__ = "test_report_schedules"
     
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(BigInteger, primary_key=True, index=True)
     name = Column(String(100), nullable=False, comment="调度任务名称")
     description = Column(Text, comment="任务描述")
     
     # 报告配置
     report_config = Column(JSON, nullable=False, comment="报告配置")
-    template_id = Column(Integer, ForeignKey("test_report_templates.id"), comment="模板ID")
+    template_id = Column(BigInteger, ForeignKey("test_report_templates.id"), comment="模板ID")
     
     # 调度配置
     schedule_type = Column(String(20), nullable=False, comment="调度类型")  # daily, weekly, monthly, cron
@@ -99,7 +99,7 @@ class TestReportSchedule(Base):
     next_run_time = Column(DateTime, comment="下次运行时间")
     run_count = Column(Integer, default=0, comment="运行次数")
     
-    created_by = Column(Integer, ForeignKey("users.id"), nullable=False, comment="创建人ID")
+    created_by = Column(BigInteger, ForeignKey("users.id"), nullable=False, comment="创建人ID")
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False, comment="创建时间")
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, comment="更新时间")
     
@@ -114,8 +114,8 @@ class TestReportShare(Base):
     """测试报告分享模型"""
     __tablename__ = "test_report_shares"
     
-    id = Column(Integer, primary_key=True, index=True)
-    report_id = Column(Integer, ForeignKey("test_report_records.id"), nullable=False, comment="报告ID")
+    id = Column(BigInteger, primary_key=True, index=True)
+    report_id = Column(BigInteger, ForeignKey("test_report_records.id"), nullable=False, comment="报告ID")
     share_token = Column(String(64), unique=True, nullable=False, comment="分享令牌")
     share_type = Column(String(20), default="link", comment="分享类型")  # link, email, download
     
@@ -132,7 +132,7 @@ class TestReportShare(Base):
     allowed_users = Column(JSON, comment="允许访问的用户ID列表")
     allowed_roles = Column(JSON, comment="允许访问的角色列表")
     
-    created_by = Column(Integer, ForeignKey("users.id"), nullable=False, comment="创建人ID")
+    created_by = Column(BigInteger, ForeignKey("users.id"), nullable=False, comment="创建人ID")
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False, comment="创建时间")
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, comment="更新时间")
     
@@ -147,11 +147,11 @@ class TestReportComment(Base):
     """测试报告评论模型"""
     __tablename__ = "test_report_comments"
     
-    id = Column(Integer, primary_key=True, index=True)
-    report_id = Column(Integer, ForeignKey("test_report_records.id"), nullable=False, comment="报告ID")
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, comment="用户ID")
+    id = Column(BigInteger, primary_key=True, index=True)
+    report_id = Column(BigInteger, ForeignKey("test_report_records.id"), nullable=False, comment="报告ID")
+    user_id = Column(BigInteger, ForeignKey("users.id"), nullable=False, comment="用户ID")
     content = Column(Text, nullable=False, comment="评论内容")
-    parent_id = Column(Integer, ForeignKey("test_report_comments.id"), comment="父评论ID")
+    parent_id = Column(BigInteger, ForeignKey("test_report_comments.id"), comment="父评论ID")
     
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False, comment="创建时间")
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, comment="更新时间")

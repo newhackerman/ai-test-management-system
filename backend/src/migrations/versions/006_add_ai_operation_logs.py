@@ -21,13 +21,13 @@ def upgrade():
     
     # 创建AI操作日志表
     op.create_table('ai_operation_logs',
-        sa.Column('id', sa.Integer(), autoincrement=True, nullable=False, comment='主键ID'),
+        sa.Column('id', sa.BigInteger(), autoincrement=True, nullable=False, comment='主键ID'),
         sa.Column('created_at', sa.DateTime(), nullable=True, comment='创建时间'),
         sa.Column('updated_at', sa.DateTime(), nullable=True, comment='更新时间'),
         sa.Column('deleted_at', sa.DateTime(), nullable=True, comment='删除时间'),
         
         # 基本信息
-        sa.Column('user_id', sa.Integer(), nullable=True, comment='操作用户ID'),
+        sa.Column('user_id', sa.BigInteger(), nullable=True, comment='操作用户ID'),
         sa.Column('session_id', sa.String(100), nullable=True, comment='会话ID'),
         sa.Column('operation_type', sa.Enum(
             'CONVERSATION_CREATE', 'CONVERSATION_DELETE', 'MESSAGE_SEND', 'MESSAGE_RECEIVE',
@@ -98,7 +98,7 @@ def upgrade():
         sa.Column('approved_at', sa.String(50), nullable=True, comment='审批时间'),
         
         # 关联信息
-        sa.Column('parent_log_id', sa.Integer(), nullable=True, comment='父日志ID'),
+        sa.Column('parent_log_id', sa.BigInteger(), nullable=True, comment='父日志ID'),
         sa.Column('correlation_id', sa.String(100), nullable=True, comment='关联ID'),
         sa.Column('trace_id', sa.String(100), nullable=True, comment='追踪ID'),
         
@@ -112,14 +112,14 @@ def upgrade():
     
     # 创建AI操作日志汇总表
     op.create_table('ai_operation_log_summaries',
-        sa.Column('id', sa.Integer(), autoincrement=True, nullable=False, comment='主键ID'),
+        sa.Column('id', sa.BigInteger(), autoincrement=True, nullable=False, comment='主键ID'),
         sa.Column('created_at', sa.DateTime(), nullable=True, comment='创建时间'),
         sa.Column('updated_at', sa.DateTime(), nullable=True, comment='更新时间'),
         sa.Column('deleted_at', sa.DateTime(), nullable=True, comment='删除时间'),
         
         # 汇总维度
         sa.Column('summary_date', sa.String(10), nullable=False, comment='汇总日期(YYYY-MM-DD)'),
-        sa.Column('user_id', sa.Integer(), nullable=True, comment='用户ID'),
+        sa.Column('user_id', sa.BigInteger(), nullable=True, comment='用户ID'),
         sa.Column('operation_type', sa.Enum(
             'CONVERSATION_CREATE', 'CONVERSATION_DELETE', 'MESSAGE_SEND', 'MESSAGE_RECEIVE',
             'AI_MODEL_CALL', 'AI_STREAMING_START', 'AI_STREAMING_COMPLETE',

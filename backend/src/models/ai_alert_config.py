@@ -1,7 +1,7 @@
 """
 AI告警配置模型
 """
-from sqlalchemy import Column, Integer, String, Text, DateTime, Boolean, Float, JSON, Enum as SQLEnum
+from sqlalchemy import Column, BigInteger, Integer, String, Text, DateTime, Boolean, Float, JSON, Enum as SQLEnum
 from sqlalchemy.sql import func
 from enum import Enum
 
@@ -92,7 +92,7 @@ class AIAlertConfig(BaseModel):
     last_resolved_at = Column(DateTime, nullable=True, comment="最后解决时间")
     
     # 创建者信息
-    created_by = Column(Integer, nullable=True, comment="创建者用户ID")
+    created_by = Column(BigInteger, nullable=True, comment="创建者用户ID")
     
     def __repr__(self):
         return f"<AIAlertConfig(id={self.id}, name='{self.name}', type='{self.alert_type}')>"
@@ -103,7 +103,7 @@ class AIAlertHistory(BaseModel):
     __tablename__ = "ai_alert_history"
     
     # 关联告警配置
-    alert_config_id = Column(Integer, nullable=False, comment="告警配置ID")
+    alert_config_id = Column(BigInteger, nullable=False, comment="告警配置ID")
     
     # 告警信息
     alert_level = Column(SQLEnum(AlertLevel), nullable=False, comment="告警级别")
@@ -135,14 +135,14 @@ class AIAlertSuppression(BaseModel):
     __tablename__ = "ai_alert_suppressions"
     
     # 关联告警配置
-    alert_config_id = Column(Integer, nullable=False, comment="告警配置ID")
+    alert_config_id = Column(BigInteger, nullable=False, comment="告警配置ID")
     
     # 抑制信息
     suppression_reason = Column(String(500), nullable=False, comment="抑制原因")
     suppressed_until = Column(DateTime, nullable=False, comment="抑制到期时间")
     
     # 创建者信息
-    created_by = Column(Integer, nullable=False, comment="创建者用户ID")
+    created_by = Column(BigInteger, nullable=False, comment="创建者用户ID")
     
     def __repr__(self):
         return f"<AIAlertSuppression(id={self.id}, config_id={self.alert_config_id})>"

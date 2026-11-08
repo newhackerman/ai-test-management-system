@@ -39,7 +39,7 @@ def upgrade():
                  nullable=True, default='MEDIUM', comment='优先级'),
         
         # 团队信息
-        sa.Column('project_manager_id', sa.Integer(), nullable=True, comment='项目经理ID'),
+        sa.Column('project_manager_id', sa.BigInteger(), nullable=True, comment='项目经理ID'),
         sa.Column('team_size', sa.Integer(), nullable=True, comment='团队规模'),
         sa.Column('team_members', sa.JSON(), nullable=True, comment='团队成员列表'),
         
@@ -61,8 +61,8 @@ def upgrade():
         sa.Column('created_at', sa.DateTime(), nullable=True, default=sa.func.current_timestamp(), comment='创建时间'),
         sa.Column('updated_at', sa.DateTime(), nullable=True, 
                  default=sa.func.current_timestamp(), onupdate=sa.func.current_timestamp(), comment='更新时间'),
-        sa.Column('created_by', sa.Integer(), nullable=True, comment='创建人ID'),
-        sa.Column('updated_by', sa.Integer(), nullable=True, comment='更新人ID'),
+        sa.Column('created_by', sa.BigInteger(), nullable=True, comment='创建人ID'),
+        sa.Column('updated_by', sa.BigInteger(), nullable=True, comment='更新人ID'),
         sa.Column('deleted_at', sa.DateTime(), nullable=True, comment='删除时间'),
         
         sa.PrimaryKeyConstraint('id'),
@@ -80,7 +80,7 @@ def upgrade():
     
     # 创建需求表
     op.create_table('requirements',
-        sa.Column('id', sa.Integer(), nullable=False, comment='需求ID'),
+        sa.Column('id', sa.BigInteger(), nullable=False, comment='需求ID'),
         sa.Column('project_id', sa.BigInteger(), nullable=False, comment='项目ID'),
         sa.Column('title', sa.String(300), nullable=False, comment='需求标题'),
         sa.Column('description', sa.Text(), nullable=True, comment='需求描述'),
@@ -111,8 +111,8 @@ def upgrade():
         sa.Column('created_at', sa.DateTime(), nullable=True, default=sa.func.current_timestamp(), comment='创建时间'),
         sa.Column('updated_at', sa.DateTime(), nullable=True, 
                  default=sa.func.current_timestamp(), onupdate=sa.func.current_timestamp(), comment='更新时间'),
-        sa.Column('created_by', sa.Integer(), nullable=True, comment='创建人ID'),
-        sa.Column('updated_by', sa.Integer(), nullable=True, comment='更新人ID'),
+        sa.Column('created_by', sa.BigInteger(), nullable=True, comment='创建人ID'),
+        sa.Column('updated_by', sa.BigInteger(), nullable=True, comment='更新人ID'),
         sa.Column('deleted_at', sa.DateTime(), nullable=True, comment='删除时间'),
         
         sa.PrimaryKeyConstraint('id'),
@@ -131,9 +131,9 @@ def upgrade():
     
     # 创建测试用例表
     op.create_table('test_cases',
-        sa.Column('id', sa.Integer(), nullable=False, comment='测试用例ID'),
+        sa.Column('id', sa.BigInteger(), nullable=False, comment='测试用例ID'),
         sa.Column('project_id', sa.BigInteger(), nullable=False, comment='项目ID'),
-        sa.Column('requirement_id', sa.Integer(), nullable=True, comment='关联需求ID'),
+        sa.Column('requirement_id', sa.BigInteger(), nullable=True, comment='关联需求ID'),
         sa.Column('title', sa.String(300), nullable=False, comment='测试用例标题'),
         sa.Column('description', sa.Text(), nullable=True, comment='测试用例描述'),
         
@@ -164,8 +164,8 @@ def upgrade():
         sa.Column('created_at', sa.DateTime(), nullable=True, default=sa.func.current_timestamp(), comment='创建时间'),
         sa.Column('updated_at', sa.DateTime(), nullable=True, 
                  default=sa.func.current_timestamp(), onupdate=sa.func.current_timestamp(), comment='更新时间'),
-        sa.Column('created_by', sa.Integer(), nullable=True, comment='创建人ID'),
-        sa.Column('updated_by', sa.Integer(), nullable=True, comment='更新人ID'),
+        sa.Column('created_by', sa.BigInteger(), nullable=True, comment='创建人ID'),
+        sa.Column('updated_by', sa.BigInteger(), nullable=True, comment='更新人ID'),
         sa.Column('deleted_at', sa.DateTime(), nullable=True, comment='删除时间'),
         
         sa.PrimaryKeyConstraint('id'),
@@ -186,9 +186,9 @@ def upgrade():
     
     # 创建缺陷表
     op.create_table('defects',
-        sa.Column('id', sa.Integer(), nullable=False, comment='缺陷ID'),
+        sa.Column('id', sa.BigInteger(), nullable=False, comment='缺陷ID'),
         sa.Column('project_id', sa.BigInteger(), nullable=False, comment='项目ID'),
-        sa.Column('test_case_id', sa.Integer(), nullable=True, comment='关联测试用例ID'),
+        sa.Column('test_case_id', sa.BigInteger(), nullable=True, comment='关联测试用例ID'),
         sa.Column('title', sa.String(300), nullable=False, comment='缺陷标题'),
         sa.Column('description', sa.Text(), nullable=True, comment='缺陷描述'),
         
@@ -209,7 +209,7 @@ def upgrade():
         
         # 处理信息
         sa.Column('assigned_to', sa.Integer(), nullable=True, comment='指派给'),
-        sa.Column('reporter_id', sa.Integer(), nullable=True, comment='报告人ID'),
+        sa.Column('reporter_id', sa.BigInteger(), nullable=True, comment='报告人ID'),
         sa.Column('resolution', sa.String(100), nullable=True, comment='解决方案'),
         sa.Column('resolution_notes', sa.Text(), nullable=True, comment='解决说明'),
         
@@ -222,8 +222,8 @@ def upgrade():
         sa.Column('created_at', sa.DateTime(), nullable=True, default=sa.func.current_timestamp(), comment='创建时间'),
         sa.Column('updated_at', sa.DateTime(), nullable=True, 
                  default=sa.func.current_timestamp(), onupdate=sa.func.current_timestamp(), comment='更新时间'),
-        sa.Column('created_by', sa.Integer(), nullable=True, comment='创建人ID'),
-        sa.Column('updated_by', sa.Integer(), nullable=True, comment='更新人ID'),
+        sa.Column('created_by', sa.BigInteger(), nullable=True, comment='创建人ID'),
+        sa.Column('updated_by', sa.BigInteger(), nullable=True, comment='更新人ID'),
         sa.Column('deleted_at', sa.DateTime(), nullable=True, comment='删除时间'),
         
         sa.PrimaryKeyConstraint('id'),
@@ -246,7 +246,7 @@ def upgrade():
     
     # 创建项目指标表
     op.create_table('project_metrics',
-        sa.Column('id', sa.Integer(), nullable=False, comment='指标ID'),
+        sa.Column('id', sa.BigInteger(), nullable=False, comment='指标ID'),
         sa.Column('project_id', sa.BigInteger(), nullable=False, comment='项目ID'),
         sa.Column('metric_date', sa.DateTime(), nullable=True, default=sa.func.current_timestamp(), comment='指标日期'),
         
@@ -283,8 +283,8 @@ def upgrade():
         sa.Column('created_at', sa.DateTime(), nullable=True, default=sa.func.current_timestamp(), comment='创建时间'),
         sa.Column('updated_at', sa.DateTime(), nullable=True, 
                  default=sa.func.current_timestamp(), onupdate=sa.func.current_timestamp(), comment='更新时间'),
-        sa.Column('created_by', sa.Integer(), nullable=True, comment='创建人ID'),
-        sa.Column('updated_by', sa.Integer(), nullable=True, comment='更新人ID'),
+        sa.Column('created_by', sa.BigInteger(), nullable=True, comment='创建人ID'),
+        sa.Column('updated_by', sa.BigInteger(), nullable=True, comment='更新人ID'),
         sa.Column('deleted_at', sa.DateTime(), nullable=True, comment='删除时间'),
         
         sa.PrimaryKeyConstraint('id'),

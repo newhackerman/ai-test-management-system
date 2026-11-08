@@ -1,7 +1,7 @@
 """
 AI建议相关模型
 """
-from sqlalchemy import Column, Integer, String, Text, DateTime, Boolean, ForeignKey, Float, Enum as SQLEnum, JSON
+from sqlalchemy import Column, BigInteger, Integer, String, Text, DateTime, Boolean, ForeignKey, Float, Enum as SQLEnum, JSON
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from enum import Enum
@@ -65,9 +65,9 @@ class AISuggestion(BaseModel):
     priority = Column(SQLEnum(SuggestionPriority), nullable=False, comment="优先级")
     
     # 关联信息
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, comment="用户ID")
-    project_id = Column(Integer, nullable=True, comment="项目ID")  # 假设将来会有项目表
-    session_id = Column(Integer, ForeignKey("ai_chat_sessions.id"), nullable=True, comment="会话ID")
+    user_id = Column(BigInteger, ForeignKey("users.id"), nullable=False, comment="用户ID")
+    project_id = Column(BigInteger, nullable=True, comment="项目ID")  # 假设将来会有项目表
+    session_id = Column(BigInteger, ForeignKey("ai_chat_sessions.id"), nullable=True, comment="会话ID")
     
     # AI生成信息
     ai_provider = Column(String(50), nullable=True, comment="AI服务提供商")
@@ -110,9 +110,9 @@ class AIRequirementsAnalysis(BaseModel):
     description = Column(Text, nullable=True, comment="分析描述")
     
     # 关联信息
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, comment="用户ID")
-    project_id = Column(Integer, nullable=True, comment="项目ID")
-    session_id = Column(Integer, ForeignKey("ai_chat_sessions.id"), nullable=True, comment="会话ID")
+    user_id = Column(BigInteger, ForeignKey("users.id"), nullable=False, comment="用户ID")
+    project_id = Column(BigInteger, nullable=True, comment="项目ID")
+    session_id = Column(BigInteger, ForeignKey("ai_chat_sessions.id"), nullable=True, comment="会话ID")
     
     # AI分析信息
     ai_provider = Column(String(50), nullable=True, comment="AI服务提供商")
@@ -168,9 +168,9 @@ class AIRequirementsSuggestion(BaseModel):
     category = Column(SQLEnum(SuggestionCategory), nullable=True, comment="建议分类")
     
     # 关联信息
-    analysis_id = Column(Integer, ForeignKey("ai_requirements_analysis.id"), nullable=False, comment="分析ID")
-    requirement_id = Column(Integer, nullable=True, comment="需求ID")  # 假设将来会有需求表
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, comment="用户ID")
+    analysis_id = Column(BigInteger, ForeignKey("ai_requirements_analysis.id"), nullable=False, comment="分析ID")
+    requirement_id = Column(BigInteger, nullable=True, comment="需求ID")  # 假设将来会有需求表
+    user_id = Column(BigInteger, ForeignKey("users.id"), nullable=False, comment="用户ID")
     
     # 建议属性
     priority = Column(SQLEnum(SuggestionPriority), nullable=False, comment="优先级")

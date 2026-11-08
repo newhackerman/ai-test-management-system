@@ -1,7 +1,7 @@
 """
 AI提示词模板模型
 """
-from sqlalchemy import Column, Integer, String, Text, DateTime, Boolean, ForeignKey, JSON, Float, Enum as SQLEnum
+from sqlalchemy import Column, BigInteger, Integer, String, Text, DateTime, Boolean, ForeignKey, JSON, Float, Enum as SQLEnum
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from enum import Enum
@@ -54,14 +54,14 @@ class AIPromptTemplate(BaseModel):
     
     # 权限和可见性
     visibility = Column(String(20), nullable=False, default='PRIVATE', comment="可见性")
-    owner_id = Column(Integer, ForeignKey("users.id"), nullable=False, comment="所有者ID")
-    team_id = Column(Integer, nullable=True, comment="团队ID")
+    owner_id = Column(BigInteger, ForeignKey("users.id"), nullable=False, comment="所有者ID")
+    team_id = Column(BigInteger, nullable=True, comment="团队ID")
     is_featured = Column(Boolean, nullable=False, default=False, comment="是否精选")
     is_verified = Column(Boolean, nullable=False, default=False, comment="是否已验证")
     
     # 版本控制
     version = Column(String(20), nullable=False, default='1.0.0', comment="版本号")
-    parent_template_id = Column(Integer, ForeignKey("ai_prompt_templates.id"), nullable=True, comment="父模板ID")
+    parent_template_id = Column(BigInteger, ForeignKey("ai_prompt_templates.id"), nullable=True, comment="父模板ID")
     is_latest_version = Column(Boolean, nullable=False, default=True, comment="是否最新版本")
     
     # 使用统计
@@ -90,8 +90,8 @@ class AIPromptTemplateUsage(BaseModel):
     __tablename__ = "ai_prompt_template_usage"
     
     # 基本信息
-    template_id = Column(Integer, ForeignKey("ai_prompt_templates.id"), nullable=False, comment="模板ID")
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, comment="用户ID")
+    template_id = Column(BigInteger, ForeignKey("ai_prompt_templates.id"), nullable=False, comment="模板ID")
+    user_id = Column(BigInteger, ForeignKey("users.id"), nullable=False, comment="用户ID")
     
     # 使用信息
     ai_provider = Column(String(50), nullable=True, comment="使用的AI服务提供商")

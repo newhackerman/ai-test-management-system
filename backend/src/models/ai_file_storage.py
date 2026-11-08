@@ -74,10 +74,10 @@ class AIFileStorage(Base):
     storage_region = Column(String(50), nullable=True, comment="存储区域")
     
     # 关联信息
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, comment="上传用户ID")
-    session_id = Column(Integer, ForeignKey("ai_chat_sessions.id"), nullable=True, comment="关联会话ID")
-    message_id = Column(Integer, ForeignKey("ai_chat_messages.id"), nullable=True, comment="关联消息ID")
-    template_id = Column(Integer, ForeignKey("ai_prompt_templates.id"), nullable=True, comment="关联模板ID")
+    user_id = Column(BigInteger, ForeignKey("users.id"), nullable=False, comment="上传用户ID")
+    session_id = Column(BigInteger, ForeignKey("ai_chat_sessions.id"), nullable=True, comment="关联会话ID")
+    message_id = Column(BigInteger, ForeignKey("ai_chat_messages.id"), nullable=True, comment="关联消息ID")
+    template_id = Column(BigInteger, ForeignKey("ai_prompt_templates.id"), nullable=True, comment="关联模板ID")
     
     # 元数据
     file_metadata = Column(Text, nullable=True, comment="文件元数据(JSON)")
@@ -135,7 +135,7 @@ class AIFileShare(Base):
     
     # 关联信息
     file_id = Column(BigInteger, ForeignKey("ai_file_storage.id"), nullable=False, comment="文件ID")
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, comment="分享用户ID")
+    user_id = Column(BigInteger, ForeignKey("users.id"), nullable=False, comment="分享用户ID")
     
     # 分享信息
     share_token = Column(String(64), nullable=False, unique=True, comment="分享令牌")
@@ -184,7 +184,7 @@ class AIFileAccessLog(Base):
     
     # 关联信息
     file_id = Column(BigInteger, ForeignKey("ai_file_storage.id"), nullable=False, comment="文件ID")
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=True, comment="访问用户ID")
+    user_id = Column(BigInteger, ForeignKey("users.id"), nullable=True, comment="访问用户ID")
     share_id = Column(BigInteger, ForeignKey("ai_file_shares.id"), nullable=True, comment="分享ID")
     
     # 访问信息

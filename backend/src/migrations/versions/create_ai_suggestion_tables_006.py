@@ -22,11 +22,11 @@ def upgrade():
     # 创建需求建议表
     op.create_table(
         'ai_requirements_suggestions',
-        sa.Column('id', sa.Integer(), autoincrement=True, nullable=False, comment='主键ID'),
+        sa.Column('id', sa.BigInteger(), autoincrement=True, nullable=False, comment='主键ID'),
         sa.Column('created_at', sa.DateTime(), nullable=False, comment='创建时间'),
         sa.Column('updated_at', sa.DateTime(), nullable=False, comment='更新时间'),
-        sa.Column('created_by', sa.Integer(), nullable=True, comment='创建人ID'),
-        sa.Column('updated_by', sa.Integer(), nullable=True, comment='更新人ID'),
+        sa.Column('created_by', sa.BigInteger(), nullable=True, comment='创建人ID'),
+        sa.Column('updated_by', sa.BigInteger(), nullable=True, comment='更新人ID'),
         
         # 基本信息
         sa.Column('title', sa.String(200), nullable=False, comment='建议标题'),
@@ -40,9 +40,9 @@ def upgrade():
                  nullable=True, comment='建议分类'),
         
         # 关联信息
-        sa.Column('analysis_id', sa.Integer(), nullable=False, comment='分析ID'),
-        sa.Column('requirement_id', sa.Integer(), nullable=True, comment='需求ID'),
-        sa.Column('user_id', sa.Integer(), nullable=False, comment='用户ID'),
+        sa.Column('analysis_id', sa.BigInteger(), nullable=False, comment='分析ID'),
+        sa.Column('requirement_id', sa.BigInteger(), nullable=True, comment='需求ID'),
+        sa.Column('user_id', sa.BigInteger(), nullable=False, comment='用户ID'),
         
         # 建议属性
         sa.Column('priority', sa.Enum('CRITICAL', 'HIGH', 'MEDIUM', 'LOW', name='reqsuggestionpriority'), 

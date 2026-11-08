@@ -1,7 +1,7 @@
 """
 AI使用统计模型
 """
-from sqlalchemy import Column, Integer, String, DateTime, Float, ForeignKey, Date, JSON
+from sqlalchemy import Column, BigInteger, Integer, String, DateTime, Float, ForeignKey, Date, JSON
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from datetime import date
@@ -14,7 +14,7 @@ class AIUsageStats(BaseModel):
     __tablename__ = "ai_usage_stats"
     
     # 基本信息
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, comment="用户ID")
+    user_id = Column(BigInteger, ForeignKey("users.id"), nullable=False, comment="用户ID")
     date = Column(Date, default=date.today, nullable=False, comment="统计日期")
     
     # AI服务信息

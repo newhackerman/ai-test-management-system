@@ -38,7 +38,7 @@ class AuditLog(BaseModel):
     """审计日志模型"""
     __tablename__ = "audit_logs"
 
-    user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, comment="用户ID")
+    user_id = Column(BigInteger, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, comment="用户ID")
     action = Column(Enum(AuditAction), nullable=False, comment="操作类型")
     resource_type = Column(String(50), nullable=False, comment="资源类型")
     resource_id = Column(String(100), nullable=True, comment="资源ID")
@@ -73,7 +73,7 @@ class SecurityEvent(Base):
     status = Column(String(20), default='OPEN', comment='事件状态')
     
     # 用户信息
-    user_id = Column(Integer, comment='用户ID')
+    user_id = Column(BigInteger, comment='用户ID')
     username = Column(String(100), comment='用户名')
     user_ip = Column(String(45), comment='用户IP地址')
     

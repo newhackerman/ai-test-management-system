@@ -1,7 +1,7 @@
 """
 AI聊天会话模型
 """
-from sqlalchemy import Column, Integer, String, Text, DateTime, Boolean, ForeignKey, Enum as SQLEnum
+from sqlalchemy import Column, BigInteger, Integer, String, Text, DateTime, Boolean, ForeignKey, Enum as SQLEnum
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from enum import Enum
@@ -22,7 +22,7 @@ class AIChatSession(BaseModel):
     
     # 基本信息
     title = Column(String(200), nullable=False, comment="会话标题")
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, comment="用户ID")
+    user_id = Column(BigInteger, ForeignKey("users.id"), nullable=False, comment="用户ID")
     status = Column(SQLEnum(SessionStatus), default=SessionStatus.ACTIVE, nullable=False, comment="会话状态")
     
     # 会话配置

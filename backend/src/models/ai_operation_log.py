@@ -9,7 +9,7 @@ AI助手操作日志模型
 - 权限操作记录
 - 系统事件记录
 """
-from sqlalchemy import Column, String, Integer, ForeignKey, Text, Enum, JSON, Float, Boolean
+from sqlalchemy import Column, BigInteger, String, Integer, ForeignKey, Text, Enum, JSON, Float, Boolean
 from sqlalchemy.orm import relationship
 from enum import Enum as PyEnum
 from typing import Optional, Dict, Any
@@ -89,7 +89,7 @@ class AIOperationLog(BaseModel):
     __tablename__ = "ai_operation_logs"
 
     # 基本信息
-    user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, comment="操作用户ID")
+    user_id = Column(BigInteger, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, comment="操作用户ID")
     session_id = Column(String(100), nullable=True, comment="会话ID")
     operation_type = Column(Enum(AIOperationType), nullable=False, comment="操作类型")
     operation_name = Column(String(100), nullable=False, comment="操作名称")
@@ -140,11 +140,11 @@ class AIOperationLog(BaseModel):
     # 审计信息
     is_sensitive = Column(Boolean, default=False, comment="是否敏感操作")
     requires_approval = Column(Boolean, default=False, comment="是否需要审批")
-    approved_by = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, comment="审批人ID")
+    approved_by = Column(BigInteger, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, comment="审批人ID")
     approved_at = Column(String(50), nullable=True, comment="审批时间")
     
     # 关联信息
-    parent_log_id = Column(Integer, ForeignKey("ai_operation_logs.id", ondelete="SET NULL"), nullable=True, comment="父日志ID")
+    parent_log_id = Column(BigInteger, ForeignKey("ai_operation_logs.id", ondelete="SET NULL"), nullable=True, comment="父日志ID")
     correlation_id = Column(String(100), nullable=True, comment="关联ID")
     trace_id = Column(String(100), nullable=True, comment="追踪ID")
     
@@ -216,7 +216,7 @@ class AIOperationLogSummary(BaseModel):
     
     # 汇总维度
     summary_date = Column(String(10), nullable=False, comment="汇总日期(YYYY-MM-DD)")
-    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=True, comment="用户ID")
+    user_id = Column(BigInteger, ForeignKey("users.id", ondelete="CASCADE"), nullable=True, comment="用户ID")
     operation_type = Column(Enum(AIOperationType), nullable=True, comment="操作类型")
     ai_provider = Column(String(50), nullable=True, comment="AI服务提供商")
     

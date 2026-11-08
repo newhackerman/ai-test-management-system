@@ -335,6 +335,19 @@
 
 **本批未修（待用户定夺）**：INT/BIGINT 统一（模型 Integer vs SQL 脚本 bigint，本地曾报 MySQL 3780）与 `fix_missing_tables.py` 是否进仓库；11 个 stub 占位页面（删路由还是留待实现）；WebRTC 房间生命周期断裂（`create_room` 零调用者、房间 ID 格式与加入端不一致、前端 WS 地址无对应后端路由，会议室页本身也是 stub）。
 
+## INT/BIGINT 统一（2026-11-08，用户选“只统一成 BigInteger”）
+
+**起因**：模型 `BaseModel.id` 用 Integer，SQL 建表脚本用 `bigint(20)`，迁移 001 用 `sa.Integer()`，一致性检查 SQL 又断言 id 该是 bigint——四处互相矛盾。用户本地库因此逐张报 MySQL 3780（`ai_prompt_template_usage.template_id`、`ai_requirements_suggestions.analysis_id`）。用户明确只做统一，不把 `fix_missing_tables.py` 放进仓库。
+
+**改动（工作区，未提交）**：
+
+- **模型**（25 个文件，170 处）：`BaseModel.id`、`created_by`、`updated_by` 改 BigInteger；所有 `Column(Integer` 中带 `primary_key`/`ForeignKey` 或名字是 id 类（`id`、`*_id`、`created_by`、`updated_by`）的改 BigInteger；计数/排序/时长等 239 处真正数值列保持 Integer。元数据核查：Integer 主键/外键/id 列剩余 0。`infrastructure.py` 的 6 张表早已是 BigInteger，未动。
+- **迁移脚本**（10 个文件，114 处）：同规则把 `sa.Column('…', sa.Integer())` 里的 id 类列改 `sa.BigInteger()`。历史文件 `011_fix_user_foreign_key_types.py` 未动——它是 2024 年把 BIGINT 降级成 INT 去迁就 `users.id` 的旧迁移，正是本次漂移的源头之一，留作记录。
+- **一致性检查 SQL**（`backend/sql/ai_consistency_check.sql`）：外键一致性检查只查数值型 id 列（`DATA_TYPE IN ('int','bigint')`），此前它把 `ai_operation_logs` 里 4 个存 UUID 的 varchar id 列（`session_id`/`trace_id`/`correlation_id`/`resource_id`）也误报为不一致。
+- **live 库迁移**（脚本 `/tmp/migrate_bigint.py`，迁移前 19:10 备过份）：317 列改 BIGINT（68 主键 + 103 外键 + 146 无约束 id 列）；外键约束先拆（103 个）、改完按原 `ON DELETE/UPDATE` 规则装回，160 个约束一个不少；0 处既有类型不匹配。核对：`users.id`、`template_id`、`analysis_id`、`permissions.created_by` 均为 bigint，INT id 列剩余 0。随后 19:12 补了一份新备份（BIGINT 结构），此后恢复脚本拿到的都是新结构备份。
+
+**验证**：干净库重建（125 张表）→ 全量 **344/345**（API 287/287 + E2E 57/58，`reports/latest.json`，19:16）：唯一失败是 `test_create_test_plan_via_ui`——在表单 `fill` 后断言输入值时读到空值，是 E2E 层 fill 与 React 重渲染竞态的抖动，与 BigInteger 无关（没走到任何 id 路径），立即 `--lf` 重跑通过。套件总数 343→345 是本批新增的 2 个加密轮换用例。跑完环境库已从 19:12 的新备份恢复，125 表、后端 200，INT id 列剩余 0。
+
 ## 框架使用
 
 ```bash

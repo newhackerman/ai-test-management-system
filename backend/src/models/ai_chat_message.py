@@ -1,7 +1,7 @@
 """
 AI聊天消息模型
 """
-from sqlalchemy import Column, Integer, String, Text, DateTime, Boolean, ForeignKey, Float, Enum as SQLEnum
+from sqlalchemy import Column, BigInteger, Integer, String, Text, DateTime, Boolean, ForeignKey, Float, Enum as SQLEnum
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from enum import Enum
@@ -30,7 +30,7 @@ class AIChatMessage(BaseModel):
     __tablename__ = "ai_chat_messages"
     
     # 基本信息
-    session_id = Column(Integer, ForeignKey("ai_chat_sessions.id"), nullable=False, comment="会话ID")
+    session_id = Column(BigInteger, ForeignKey("ai_chat_sessions.id"), nullable=False, comment="会话ID")
     role = Column(SQLEnum(MessageRole), nullable=False, comment="消息角色")
     content = Column(Text, nullable=False, comment="消息内容")
     content_type = Column(SQLEnum(ContentType), default=ContentType.TEXT, comment="内容类型")
@@ -48,7 +48,7 @@ class AIChatMessage(BaseModel):
     
     # 消息元数据
     message_metadata = Column(Text, nullable=True, comment="元数据（JSON格式）")
-    parent_message_id = Column(Integer, ForeignKey("ai_chat_messages.id"), nullable=True, comment="父消息ID")
+    parent_message_id = Column(BigInteger, ForeignKey("ai_chat_messages.id"), nullable=True, comment="父消息ID")
     
     # 用户交互
     user_rating = Column(Integer, nullable=True, comment="用户评分（1-5）")
