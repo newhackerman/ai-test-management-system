@@ -1,19 +1,19 @@
 # AI 测试管理系统 — 自动化测试报告
 
-生成时间：2026-11-08（数据库备份提交轮：备份代码进分支 `ops/db-backup`；全量干净库回归 339/339，首次全绿——巡游的报告下载点击在 PR #5 合并后通过）
+生成时间：2026-11-08（优化后框架重测：模板同步进仓库 + 新增 PROJECT.md；全量干净库回归 343/343）
 被测部署：后端 http://localhost:8000（FastAPI + MySQL 8.0.46 + Redis 7.0.15，干净库重建后 **125 张表**，**外键约束已保留**）、前端 http://localhost:3000（Vite + React 18）
-分支：`main`（PR #1–#8 均已合并，`ae7077c`）；本轮备份代码在分支 `ops/db-backup`（待 PR，见“数据库备份与最终回归”）
+分支：`main`（PR #1–#9 均已合并，`000a222`）；本轮框架同步、PROJECT.md、4 个新增用例与报告更新在工作区，未提交（见“优化后框架重测”）
 
 ## 总览
 
 | 套件 | 用例总数 | 通过 | 失败 | 错误 | 跳过 | 通过率 |
 | --- | --- | --- | --- | --- | --- | --- |
-| API（`tests/`） | 281 | 281 | 0 | 0 | 0 | 100% |
+| API（`tests/`） | 285 | 285 | 0 | 0 | 0 | 100% |
 | E2E（`e2e/`，Playwright + Chromium 真实浏览器） | 58 | 58 | 0 | 0 | 0 | 100% |
-| **合计** | **339** | **339** | **0** | **0** | **0** | **100%** |
+| **合计** | **343** | **343** | **0** | **0** | **0** | **100%** |
 
-- API 281 = 第六轮 275 + AI 助手回归 3（`test_ai_assistant_regression.py`）+ 路由覆盖守卫 3（`test_route_coverage.py`）；E2E 58 = 第六轮 23 + AI 助手回归 1（`test_e2e_ai_assistant.py`）+ 页面巡游 34（`test_e2e_page_tour.py`：33 个页面渲染 + 1 个主按钮抽查）。
-- 全量最后一次执行：2026-11-08 14:01，API 281/281、E2E 58/58、合计 339/339，执行耗时 254.1 秒，0 失败 0 错误 0 跳过。在干净库（`DROP DATABASE` 后 `ops/rebuild_db.py` 重建，**125 张表**、种子 45 权限/9 角色）上跑出，分支 `ops/db-backup`（main `ae7077c` + 备份代码提交 `a0fb21b`）。上一次的唯一失败（巡游主按钮抽查的报告下载点击）已随 PR #5 合并而通过——这是首次 339/339 全绿。
+- API 285 = 第六轮 275 + AI 助手回归 3（`test_ai_assistant_regression.py`）+ 路由覆盖守卫 3（`test_route_coverage.py`）+ 报告下载接口 4（`test_reports.py`，见“优化后框架重测”）；E2E 58 = 第六轮 23 + AI 助手回归 1（`test_e2e_ai_assistant.py`）+ 页面巡游 34（`test_e2e_page_tour.py`：33 个页面渲染 + 1 个主按钮抽查）。
+- 全量最后一次执行：2026-11-08 15:42，API 285/285、E2E 58/58、合计 343/343，执行耗时 261.7 秒，0 失败 0 错误 0 跳过。在干净库（`DROP DATABASE` 后 `ops/rebuild_db.py` 重建，**125 张表**、种子 45 权限/9 角色）上跑出，main `000a222` + 工作区框架同步。第一次跑到一半被虚拟机替换打断（15:22），环境恢复后重跑出此结果——中断那次不计入执行记录。
 - 本报告回答用户质疑“只发现 2 个问题不可信”：第一阶段的 108 个 API 用例确实只证实了 2 个缺陷；深化 + E2E + 安全三轮补测后，**新发现 12 个真实缺陷，全部修复并回归验证通过**（见下表 #3–#14）。失败就是失败，如实写：中途的失败全部记录在各轮执行小结里，本报告的 100% 是修复后的最终回归结果，不是放水。
 
 ## 按模块统计（API）
@@ -29,7 +29,7 @@
 | test_executions | 18 | 18 | 0 |
 | test_defects | 12 | 12 | 0 |
 | test_risks | 14 | 14 | 0 |
-| test_reports | 5 | 5 | 0 |
+| test_reports | 9 | 9 | 0 |
 | test_hardening | 70 | 70 | 0 |
 | test_security | 35 | 35 | 0 |
 | test_meeting_integration | 28 | 28 | 0 |
@@ -301,6 +301,21 @@
 **验证**：干净库重建（`DROP DATABASE` + `ops/rebuild_db.py`，125 张表，种子 45 权限/9 角色）→ 冒烟 5/5 → 全量 339/339（API 281/281 + E2E 58/58，254.1 秒，0 失败 0 错误 0 跳过，`reports/latest.json`）。本节随同一分支提交（待 PR）。
 
 **附注（用户本地部署验证，同日）**：用户本地库因 SQL 脚本建表用 BIGINT id、模型用 Integer，建表 one-liner 曾逐张报 MySQL 3780。`fix_missing_tables.py`（查本地被引用列实际类型、外键列自动改 BIGINT/UNSIGNED、带重试循环）已在本机用临时表实测通过；用户本地跑完：全部缺失表已建好（总表数 133，比本机多 8 张本地 SQL 脚本建的表），重跑建表无报错，自动恢复接口返回 200，AI 助手调通。该脚本目前只在用户本地，未进仓库；仓库模型与 SQL 脚本类型不一致仍是隐患，修仓库需用户确认。
+
+## 优化后框架重测（2026-11-08）
+
+**起因**：用户要求用优化后的框架与 skill 再测一遍代码。优化内容见模板与 skill 本轮改动（`QA_APP_ROOT`、`QA_AUTH_SCHEME`、`QA_ENVELOPE`、`QA_HAS_OPENAPI`、`PROJECT.md`、报告生成件与手工报告分开等）。
+
+**本轮改动（工作区，未提交）**：
+
+- 模板同步进仓库 `qa-automation/`：`client.py`、`assertions.py` 直接取模板新版；`config.py` 补新设置但保留本项目默认值（密码 `TEST@test1`、登录/登出/健康路径）；`e2e/helpers.py` 只改 `#root` 为 `APP_ROOT`（其余 264 行项目定制原样保留）；`tools/report.py` 默认输出改成 `reports/generated.md`，保留本项目标题；`requirements.txt` 补 `pytest-json-report`、`pytest-rerunfailures`、`playwright`（`pytest-rerunfailures` 已装进后端 venv）。
+- 未同步的：`tests/test_smoke.py` 保留本项目版（健康体断言、`/health`、openapi 核心模块前缀检查比模板通用版更严，模板的跳过逻辑只对无 OpenAPI 的项目有意义）；仓库 `README.md` 保留项目版。
+- 新增 `qa-automation/PROJECT.md`：栈、认证、返回体、重建库方式、健康端点、已知 quirks（15 秒启动、antd 警告白名单、录制限制、ChangeImpactAnalysis 未挂载等）。
+- 清单核对发现接口面变化：OpenAPI 路径 651 → **652**，新增 `GET /api/v1/reports/imported/{import_id}/download`（PR #5 的报告下载修复端点，根 openapi.json 是 651 版所以之前没发现）；前端路由仍 61 条，无变化。巡游只点了下载按钮，API 层从未覆盖该端点。
+
+**新增用例（4 个，`tests/test_reports.py`）**：未知 ID 下载 → 404；路径穿越（`%2E%2E`）→ 400；未认证 → 401；导入小 HTML 后下载回字节完全一致（`Content-Disposition: attachment`），随后删除清理。行为先手工探针核实过，再写成用例；4 个全部通过。
+
+**执行**：干净库重建（`DROP DATABASE` + `ops/rebuild_db.py`，125 张表，种子 45/9）→ 冒烟 10/10（API 5 + E2E 登录 5）→ 全量 **343/343**（API 285/285 + E2E 58/58，261.7 秒，0 失败 0 错误 0 跳过，`reports/latest.json`）。中途虚拟机在 15:22 又被替换一次（当天第 6 次），第一次全量跑到一半被打断；`recover.sh` 重装 MySQL/Redis、从 14:44 备份恢复、四项健康后，重做干净库重建并重跑出此结果。
 
 ## 框架使用
 
