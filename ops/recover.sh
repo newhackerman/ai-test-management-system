@@ -216,6 +216,36 @@ SQL
     return 1
 }
 
+restore_latest_backup() {
+    # 数据库备份恢复（见 ops/backup_db.sh）：虚拟机替换后重建库
+    # 时，尽量把备份里的数据恢复回来，而不是只留种子数据。
+    # 只在重建刚成功时调用；best-effort——恢复失败不影响本次
+    # 恢复结果（库里仍是刚建好的种子数据），只记日志。
+    local backup_dir="${HOME:-/home/hatch}/backups/ai-test-db"
+    local file
+    file="$(ls -1t "$backup_dir"/ai_test_db-*.sql.gz 2>/dev/null | head -1)"
+    [ -n "$file" ] || { log "no database backup found in $backup_dir, keeping fresh seed"; return 0; }
+    # 校验：文件名里的表数须与刚重建的库一致，否则是旧 schema
+    # 的备份，恢复会用旧结构覆盖新表，直接跳过。
+    local want have
+    want="$(basename "$file" | sed -n 's/.*-t\([0-9]*\)\.sql\.gz/\1/p')"
+    have="$(MYSQL_PWD="$(env_val MYSQL_PASSWORD)" mysql -u "$DB_USER" -h 127.0.0.1 \
+        -P "$DB_PORT" -N -e \
+        "SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA='$DB_NAME';" 2>/dev/null || echo 0)"
+    if [ -z "$want" ] || [ "$want" != "$have" ]; then
+        log "backup $file is from a different schema (tables=$want, current=$have), skipping restore"
+        return 0
+    fi
+    log "restoring database from backup $(basename "$file")..."
+    if gunzip -c "$file" 2>/dev/null | MYSQL_PWD="$(env_val MYSQL_PASSWORD)" \
+            mysql -u "$DB_USER" -h 127.0.0.1 -P "$DB_PORT" "$DB_NAME" >/dev/null 2>&1; then
+        repaired "restored database from backup $(basename "$file")"
+        return 0
+    fi
+    log "WARNING: backup restore failed, keeping fresh seed (see $LOG_FILE)"
+    return 0
+}
+
 ensure_tables() {
     local tables admin
     tables="$(MYSQL_PWD="$(env_val MYSQL_PASSWORD)" mysql -u "$DB_USER" -h 127.0.0.1 \
@@ -241,6 +271,7 @@ ensure_tables() {
     log "tables=$tables admin=$admin permissions=$perms roles=$roles, rebuilding database..."
     if "$BACKEND_DIR/venv/bin/python" "$SCRIPT_DIR/rebuild_db.py" >>"$LOG_FILE" 2>&1; then
         repaired "rebuilt database (tables + seed)"
+        restore_latest_backup
         return 0
     fi
     failed "rebuild_db.py failed (see $LOG_FILE)"
