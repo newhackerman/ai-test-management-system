@@ -16,7 +16,8 @@
 | 文件 | 用途 |
 | --- | --- |
 | `recover.sh` | 幂等恢复脚本：逐个检查并补齐缺失的环节 |
-| `rebuild_db.py` | 建表（保留外键约束，120 张表）+ 种子数据，供 `recover.sh` 调用 |
+| `rebuild_db.py` | 建表（保留外键约束，125 张表）+ 种子数据，供 `recover.sh` 调用 |
+| `backup_db.sh` | 整库备份到 `~/backups/ai-test-db/`（每小时定时任务调用，保留最近 7 份）；`recover.sh` 重建库后自动从最新备份恢复数据 |
 | `cleanup_soft_deleted.py` | 物理清理软删除残留行与孤儿文件（默认 dry-run，只看不删） |
 | `verify_clean_install.sh` | 干净环境验证：全新 venv 里 `pip install -r requirements.txt` 并导入检查 |
 | `systemd/*.service` | 后端/前端的 systemd 单元（进程内自启），由 `recover.sh` 负责链接与启用 |
@@ -92,6 +93,26 @@ bash ops/verify_clean_install.sh
 
 清理脚本首跑删过 1666 行软删残留 + 50 个孤儿文件（21MB），再跑
 就是 nothing to purge。两个脚本都不碰应用代码。
+
+## 数据库备份与恢复（2026-11-07 新增）
+
+虚拟机替换会清空 `/var/lib/mysql`，`recover.sh` 只能重建出种子
+数据，库里的业务数据会丢。备份解决这个问题：
+
+- `backup_db.sh`：`mysqldump --single-transaction` 整库备份到
+  `~/backups/ai-test-db/`（home 目录随替换持久化），文件名带表数
+  （`ai_test_db-YYYYMMDD-HHMMSS-t<表数>.sql.gz`），保留最近 7 份；
+  每小时由定时任务 `ai-test-db-backup` 调用，失败才汇报。
+- `recover.sh` 重建库成功后，自动从最新备份恢复：文件名里的表数
+  须与刚重建的库一致（否则是旧 schema 的备份，跳过）；恢复失败
+  不影响本次恢复结果（库里仍是刚建好的种子数据），只记日志。
+
+手动备份 / 恢复：
+
+```bash
+bash ops/backup_db.sh        # 手动备份一次
+ls -1t ~/backups/ai-test-db/ # 看最新备份
+```
 
 ## 事务泄漏是怎么修的
 
