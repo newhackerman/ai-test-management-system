@@ -71,7 +71,7 @@ class Meeting(BaseModel):
     
     # 关联信息
     project_id = Column(BigInteger, ForeignKey('projects.id'), index=True, comment='关联项目ID')
-    organizer_id = Column(Integer, ForeignKey('users.id'), nullable=False, index=True, comment='组织者ID')
+    organizer_id = Column(BigInteger, ForeignKey('users.id'), nullable=False, index=True, comment='组织者ID')
     
     # 会议设置 (JSON格式存储)
     agenda = Column(JSON, comment='会议议程')
@@ -162,8 +162,8 @@ class MeetingParticipant(BaseModel):
     __tablename__ = 'meeting_participants'
     
     # 基本信息 (id inherited from BaseModel)
-    meeting_id = Column(Integer, ForeignKey('meetings.id', ondelete='CASCADE'), nullable=False, index=True, comment='会议ID')
-    user_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True, comment='用户ID')
+    meeting_id = Column(BigInteger, ForeignKey('meetings.id', ondelete='CASCADE'), nullable=False, index=True, comment='会议ID')
+    user_id = Column(BigInteger, ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True, comment='用户ID')
     participant_role = Column(Enum(ParticipantRole), default=ParticipantRole.PARTICIPANT, nullable=False, index=True, comment='参与角色')
     invitation_status = Column(Enum(InvitationStatus), default=InvitationStatus.PENDING, nullable=False, index=True, comment='邀请状态')
     attendance_status = Column(Enum(AttendanceStatus), default=AttendanceStatus.NOT_JOINED, nullable=False, index=True, comment='出席状态')
@@ -260,7 +260,7 @@ class MeetingRecording(BaseModel):
     __tablename__ = 'meeting_recordings'
     
     # 基本信息 (id inherited from BaseModel)
-    meeting_id = Column(Integer, ForeignKey('meetings.id', ondelete='CASCADE'), nullable=False, index=True, comment='会议ID')
+    meeting_id = Column(BigInteger, ForeignKey('meetings.id', ondelete='CASCADE'), nullable=False, index=True, comment='会议ID')
     recording_name = Column(String(200), nullable=False, comment='录制名称')
     recording_type = Column(Enum(RecordingType), default=RecordingType.FULL_MEETING, nullable=False, index=True, comment='录制类型')
     file_format = Column(Enum(FileFormat), default=FileFormat.MP4, nullable=False, comment='文件格式')
@@ -348,7 +348,7 @@ class MeetingMinutes(BaseModel):
     __tablename__ = 'meeting_minutes'
     
     # 基本信息 (id inherited from BaseModel)
-    meeting_id = Column(Integer, ForeignKey('meetings.id', ondelete='CASCADE'), nullable=False, index=True, comment='会议ID')
+    meeting_id = Column(BigInteger, ForeignKey('meetings.id', ondelete='CASCADE'), nullable=False, index=True, comment='会议ID')
     title = Column(String(200), nullable=False, comment='纪要标题')
     content = Column(Text, comment='纪要内容')
     summary = Column(Text, comment='会议摘要')
@@ -370,10 +370,10 @@ class MeetingMinutes(BaseModel):
     
     # 版本管理
     version = Column(String(20), default='1.0', comment='版本号')
-    parent_minute_id = Column(Integer, ForeignKey('meeting_minutes.id'), comment='父纪要ID')
+    parent_minute_id = Column(BigInteger, ForeignKey('meeting_minutes.id'), comment='父纪要ID')
     
     # 审批信息
-    approved_by = Column(Integer, ForeignKey('users.id'), comment='审批者ID')
+    approved_by = Column(BigInteger, ForeignKey('users.id'), comment='审批者ID')
     approved_at = Column(DateTime, comment='审批时间')
     
     def to_dict(self) -> Dict[str, Any]:
@@ -427,8 +427,8 @@ class MeetingChat(BaseModel):
     __tablename__ = 'meeting_chats'
     
     # 基本信息 (id inherited from BaseModel)
-    meeting_id = Column(Integer, ForeignKey('meetings.id', ondelete='CASCADE'), nullable=False, index=True, comment='会议ID')
-    sender_id = Column(Integer, ForeignKey('users.id'), nullable=False, index=True, comment='发送者ID')
+    meeting_id = Column(BigInteger, ForeignKey('meetings.id', ondelete='CASCADE'), nullable=False, index=True, comment='会议ID')
+    sender_id = Column(BigInteger, ForeignKey('users.id'), nullable=False, index=True, comment='发送者ID')
     
     # 消息内容
     message_type = Column(Enum(MessageType), default=MessageType.TEXT, nullable=False, comment='消息类型')
@@ -436,7 +436,7 @@ class MeetingChat(BaseModel):
     
     # 消息属性
     is_private = Column(Boolean, default=False, comment='是否私聊')
-    recipient_id = Column(Integer, ForeignKey('users.id'), comment='接收者ID(私聊时使用)')
+    recipient_id = Column(BigInteger, ForeignKey('users.id'), comment='接收者ID(私聊时使用)')
     
     # 附加信息 (JSON格式存储)
     message_metadata = Column(JSON, comment='消息元数据')
@@ -485,8 +485,8 @@ class MeetingFile(BaseModel):
     __tablename__ = 'meeting_files'
     
     # 基本信息 (id inherited from BaseModel)
-    meeting_id = Column(Integer, ForeignKey('meetings.id', ondelete='CASCADE'), nullable=False, index=True, comment='会议ID')
-    uploader_id = Column(Integer, ForeignKey('users.id'), nullable=False, index=True, comment='上传者ID')
+    meeting_id = Column(BigInteger, ForeignKey('meetings.id', ondelete='CASCADE'), nullable=False, index=True, comment='会议ID')
+    uploader_id = Column(BigInteger, ForeignKey('users.id'), nullable=False, index=True, comment='上传者ID')
     
     # 文件信息
     file_name = Column(String(255), nullable=False, comment='文件名')
@@ -551,7 +551,7 @@ class MeetingTask(BaseModel):
     """
     __tablename__ = 'meeting_tasks'
 
-    meeting_id = Column(Integer, ForeignKey('meetings.id', ondelete='CASCADE'), nullable=False, index=True, comment='会议ID')
+    meeting_id = Column(BigInteger, ForeignKey('meetings.id', ondelete='CASCADE'), nullable=False, index=True, comment='会议ID')
     task_id = Column(BigInteger, ForeignKey('project_tasks.id', ondelete='CASCADE'), nullable=False, index=True, comment='任务ID')
     linked_by = Column(Integer, comment='关联人ID')
     linked_at = Column(DateTime, default=datetime.utcnow, comment='关联时间')
@@ -570,7 +570,7 @@ class MeetingAnalytics(BaseModel):
     __tablename__ = 'meeting_analytics'
     
     # 基本信息 (id inherited from BaseModel)
-    meeting_id = Column(Integer, ForeignKey('meetings.id', ondelete='CASCADE'), nullable=False, unique=True, comment='会议ID')
+    meeting_id = Column(BigInteger, ForeignKey('meetings.id', ondelete='CASCADE'), nullable=False, unique=True, comment='会议ID')
     
     # 参与度分析
     total_participants = Column(Integer, default=0, comment='总参与人数')

@@ -19,7 +19,7 @@ depends_on = None
 def upgrade():
     # Create ai_alert_configs table
     op.create_table('ai_alert_configs',
-        sa.Column('id', sa.Integer(), nullable=False),
+        sa.Column('id', sa.BigInteger(), nullable=False),
         sa.Column('name', sa.String(length=200), nullable=False, comment='告警名称'),
         sa.Column('description', sa.Text(), nullable=True, comment='告警描述'),
         sa.Column('alert_type', sa.Enum('cost_budget', 'token_quota', 'request_quota', 'response_time', 'error_rate', 'model_health', 'concurrent_limit', 'system_resource', name='alerttype'), nullable=False, comment='告警类型'),
@@ -45,7 +45,7 @@ def upgrade():
         sa.Column('trigger_count', sa.Integer(), nullable=True, comment='触发次数'),
         sa.Column('last_triggered_at', sa.DateTime(), nullable=True, comment='最后触发时间'),
         sa.Column('last_resolved_at', sa.DateTime(), nullable=True, comment='最后解决时间'),
-        sa.Column('created_by', sa.Integer(), nullable=True, comment='创建者用户ID'),
+        sa.Column('created_by', sa.BigInteger(), nullable=True, comment='创建者用户ID'),
         sa.Column('created_at', sa.DateTime(), nullable=True),
         sa.Column('updated_at', sa.DateTime(), nullable=True),
         sa.PrimaryKeyConstraint('id'),
@@ -63,8 +63,8 @@ def upgrade():
     
     # Create ai_alert_history table
     op.create_table('ai_alert_history',
-        sa.Column('id', sa.Integer(), nullable=False),
-        sa.Column('alert_config_id', sa.Integer(), nullable=False, comment='告警配置ID'),
+        sa.Column('id', sa.BigInteger(), nullable=False),
+        sa.Column('alert_config_id', sa.BigInteger(), nullable=False, comment='告警配置ID'),
         sa.Column('alert_level', sa.Enum('info', 'warning', 'critical', 'emergency', name='alertlevel'), nullable=False, comment='告警级别'),
         sa.Column('alert_message', sa.Text(), nullable=False, comment='告警消息'),
         sa.Column('alert_details', sa.JSON(), nullable=True, comment='告警详细信息'),
@@ -95,11 +95,11 @@ def upgrade():
     
     # Create ai_alert_suppressions table
     op.create_table('ai_alert_suppressions',
-        sa.Column('id', sa.Integer(), nullable=False),
-        sa.Column('alert_config_id', sa.Integer(), nullable=False, comment='告警配置ID'),
+        sa.Column('id', sa.BigInteger(), nullable=False),
+        sa.Column('alert_config_id', sa.BigInteger(), nullable=False, comment='告警配置ID'),
         sa.Column('suppression_reason', sa.String(length=500), nullable=False, comment='抑制原因'),
         sa.Column('suppressed_until', sa.DateTime(), nullable=False, comment='抑制到期时间'),
-        sa.Column('created_by', sa.Integer(), nullable=False, comment='创建者用户ID'),
+        sa.Column('created_by', sa.BigInteger(), nullable=False, comment='创建者用户ID'),
         sa.Column('created_at', sa.DateTime(), nullable=True),
         sa.Column('updated_at', sa.DateTime(), nullable=True),
         sa.PrimaryKeyConstraint('id'),

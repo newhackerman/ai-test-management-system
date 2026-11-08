@@ -1,7 +1,7 @@
 """
 用户模型
 """
-from sqlalchemy import Column, String, Boolean, Integer, DateTime, ForeignKey, Text, Enum
+from sqlalchemy import Column, BigInteger, String, Boolean, Integer, DateTime, ForeignKey, Text, Enum
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from enum import Enum as PyEnum
@@ -110,8 +110,8 @@ class UserRole(BaseModel):
     """用户角色关联表"""
     __tablename__ = "user_roles"
 
-    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, comment="用户ID")
-    role_id = Column(Integer, ForeignKey("roles.id", ondelete="CASCADE"), nullable=False, comment="角色ID")
+    user_id = Column(BigInteger, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, comment="用户ID")
+    role_id = Column(BigInteger, ForeignKey("roles.id", ondelete="CASCADE"), nullable=False, comment="角色ID")
     
     # 关系
     user = relationship("User", back_populates="roles")
@@ -122,7 +122,7 @@ class UserSession(BaseModel):
     """用户会话表"""
     __tablename__ = "user_sessions"
 
-    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, comment="用户ID")
+    user_id = Column(BigInteger, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, comment="用户ID")
     session_token = Column(String(500), unique=True, index=True, nullable=False, comment="会话令牌")
     refresh_token = Column(String(500), nullable=True, comment="刷新令牌")
     user_agent = Column(Text, nullable=True, comment="用户代理")
@@ -145,7 +145,7 @@ class UserLog(BaseModel):
     """用户日志表"""
     __tablename__ = "user_logs"
 
-    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, comment="用户ID")
+    user_id = Column(BigInteger, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, comment="用户ID")
     action = Column(String(50), nullable=False, comment="操作类型")
     description = Column(Text, nullable=True, comment="操作描述")
     ip_address = Column(String(45), nullable=True, comment="IP地址")

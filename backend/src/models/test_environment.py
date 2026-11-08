@@ -59,7 +59,7 @@ class TestEnvironment(BaseModel):
     current_users = Column(BigInteger, default=0, comment='当前用户数')
     
     # 管理信息
-    owner_id = Column(Integer, ForeignKey('users.id'), comment='环境负责人ID')
+    owner_id = Column(BigInteger, ForeignKey('users.id'), comment='环境负责人ID')
     project_id = Column(BigInteger, ForeignKey('projects.id'), comment='所属项目ID')
     
     # 状态管理
@@ -127,7 +127,7 @@ class EnvironmentReservation(BaseModel):
     id = Column(BigInteger, primary_key=True, autoincrement=True, comment='预约ID')
     reservation_code = Column(String(50), unique=True, nullable=False, comment='预约编码')
     environment_id = Column(BigInteger, ForeignKey('test_environments.id'), nullable=False, comment='环境ID')
-    user_id = Column(Integer, ForeignKey('users.id'), nullable=False, comment='用户ID')
+    user_id = Column(BigInteger, ForeignKey('users.id'), nullable=False, comment='用户ID')
     
     # 预约信息
     reserved_from = Column(DateTime, nullable=False, comment='预约开始时间')
@@ -139,7 +139,7 @@ class EnvironmentReservation(BaseModel):
     status = Column(Enum(ReservationStatus), default=ReservationStatus.PENDING, comment='预约状态')
     
     # 审批信息
-    approved_by = Column(Integer, ForeignKey('users.id'), comment='审批人ID')
+    approved_by = Column(BigInteger, ForeignKey('users.id'), comment='审批人ID')
     approved_at = Column(DateTime, comment='审批时间')
     approval_notes = Column(Text, comment='审批备注')
     
@@ -212,7 +212,7 @@ class EnvironmentDeployment(BaseModel):
     duration = Column(BigInteger, comment='部署时长(秒)')
     
     # 人员信息
-    deployed_by = Column(Integer, ForeignKey('users.id'), nullable=False, comment='部署人ID')
+    deployed_by = Column(BigInteger, ForeignKey('users.id'), nullable=False, comment='部署人ID')
     
     # 结果信息
     deployment_logs = Column(Text, comment='部署日志')
@@ -274,7 +274,7 @@ class TestData(BaseModel):
     auto_cleanup = Column(Boolean, default=True, comment='是否自动清理')
     
     # 生命周期
-    created_by = Column(Integer, ForeignKey('users.id'), nullable=False, comment='创建人ID')
+    created_by = Column(BigInteger, ForeignKey('users.id'), nullable=False, comment='创建人ID')
     expires_at = Column(DateTime, comment='过期时间')
     
     # 使用统计

@@ -72,7 +72,7 @@ class RequirementRolePermission(RequirementBaseModel):
     __tablename__ = 'requirement_role_permissions'
     
     id = Column(BigInteger, primary_key=True, autoincrement=True, comment='权限ID')
-    role_id = Column(Integer, ForeignKey('roles.id'), nullable=False, comment='角色ID')
+    role_id = Column(BigInteger, ForeignKey('roles.id'), nullable=False, comment='角色ID')
     permission_type = Column(Enum(RequirementPermissionType), nullable=False, comment='权限类型')
     
     # 权限配置
@@ -94,7 +94,7 @@ class RequirementRolePermission(RequirementBaseModel):
     effective_to = Column(DateTime, comment='生效结束时间')
     
     # 审计字段
-    granted_by = Column(Integer, ForeignKey('users.id'), comment='授权人ID')
+    granted_by = Column(BigInteger, ForeignKey('users.id'), comment='授权人ID')
     granted_at = Column(DateTime, default=datetime.utcnow, comment='授权时间')
     
     # 关联关系
@@ -126,7 +126,7 @@ class RequirementUserPermission(RequirementBaseModel):
     __tablename__ = 'requirement_user_permissions'
     
     id = Column(BigInteger, primary_key=True, autoincrement=True, comment='权限ID')
-    user_id = Column(Integer, ForeignKey('users.id'), nullable=False, comment='用户ID')
+    user_id = Column(BigInteger, ForeignKey('users.id'), nullable=False, comment='用户ID')
     permission_type = Column(Enum(RequirementPermissionType), nullable=False, comment='权限类型')
     
     # 权限配置
@@ -148,7 +148,7 @@ class RequirementUserPermission(RequirementBaseModel):
     effective_to = Column(DateTime, comment='生效结束时间')
     
     # 审计字段
-    granted_by = Column(Integer, ForeignKey('users.id'), comment='授权人ID')
+    granted_by = Column(BigInteger, ForeignKey('users.id'), comment='授权人ID')
     granted_at = Column(DateTime, default=datetime.utcnow, comment='授权时间')
     reason = Column(Text, comment='授权原因')
     
@@ -182,7 +182,7 @@ class RequirementResourcePermission(RequirementBaseModel):
     __tablename__ = 'requirement_resource_permissions'
     
     id = Column(BigInteger, primary_key=True, autoincrement=True, comment='权限ID')
-    user_id = Column(Integer, ForeignKey('users.id'), nullable=False, comment='用户ID')
+    user_id = Column(BigInteger, ForeignKey('users.id'), nullable=False, comment='用户ID')
     requirement_id = Column(BigInteger, ForeignKey('requirements.id'), nullable=False, comment='需求ID')
     permission_type = Column(Enum(RequirementPermissionType), nullable=False, comment='权限类型')
     
@@ -195,7 +195,7 @@ class RequirementResourcePermission(RequirementBaseModel):
     effective_to = Column(DateTime, comment='生效结束时间')
     
     # 审计字段
-    granted_by = Column(Integer, ForeignKey('users.id'), comment='授权人ID')
+    granted_by = Column(BigInteger, ForeignKey('users.id'), comment='授权人ID')
     granted_at = Column(DateTime, default=datetime.utcnow, comment='授权时间')
     reason = Column(Text, comment='授权原因')
     
@@ -269,7 +269,7 @@ class RequirementAuditLog(RequirementBaseModel):
     id = Column(BigInteger, primary_key=True, autoincrement=True, comment='审计日志ID')
     
     # 操作信息
-    user_id = Column(Integer, ForeignKey('users.id'), nullable=True, comment='操作用户ID')
+    user_id = Column(BigInteger, ForeignKey('users.id'), nullable=True, comment='操作用户ID')
     action = Column(Enum(RequirementAuditAction), nullable=False, comment='操作类型')
     result = Column(Enum(RequirementAuditResult), nullable=False, comment='操作结果')
     
@@ -356,8 +356,8 @@ class RequirementPermissionTemplate(RequirementBaseModel):
     last_used_at = Column(DateTime, comment='最后使用时间')
     
     # 审计字段
-    created_by = Column(Integer, ForeignKey('users.id'), nullable=False, comment='创建人ID')
-    updated_by = Column(Integer, ForeignKey('users.id'), comment='更新人ID')
+    created_by = Column(BigInteger, ForeignKey('users.id'), nullable=False, comment='创建人ID')
+    updated_by = Column(BigInteger, ForeignKey('users.id'), comment='更新人ID')
     
     # 关联关系
     creator = relationship("User", foreign_keys=[created_by])

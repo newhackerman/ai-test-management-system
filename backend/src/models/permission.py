@@ -1,7 +1,7 @@
 """
 权限管理模型
 """
-from sqlalchemy import Column, String, Boolean, Integer, ForeignKey, Text, JSON, Enum
+from sqlalchemy import Column, BigInteger, String, Boolean, Integer, ForeignKey, Text, JSON, Enum
 from sqlalchemy.orm import relationship
 from enum import Enum as PyEnum
 
@@ -46,7 +46,7 @@ class Permission(BaseModel):
     permission_type = Column(Enum(PermissionType, values_callable=lambda e: [v.value for v in e]), default=PermissionType.API, comment="权限类型")
     
     # 层级结构
-    parent_id = Column(Integer, ForeignKey("permissions.id"), nullable=True, comment="父权限ID")
+    parent_id = Column(BigInteger, ForeignKey("permissions.id"), nullable=True, comment="父权限ID")
     level = Column(Integer, default=1, nullable=False, comment="权限层级")
     sort_order = Column(Integer, default=0, nullable=False, comment="排序顺序")
     path = Column(String(500), nullable=True, comment="权限路径")
@@ -67,13 +67,13 @@ class RolePermission(BaseModel):
     """角色权限关联表"""
     __tablename__ = "role_permissions"
 
-    role_id = Column(Integer, ForeignKey("roles.id", ondelete="CASCADE"), nullable=False, comment="角色ID")
-    permission_id = Column(Integer, ForeignKey("permissions.id", ondelete="CASCADE"), nullable=False, comment="权限ID")
+    role_id = Column(BigInteger, ForeignKey("roles.id", ondelete="CASCADE"), nullable=False, comment="角色ID")
+    permission_id = Column(BigInteger, ForeignKey("permissions.id", ondelete="CASCADE"), nullable=False, comment="权限ID")
     
     # 权限配置
     effect = Column(Enum(PermissionEffect, values_callable=lambda e: [v.value for v in e]), default=PermissionEffect.ALLOW, comment="权限效果")
     conditions = Column(JSON, nullable=True, comment="权限条件")
-    granted_by = Column(Integer, ForeignKey("users.id"), nullable=True, comment="授权人")
+    granted_by = Column(BigInteger, ForeignKey("users.id"), nullable=True, comment="授权人")
     granted_at = Column(String(50), nullable=True, comment="授权时间")
     expires_at = Column(String(50), nullable=True, comment="过期时间")
     
@@ -87,13 +87,13 @@ class UserPermission(BaseModel):
     """用户直接权限表"""
     __tablename__ = "user_permissions"
 
-    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, comment="用户ID")
-    permission_id = Column(Integer, ForeignKey("permissions.id", ondelete="CASCADE"), nullable=False, comment="权限ID")
+    user_id = Column(BigInteger, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, comment="用户ID")
+    permission_id = Column(BigInteger, ForeignKey("permissions.id", ondelete="CASCADE"), nullable=False, comment="权限ID")
     
     # 权限配置
     effect = Column(Enum(PermissionEffect, values_callable=lambda e: [v.value for v in e]), default=PermissionEffect.ALLOW, comment="权限效果")
     conditions = Column(JSON, nullable=True, comment="权限条件")
-    granted_by = Column(Integer, ForeignKey("users.id"), nullable=True, comment="授权人")
+    granted_by = Column(BigInteger, ForeignKey("users.id"), nullable=True, comment="授权人")
     granted_at = Column(String(50), nullable=True, comment="授权时间")
     expires_at = Column(String(50), nullable=True, comment="过期时间")
     reason = Column(Text, nullable=True, comment="授权原因")
@@ -127,8 +127,8 @@ class PermissionGroupItem(BaseModel):
     """权限组项目关联表"""
     __tablename__ = "permission_group_items"
 
-    group_id = Column(Integer, ForeignKey("permission_groups.id", ondelete="CASCADE"), nullable=False, comment="权限组ID")
-    permission_id = Column(Integer, ForeignKey("permissions.id", ondelete="CASCADE"), nullable=False, comment="权限ID")
+    group_id = Column(BigInteger, ForeignKey("permission_groups.id", ondelete="CASCADE"), nullable=False, comment="权限组ID")
+    permission_id = Column(BigInteger, ForeignKey("permissions.id", ondelete="CASCADE"), nullable=False, comment="权限ID")
     sort_order = Column(Integer, default=0, nullable=False, comment="排序顺序")
     
     # 关联关系
@@ -162,11 +162,11 @@ class UserDataPermission(BaseModel):
     """用户数据权限关联表"""
     __tablename__ = "user_data_permissions"
 
-    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, comment="用户ID")
-    data_permission_id = Column(Integer, ForeignKey("data_permissions.id", ondelete="CASCADE"), nullable=False, comment="数据权限ID")
+    user_id = Column(BigInteger, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, comment="用户ID")
+    data_permission_id = Column(BigInteger, ForeignKey("data_permissions.id", ondelete="CASCADE"), nullable=False, comment="数据权限ID")
     
     # 权限配置
-    granted_by = Column(Integer, ForeignKey("users.id"), nullable=True, comment="授权人")
+    granted_by = Column(BigInteger, ForeignKey("users.id"), nullable=True, comment="授权人")
     granted_at = Column(String(50), nullable=True, comment="授权时间")
     expires_at = Column(String(50), nullable=True, comment="过期时间")
     

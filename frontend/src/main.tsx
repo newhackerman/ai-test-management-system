@@ -8,7 +8,7 @@ import { PersistGate } from 'redux-persist/integration/react'
 import { ConfigProvider } from 'antd'
 import zhCN from 'antd/locale/zh_CN'
 import { store, persistor } from './store'
-// import { Toaster } from 'react-hot-toast' // 绉婚櫎锛屼娇鐢ˋpp.tsx涓殑sonner
+// Toaster（react-hot-toast）挂在 App.tsx 中，不在这里重复挂载。
 
 import App from './App.tsx'
 import './index.css'
@@ -62,7 +62,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
         >
           <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
             <App />
-            {/* Toaster moved to App.tsx using sonner */}
+            {/* Toaster: react-hot-toast, mounted in App.tsx */}
           </BrowserRouter>
         </ConfigProvider>
       </QueryClientProvider>

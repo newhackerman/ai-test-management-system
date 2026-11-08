@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/Tabs';
 import { Search, Shield, Check, X } from 'lucide-react';
 import { getRolePermissions, updateRolePermissions } from '@/api/role';
 import { getAllPermissions } from '@/api/permission';
-import { toast } from 'sonner';
+import { toast } from 'react-hot-toast';
 import type { Role, Permission } from '@/types';
 
 interface RolePermissionsDialogProps {

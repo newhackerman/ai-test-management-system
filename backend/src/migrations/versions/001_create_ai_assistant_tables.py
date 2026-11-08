@@ -22,9 +22,9 @@ def upgrade() -> None:
     # 1. Create ai_chat_sessions table
     op.create_table(
         'ai_chat_sessions',
-        sa.Column('id', sa.Integer(), nullable=False, comment='主键ID'),
+        sa.Column('id', sa.BigInteger(), nullable=False, comment='主键ID'),
         sa.Column('title', sa.String(200), nullable=False, comment='会话标题'),
-        sa.Column('user_id', sa.Integer(), nullable=False, comment='用户ID'),
+        sa.Column('user_id', sa.BigInteger(), nullable=False, comment='用户ID'),
         sa.Column('status', sa.Enum('ACTIVE', 'ARCHIVED', 'DELETED', name='sessionstatus'), 
                  nullable=False, default='ACTIVE', comment='会话状态'),
         
@@ -53,8 +53,8 @@ def upgrade() -> None:
                  server_default=sa.text('CURRENT_TIMESTAMP'), comment='创建时间'),
         sa.Column('updated_at', sa.DateTime(), nullable=False, 
                  server_default=sa.text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'), comment='更新时间'),
-        sa.Column('created_by', sa.Integer(), nullable=True, comment='创建人ID'),
-        sa.Column('updated_by', sa.Integer(), nullable=True, comment='更新人ID'),
+        sa.Column('created_by', sa.BigInteger(), nullable=True, comment='创建人ID'),
+        sa.Column('updated_by', sa.BigInteger(), nullable=True, comment='更新人ID'),
         sa.Column('deleted_at', sa.DateTime(), nullable=True, comment='删除时间'),
         
         sa.PrimaryKeyConstraint('id'),
@@ -80,8 +80,8 @@ def upgrade() -> None:
     # 2. Create ai_chat_messages table
     op.create_table(
         'ai_chat_messages',
-        sa.Column('id', sa.Integer(), nullable=False, comment='主键ID'),
-        sa.Column('session_id', sa.Integer(), nullable=False, comment='会话ID'),
+        sa.Column('id', sa.BigInteger(), nullable=False, comment='主键ID'),
+        sa.Column('session_id', sa.BigInteger(), nullable=False, comment='会话ID'),
         sa.Column('role', sa.Enum('USER', 'ASSISTANT', 'SYSTEM', name='messagerole'), 
                  nullable=False, comment='消息角色'),
         sa.Column('content', sa.Text(length=4294967295), nullable=False, comment='消息内容'),
@@ -104,7 +104,7 @@ def upgrade() -> None:
         
         # 消息元数据
         sa.Column('message_metadata', sa.JSON(), nullable=True, comment='消息元数据'),
-        sa.Column('parent_message_id', sa.Integer(), nullable=True, comment='父消息ID'),
+        sa.Column('parent_message_id', sa.BigInteger(), nullable=True, comment='父消息ID'),
         sa.Column('thread_id', sa.String(100), nullable=True, comment='线程ID'),
         
         # 用户交互
@@ -118,8 +118,8 @@ def upgrade() -> None:
                  server_default=sa.text('CURRENT_TIMESTAMP'), comment='创建时间'),
         sa.Column('updated_at', sa.DateTime(), nullable=False, 
                  server_default=sa.text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'), comment='更新时间'),
-        sa.Column('created_by', sa.Integer(), nullable=True, comment='创建人ID'),
-        sa.Column('updated_by', sa.Integer(), nullable=True, comment='更新人ID'),
+        sa.Column('created_by', sa.BigInteger(), nullable=True, comment='创建人ID'),
+        sa.Column('updated_by', sa.BigInteger(), nullable=True, comment='更新人ID'),
         sa.Column('deleted_at', sa.DateTime(), nullable=True, comment='删除时间'),
         
         sa.PrimaryKeyConstraint('id'),
@@ -148,7 +148,7 @@ def upgrade() -> None:
     # 3. Create ai_model_configs table
     op.create_table(
         'ai_model_configs',
-        sa.Column('id', sa.Integer(), nullable=False, comment='主键ID'),
+        sa.Column('id', sa.BigInteger(), nullable=False, comment='主键ID'),
         sa.Column('provider', sa.String(50), nullable=False, comment='AI服务提供商'),
         sa.Column('model_name', sa.String(100), nullable=False, comment='模型名称'),
         sa.Column('display_name', sa.String(200), nullable=False, comment='显示名称'),
@@ -210,8 +210,8 @@ def upgrade() -> None:
                  server_default=sa.text('CURRENT_TIMESTAMP'), comment='创建时间'),
         sa.Column('updated_at', sa.DateTime(), nullable=False, 
                  server_default=sa.text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'), comment='更新时间'),
-        sa.Column('created_by', sa.Integer(), nullable=True, comment='创建人ID'),
-        sa.Column('updated_by', sa.Integer(), nullable=True, comment='更新人ID'),
+        sa.Column('created_by', sa.BigInteger(), nullable=True, comment='创建人ID'),
+        sa.Column('updated_by', sa.BigInteger(), nullable=True, comment='更新人ID'),
         sa.Column('deleted_at', sa.DateTime(), nullable=True, comment='删除时间'),
         
         sa.PrimaryKeyConstraint('id'),
@@ -237,7 +237,7 @@ def upgrade() -> None:
     # 4. Create ai_prompt_templates table
     op.create_table(
         'ai_prompt_templates',
-        sa.Column('id', sa.Integer(), nullable=False, comment='主键ID'),
+        sa.Column('id', sa.BigInteger(), nullable=False, comment='主键ID'),
         sa.Column('name', sa.String(200), nullable=False, comment='模板名称'),
         sa.Column('title', sa.String(300), nullable=False, comment='模板标题'),
         sa.Column('description', sa.Text(), nullable=True, comment='模板描述'),
@@ -260,14 +260,14 @@ def upgrade() -> None:
         # 权限和可见性
         sa.Column('visibility', sa.Enum('PUBLIC', 'PRIVATE', 'TEAM', 'ORGANIZATION', name='templatevisibility'), 
                  nullable=False, default='PRIVATE', comment='可见性'),
-        sa.Column('owner_id', sa.Integer(), nullable=False, comment='所有者ID'),
-        sa.Column('team_id', sa.Integer(), nullable=True, comment='团队ID'),
+        sa.Column('owner_id', sa.BigInteger(), nullable=False, comment='所有者ID'),
+        sa.Column('team_id', sa.BigInteger(), nullable=True, comment='团队ID'),
         sa.Column('is_featured', sa.Boolean(), nullable=False, default=False, comment='是否精选'),
         sa.Column('is_verified', sa.Boolean(), nullable=False, default=False, comment='是否已验证'),
         
         # 版本控制
         sa.Column('version', sa.String(20), nullable=False, default='1.0.0', comment='版本号'),
-        sa.Column('parent_template_id', sa.Integer(), nullable=True, comment='父模板ID'),
+        sa.Column('parent_template_id', sa.BigInteger(), nullable=True, comment='父模板ID'),
         sa.Column('is_latest_version', sa.Boolean(), nullable=False, default=True, comment='是否最新版本'),
         
         # 使用统计
@@ -281,8 +281,8 @@ def upgrade() -> None:
                  server_default=sa.text('CURRENT_TIMESTAMP'), comment='创建时间'),
         sa.Column('updated_at', sa.DateTime(), nullable=False, 
                  server_default=sa.text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'), comment='更新时间'),
-        sa.Column('created_by', sa.Integer(), nullable=True, comment='创建人ID'),
-        sa.Column('updated_by', sa.Integer(), nullable=True, comment='更新人ID'),
+        sa.Column('created_by', sa.BigInteger(), nullable=True, comment='创建人ID'),
+        sa.Column('updated_by', sa.BigInteger(), nullable=True, comment='更新人ID'),
         sa.Column('deleted_at', sa.DateTime(), nullable=True, comment='删除时间'),
         
         sa.PrimaryKeyConstraint('id'),

@@ -6,7 +6,7 @@ import { Textarea } from '@/components/ui/Textarea';
 import { Label } from '@/components/ui/Label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/Select';
 import { createPermission } from '@/api/permission';
-import { toast } from 'sonner';
+import { toast } from 'react-hot-toast';
 
 interface CreatePermissionDialogProps {
   open: boolean;

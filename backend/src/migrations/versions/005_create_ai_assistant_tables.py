@@ -22,15 +22,15 @@ def upgrade():
     # 创建AI提示词模板使用记录表
     op.create_table(
         'ai_prompt_template_usage',
-        sa.Column('id', sa.Integer(), autoincrement=True, nullable=False, comment='主键ID'),
+        sa.Column('id', sa.BigInteger(), autoincrement=True, nullable=False, comment='主键ID'),
         sa.Column('created_at', sa.DateTime(), nullable=False, comment='创建时间'),
         sa.Column('updated_at', sa.DateTime(), nullable=False, comment='更新时间'),
-        sa.Column('created_by', sa.Integer(), nullable=True, comment='创建人ID'),
-        sa.Column('updated_by', sa.Integer(), nullable=True, comment='更新人ID'),
+        sa.Column('created_by', sa.BigInteger(), nullable=True, comment='创建人ID'),
+        sa.Column('updated_by', sa.BigInteger(), nullable=True, comment='更新人ID'),
         
         # 基本信息
-        sa.Column('template_id', sa.Integer(), nullable=False, comment='模板ID'),
-        sa.Column('user_id', sa.Integer(), nullable=False, comment='用户ID'),
+        sa.Column('template_id', sa.BigInteger(), nullable=False, comment='模板ID'),
+        sa.Column('user_id', sa.BigInteger(), nullable=False, comment='用户ID'),
         
         # 使用信息
         sa.Column('ai_provider', sa.String(50), nullable=True, comment='使用的AI服务提供商'),
@@ -64,11 +64,11 @@ def upgrade():
     # 创建AI系统统计表
     op.create_table(
         'ai_system_stats',
-        sa.Column('id', sa.Integer(), autoincrement=True, nullable=False, comment='主键ID'),
+        sa.Column('id', sa.BigInteger(), autoincrement=True, nullable=False, comment='主键ID'),
         sa.Column('created_at', sa.DateTime(), nullable=False, comment='创建时间'),
         sa.Column('updated_at', sa.DateTime(), nullable=False, comment='更新时间'),
-        sa.Column('created_by', sa.Integer(), nullable=True, comment='创建人ID'),
-        sa.Column('updated_by', sa.Integer(), nullable=True, comment='更新人ID'),
+        sa.Column('created_by', sa.BigInteger(), nullable=True, comment='创建人ID'),
+        sa.Column('updated_by', sa.BigInteger(), nullable=True, comment='更新人ID'),
         
         # 基本信息
         sa.Column('date', sa.Date(), nullable=False, comment='统计日期'),

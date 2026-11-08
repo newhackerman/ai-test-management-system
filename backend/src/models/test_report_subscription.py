@@ -3,7 +3,7 @@
 
 本模块定义了测试报告订阅和分发相关的数据库模型
 """
-from sqlalchemy import Column, Integer, String, Text, DateTime, JSON, Boolean, ForeignKey, Enum as SQLEnum
+from sqlalchemy import Column, BigInteger, Integer, String, Text, DateTime, JSON, Boolean, ForeignKey, Enum as SQLEnum
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from enum import Enum
@@ -45,7 +45,7 @@ class TestReportSubscription(Base):
     """测试报告订阅模型"""
     __tablename__ = "test_report_subscriptions"
     
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(BigInteger, primary_key=True, index=True)
     name = Column(String(100), nullable=False, comment="订阅名称")
     description = Column(Text, comment="订阅描述")
     
@@ -80,8 +80,8 @@ class TestReportSubscription(Base):
     delivery_count = Column(Integer, default=0, comment="分发次数")
     
     # 用户信息
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, comment="订阅用户ID")
-    created_by = Column(Integer, ForeignKey("users.id"), nullable=False, comment="创建人ID")
+    user_id = Column(BigInteger, ForeignKey("users.id"), nullable=False, comment="订阅用户ID")
+    created_by = Column(BigInteger, ForeignKey("users.id"), nullable=False, comment="创建人ID")
     
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False, comment="创建时间")
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, comment="更新时间")
@@ -97,9 +97,9 @@ class TestReportDistribution(Base):
     """测试报告分发记录模型"""
     __tablename__ = "test_report_distributions"
     
-    id = Column(Integer, primary_key=True, index=True)
-    subscription_id = Column(Integer, ForeignKey("test_report_subscriptions.id"), nullable=False, comment="订阅ID")
-    report_id = Column(Integer, ForeignKey("test_report_records.id"), comment="报告ID")
+    id = Column(BigInteger, primary_key=True, index=True)
+    subscription_id = Column(BigInteger, ForeignKey("test_report_subscriptions.id"), nullable=False, comment="订阅ID")
+    report_id = Column(BigInteger, ForeignKey("test_report_records.id"), comment="报告ID")
     
     # 分发信息
     delivery_channel = Column(SQLEnum(DeliveryChannel), nullable=False, comment="分发渠道")
@@ -135,8 +135,8 @@ class TestReportVersion(Base):
     """测试报告版本管理模型"""
     __tablename__ = "test_report_versions"
     
-    id = Column(Integer, primary_key=True, index=True)
-    report_id = Column(Integer, ForeignKey("test_report_records.id"), nullable=False, comment="报告ID")
+    id = Column(BigInteger, primary_key=True, index=True)
+    report_id = Column(BigInteger, ForeignKey("test_report_records.id"), nullable=False, comment="报告ID")
     version_number = Column(String(20), nullable=False, comment="版本号")
     
     # 版本信息
@@ -158,7 +158,7 @@ class TestReportVersion(Base):
     allowed_users = Column(JSON, comment="允许访问的用户ID列表")
     allowed_roles = Column(JSON, comment="允许访问的角色列表")
     
-    created_by = Column(Integer, ForeignKey("users.id"), nullable=False, comment="创建人ID")
+    created_by = Column(BigInteger, ForeignKey("users.id"), nullable=False, comment="创建人ID")
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False, comment="创建时间")
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, comment="更新时间")
     
@@ -173,10 +173,10 @@ class TestReportAccessLog(Base):
     """测试报告访问日志模型"""
     __tablename__ = "test_report_access_logs"
     
-    id = Column(Integer, primary_key=True, index=True)
-    report_id = Column(Integer, ForeignKey("test_report_records.id"), nullable=False, comment="报告ID")
-    version_id = Column(Integer, ForeignKey("test_report_versions.id"), comment="版本ID")
-    user_id = Column(Integer, ForeignKey("users.id"), comment="用户ID")
+    id = Column(BigInteger, primary_key=True, index=True)
+    report_id = Column(BigInteger, ForeignKey("test_report_records.id"), nullable=False, comment="报告ID")
+    version_id = Column(BigInteger, ForeignKey("test_report_versions.id"), comment="版本ID")
+    user_id = Column(BigInteger, ForeignKey("users.id"), comment="用户ID")
     
     # 访问信息
     access_type = Column(String(20), nullable=False, comment="访问类型")  # view, download, share

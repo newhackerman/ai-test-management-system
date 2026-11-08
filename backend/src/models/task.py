@@ -34,15 +34,15 @@ class Task(Base):
     
     __tablename__ = 'tasks'
     
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(BigInteger, primary_key=True, index=True)
     title = Column(String(200), nullable=False)
     description = Column(Text, nullable=True)
     
     # 关联信息
     project_id = Column(BigInteger, ForeignKey('projects.id'), nullable=False, index=True)
-    meeting_id = Column(Integer, ForeignKey('meetings.id'), nullable=True, index=True)  # 来源会议
-    assignee_id = Column(Integer, ForeignKey('users.id'), nullable=True, index=True)
-    creator_id = Column(Integer, ForeignKey('users.id'), nullable=False, index=True)
+    meeting_id = Column(BigInteger, ForeignKey('meetings.id'), nullable=True, index=True)  # 来源会议
+    assignee_id = Column(BigInteger, ForeignKey('users.id'), nullable=True, index=True)
+    creator_id = Column(BigInteger, ForeignKey('users.id'), nullable=False, index=True)
     
     # 任务属性
     status = Column(Enum(TaskStatus), default=TaskStatus.TODO, nullable=False, index=True)

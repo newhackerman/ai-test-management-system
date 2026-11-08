@@ -45,15 +45,32 @@ class RequirementDataSecurityService:
         self.backup_directory.mkdir(exist_ok=True)
     
     def _generate_encryption_key(self) -> str:
-        """生成加密密钥"""
-        # 在生产环境中，这应该从安全的密钥管理系统获取
-        password = os.environ.get('REQUIREMENT_ENCRYPTION_PASSWORD', 'default-password-change-in-production')
-        salt = os.environ.get('REQUIREMENT_ENCRYPTION_SALT', 'default-salt-change-in-production').encode()
-        
+        """生成加密密钥。
+
+        密钥来自配置 REQUIREMENT_ENCRYPTION_PASSWORD / _SALT（backend/.env，
+        经应用 Settings 读取；脚本等场景可改用同名环境变量）。两者缺一即
+        直接报错，绝不回退到任何默认值——2026-11-08 前这里用的公开默认
+        字符串写死在代码里，任何人读仓库都能解密所谓“加密”的需求字段。
+        """
+        password = (
+            getattr(settings, "REQUIREMENT_ENCRYPTION_PASSWORD", None)
+            or os.environ.get("REQUIREMENT_ENCRYPTION_PASSWORD")
+        )
+        salt = (
+            getattr(settings, "REQUIREMENT_ENCRYPTION_SALT", None)
+            or os.environ.get("REQUIREMENT_ENCRYPTION_SALT")
+        )
+        if not password or not salt:
+            raise RuntimeError(
+                "需求数据加密未配置：请在 backend/.env 中设置真实的 "
+                "REQUIREMENT_ENCRYPTION_PASSWORD 与 REQUIREMENT_ENCRYPTION_SALT"
+            )
+        salt_bytes = salt.encode() if isinstance(salt, str) else salt
+
         kdf = PBKDF2HMAC(
             algorithm=hashes.SHA256(),
             length=32,
-            salt=salt,
+            salt=salt_bytes,
             iterations=100000,
             backend=default_backend()
         )

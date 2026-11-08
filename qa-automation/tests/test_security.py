@@ -503,3 +503,54 @@ def test_meeting_file_upload_executable(api, make_project):
         )
     finally:
         api.delete(f"/api/v1/meetings/{meeting_id}")
+
+
+# --- Requirement encryption key rotation (2026-11-08) -------------------
+# The requirement data-security service used to derive its Fernet key from
+# the publicly-known defaults 'default-password-change-in-production' /
+# 'default-salt-change-in-production' whenever the env vars were unset —
+# and they were unset everywhere (neither backend/.env nor .env.example
+# had them), so every "encrypted" requirement field was decryptable by
+# anyone who read the repo. The fix: real keys in backend/.env via the
+# app Settings, and fail fast when they are missing. These two tests
+# guard exactly that (no HTTP involved: the requirement-security router
+# is not mounted, and the DB holds zero requirements).
+
+def _load_encryption_service(monkeypatch, tmp_path):
+    """Import the service with a clean CWD (backup dir lands in tmp)."""
+    import sys
+    from pathlib import Path
+
+    backend_dir = Path(__file__).resolve().parents[2] / "backend"
+    if str(backend_dir) not in sys.path:
+        sys.path.insert(0, str(backend_dir))
+    monkeypatch.chdir(tmp_path)
+    import src.services.requirement_data_security_service as mod
+
+    return mod
+
+
+def test_requirement_encryption_fails_without_config(monkeypatch, tmp_path):
+    mod = _load_encryption_service(monkeypatch, tmp_path)
+    monkeypatch.delenv("REQUIREMENT_ENCRYPTION_PASSWORD", raising=False)
+    monkeypatch.delenv("REQUIREMENT_ENCRYPTION_SALT", raising=False)
+    monkeypatch.setattr(mod.settings, "REQUIREMENT_ENCRYPTION_PASSWORD", None)
+    monkeypatch.setattr(mod.settings, "REQUIREMENT_ENCRYPTION_SALT", None)
+    with pytest.raises(RuntimeError, match="REQUIREMENT_ENCRYPTION"):
+        mod.RequirementDataSecurityService(None)
+
+
+def test_requirement_encryption_round_trip(monkeypatch, tmp_path):
+    mod = _load_encryption_service(monkeypatch, tmp_path)
+    monkeypatch.setattr(
+        mod.settings, "REQUIREMENT_ENCRYPTION_PASSWORD", "test-password-rotate-2026"
+    )
+    monkeypatch.setattr(
+        mod.settings, "REQUIREMENT_ENCRYPTION_SALT", "test-salt-rotate-2026"
+    )
+    svc = mod.RequirementDataSecurityService(None)
+    cipher = svc.encrypt_sensitive_data("acceptance criterion: must not leak")
+    assert cipher != "acceptance criterion: must not leak"
+    assert svc.decrypt_sensitive_data(cipher) == (
+        "acceptance criterion: must not leak"
+    )

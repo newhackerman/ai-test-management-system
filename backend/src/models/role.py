@@ -1,7 +1,7 @@
 """
 角色管理模型
 """
-from sqlalchemy import Column, String, Boolean, Integer, ForeignKey, Text, JSON
+from sqlalchemy import Column, BigInteger, String, Boolean, Integer, ForeignKey, Text, JSON
 from sqlalchemy.orm import relationship
 
 from .base import BaseModel
@@ -21,7 +21,7 @@ class Role(BaseModel):
     icon = Column(String(50), nullable=True, comment="图标")
     
     # 层级结构
-    parent_id = Column(Integer, ForeignKey("roles.id"), nullable=True, comment="父角色ID")
+    parent_id = Column(BigInteger, ForeignKey("roles.id"), nullable=True, comment="父角色ID")
     level = Column(Integer, default=1, nullable=False, comment="角色层级")
     path = Column(String(500), nullable=True, comment="角色路径")
     sort_order = Column(Integer, default=0, nullable=False, comment="排序顺序")
@@ -80,8 +80,8 @@ class RoleGroupItem(BaseModel):
     """角色组项目关联表"""
     __tablename__ = "role_group_items"
 
-    group_id = Column(Integer, ForeignKey("role_groups.id", ondelete="CASCADE"), nullable=False, comment="角色组ID")
-    role_id = Column(Integer, ForeignKey("roles.id", ondelete="CASCADE"), nullable=False, comment="角色ID")
+    group_id = Column(BigInteger, ForeignKey("role_groups.id", ondelete="CASCADE"), nullable=False, comment="角色组ID")
+    role_id = Column(BigInteger, ForeignKey("roles.id", ondelete="CASCADE"), nullable=False, comment="角色ID")
     sort_order = Column(Integer, default=0, nullable=False, comment="排序顺序")
     
     # 关联关系
@@ -113,8 +113,8 @@ class RoleApproval(BaseModel):
     __tablename__ = "role_approvals"
 
     # 基本信息
-    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, comment="申请用户ID")
-    role_id = Column(Integer, ForeignKey("roles.id", ondelete="CASCADE"), nullable=False, comment="申请角色ID")
+    user_id = Column(BigInteger, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, comment="申请用户ID")
+    role_id = Column(BigInteger, ForeignKey("roles.id", ondelete="CASCADE"), nullable=False, comment="申请角色ID")
     action = Column(String(20), nullable=False, comment="操作类型: assign, remove")
     
     # 申请信息
@@ -122,7 +122,7 @@ class RoleApproval(BaseModel):
     status = Column(String(20), default="pending", nullable=False, comment="审批状态: pending, approved, rejected")
     
     # 审批信息
-    approver_id = Column(Integer, ForeignKey("users.id"), nullable=True, comment="审批人ID")
+    approver_id = Column(BigInteger, ForeignKey("users.id"), nullable=True, comment="审批人ID")
     approved_at = Column(String(50), nullable=True, comment="审批时间")
     approval_reason = Column(Text, nullable=True, comment="审批意见")
     

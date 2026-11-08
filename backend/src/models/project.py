@@ -94,8 +94,8 @@ class Project(ProjectBaseModel):
     actual_end_date = Column(Date, comment='实际结束日期')
     
     # 人员管理
-    project_manager_id = Column(Integer, nullable=False, comment='项目经理ID')
-    test_manager_id = Column(Integer, comment='测试经理ID')
+    project_manager_id = Column(BigInteger, nullable=False, comment='项目经理ID')
+    test_manager_id = Column(BigInteger, comment='测试经理ID')
     client_contact = Column(String(200), comment='客户联系人')
     
     # 预算管理
@@ -117,8 +117,8 @@ class Project(ProjectBaseModel):
     custom_fields = Column(JSON, comment='自定义字段')
     
     # 审计字段
-    created_by = Column(Integer, nullable=False, comment='创建人ID')
-    updated_by = Column(Integer, comment='更新人ID')
+    created_by = Column(BigInteger, nullable=False, comment='创建人ID')
+    updated_by = Column(BigInteger, comment='更新人ID')
     deleted_at = Column(DateTime, comment='删除时间')
     
     # 关联关系
@@ -181,7 +181,7 @@ class ProjectMember(ProjectBaseModel):
     
     id = Column(BigInteger, primary_key=True, autoincrement=True, comment='成员关系ID')
     project_id = Column(BigInteger, ForeignKey('projects.id'), nullable=False, comment='项目ID')
-    user_id = Column(Integer, nullable=False, comment='用户ID')
+    user_id = Column(BigInteger, nullable=False, comment='用户ID')
     
     # 角色和权限
     role_in_project = Column(Enum('ADMIN', 'PROJECT_MANAGER', 'REQUIREMENT_MANAGER', 'DESIGNER', 
@@ -243,10 +243,10 @@ class Task(ProjectBaseModel):
                    default='TODO', comment='任务状态')
     
     # 人员分配
-    assignee_id = Column(Integer, comment='执行人ID')
+    assignee_id = Column(BigInteger, comment='执行人ID')
     assignee_ids = Column(JSON, comment='执行人ID列表')
-    reporter_id = Column(Integer, comment='报告人ID')
-    reviewer_id = Column(Integer, comment='审核人ID')
+    reporter_id = Column(BigInteger, comment='报告人ID')
+    reviewer_id = Column(BigInteger, comment='审核人ID')
     
     # 时间管理
     planned_start_date = Column(Date, comment='计划开始日期')
@@ -273,8 +273,8 @@ class Task(ProjectBaseModel):
     attachments = Column(JSON, comment='附件信息')
     
     # 审计字段
-    created_by = Column(Integer, nullable=False, comment='创建人ID')
-    updated_by = Column(Integer, comment='更新人ID')
+    created_by = Column(BigInteger, nullable=False, comment='创建人ID')
+    updated_by = Column(BigInteger, comment='更新人ID')
     
     # 关联关系
     project = relationship("Project", back_populates="tasks")
@@ -341,14 +341,14 @@ class Milestone(ProjectBaseModel):
     acceptance_criteria = Column(Text, comment='验收标准')
     
     # 负责人
-    owner_id = Column(Integer, nullable=False, comment='负责人ID')
+    owner_id = Column(BigInteger, nullable=False, comment='负责人ID')
     
     # 依赖关系
     dependency_milestones = Column(JSON, comment='依赖里程碑ID列表')
     
     # 审计字段
-    created_by = Column(Integer, nullable=False, comment='创建人ID')
-    updated_by = Column(Integer, comment='更新人ID')
+    created_by = Column(BigInteger, nullable=False, comment='创建人ID')
+    updated_by = Column(BigInteger, comment='更新人ID')
     deleted_at = Column(DateTime, nullable=True, comment='软删除时间')
 
     # 关联关系
@@ -383,7 +383,7 @@ class WorkLog(ProjectBaseModel):
     id = Column(BigInteger, primary_key=True, autoincrement=True, comment='工作日志ID')
     project_id = Column(BigInteger, ForeignKey('projects.id'), nullable=False, comment='项目ID')
     task_id = Column(BigInteger, ForeignKey('project_tasks.id'), comment='任务ID')
-    user_id = Column(Integer, nullable=False, comment='用户ID')
+    user_id = Column(BigInteger, nullable=False, comment='用户ID')
     
     # 工时信息
     work_date = Column(Date, nullable=False, comment='工作日期')
@@ -459,7 +459,7 @@ class ProjectRisk(ProjectBaseModel):
                    default='IDENTIFIED', comment='风险状态')
     
     # 负责人
-    owner_id = Column(Integer, nullable=False, comment='风险负责人ID')
+    owner_id = Column(BigInteger, nullable=False, comment='风险负责人ID')
     
     # 时间信息
     identified_date = Column(Date, nullable=False, comment='识别日期')
@@ -467,8 +467,8 @@ class ProjectRisk(ProjectBaseModel):
     actual_resolution_date = Column(Date, comment='实际解决日期')
     
     # 审计字段
-    created_by = Column(Integer, nullable=False, comment='创建人ID')
-    updated_by = Column(Integer, comment='更新人ID')
+    created_by = Column(BigInteger, nullable=False, comment='创建人ID')
+    updated_by = Column(BigInteger, comment='更新人ID')
     
     # 关联关系
     project = relationship("Project", back_populates="risks")
@@ -507,7 +507,7 @@ class ProjectMetrics(ProjectBaseModel):
     """项目指标模型"""
     __tablename__ = 'project_metrics'
     
-    id = Column(Integer, primary_key=True, comment='指标ID')
+    id = Column(BigInteger, primary_key=True, comment='指标ID')
     project_id = Column(BigInteger, ForeignKey('projects.id'), nullable=False, comment='项目ID')
     metric_date = Column(DateTime, default=datetime.utcnow, comment='指标日期')
     

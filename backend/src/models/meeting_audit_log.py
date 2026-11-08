@@ -5,7 +5,7 @@
 """
 from datetime import datetime
 from typing import Dict, Any, Optional
-from sqlalchemy import Column, Integer, String, DateTime, Text, JSON, ForeignKey
+from sqlalchemy import Column, BigInteger, Integer, String, DateTime, Text, JSON, ForeignKey
 from sqlalchemy.orm import relationship
 
 from src.models.base import Base
@@ -16,9 +16,9 @@ class MeetingAuditLog(Base):
     
     __tablename__ = 'meeting_audit_logs'
     
-    id = Column(Integer, primary_key=True, index=True)
-    meeting_id = Column(Integer, ForeignKey('meetings.id'), nullable=False, index=True)
-    user_id = Column(Integer, ForeignKey('users.id'), nullable=True, index=True)  # 可为空，支持系统操作
+    id = Column(BigInteger, primary_key=True, index=True)
+    meeting_id = Column(BigInteger, ForeignKey('meetings.id'), nullable=False, index=True)
+    user_id = Column(BigInteger, ForeignKey('users.id'), nullable=True, index=True)  # 可为空，支持系统操作
     action = Column(String(100), nullable=False, index=True)  # 操作类型
     ip_address = Column(String(45), nullable=True)  # 支持IPv6
     user_agent = Column(Text, nullable=True)  # 用户代理字符串

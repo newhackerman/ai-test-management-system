@@ -45,7 +45,11 @@ SELECT
 FROM INFORMATION_SCHEMA.COLUMNS 
 WHERE TABLE_SCHEMA = DATABASE() 
 AND TABLE_NAME LIKE 'ai_%'
-AND COLUMN_NAME LIKE '%_id';
+AND COLUMN_NAME LIKE '%_id'
+-- 只查数值型 ID 列：字符串 ID（如 ai_operation_logs 的 session_id /
+-- trace_id / correlation_id / resource_id，存 UUID）不是行号，不参与
+-- INT/BIGINT 统一；不加这一行它们会被误报为“不一致”
+AND DATA_TYPE IN ('int', 'bigint');
 
 -- =====================================================
 -- 2. 业务逻辑一致性检查

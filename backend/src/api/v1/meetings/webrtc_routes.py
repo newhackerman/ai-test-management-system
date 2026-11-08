@@ -11,12 +11,13 @@ WebRTC信令API路由
 import logging
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Path, status, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, status, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ....core.database import get_async_session
 from ....core.exceptions import ValidationError, NotFoundError, PermissionError
+from ....utils.jwt import verify_token
 from ....services.webrtc_service import WebRTCService, get_webrtc_service
 from ....services.meeting_service import MeetingService, get_meeting_service
 from ....api.auth import get_current_user
@@ -37,15 +38,19 @@ router = APIRouter()
 async def websocket_endpoint(
     websocket: WebSocket,
     meeting_id: int = Path(..., description="会议ID"),
-    webrtc_service: WebRTCService = Depends(get_webrtc_service)
+    token: Optional[str] = Query(None, description="JWT 访问令牌"),
+    webrtc_service: WebRTCService = Depends(get_webrtc_service),
+    meeting_service: MeetingService = Depends(get_meeting_service)
 ):
     """
     WebSocket信令连接
-    
-    建立WebSocket连接用于实时信令交换
-    
+
+    建立WebSocket连接用于实时信令交换。连接前必须验证 JWT（query 参数
+    token），并校验用户对该会议的访问权限；未通过时直接拒绝握手，
+    不再以匿名身份（user_id=None）加入房间。
+
     - **meeting_id**: 会议ID（必填）
-    
+
     WebSocket消息格式：
     ```json
     {
@@ -54,35 +59,58 @@ async def websocket_endpoint(
     }
     ```
     """
-    await websocket.accept()
-    
+    # 认证必须在 accept() 之前完成：未提供、无效或过期的令牌直接拒绝。
+    # 只接受 type=access 的访问令牌，refresh/reset 令牌不能用于建连。
+    user_id: Optional[int] = None
+    if not token:
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason="Authentication required")
+        return
+    payload = verify_token(token)
+    if not payload or payload.get("type") != "access":
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason="Invalid token")
+        return
     try:
-        # 从查询参数或头部获取用户信息
-        # 这里需要实现WebSocket认证逻辑
-        user_id = None  # TODO: 实现WebSocket用户认证
-        
+        user_id = int(payload.get("sub"))
+    except (TypeError, ValueError):
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason="Invalid token")
+        return
+
+    # 会议访问权限：组织者、拥有 meeting:view 权限者或参会者才能加入。
+    try:
+        await meeting_service.get_meeting_by_id(meeting_id, user_id)
+    except NotFoundError:
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason="Meeting not found")
+        return
+    except PermissionError:
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason="Access denied")
+        return
+
+    await websocket.accept()
+
+    session = None
+    try:
         logger.info(f"WebSocket连接建立: 会议 {meeting_id}, 用户 {user_id}")
-        
+
         # 加入WebRTC房间
         session = await webrtc_service.join_room(f"room_{meeting_id}", user_id, {})
-        
+
         # 注册WebSocket连接
         await webrtc_service.register_websocket(session.session_id, websocket)
-        
+
         while True:
             # 接收WebSocket消息
             data = await websocket.receive_json()
-            
+
             # 处理信令消息
             await webrtc_service.handle_websocket_message(session.session_id, data)
-            
+
     except WebSocketDisconnect:
         logger.info(f"WebSocket连接断开: 会议 {meeting_id}, 用户 {user_id}")
-        
+
         # 清理连接
-        if 'session' in locals():
+        if session is not None:
             await webrtc_service.leave_room(session.session_id)
-            
+
     except Exception as e:
         logger.error(f"WebSocket连接异常: {e}")
         await websocket.close(code=1011, reason="Internal server error")
