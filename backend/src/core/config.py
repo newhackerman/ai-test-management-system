@@ -85,7 +85,14 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 8  # 8 days
     JWT_ACCESS_TOKEN_EXPIRE_HOURS: int = 1
     JWT_REFRESH_TOKEN_EXPIRE_DAYS: int = 7
-    
+
+    # 需求数据加密（REQUIREMENT_ENCRYPTION_*）：用于需求敏感字段的 Fernet
+    # 加密。必须配置真实随机值；未配置时 RequirementDataSecurityService
+    # 会直接拒绝启动加密，绝不回退到公开默认值（2026-11-08 前的默认值
+    # 是写死在代码里的公开字符串，任何人读仓库都能解密）。
+    REQUIREMENT_ENCRYPTION_PASSWORD: Optional[str] = None
+    REQUIREMENT_ENCRYPTION_SALT: Optional[str] = None
+
     # 数据库配置
     DATABASE_URL: str = "mysql+asyncmy://aitest:AItestdb123@localhost:3306/aitestdb"
     

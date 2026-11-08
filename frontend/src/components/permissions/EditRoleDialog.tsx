@@ -1,6 +1,6 @@
 ﻿// @ts-nocheck
 import React, { useEffect, useState } from 'react';
-import { toast } from 'sonner';
+import { toast } from 'react-hot-toast';
 
 import { updateRole } from '@/api/role';
 import { Button } from '@/components/ui/Button';

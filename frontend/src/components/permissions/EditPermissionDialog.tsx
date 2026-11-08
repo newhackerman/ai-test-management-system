@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
 import { Label } from '@/components/ui/Label';
 import { updatePermission } from '@/api/permission';
-import { toast } from 'sonner';
+import { toast } from 'react-hot-toast';
 import type { Permission } from '@/types';
 
 interface EditPermissionDialogProps {

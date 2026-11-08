@@ -317,6 +317,24 @@
 
 **执行**：干净库重建（`DROP DATABASE` + `ops/rebuild_db.py`，125 张表，种子 45/9）→ 冒烟 10/10（API 5 + E2E 登录 5）→ 全量 **343/343**（API 285/285 + E2E 58/58，261.7 秒，0 失败 0 错误 0 跳过，`reports/latest.json`）。中途虚拟机在 15:22 又被替换一次（当天第 6 次），第一次全量跑到一半被打断；`recover.sh` 重装 MySQL/Redis、从 14:44 备份恢复、四项健康后，重做干净库重建并重跑出此结果。
 
+## 安全与正确性批量修复（2026-11-08，用户要求“先修安全与正确性那批”）
+
+**起因**：用户要求再次全项目扫描（后端/前端/数据库+部署三路并行只读扫描，逐项人工核实），本批只修安全与正确性类问题；性能与清理类已列出、未动。
+
+**改动（工作区，未提交）**：
+
+- **权限 API 补授权**（`backend/src/api/permissions.py`）：10 个端点原先只有 `# TODO: 检查权限` 占位，任意登录用户可读写权限/角色。新增与 `users.py` 同款的 `_require_permission`（超管放行，否则按 `permission:view/create/edit/delete`、`role:assign_permission` 校验，不足 403）；6 个吞异常的 handler 补 `except HTTPException: raise`（否则 403 会被包成 500）。自查端点（GET /users/{id}、POST /check）保持原样。
+- **WebRTC WebSocket 补认证**（`backend/src/api/v1/meetings/webrtc_routes.py`）：原先不验 token 就能接通（实测未认证升级返回 101）。现接受前校验 `token` 查询参数：无 token/验签失败/非 access 类型 → 1008 关闭；再用 `meeting_service` 核查会议存在与参与权限（组织者、`meeting:view` 持有者或参与者），通过后才 `accept()` 并用真实 user_id 加入房间。
+- **删除死 WebSocket 模块**（`backend/src/api/v1/requirement_websocket.py`）：导入即失败（`get_db` 不存在）、全项目无任何挂载与调用、前端无引用，其未认证端点从未实际运行过；删掉比修更安全。
+- **CI 重写**（`.github/workflows/ci-cd.yml`）：11 个 action 升 v4（原 v3 已被 GitHub 下线）、删重复的 `deploy-staging`、生产部署不再依赖被跳过的 staging、六个调用不存在脚本的测试任务合并为一个真实任务 `qa-automation-tests`（MySQL 8.0 + Redis 服务容器、建库、跑 `ops/rebuild_db.py`、起后端/前端、跑全量并上传报告）。测试任务不依赖 `code-quality`：实测 `black --check` 下后端 398/400 个文件都要重排（项目从未格式化过），挂钩只会让测试永不运行；格式化是另案决定。
+- **前端 Toast 与错误边界**：6 处 `sonner` 调用改用已装的 `react-hot-toast`（之前 sonner 的 `<Toaster>` 从未挂载，提示全部不可见）；新增 `ErrorBoundary` 并包住路由（之前全站无错误边界，一次渲染崩溃就白屏）。构建验证：默认堆内存 OOM（虚拟机限制），`NODE_OPTIONS=--max-old-space-size=4096` 下 1 分 9 秒构建通过。
+- **需求加密密钥轮换**（`services/requirement_data_security_service.py`、`core/config.py`、`backend/.env`、`.env.example`）：密钥原先来自写死在代码里的公开默认值（`default-password-change-in-production` / `default-salt-change-in-production`），且两个环境变量在 `.env` 与 `.env.example` 里都不存在——即默认路径一直是生效的。现生成随机密码/盐写入 `backend/.env`（不进 git），Settings 显式声明两项，服务优先从 Settings 读（`backend/.env` 不经 `os.environ`，只加环境变量读不到——已核实），缺失时直接抛 `RuntimeError` 拒绝启动加密。新增 2 个用例（`tests/test_security.py`）：未配置 → 拒绝；配置后加解密往返通过。
+- **轮换风险核查**：库里 0 条需求（无任何数据被旧密钥加密过），且需求安全路由（`/requirement-security`）未挂载、7 个调用点全是死代码——旧密钥从未真正用过，轮换无数据迁移成本。路由未挂载是遗留问题（与已删的 WebSocket 模块同类），不在本批修复范围。
+
+**验证**：权限与 WebSocket 逐项实测（超管 200、普通用户 403、无 token/坏 token 被拒、真 token + 真会议接通）；CI 只做了 YAML 解析与依赖检查（首次真实流水线运行待 GitHub Actions 上验证）；加密轮换验证：新密钥加解密往返通过、未配置时拒绝通过、后端重启后健康 200。干净库全量 **343/343**（API 285/285 + E2E 58/58，0 失败，`reports/latest.json`，17:58），跑完环境库已从 17:44 备份恢复，四项健康。
+
+**本批未修（待用户定夺）**：INT/BIGINT 统一（模型 Integer vs SQL 脚本 bigint，本地曾报 MySQL 3780）与 `fix_missing_tables.py` 是否进仓库；11 个 stub 占位页面（删路由还是留待实现）；WebRTC 房间生命周期断裂（`create_room` 零调用者、房间 ID 格式与加入端不一致、前端 WS 地址无对应后端路由，会议室页本身也是 stub）。
+
 ## 框架使用
 
 ```bash

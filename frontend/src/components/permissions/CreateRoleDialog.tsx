@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
 import { Label } from '@/components/ui/Label';
 import { createRole } from '@/api/role';
-import { toast } from 'sonner';
+import { toast } from 'react-hot-toast';
 
 interface CreateRoleDialogProps {
   open: boolean;

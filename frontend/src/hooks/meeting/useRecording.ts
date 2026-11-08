@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { RecordingService, RecordingConfig, RecordingStatus, StartRecordingRequest } from '@/services/recordingService'
-import { toast } from 'sonner'
+import { toast } from 'react-hot-toast'
 
 export interface UseRecordingOptions {
   meetingId: number
