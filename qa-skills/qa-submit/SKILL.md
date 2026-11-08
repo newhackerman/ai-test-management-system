@@ -15,8 +15,7 @@
 
 ## Prepare the branch
 
-- Confirm the full suite passes on a clean database before creating the branch. A branch built on a red suite wastes the reviewer's time.
-- Create a new branch named after the work, such as `qa/automation-framework`.
+- Create a new branch named after the work, such as `qa/automation-framework`. The branch is created first; the green suite is required before opening the pull request, not before creating the branch — a branch built on a red suite is normal work in progress, a pull request opened on one wastes the reviewer's time.
 - Commit in logical chunks: the framework first, then the defect fixes grouped by area, then the recovery scripts, then the report.
 - Write each commit message so it says what changed and why in one line.
 - Never commit a secret, a password or a token. Read the repository ignore file before the first commit.
@@ -26,8 +25,10 @@
 - Push the branch and confirm the remote holds every local commit.
 - Check whether a pull request already exists for the branch before creating one.
 - Open the pull request with a title that names the framework and the defect count, and a body that states the test results, the defects fixed with their severity, the unrepaired items and how to verify the work.
+- Confirm the full suite passes on a clean database before opening the pull request. If it does not, go back to the fix step — do not open a pull request on a red suite.
 - Confirm the pull request is open and report its URL to the user.
 - Do not skip the confirmation above even when the user approved submitting for another project.
+- When the remote is not GitHub, use the equivalent tool: `glab` for GitLab, the host's web UI for anything else. The rule is the same — branch, push, check for an existing request, open one.
 
 ## Hand off
 

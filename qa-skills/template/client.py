@@ -1,21 +1,53 @@
 """HTTP client for the API under test.
 
-Thin wrapper over httpx with one login() that stores access/refresh tokens
-and verb helpers that always send/accept JSON.
+Thin wrapper over httpx with one login() that stores the credential and
+verb helpers that always send/accept JSON.
 
-Adaptation points for a new project:
-  - LOGIN_PATH comes from config.py; point it at the new login endpoint.
-  - Token field names below (access_token / refresh_token) must match the
-    login response. If the new API returns a different shape, adjust the
-    two lines marked ADAPT.
-  - If the new API uses a different auth scheme (cookie, API key), replace
-    auth_headers() accordingly.
+Auth is driven by QA_AUTH_SCHEME (see config.py):
+  - bearer (default): login() reads the token field (QA_TOKEN_FIELD,
+    also checked inside a nested "data" object) and sends
+    Authorization: Bearer <token>.
+  - cookie: login() just posts the credentials; the session cookie the
+    server sets is kept by httpx's cookie jar, no header is sent.
+  - apikey: no login call — every request sends
+    QA_API_KEY_HEADER: QA_API_KEY. login_as_admin() is a no-op that
+    verifies the key with a GET on the health endpoint.
+
+If the new API uses a different scheme (basic auth, OAuth, …), replace
+auth_headers() / login() here — that is the one adaptation point.
 """
 from __future__ import annotations
 
 import httpx
 
-from config import BASE_URL, ADMIN_USER, ADMIN_PASSWORD, LOGIN_PATH, TIMEOUT
+from config import (
+    ADMIN_PASSWORD,
+    ADMIN_USER,
+    API_KEY,
+    API_KEY_HEADER,
+    AUTH_SCHEME,
+    BASE_URL,
+    HEALTH_PATH,
+    LOGIN_PATH,
+    LOGOUT_PATH,
+    REFRESH_FIELD,
+    TIMEOUT,
+    TOKEN_FIELD,
+)
+
+
+def _token_from(body: dict) -> tuple[str | None, str | None]:
+    """Read the token fields from a login response body.
+
+    Checks the top level first, then a nested "data" object, so both
+    {"access_token": ...} and {"data": {"access_token": ...}} work.
+    """
+    data = body.get("data") if isinstance(body.get("data"), dict) else {}
+    access = body.get(TOKEN_FIELD) or data.get(TOKEN_FIELD)
+    refresh = None
+    if REFRESH_FIELD:
+        refresh = body.get(REFRESH_FIELD) or data.get(REFRESH_FIELD)
+    return access, refresh
 
 
 class ApiClient:
@@ -28,26 +60,34 @@ class ApiClient:
         self.refresh_token = None
 
     def login(self, username: str = ADMIN_USER, password: str = ADMIN_PASSWORD) -> httpx.Response:
+        if AUTH_SCHEME == "apikey":
+            # No login endpoint: verify the key instead.
+            resp = self._client.get(HEALTH_PATH, headers=self.auth_headers())
+            return resp
         resp = self._client.post(
             LOGIN_PATH,
             json={"username": username, "password": password},
         )
-        if resp.status_code == 200:
+        if resp.status_code == 200 and AUTH_SCHEME == "bearer":
             body = resp.json()
-            # ADAPT: token field names for the new API.
-            self.access_token = body.get("access_token")
-            self.refresh_token = body.get("refresh_token")
+            self.access_token, self.refresh_token = _token_from(body)
         return resp
 
     def login_as_admin(self) -> "ApiClient":
         resp = self.login()
         assert resp.status_code == 200, f"admin login failed: {resp.status_code} {resp.text[:300]}"
+        if AUTH_SCHEME == "bearer":
+            assert self.access_token, "login returned 200 but no token was found"
         return self
 
     def logout(self) -> httpx.Response:
-        return self.post("/api/v1/auth/logout")
+        return self.post(LOGOUT_PATH)
 
     def auth_headers(self) -> dict:
+        if AUTH_SCHEME == "apikey":
+            return {API_KEY_HEADER: API_KEY} if API_KEY else {}
+        if AUTH_SCHEME == "cookie":
+            return {}  # the session cookie lives in the client's jar
         if not self.access_token:
             return {}
         return {"Authorization": f"Bearer {self.access_token}"}

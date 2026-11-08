@@ -14,6 +14,30 @@
 - Open the API surface: fetch the OpenAPI document when the backend exposes one, otherwise enumerate the route files.
 - Write down the health endpoints for the backend and the frontend before starting anything.
 
+## Pick the deployment shape
+
+Not every project is a backend plus a frontend on one VM. Decide which
+shape fits and deploy only what exists:
+
+- **Full-stack** (backend + frontend + database): the default path below.
+- **API-only** (no frontend): skip the frontend entirely — no E2E suite,
+  no `QA_FRONTEND_URL`. The API suite is the whole framework.
+- **Frontend-only** (no backend of its own): the API suite has nothing
+  to test; the page tour and the UI flows are the framework. Record the
+  backend it talks to, if any, as out of scope.
+- **Compose-based** (the repo ships a working `docker compose` file):
+  deploy with compose, not with systemd units. `docker compose up -d`
+  is the start command; `docker compose down -v && docker compose up -d`
+  is the clean-database rebuild. Keep the compose file as the recovery
+  mechanism instead of writing `ops/recover.sh`.
+- **No database** (stateless service, SQLite file, or an external
+  managed database): there is no clean-database rebuild to write. The
+  "clean run" for the final regression is a fresh container or a
+  reseeded fixture set — say which one in the project profile.
+
+Record the choice in `qa-automation/PROJECT.md` (see "Hand off" below)
+so later steps never re-decide it.
+
 ## Start the services
 
 - Install the system dependencies the stack needs, preferring the package manager already present on the machine.
@@ -24,15 +48,20 @@
 
 ## Add self-healing recovery
 
-- Write an idempotent recovery script under the repository's `ops/` directory that rebuilds the whole environment from scratch: reinstall missing packages, recreate the database and the service accounts, rebuild tables and seed data, then restart every service and verify each health endpoint.
+- Write an idempotent recovery script under the repository's `ops/` directory that rebuilds the whole environment from scratch: reinstall missing packages, recreate the database and the service accounts, rebuild tables and seed data, then restart every service and verify each health endpoint. For a compose-based deployment, skip this script: the recovery is `docker compose down -v && docker compose up -d` plus a health check, written down in the project profile instead.
 - Read every secret from the application's own env file at runtime only. Never commit a password and never print one.
-- Add service units that restart the backend and the frontend automatically.
-- Add a watchdog that runs the recovery script every 10 minutes and reports only when it repairs something or when it fails.
-- Test the recovery by stopping every service and running the script once. Report the result only after all four checks pass: database alive, cache answering, backend health 200 and frontend 200.
+- Add service units that restart the backend and the frontend automatically. For a compose-based deployment, use `restart: unless-stopped` in the compose file instead.
+- Add a watchdog that runs the recovery script every 10 minutes and reports only when it repairs something or when it fails. For a compose-based deployment, the watchdog runs the compose rebuild command instead.
+- Test the recovery by stopping every service and running the script once. Report the result only after all four checks pass: database alive, cache answering, backend health 200 and frontend 200. Skip the checks that do not apply to the deployment shape (no frontend, no cache, no database).
 
 ## Hand off
 
-- Hand the next step a short note with the stack, the ports, the base commit, the test account location and the health endpoints.
+- Write the project profile into `qa-automation/PROJECT.md` (the
+  template ships a blank one): stack, deployment shape, ports, base
+  commit, test account location, health endpoints, auth scheme and
+  envelope shape, app container selector, and how to rebuild a clean
+  database. This file — not a chat message — is the handoff. Later
+  steps read it instead of re-deriving the same facts.
 - Keep the working tree clean of test changes at this point. The framework comes next.
 - Do not create a branch yet. Branching belongs to the submit step.
 

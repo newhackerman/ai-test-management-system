@@ -23,9 +23,14 @@
 ## Verify each fix
 
 - Rerun the affected module right after each fix and confirm the failing case now passes.
-- Rerun the full suite on a clean database after all fixes in the round are done.
+- Rerun the full suite on a clean database after all fixes in the round are done. The clean rebuild is the one recorded in `qa-automation/PROJECT.md` (the deploy step's recovery script, or the compose rebuild command) — do not invent a new reset procedure here, and never drop a database that is not the test environment's own.
 - Update the report after every round with the new counts and the status of each defect.
 - Leave a defect open with its reason when it cannot be fixed in this round. Never delete the case that proves it.
+
+## When a fix needs a migration or a seed change
+
+- Write the migration so a fresh database builds cleanly from scratch — a fix that only works on the current database is not a fix.
+- When the fix changes a table the seed data depends on, update the seed in the same change and verify the rebuild still passes its own checks (the project profile records what those checks are).
 
 ## Dig deeper when the count looks thin
 
