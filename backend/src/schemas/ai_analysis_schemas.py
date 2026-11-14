@@ -188,9 +188,55 @@ class MeetingAnalyticsResponse(BaseModel):
     network_quality_avg: float = Field(..., description="平均网络质量评分(1-5)")
     technical_issues_count: int = Field(..., description="技术问题次数")
     analyzed_at: datetime = Field(..., description="分析时间")
+    data_sources: Optional[Dict[str, Any]] = Field(
+        None, description="各指标的数据来源/缺失说明（无真实来源的字段不编数字）"
+    )
 
     class Config:
         from_attributes = True
+
+
+class CreateActionItemRequest(BaseModel):
+    """新建行动项请求模型（基于 meeting_tasks + project_tasks）"""
+    title: str = Field(..., description="行动项标题", max_length=200)
+    description: Optional[str] = Field(None, description="行动项描述")
+    assignee_id: Optional[int] = Field(None, description="负责人用户ID")
+    assignee: Optional[str] = Field(None, description="负责人用户名/昵称（assignee_id 为空时按名查找）")
+    due_date: Optional[datetime] = Field(None, description="截止日期")
+    priority: str = Field("medium", description="优先级", pattern="^(low|medium|high|urgent)$")
+    status: str = Field("pending", description="状态", pattern="^(pending|in_progress|completed|cancelled)$")
+    estimated_hours: Optional[float] = Field(None, description="预估工时", ge=0)
+
+
+class UpdateActionItemRequest(BaseModel):
+    """更新行动项请求模型（全部字段可选）"""
+    title: Optional[str] = Field(None, description="行动项标题", max_length=200)
+    description: Optional[str] = Field(None, description="行动项描述")
+    assignee_id: Optional[int] = Field(None, description="负责人用户ID")
+    assignee: Optional[str] = Field(None, description="负责人用户名/昵称")
+    due_date: Optional[datetime] = Field(None, description="截止日期")
+    priority: Optional[str] = Field(None, description="优先级", pattern="^(low|medium|high|urgent)$")
+    status: Optional[str] = Field(None, description="状态", pattern="^(pending|in_progress|completed|cancelled)$")
+    estimated_hours: Optional[float] = Field(None, description="预估工时", ge=0)
+
+
+class GenerateReportRequest(BaseModel):
+    """生成会议报告请求模型"""
+    report_type: str = Field("full", description="报告类型（full/effectiveness/summary，聚合内容相同，按类型命名）")
+    format: str = Field("markdown", description="导出格式", pattern="^(html|markdown)$")
+
+
+class GenerateReportResponse(BaseModel):
+    """生成会议报告响应模型"""
+    report_id: str = Field(..., description="报告ID（用于下载）")
+    meeting_id: int = Field(..., description="会议ID")
+    report_type: str = Field(..., description="报告类型")
+    format: str = Field(..., description="导出格式")
+    file_name: str = Field(..., description="报告文件名")
+    file_size: int = Field(..., description="文件大小（字节）")
+    media_type: str = Field(..., description="媒体类型")
+    download_url: str = Field(..., description="下载链接")
+    generated_at: datetime = Field(..., description="生成时间")
 
 
 class GetAnalyticsResponse(BaseModel):
