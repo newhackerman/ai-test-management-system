@@ -37,6 +37,8 @@ import {
 } from '@/components/ui/DropdownMenu';
 import { Switch } from '@/components/ui/Switch';
 import { useMeetingStore } from '@/stores/meeting/meetingStore';
+import { useAuthStore } from '@/stores/auth';
+import { meetingService } from '@/services/meeting/meetingService';
 import { useMeetingRoomStore } from '@/stores/meeting/meetingRoomStore';
 import type { Meeting, MeetingParticipant, ParticipantRole } from '@/types/meeting';
 
@@ -78,7 +80,7 @@ const MeetingControls: React.FC<MeetingControlsProps> = ({ meeting, className })
   const [showMeetingSettings, setShowMeetingSettings] = useState(false);
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
 
-  const currentUserId = 1;
+  const currentUserId = useAuthStore((state) => state.user?.id) ?? 0;
   const safeParticipants = Array.isArray(participants) ? participants : [];
   const currentParticipant = safeParticipants.find((participant) => participant.user_id === currentUserId);
   const isOrganizer = meeting?.organizer_id === currentUserId;
@@ -98,6 +100,7 @@ const MeetingControls: React.FC<MeetingControlsProps> = ({ meeting, className })
     });
   };
 
+  // 注意：后端没有全员静音端点，全员静音目前只改本地状态，不发请求。
   const handleMuteAll = () => {
     const nextMuted = !isAllMuted;
     setIsAllMuted(nextMuted);
@@ -112,7 +115,13 @@ const MeetingControls: React.FC<MeetingControlsProps> = ({ meeting, className })
     setConfirmAction({
       title: '移除参与者',
       message: `确定要将 ${participant.user?.name || `用户 ${participant.user_id}`} 移出会议吗？`,
-      action: () => {
+      action: async () => {
+        if (!meeting?.id) return;
+        try {
+          await meetingService.kickParticipant(meeting.id, participant.user_id);
+        } catch (error) {
+          console.warn('踢出参与者失败:', error);
+        }
         removeParticipant(participant.user_id);
         updateParticipant(participant.user_id, {
           ...participant,
@@ -123,6 +132,10 @@ const MeetingControls: React.FC<MeetingControlsProps> = ({ meeting, className })
   };
 
   const handleChangeRole = (participant: MeetingParticipant, role: ParticipantRole) => {
+    if (meeting?.id) {
+      meetingService.updateParticipant(meeting.id, participant.user_id, { participant_role: role })
+        .catch((error) => console.warn('修改角色失败:', error));
+    }
     updateParticipant(participant.user_id, { ...participant, participant_role: role });
   };
 
@@ -155,12 +168,19 @@ const MeetingControls: React.FC<MeetingControlsProps> = ({ meeting, className })
     setConfirmAction({
       title: '清空会议室',
       message: '确定要移除所有非主持人参与者吗？',
-      action: () => {
-        safeParticipants.forEach((participant) => {
-          if (participant.participant_role !== 'ORGANIZER' && participant.user_id !== currentUserId) {
-            removeParticipant(participant.user_id);
+      action: async () => {
+        if (meeting?.id) {
+          for (const participant of safeParticipants) {
+            if (participant.participant_role !== 'ORGANIZER' && participant.user_id !== currentUserId) {
+              try {
+                await meetingService.kickParticipant(meeting.id, participant.user_id);
+              } catch (error) {
+                console.warn('清空会议室：踢出失败:', error);
+              }
+              removeParticipant(participant.user_id);
+            }
           }
-        });
+        }
         setShowEmergencyControls(false);
       }
     });

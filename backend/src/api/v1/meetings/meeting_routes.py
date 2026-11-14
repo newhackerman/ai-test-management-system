@@ -186,6 +186,50 @@ async def get_meetings(
 
 
 @router.get(
+    "/code/{meeting_code}",
+    response_model=MeetingResponse,
+    summary="按会议编码获取会议详情",
+    description="根据会议编码获取会议详细信息（供 /meetings/join/:meetingCode 入口）"
+)
+async def get_meeting_by_code(
+    meeting_code: str = Path(..., description="会议编码"),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_session),
+    meeting_service: MeetingService = Depends(get_meeting_service)
+):
+    """
+    按会议编码获取会议详情
+
+    - **meeting_code**: 会议编码（必填）
+    """
+    try:
+        logger.info(f"用户 {current_user.id} 按编码获取会议详情: {meeting_code}")
+
+        meeting = await meeting_service.get_meeting_by_code(meeting_code, current_user.id)
+
+        return MeetingResponse.from_orm(meeting)
+
+    except NotFoundError as e:
+        logger.warning(f"会议不存在: {meeting_code}")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
+        )
+    except PermissionError as e:
+        logger.warning(f"获取会议详情权限不足: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=str(e)
+        )
+    except Exception as e:
+        logger.error(f"按编码获取会议详情失败: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="获取会议详情失败"
+        )
+
+
+@router.get(
     "/{meeting_id}",
     response_model=MeetingResponse,
     summary="获取会议详情",

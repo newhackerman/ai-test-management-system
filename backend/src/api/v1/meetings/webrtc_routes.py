@@ -88,14 +88,38 @@ async def websocket_endpoint(
     await websocket.accept()
 
     session = None
+    room_id = webrtc_service.room_id_for_meeting(meeting_id)
     try:
         logger.info(f"WebSocket连接建立: 会议 {meeting_id}, 用户 {user_id}")
 
+        # 房间生命周期方案 (a)：join 前按需 get-or-create。房间 ID 统一为
+        # room_{meeting_id}（create_room 不再带时间戳后缀），房间不存在
+        # 时不再抛 NotFoundError 导致 1011 关闭。注意房间只存后端进程
+        # 内存，重启即丢，已加入者需重新建连。
+        await webrtc_service.get_or_create_room(meeting_id)
+
         # 加入WebRTC房间
-        session = await webrtc_service.join_room(f"room_{meeting_id}", user_id, {})
+        session = await webrtc_service.join_room(room_id, user_id, {})
 
         # 注册WebSocket连接
         await webrtc_service.register_websocket(session.session_id, websocket)
+
+        # 告诉新加入者房间现状：自己的 session_id 与已在房间的其他人，
+        # 前端据此向每位已在场者发起 offer（mesh 建连的起点）。
+        room_info = await webrtc_service.get_room_info(room_id)
+        existing = [
+            {"user_id": uid, "session_id": s.session_id}
+            for uid, s in (room_info.participants if room_info else {}).items()
+            if uid != user_id
+        ]
+        await websocket.send_json({
+            "type": "room-joined",
+            "room_id": room_id,
+            "meeting_id": meeting_id,
+            "session_id": session.session_id,
+            "user_id": user_id,
+            "participants": existing,
+        })
 
         while True:
             # 接收WebSocket消息
@@ -109,7 +133,13 @@ async def websocket_endpoint(
 
         # 清理连接
         if session is not None:
-            await webrtc_service.leave_room(session.session_id)
+            await webrtc_service.leave_room(session.room_id, session.user_id)
+
+    except (NotFoundError, PermissionError, ValidationError) as e:
+        # 加入房间失败（会议被删/无权限/房间已满）是可预期的拒绝，
+        # 用 1008 关连接并说明原因，不要走 1011。
+        logger.warning(f"WebSocket加入房间失败: 会议 {meeting_id}, 用户 {user_id}: {e}")
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason=str(e)[:120])
 
     except Exception as e:
         logger.error(f"WebSocket连接异常: {e}")
@@ -145,6 +175,8 @@ async def send_offer(
             'sdp': request.sdp,
             'media_constraints': request.media_constraints
         })
+        if not result.get('success'):
+            raise NotFoundError(result.get('error') or "会话不存在")
         
         return WebRTCSignalResponse(
             success=True,
@@ -200,6 +232,8 @@ async def send_answer(
         result = await webrtc_service.handle_answer(request.session_id, {
             'sdp': request.sdp
         })
+        if not result.get('success'):
+            raise NotFoundError(result.get('error') or "会话不存在")
         
         return WebRTCSignalResponse(
             success=True,
@@ -259,6 +293,8 @@ async def send_ice_candidate(
             'sdp_mid': request.sdp_mid,
             'sdp_m_line_index': request.sdp_m_line_index
         })
+        if not result.get('success'):
+            raise NotFoundError(result.get('error') or "会话不存在")
         
         return WebRTCSignalResponse(
             success=True,
@@ -380,6 +416,8 @@ async def media_control(
             'target_user_id': request.target_user_id,
             'user_id': current_user.id
         })
+        if not result.get('success'):
+            raise NotFoundError(result.get('error') or "会话不存在")
         
         return WebRTCSignalResponse(
             success=True,

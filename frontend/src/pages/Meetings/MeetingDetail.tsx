@@ -1,7 +1,7 @@
 ﻿// @ts-nocheck
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, CalendarDays, Clock, Edit, Loader2, Play, Square, Trash2, Users } from 'lucide-react'
+import { ArrowLeft, BarChart3, CalendarDays, Clock, Edit, Film, Loader2, Play, Square, Trash2, Users, Video } from 'lucide-react'
 import { message } from 'antd'
 
 import { Badge } from '@/components/ui/Badge'
@@ -131,6 +131,15 @@ export default function MeetingDetail() {
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
+          <Button asChild variant="outline">
+            <Link to={`/meetings/room/${meeting.id}`}><Video className="mr-2 h-4 w-4" />进入会议室</Link>
+          </Button>
+          <Button asChild variant="outline">
+            <Link to={`/meetings/${meeting.id}/analytics`}><BarChart3 className="mr-2 h-4 w-4" />查看分析</Link>
+          </Button>
+          <Button asChild variant="outline">
+            <Link to={`/meetings/${meeting.id}/recordings`}><Film className="mr-2 h-4 w-4" />录制</Link>
+          </Button>
           {(meeting.status === 'SCHEDULED' || meeting.status === 'POSTPONED') && (
             <Button type="button" onClick={() => operate('start')} disabled={Boolean(operating)}>
               <Play className="mr-2 h-4 w-4" />

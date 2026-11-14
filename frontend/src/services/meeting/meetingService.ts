@@ -143,7 +143,9 @@ export class MeetingService {
     const response = await apiClient.get<MeetingParticipant[]>(
       `${this.baseUrl}/${meetingId}/participants`
     )
-    return response.data
+    // 后端返回 {participants: [...], ...} 信封，不是裸数组。
+    const body: any = response.data
+    return body?.participants ?? body ?? []
   }
 
   async inviteParticipant(meetingId: number, data: InviteParticipantRequest): Promise<MeetingParticipant> {
@@ -195,8 +197,11 @@ export class MeetingService {
     return response.data
   }
 
+  // 踢出参与者：调会议控制端点 POST /{meeting_id}/kick/{user_id}
+  //（此前调的 /participants/{id}/kick 后端不存在）。与直接删除参会人
+  //不同：可附原因与禁入时长。
   async kickParticipant(meetingId: number, participantId: number, reason?: string): Promise<void> {
-    await apiClient.post(`${this.baseUrl}/${meetingId}/participants/${participantId}/kick`, { reason })
+    await apiClient.post(`${this.baseUrl}/${meetingId}/kick/${participantId}`, { reason })
   }
 
   // 会议控制

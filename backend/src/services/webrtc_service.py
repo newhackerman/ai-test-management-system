@@ -14,6 +14,7 @@ WebRTC信令服务
 import asyncio
 import json
 import logging
+import os
 import secrets
 import time
 from datetime import datetime, timedelta
@@ -242,17 +243,22 @@ class WebSocketManager:
 
 class WebRTCService:
     """WebRTC实时通信服务"""
-    
+
     def __init__(self, db: AsyncSession):
         self.db = db
         self.permission_service = PermissionService(db)
-        self.websocket_manager = WebSocketManager()
-        
-        # 活跃房间管理
-        self.active_rooms: Dict[str, RoomInfo] = {}
-        
-        # 网络质量监控
-        self.network_stats: Dict[str, List[NetworkStats]] = {}
+        # 注意：WebRTCService 每次请求都会新建实例（Depends 工厂），
+        # 但房间与 WS 连接必须跨请求、跨连接共享，否则 A、B 两个连接
+        # 各自持有独立的 active_rooms / websocket_manager，双端信令
+        # 永远到不了对方。共享状态放在模块级字典/管理器上；房间仍只
+        # 在进程内存里，后端重启即丢。
+        self.websocket_manager = _SHARED_WS_MANAGER
+
+        # 活跃房间管理（模块级共享）
+        self.active_rooms: Dict[str, RoomInfo] = _SHARED_ROOMS
+
+        # 网络质量监控（模块级共享）
+        self.network_stats: Dict[str, List[NetworkStats]] = _SHARED_NETWORK_STATS
         
         # ICE服务器配置
         self.ice_servers = [
@@ -276,26 +282,54 @@ class WebRTCService:
     
     # 3.1 WebRTC房间管理
     
+    # 房间 ID 规则：固定为 room_{meeting_id}（确定性，一个会议一个房间）。
+    # 房间只存于后端进程内存（self.active_rooms），后端重启后房间即丢失，
+    # 已加入的会话需重新建连；是否持久化未定，先不做 DB 落盘。
+    ROOM_ID_PREFIX = "room_"
+
+    @staticmethod
+    def room_id_for_meeting(meeting_id: int) -> str:
+        """会议 ID -> 确定性房间 ID。"""
+        return f"{WebRTCService.ROOM_ID_PREFIX}{meeting_id}"
+
+    async def get_or_create_room(self, meeting_id: int, room_config: Optional[Dict[str, Any]] = None) -> RoomInfo:
+        """按需获取或创建房间（WS 入口 join 前调用，见方案 (a)）。
+
+        已存在则直接返回现有房间，不重复创建；不存在则创建。
+        """
+        room_id = self.room_id_for_meeting(meeting_id)
+        existing = self.active_rooms.get(room_id)
+        if existing:
+            return existing
+        return await self.create_room(meeting_id, room_config or {})
+
     async def create_room(self, meeting_id: int, room_config: Dict[str, Any]) -> RoomInfo:
         """
         创建会议室
-        
+
         Args:
             meeting_id: 会议ID
             room_config: 房间配置
-            
+
         Returns:
             房间信息对象
-            
+
         Raises:
             NotFoundError: 会议不存在
             ValidationError: 配置无效
         """
         # 1. 验证会议存在
         meeting = await self._get_meeting_by_id(meeting_id)
-        
-        # 2. 生成房间ID
-        room_id = f"meeting_{meeting_id}_{int(time.time())}"
+
+        # 2. 生成房间ID：确定性 room_{meeting_id}，不再带时间戳后缀，
+        #    否则同一会议每次建房都会换 ID，WS 入口永远对不上。
+        room_id = self.room_id_for_meeting(meeting_id)
+
+        # 2b. 幂等：房间已存在则直接返回，不重复创建。
+        existing = self.active_rooms.get(room_id)
+        if existing:
+            logger.info(f"WebRTC room {room_id} already exists, reusing it")
+            return existing
         
         # 3. 验证房间配置
         validated_config = await self._validate_room_config(room_config)
@@ -353,6 +387,9 @@ class WebRTCService:
         # 3. 验证配置更新
         validated_updates = await self._validate_room_config(config_updates)
         
+        # 3. 验证配置更新
+        validated_updates = await self._validate_room_config(config_updates)
+        
         # 4. 更新房间配置
         room_info.settings.update(validated_updates)
         room_info.last_activity = datetime.utcnow()
@@ -379,8 +416,9 @@ class WebRTCService:
         if not room_info:
             return True  # 房间已不存在，视为成功
         
-        # 2. 验证权限
-        await self._validate_room_management_permission(room_info.meeting_id, user_id)
+        # 2. 验证权限（user_id == 0 表示系统自动清理，跳过权限校验）
+        if user_id != 0:
+            await self._validate_room_management_permission(room_info.meeting_id, user_id)
         
         # 3. 通知所有参与者房间即将关闭
         await self._notify_room_closing(room_id)
@@ -522,6 +560,132 @@ class WebRTCService:
                     session.last_heartbeat = datetime.utcnow()
                     return True
         return False
+
+    # 3.2b WebRTC 配置 / WebSocket 接线（MeetingRoom 实现补齐）
+
+    async def get_webrtc_config(self, meeting_id: int, user_id: int) -> Dict[str, Any]:
+        """获取 WebRTC 连接配置（供 GET /webrtc/config）。
+
+        字段与 meeting_config_service.get_webrtc_config 保持一致：
+        STUN 默认 Google，TURN 来自 WEBRTC_TURN_* 环境变量。
+        返回体须与 schemas.WebRTCConfigResponse 的四个键一致：
+        ice_servers / media_constraints / room_config / session_config。
+        """
+        # 会议存在性校验（权限已由路由层的 get_meeting_by_id 校验）
+        await self._get_meeting_by_id(meeting_id)
+
+        ice_servers = await self._generate_ice_config()
+        turn_server = os.getenv('WEBRTC_TURN_SERVER')
+        turn_username = os.getenv('WEBRTC_TURN_USERNAME')
+        turn_credential = os.getenv('WEBRTC_TURN_CREDENTIAL')
+        if turn_server and turn_username and turn_credential:
+            ice_servers['iceServers'].append({
+                'urls': turn_server,
+                'username': turn_username,
+                'credential': turn_credential,
+            })
+
+        room_info = self.active_rooms.get(self.room_id_for_meeting(meeting_id))
+        room_config = dict(room_info.settings) if room_info else await self._validate_room_config({})
+        return {
+            'ice_servers': ice_servers['iceServers'],
+            'media_constraints': {
+                'audio': {'echoCancellation': True, 'noiseSuppression': True},
+                'video': {'width': {'ideal': 1280}, 'height': {'ideal': 720}, 'frameRate': {'ideal': 30}},
+            },
+            'room_config': {
+                **room_config,
+                'room_id': self.room_id_for_meeting(meeting_id),
+                'meeting_id': meeting_id,
+                'ice_transport_policy': 'all',
+                'bundle_policy': 'balanced',
+                'rtcp_mux_policy': 'require',
+            },
+            'session_config': {
+                'session_timeout': 3600,
+                'heartbeat_interval': 30,
+                'ice_candidate_pool_size': 10,
+            },
+        }
+
+    async def register_websocket(self, session_id: str, websocket: Any) -> bool:
+        """把已加入房间的会话与 WS 连接绑定（WS 入口调用）。"""
+        session = await self._get_session_by_id(session_id)
+        if not session:
+            logger.warning(f"register_websocket: session {session_id} not found")
+            return False
+        await self.websocket_manager.add_connection(
+            session_id, websocket, session.user_id, session.room_id
+        )
+        return True
+
+    async def handle_websocket_message(self, session_id: str, data: Dict[str, Any]) -> Dict[str, Any]:
+        """分发 WS 收到的前端消息。
+
+        前端 webrtcService 发来的消息与后端 SignalType 同名：
+        offer / answer / ice-candidate / media-control；另有 ping /
+        heartbeat 两种连接维护消息。
+        """
+        msg_type = data.get('type')
+        if msg_type == 'ping':
+            await self.websocket_manager.send_to_session(session_id, {
+                'type': 'pong',
+                'timestamp': datetime.utcnow().isoformat(),
+            })
+            return {"success": True, "message": "pong"}
+        if msg_type == 'heartbeat':
+            await self.update_session_heartbeat(session_id)
+            return {"success": True, "message": "heartbeat ok"}
+        if msg_type in ('offer', 'answer', 'ice-candidate', 'media-control'):
+            return await self.handle_webrtc_signal(session_id, data)
+        logger.warning(f"Unsupported websocket message type: {msg_type}")
+        return {"success": False, "error": f"不支持的消息类型: {msg_type}"}
+
+    # REST 信令端点（webrtc_routes.py 的 offer/answer/ice/media-control）
+    # 调用的公开适配器：内部 _handle_* 只返回 {success, message}，
+    # 这里再补路由层要的 signal_id / response_data。
+
+    async def handle_offer(self, session_id: str, signal_data: Dict[str, Any]) -> Dict[str, Any]:
+        """处理SDP Offer（REST）"""
+        result = await self._handle_offer(session_id, signal_data)
+        result['signal_id'] = f"sig_offer_{session_id}_{int(time.time())}"
+        result['response_data'] = {'session_id': session_id}
+        return result
+
+    async def handle_answer(self, session_id: str, signal_data: Dict[str, Any]) -> Dict[str, Any]:
+        """处理SDP Answer（REST）"""
+        result = await self._handle_answer(session_id, signal_data)
+        result['signal_id'] = f"sig_answer_{session_id}_{int(time.time())}"
+        result['response_data'] = {'session_id': session_id}
+        return result
+
+    async def handle_ice_candidate(self, session_id: str, signal_data: Dict[str, Any]) -> Dict[str, Any]:
+        """处理ICE候选（REST）"""
+        result = await self._handle_ice_candidate(session_id, signal_data)
+        result['signal_id'] = f"sig_ice_{session_id}_{int(time.time())}"
+        result['response_data'] = {'session_id': session_id}
+        return result
+
+    async def handle_media_control(self, session_id: str, signal_data: Dict[str, Any]) -> Dict[str, Any]:
+        """处理媒体控制（REST/WS）。
+
+        接受两种形状：WS 的 {control_type: mute_audio|mute_video|change_quality}，
+        或 REST 的 {media_type: audio|video|screen, action: mute|unmute|enable|disable}。
+        """
+        if 'control_type' not in signal_data and 'media_type' in signal_data:
+            media_type = signal_data.get('media_type')
+            action = signal_data.get('action')
+            muted = action in ('mute', 'disable')
+            if media_type == 'audio':
+                signal_data = {**signal_data, 'control_type': 'mute_audio', 'muted': muted}
+            elif media_type == 'video':
+                signal_data = {**signal_data, 'control_type': 'mute_video', 'muted': muted}
+            else:
+                return {"success": False, "error": f"不支持的媒体类型: {media_type}"}
+        result = await self._handle_media_control(session_id, signal_data)
+        result['signal_id'] = f"sig_media_{session_id}_{int(time.time())}"
+        result['response_data'] = {'session_id': session_id}
+        return result
     
     # 3.3 WebRTC信令处理
     
@@ -802,15 +966,33 @@ class WebRTCService:
     async def stop_screen_share(self, room_id: str, user_id: int) -> bool:
         """
         停止屏幕共享
-        
+
         Args:
             room_id: 房间ID
             user_id: 用户ID
-            
+
         Returns:
             停止是否成功
         """
         return await self._stop_screen_share_internal(room_id, user_id)
+
+    async def start_screen_share_by_session(self, session_id: str, stream_config: Dict[str, Any]) -> ScreenShareInfo:
+        """按 WS 会话 ID 开始屏幕共享（协作路由调用）。
+
+        路由收到的是 session_id，服务层原 start_screen_share 要的是
+        room_id；这里先由会话解析出房间与用户再调原方法。
+        """
+        session = await self._get_session_by_id(session_id)
+        if not session:
+            raise NotFoundError("会话不存在")
+        return await self.start_screen_share(session.room_id, session.user_id, stream_config)
+
+    async def stop_screen_share_by_session(self, session_id: str, share_id: str, user_id: int) -> bool:
+        """按 WS 会话 ID 停止屏幕共享（协作路由调用）。"""
+        session = await self._get_session_by_id(session_id)
+        if not session:
+            raise NotFoundError("会话不存在")
+        return await self.stop_screen_share(session.room_id, session.user_id)
     
     async def _stop_screen_share_internal(self, room_id: str, user_id: int) -> bool:
         """内部停止屏幕共享方法"""
@@ -1078,6 +1260,11 @@ class WebRTCService:
     
     async def _validate_join_room_permission(self, meeting_id: int, user_id: int) -> None:
         """验证加入房间权限"""
+        # 会议组织者可以直接加入（组织者不一定在参会人表里有行）。
+        meeting = await self._get_meeting_by_id(meeting_id)
+        if meeting.organizer_id == user_id:
+            return
+
         # 检查是否是会议参与者
         query = select(MeetingParticipant).where(
             and_(
@@ -1174,11 +1361,15 @@ class WebRTCService:
         asyncio.create_task(cleanup_task())
     
     async def _forward_signal_to_user(self, room_id: str, user_id: int, signal_data: Dict[str, Any]) -> bool:
-        """转发信令给指定用户"""
+        """转发信令给指定用户。
+
+        直接转发 signal 本体（type 为 offer/answer/ice-candidate 等 kebab-case），
+        不再包一层 {type: 'webrtc_signal', data: ...}——前端
+        webrtcService.handleSignalingMessage 只认顶层 type。
+        """
         return await self.websocket_manager.send_to_user(user_id, {
-            'type': 'webrtc_signal',
+            **signal_data,
             'room_id': room_id,
-            'data': signal_data,
             'timestamp': datetime.utcnow().isoformat()
         }) > 0
     
@@ -1203,7 +1394,7 @@ class WebRTCService:
     async def _notify_participant_joined(self, room_id: str, user_id: int, session: ParticipantSession) -> None:
         """通知参与者加入"""
         await self.websocket_manager.send_to_room(room_id, {
-            'type': 'participant_joined',
+            'type': 'participant-joined',
             'room_id': room_id,
             'user_id': user_id,
             'session_id': session.session_id,
@@ -1214,7 +1405,7 @@ class WebRTCService:
     async def _notify_participant_left(self, room_id: str, user_id: int) -> None:
         """通知参与者离开"""
         await self.websocket_manager.send_to_room(room_id, {
-            'type': 'participant_left',
+            'type': 'participant-left',
             'room_id': room_id,
             'user_id': user_id,
             'timestamp': datetime.utcnow().isoformat()
@@ -1223,7 +1414,7 @@ class WebRTCService:
     async def _notify_room_config_update(self, room_id: str, config_updates: Dict[str, Any]) -> None:
         """通知房间配置更新"""
         await self.websocket_manager.send_to_room(room_id, {
-            'type': 'room_config_updated',
+            'type': 'room-config-updated',
             'room_id': room_id,
             'config_updates': config_updates,
             'timestamp': datetime.utcnow().isoformat()
@@ -1232,7 +1423,7 @@ class WebRTCService:
     async def _notify_room_closing(self, room_id: str) -> None:
         """通知房间即将关闭"""
         await self.websocket_manager.send_to_room(room_id, {
-            'type': 'room_closing',
+            'type': 'room-closing',
             'room_id': room_id,
             'message': '会议室即将关闭，请保存重要信息',
             'timestamp': datetime.utcnow().isoformat()
@@ -1241,7 +1432,7 @@ class WebRTCService:
     async def _notify_media_state_change(self, room_id: str, user_id: int, media_change: Dict[str, Any]) -> None:
         """通知媒体状态变化"""
         await self.websocket_manager.send_to_room(room_id, {
-            'type': 'media_state_changed',
+            'type': 'media-state-changed',
             'room_id': room_id,
             'user_id': user_id,
             'change': media_change,
@@ -1251,7 +1442,7 @@ class WebRTCService:
     async def _notify_screen_share_started(self, room_id: str, user_id: int, screen_share: ScreenShareInfo) -> None:
         """通知屏幕共享开始"""
         await self.websocket_manager.send_to_room(room_id, {
-            'type': 'screen_share_started',
+            'type': 'screen-share-started',
             'room_id': room_id,
             'user_id': user_id,
             'share_id': screen_share.share_id,
@@ -1262,7 +1453,7 @@ class WebRTCService:
     async def _notify_screen_share_stopped(self, room_id: str, user_id: int) -> None:
         """通知屏幕共享停止"""
         await self.websocket_manager.send_to_room(room_id, {
-            'type': 'screen_share_stopped',
+            'type': 'screen-share-stopped',
             'room_id': room_id,
             'user_id': user_id,
             'timestamp': datetime.utcnow().isoformat()
@@ -1271,7 +1462,7 @@ class WebRTCService:
     async def _notify_network_quality_change(self, session: ParticipantSession, quality: NetworkQuality) -> None:
         """通知网络质量变化"""
         await self.websocket_manager.send_to_user(session.user_id, {
-            'type': 'network_quality_changed',
+            'type': 'network-quality-changed',
             'room_id': session.room_id,
             'session_id': session.session_id,
             'quality': quality.value,
@@ -1298,11 +1489,21 @@ class WebRTCService:
 def get_webrtc_service(db: AsyncSession = Depends(get_async_session)) -> WebRTCService:
     """
     获取WebRTC服务实例
-    
+
     Args:
         db: 数据库会话（通过依赖注入）
-        
+
     Returns:
         WebRTCService: WebRTC服务实例
     """
     return WebRTCService(db)
+
+
+# 模块级共享状态：WebRTCService 每次请求都会新建实例（见上），但房间、
+# WS 连接与网络统计必须跨请求、跨连接共享，否则双端信令到不了对方。
+# 定义在 WebSocketManager / RoomInfo 之后、WebRTCService 之前引用；
+# 为避免前向引用问题，这里在文件末尾赋值，WebRTCService.__init__
+# 在运行时解析这些名字。
+_SHARED_ROOMS: Dict[str, RoomInfo] = {}
+_SHARED_WS_MANAGER = WebSocketManager()
+_SHARED_NETWORK_STATS: Dict[str, List[NetworkStats]] = {}
