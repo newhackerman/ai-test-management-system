@@ -78,7 +78,7 @@ const AnalyticsLayout: React.FC<AnalyticsLayoutProps> = ({
                 onClick={handleClearError}
                 className="ml-2 text-red-600 hover:text-red-800 underline dark:text-red-400"
               >
-                鍏抽棴
+                关闭
               </button>
             </AlertDescription>
           </Alert>

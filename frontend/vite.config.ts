@@ -39,6 +39,9 @@ export default defineConfig({
         target: 'http://127.0.0.1:8000',
         changeOrigin: true,
         secure: false,
+        // 会议室 WebSocket 信令走 /api/v1/meetings/{id}/webrtc/ws，
+        // 必须转发 upgrade 请求，否则开发环境下信令连不上。
+        ws: true,
         rewrite: (path) => {
           console.log('代理请求:', path);
           return path;

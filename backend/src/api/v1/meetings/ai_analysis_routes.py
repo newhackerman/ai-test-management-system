@@ -12,8 +12,8 @@ import logging
 from typing import Optional, List
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Path, status
-from fastapi.responses import JSONResponse
+from fastapi import APIRouter, Depends, HTTPException, Query, Path, status, Response
+from fastapi.responses import JSONResponse, FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ....core.database import get_async_session
@@ -26,7 +26,9 @@ from ....schemas.ai_analysis_schemas import (
     GenerateSummaryRequest, GenerateSummaryResponse, MeetingSummaryResponse,
     GenerateMinutesRequest, GenerateMinutesResponse, MeetingMinutesResponse,
     MeetingAnalyticsResponse, GetAnalyticsResponse, TranscriptionResponse,
-    AdvancedAnalyticsResponse, MinuteTypeEnum, GenerationMethodEnum, MinuteStatusEnum
+    AdvancedAnalyticsResponse, MinuteTypeEnum, GenerationMethodEnum, MinuteStatusEnum,
+    ActionItem, CreateActionItemRequest, UpdateActionItemRequest,
+    GenerateReportRequest, GenerateReportResponse
 )
 
 logger = logging.getLogger(__name__)
@@ -206,7 +208,7 @@ async def generate_meeting_minutes(
         return GenerateMinutesResponse(
             success=True,
             message="会议纪要生成成功",
-            data=MeetingMinutesResponse.from_orm(minutes)
+            data=MeetingMinutesResponse(**minutes.to_dict())
         )
         
     except NotFoundError as e:
@@ -272,7 +274,7 @@ async def get_meeting_minutes(
             version=version
         )
         
-        return [MeetingMinutesResponse.from_orm(minutes) for minutes in minutes_list]
+        return [MeetingMinutesResponse(**minutes.to_dict()) for minutes in minutes_list]
         
     except NotFoundError as e:
         logger.warning(f"会议不存在: {meeting_id}")
@@ -325,54 +327,9 @@ async def get_meeting_analytics(
                 detail="会议分析不存在，请先生成分析"
             )
         
-        # 将分析结果转换为响应模型所需的字段结构
-        analytics_data = analytics.to_dict() if hasattr(analytics, "to_dict") else dict(analytics)
+        # 将分析结果转换为响应模型所需的字段结构（与 POST /analytics/generate 共用同一映射）
+        analytics_response = ai_service.analytics_to_response_dict(analytics)
 
-        def _to_float(value, default=0.0) -> float:
-            """将数值或包含数值的字典/列表安全转换为 float。"""
-            if value is None:
-                return default
-            if isinstance(value, (int, float)):
-                return float(value)
-            if isinstance(value, dict):
-                for key in ("score", "rate", "value", "overall", "percentage"):
-                    if key in value and isinstance(value[key], (int, float)):
-                        return float(value[key])
-                return default
-            if isinstance(value, list):
-                return default
-            try:
-                return float(value)
-            except (TypeError, ValueError):
-                return default
-
-        analytics_response = {
-            "meeting_id": analytics_data.get("meeting_id", meeting_id),
-            "overall_effectiveness": _to_float(
-                analytics_data.get("overall_effectiveness", analytics_data.get("overall_score"))
-            ),
-            "participation_metrics": (
-                # 响应模型要求 List[ParticipationMetrics]，服务返回的是聚合指标 dict，
-                # 而非按用户拆分的列表，这里统一规范化为列表（聚合指标非逐人记录时返回空列表）。
-                analytics_data.get("participation_metrics")
-                if isinstance(analytics_data.get("participation_metrics"), list)
-                else []
-            ),
-            "agenda_completion_rate": _to_float(
-                analytics_data.get("agenda_completion_rate", analytics_data.get("agenda_completion"))
-            ),
-            "decision_efficiency": _to_float(analytics_data.get("decision_efficiency")),
-            "time_utilization": _to_float(analytics_data.get("time_utilization")),
-            "sentiment_analysis": analytics_data.get("sentiment_analysis") or {},
-            "improvement_suggestions": analytics_data.get("improvement_suggestions") or [],
-            "meeting_quality_score": _to_float(
-                analytics_data.get("meeting_quality_score", analytics_data.get("overall_score"))
-            ),
-            "network_quality_avg": _to_float(analytics_data.get("network_quality_avg")),
-            "technical_issues_count": int(analytics_data.get("technical_issues_count") or 0),
-            "analyzed_at": analytics_data.get("analyzed_at") or datetime.utcnow(),
-        }
-        
         return GetAnalyticsResponse(
             success=True,
             message="会议分析获取成功",
@@ -572,3 +529,180 @@ async def get_advanced_analytics(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="获取高级分析失败"
         )
+
+# ---------------------------------------------------------------------------
+# 行动项 CRUD（基于 meeting_tasks + project_tasks，见 meeting_ai_service）
+# ---------------------------------------------------------------------------
+
+@router.get(
+    "/action-items",
+    response_model=List[ActionItem],
+    summary="获取会议行动项",
+    description="列出会议关联的全部行动项（meeting_tasks 关联的项目任务）"
+)
+async def list_meeting_action_items(
+    meeting_id: int = Path(..., description="会议ID"),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_session),
+    ai_service: MeetingAIService = Depends(get_meeting_ai_service)
+):
+    try:
+        items = await ai_service.list_action_items(meeting_id, current_user.id)
+        return [ActionItem(**item) for item in items]
+    except NotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except Exception as e:
+        logger.error(f"获取行动项失败: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="获取行动项失败")
+
+
+@router.post(
+    "/action-items",
+    response_model=ActionItem,
+    status_code=status.HTTP_201_CREATED,
+    summary="新建会议行动项",
+    description="新建一条行动项：创建项目任务并在 meeting_tasks 登记会议关联"
+)
+async def create_meeting_action_item(
+    meeting_id: int = Path(..., description="会议ID"),
+    request: CreateActionItemRequest = ...,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_session),
+    ai_service: MeetingAIService = Depends(get_meeting_ai_service)
+):
+    try:
+        item = await ai_service.create_action_item(
+            meeting_id, current_user.id, request.model_dump()
+        )
+        return ActionItem(**item)
+    except NotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except ValidationError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except Exception as e:
+        logger.error(f"新建行动项失败: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="新建行动项失败")
+
+
+@router.patch(
+    "/action-items/{action_id}",
+    response_model=ActionItem,
+    summary="更新会议行动项",
+    description="更新行动项标题/负责人/截止日期/优先级/状态等"
+)
+async def update_meeting_action_item(
+    meeting_id: int = Path(..., description="会议ID"),
+    action_id: str = Path(..., description="行动项ID（底层项目任务ID）"),
+    request: UpdateActionItemRequest = ...,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_session),
+    ai_service: MeetingAIService = Depends(get_meeting_ai_service)
+):
+    try:
+        item = await ai_service.update_action_item(
+            meeting_id, action_id, current_user.id,
+            request.model_dump(exclude_unset=True)
+        )
+        if item is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="行动项不存在")
+        return ActionItem(**item)
+    except NotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except ValidationError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"更新行动项失败: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="更新行动项失败")
+
+
+@router.delete(
+    "/action-items/{action_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="删除会议行动项",
+    description="解除会议关联；本会议自建的任务行一并删除，先前由项目集成链接的任务只解除关联"
+)
+async def delete_meeting_action_item(
+    meeting_id: int = Path(..., description="会议ID"),
+    action_id: str = Path(..., description="行动项ID（底层项目任务ID）"),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_session),
+    ai_service: MeetingAIService = Depends(get_meeting_ai_service)
+):
+    try:
+        deleted = await ai_service.delete_action_item(meeting_id, action_id, current_user.id)
+        if not deleted:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="行动项不存在")
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
+    except NotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"删除行动项失败: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="删除行动项失败")
+
+
+# ---------------------------------------------------------------------------
+# 会议报告生成与下载（聚合真实数据；复用“生成文件 → 下载链接”套路）
+# ---------------------------------------------------------------------------
+
+@router.post(
+    "/analytics/reports/generate",
+    response_model=GenerateReportResponse,
+    summary="生成会议分析报告",
+    description="聚合 analytics + summary + minutes 的真实数据，生成 HTML/Markdown 报告文件并返回下载链接（PDF 二期）"
+)
+async def generate_meeting_report(
+    meeting_id: int = Path(..., description="会议ID"),
+    request: GenerateReportRequest = ...,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_session),
+    ai_service: MeetingAIService = Depends(get_meeting_ai_service)
+):
+    try:
+        report = await ai_service.generate_meeting_report(
+            meeting_id, current_user.id,
+            report_type=request.report_type, format=request.format
+        )
+        return GenerateReportResponse(**report)
+    except NotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except ValidationError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except Exception as e:
+        logger.error(f"生成会议报告失败: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="生成会议报告失败")
+
+
+@router.get(
+    "/analytics/reports/{report_id}/download",
+    summary="下载会议分析报告",
+    description="按报告ID下载之前生成的报告文件"
+)
+async def download_meeting_report(
+    meeting_id: int = Path(..., description="会议ID"),
+    report_id: str = Path(..., description="报告ID"),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_session),
+    ai_service: MeetingAIService = Depends(get_meeting_ai_service)
+):
+    try:
+        await ai_service._get_meeting_or_404(meeting_id)
+        file_path = MeetingAIService.get_meeting_report_path(report_id)
+        if file_path is None or not file_path.name.startswith(f"meeting-{meeting_id}-report-"):
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="报告不存在")
+        media_type = "text/html" if file_path.suffix == ".html" else "text/markdown"
+        return FileResponse(
+            path=str(file_path),
+            media_type=media_type,
+            filename=file_path.name,
+        )
+    except NotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"下载会议报告失败: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="下载会议报告失败")

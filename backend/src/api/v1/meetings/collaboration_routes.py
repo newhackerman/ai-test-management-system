@@ -24,7 +24,8 @@ from ....api.auth import get_current_user
 from ....models.user import User
 from ....schemas.webrtc_schemas import (
     ScreenShareRequest, ScreenShareResponse,
-    StopScreenShareRequest, StopScreenShareResponse
+    StopScreenShareRequest, StopScreenShareResponse,
+    MediaStreamInfo, MediaType
 )
 from ....schemas.collaboration_schemas import (
     SendChatMessageRequest, ChatMessageResponse, ChatHistoryResponse,
@@ -65,21 +66,28 @@ async def start_screen_share(
     try:
         logger.info(f"用户 {current_user.id} 开始屏幕共享: 会议 {meeting_id}")
         
-        # 开始屏幕共享
-        screen_share = await webrtc_service.start_screen_share(request.session_id, {
+        # 开始屏幕共享（按 WS 会话 ID 解析房间；服务层原方法要的是
+        # room_id，不是 session_id，直接传会 404）
+        screen_share = await webrtc_service.start_screen_share_by_session(request.session_id, {
             'share_type': request.share_type,
             'audio_enabled': request.audio_enabled,
             'resolution': request.resolution,
             'user_id': current_user.id
         })
-        
+
         logger.info(f"屏幕共享开始成功: 会议 {meeting_id}, 共享ID {screen_share.share_id}")
-        
+
         return ScreenShareResponse(
             success=True,
             message="屏幕共享开始成功",
             share_id=screen_share.share_id,
-            stream_info=screen_share.stream_info
+            stream_info=MediaStreamInfo(
+                stream_id=screen_share.share_id,
+                user_id=current_user.id,
+                media_type=MediaType.SCREEN,
+                is_active=True,
+                resolution=request.resolution,
+            )
         )
         
     except NotFoundError as e:
@@ -131,8 +139,8 @@ async def stop_screen_share(
     try:
         logger.info(f"用户 {current_user.id} 停止屏幕共享: 会议 {meeting_id}, 共享ID {request.share_id}")
         
-        # 停止屏幕共享
-        await webrtc_service.stop_screen_share(request.session_id, request.share_id, current_user.id)
+        # 停止屏幕共享（同上：按会话 ID 解析，服务层原方法签名也不同）
+        await webrtc_service.stop_screen_share_by_session(request.session_id, request.share_id, current_user.id)
         
         logger.info(f"屏幕共享停止成功: 会议 {meeting_id}, 共享ID {request.share_id}")
         
@@ -506,6 +514,12 @@ async def whiteboard_action(
         logger.warning(f"会议不存在: {e}")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
+        )
+    except ValidationError as e:
+        logger.warning(f"白板操作验证失败: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e)
         )
     except PermissionError as e:

@@ -24,6 +24,7 @@ import {
   Trash2,
   User,
   Users,
+  Video,
   X,
 } from 'lucide-react'
 import { useAuthStore } from '@/stores/auth'
@@ -54,6 +55,13 @@ const navGroups = [
       { label: '测试报告', path: '/test-manager/reports', icon: FileSpreadsheet, module: 'reports' },
       { label: '性能测试', path: '/test-manager/performance', icon: BarChart3, module: 'testing' },
       { label: '安全测试', path: '/test-manager/security', icon: Shield, module: 'testing' },
+    ],
+  },
+  {
+    title: '会议管理',
+    items: [
+      { label: '会议列表', path: '/meetings', icon: Video, module: 'meetings' },
+      { label: '会议录制', path: '/meetings/recordings', icon: PlayCircle, module: 'meetings' },
     ],
   },
   {

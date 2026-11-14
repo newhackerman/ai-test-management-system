@@ -2,6 +2,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { Meeting, MeetingParticipant, MeetingStatus, MeetingType } from '@/types/meeting'
+import { meetingService } from '@/services/meeting/meetingService'
 
 interface MeetingState {
   // 浼氳鍒楄〃鐘舵€?
@@ -39,7 +40,9 @@ interface MeetingState {
   
   // 浼氳鎿嶄綔
   addMeeting: (meeting: Meeting) => void
-  updateMeeting: (id: number, updates: Partial<Meeting>) => void
+  updateMeeting: (id: number, updates: Partial<Meeting>) => Promise<void>
+  startMeeting: (id: number) => Promise<void>
+  endMeeting: (id: number) => Promise<void>
   removeMeeting: (id: number) => void
   
   // 鍙備笌鑰呮搷浣?
@@ -92,14 +95,61 @@ export const useMeetingStore = create<MeetingState>()(
         }
       })),
       
-      updateMeeting: (id, updates) => set((state) => ({
-        meetings: state.meetings.map(meeting => 
+      updateMeeting: async (id, updates) => {
+        // 先乐观更新本地，再调真实接口 PUT /meetings/{id}；
+        // 接口失败只告警、不抛错（调用方有不 await 的地方）。
+        get().setMeetings(get().meetings.map(meeting =>
           meeting.id === id ? { ...meeting, ...updates } : meeting
-        ),
-        currentMeeting: state.currentMeeting?.id === id 
-          ? { ...state.currentMeeting, ...updates }
-          : state.currentMeeting
-      })),
+        ))
+        if (get().currentMeeting?.id === id) {
+          get().setCurrentMeeting({ ...get().currentMeeting!, ...updates })
+        }
+        try {
+          const updated = await meetingService.updateMeeting(id, updates)
+          if (updated) {
+            get().setMeetings(get().meetings.map(meeting =>
+              meeting.id === id ? { ...meeting, ...updated } : meeting
+            ))
+            if (get().currentMeeting?.id === id) {
+              get().setCurrentMeeting({ ...get().currentMeeting!, ...updated })
+            }
+          }
+        } catch (error) {
+          console.warn('更新会议失败（已保留本地修改）:', error)
+        }
+      },
+
+      startMeeting: async (id) => {
+        try {
+          await meetingService.startMeeting(id)
+          // 控制接口的 data 不是完整 Meeting，只显式改状态。
+          get().setMeetings(get().meetings.map(meeting =>
+            meeting.id === id ? { ...meeting, status: 'IN_PROGRESS' as MeetingStatus } : meeting
+          ))
+          if (get().currentMeeting?.id === id) {
+            get().setCurrentMeeting({ ...get().currentMeeting!, status: 'IN_PROGRESS' as MeetingStatus })
+          }
+        } catch (error) {
+          get().setError(error instanceof Error ? error.message : '开始会议失败')
+          console.warn('开始会议失败:', error)
+        }
+      },
+
+      endMeeting: async (id) => {
+        try {
+          await meetingService.endMeeting(id)
+          // 控制接口的 data 不是完整 Meeting，只显式改状态。
+          get().setMeetings(get().meetings.map(meeting =>
+            meeting.id === id ? { ...meeting, status: 'COMPLETED' as MeetingStatus } : meeting
+          ))
+          if (get().currentMeeting?.id === id) {
+            get().setCurrentMeeting({ ...get().currentMeeting!, status: 'COMPLETED' as MeetingStatus })
+          }
+        } catch (error) {
+          get().setError(error instanceof Error ? error.message : '结束会议失败')
+          console.warn('结束会议失败:', error)
+        }
+      },
       
       removeMeeting: (id) => set((state) => ({
         meetings: state.meetings.filter(meeting => meeting.id !== id),

@@ -32,25 +32,50 @@ export interface MediaQualitySettings {
 export class WebRTCService {
   private baseUrl = '/api/v1/meetings'
   private websocket: WebSocket | null = null
-  private peerConnection: RTCPeerConnection | null = null
+  // Mesh 通话：每个远端对端一个 RTCPeerConnection（单 PC 无法同时
+  // 连多个对端）。key 为对端 user_id。
+  private peerConnections: Map<number, RTCPeerConnection> = new Map()
   private localStream: MediaStream | null = null
   private remoteStreams: Map<string, MediaStream> = new Map()
   private eventListeners: Map<string, Function[]> = new Map()
+  // WS 加入房间后后端在 room-joined 消息里给的会话 ID，屏幕共享等
+  // REST 调用需要它。
+  private sessionId: string | null = null
 
-  // WebRTC閰嶇疆鑾峰彇
-  async getWebRTCConfig(meetingId: number): Promise<WebRTCConfig> {
-    const response = await apiClient.get<WebRTCConfig>(
-      `${this.baseUrl}/${meetingId}/webrtc/config`
-    )
-    return response.data
+  getSessionId(): string | null {
+    return this.sessionId
   }
 
-  // 寤虹珛WebSocket杩炴帴
-  async connectSignaling(meetingCode: string, token: string): Promise<void> {
+  // WebRTC配置获取：后端返回 snake_case（ice_servers / media_constraints /
+  // room_config / session_config），这里映射成前端的 camelCase。
+  async getWebRTCConfig(meetingId: number): Promise<WebRTCConfig> {
+    const response = await apiClient.get<any>(
+      `${this.baseUrl}/${meetingId}/webrtc/config`
+    )
+    const body = response.data ?? response
+    return {
+      iceServers: (body.ice_servers ?? []).map((s: any) => ({
+        urls: s.urls,
+        username: s.username,
+        credential: s.credential,
+      })),
+      mediaConstraints: body.media_constraints ?? {
+        audio: { echoCancellation: true, noiseSuppression: true },
+        video: { width: { ideal: 1280 }, height: { ideal: 720 } },
+      },
+      signalingUrl: `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/api/v1/meetings/${meetingId}/webrtc/ws`,
+      roomId: body.room_config?.room_id ?? `room_${meetingId}`,
+    }
+  }
+
+  // 建立WebSocket连接：后端真实地址是
+  // /api/v1/meetings/{meeting_id}/webrtc/ws?token=...（此前连的是不
+  // 存在的 /meetings/ws/{meetingCode}）。
+  async connectSignaling(meetingId: number, token: string): Promise<void> {
     return new Promise((resolve, reject) => {
       const wsBaseUrl = import.meta.env.VITE_WS_URL || `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/api/v1`
-      const wsUrl = `${wsBaseUrl}/meetings/ws/${meetingCode}?token=${token}`
-      
+      const wsUrl = `${wsBaseUrl}/meetings/${meetingId}/webrtc/ws?token=${encodeURIComponent(token)}`
+
       this.websocket = new WebSocket(wsUrl)
       
       this.websocket.onopen = () => {
@@ -87,39 +112,51 @@ export class WebRTCService {
     }
   }
 
-  // 鍒濆鍖朠eerConnection
-  async initializePeerConnection(config: WebRTCConfig): Promise<void> {
-    this.peerConnection = new RTCPeerConnection({
+  // 初始化与某一位对端的 PeerConnection（mesh：每位对端一个 PC）
+  async initializePeerConnection(config: WebRTCConfig, targetUserId: number): Promise<RTCPeerConnection> {
+    const existing = this.peerConnections.get(targetUserId)
+    if (existing) return existing
+
+    const pc = new RTCPeerConnection({
       iceServers: config.iceServers
     })
+    this.peerConnections.set(targetUserId, pc)
 
-    // 澶勭悊ICE鍊欓€?
-    this.peerConnection.onicecandidate = (event) => {
+    // 处理ICE候选：带上目标用户，后端才知道转发给谁
+    pc.onicecandidate = (event) => {
       if (event.candidate) {
         this.sendSignalingMessage({
           type: 'ice-candidate',
-          candidate: event.candidate
+          candidate: event.candidate,
+          target_user_id: targetUserId,
         })
       }
     }
 
-    // 澶勭悊杩滅▼娴?
-    this.peerConnection.ontrack = (event) => {
+    // 处理远程流
+    pc.ontrack = (event) => {
       const [remoteStream] = event.streams
-      const participantId = event.track.id // 鎴栦粠鍏朵粬鍦版柟鑾峰彇鍙備笌鑰匢D
-      this.remoteStreams.set(participantId, remoteStream)
-      this.emit('remoteStreamAdded', { participantId, stream: remoteStream })
+      this.remoteStreams.set(String(targetUserId), remoteStream)
+      this.emit('remoteStreamAdded', { participantId: targetUserId, stream: remoteStream })
     }
 
-    // 澶勭悊杩炴帴鐘舵€佸彉鍖?
-    this.peerConnection.onconnectionstatechange = () => {
-      const state = this.peerConnection?.connectionState
-      console.log('PeerConnection鐘舵€?', state)
-      this.emit('connectionStateChanged', state)
+    // 处理连接状态变化
+    pc.onconnectionstatechange = () => {
+      const state = pc.connectionState
+      console.log('PeerConnection状态?', state)
+      this.emit('connectionStateChanged', { targetUserId, state })
     }
+
+    // 本地流已存在则加上去
+    this.addLocalStreamToPeer(targetUserId)
+    return pc
   }
 
-  // 鑾峰彇鏈湴濯掍綋娴?
+  getPeerConnection(targetUserId: number): RTCPeerConnection | null {
+    return this.peerConnections.get(targetUserId) ?? null
+  }
+
+  // 获取本地媒体流
   async getLocalStream(constraints?: MediaStreamConstraints): Promise<MediaStream> {
     try {
       const defaultConstraints: MediaStreamConstraints = {
@@ -138,79 +175,94 @@ export class WebRTCService {
       const stream = await navigator.mediaDevices.getUserMedia(
         constraints || defaultConstraints
       )
-      
+
       this.localStream = stream
+      // 新拿到的本地流要加到已建好的各对端 PC 上
+      this.peerConnections.forEach((_, targetUserId) => {
+        this.addLocalStreamToPeer(targetUserId)
+      })
       this.emit('localStreamReady', stream)
-      
+
       return stream
     } catch (error) {
-      console.error('鑾峰彇鏈湴濯掍綋娴佸け璐?', error)
+      // 无摄像头/无权限在自动化与部分机器上是预期情况，用 warn 而
+      // 不是 error，避免巡游把“无媒体设备”当成页面错误。
+      console.warn('获取本地媒体流失败:', error)
       throw error
     }
   }
 
-  // 娣诲姞鏈湴娴佸埌PeerConnection
-  addLocalStreamToPeer(): void {
-    if (this.localStream && this.peerConnection) {
-      this.localStream.getTracks().forEach(track => {
-        this.peerConnection!.addTrack(track, this.localStream!)
-      })
-    }
+  // 添加本地流到指定对端的 PeerConnection（已加过的轨道不再重复加）
+  addLocalStreamToPeer(targetUserId: number): void {
+    const pc = this.peerConnections.get(targetUserId)
+    if (!this.localStream || !pc) return
+    const existing = new Set(pc.getSenders().map((s) => s.track))
+    this.localStream.getTracks().forEach(track => {
+      if (!existing.has(track)) {
+        pc.addTrack(track, this.localStream!)
+      }
+    })
   }
 
-  // 鍒涘缓Offer
-  async createOffer(): Promise<RTCSessionDescriptionInit> {
-    if (!this.peerConnection) {
+  // 创建Offer（发给指定对端）
+  async createOffer(targetUserId: number): Promise<RTCSessionDescriptionInit> {
+    const pc = this.peerConnections.get(targetUserId)
+    if (!pc) {
       throw new Error('PeerConnection 未初始化')
     }
 
-    const offer = await this.peerConnection.createOffer()
-    await this.peerConnection.setLocalDescription(offer)
-    
+    const offer = await pc.createOffer()
+    await pc.setLocalDescription(offer)
+
     this.sendSignalingMessage({
       type: 'offer',
-      sdp: offer
+      sdp: offer,
+      target_user_id: targetUserId,
     })
-    
+
     return offer
   }
 
-  // 鍒涘缓Answer
-  async createAnswer(offer: RTCSessionDescriptionInit): Promise<RTCSessionDescriptionInit> {
-    if (!this.peerConnection) {
+  // 创建Answer（回给发 offer 的对端）
+  async createAnswer(offer: RTCSessionDescriptionInit, fromUserId?: number): Promise<RTCSessionDescriptionInit> {
+    const targetUserId = fromUserId ?? 0
+    const pc = this.peerConnections.get(targetUserId)
+    if (!pc) {
       throw new Error('PeerConnection 未初始化')
     }
 
-    await this.peerConnection.setRemoteDescription(offer)
-    const answer = await this.peerConnection.createAnswer()
-    await this.peerConnection.setLocalDescription(answer)
-    
+    await pc.setRemoteDescription(offer)
+    const answer = await pc.createAnswer()
+    await pc.setLocalDescription(answer)
+
     this.sendSignalingMessage({
       type: 'answer',
-      sdp: answer
+      sdp: answer,
+      target_user_id: targetUserId,
     })
-    
+
     return answer
   }
 
-  // 澶勭悊Answer
-  async handleAnswer(answer: RTCSessionDescriptionInit): Promise<void> {
-    if (!this.peerConnection) {
+  // 处理Answer（按发来的对端找 PC）
+  async handleAnswer(answer: RTCSessionDescriptionInit, fromUserId?: number): Promise<void> {
+    const pc = this.peerConnections.get(fromUserId ?? 0)
+    if (!pc) {
       throw new Error('PeerConnection 未初始化')
     }
 
-    await this.peerConnection.setRemoteDescription(answer)
+    await pc.setRemoteDescription(answer)
   }
 
-  // 娣诲姞ICE鍊欓€?
-  async addIceCandidate(candidate: RTCIceCandidateInit): Promise<void> {
-    if (!this.peerConnection) {
+  // 添加ICE候选（按发来的对端找 PC）
+  async addIceCandidate(candidate: RTCIceCandidateInit, fromUserId?: number): Promise<void> {
+    const pc = this.peerConnections.get(fromUserId ?? 0)
+    if (!pc) {
       throw new Error('PeerConnection 未初始化')
     }
 
-    await this.peerConnection.addIceCandidate(candidate)
+    await pc.addIceCandidate(candidate)
   }
-
   // 灞忓箷鍏变韩
   async startScreenShare(config?: ScreenShareConfig): Promise<MediaStream> {
     try {
@@ -223,15 +275,16 @@ export class WebRTCService {
 
       const screenStream = await navigator.mediaDevices.getDisplayMedia(constraints)
       
-      // 鏇挎崲瑙嗛杞ㄩ亾
-      if (this.peerConnection && this.localStream) {
+      // 替换各对端 PC 上的视频轨道为屏幕流
+      if (this.localStream) {
         const videoTrack = screenStream.getVideoTracks()[0]
-        const sender = this.peerConnection.getSenders().find(s => 
-          s.track && s.track.kind === 'video'
-        )
-        
-        if (sender) {
-          await sender.replaceTrack(videoTrack)
+        for (const pc of this.peerConnections.values()) {
+          const sender = pc.getSenders().find(s =>
+            s.track && s.track.kind === 'video'
+          )
+          if (sender) {
+            await sender.replaceTrack(videoTrack)
+          }
         }
       }
 
@@ -251,15 +304,16 @@ export class WebRTCService {
   // 鍋滄灞忓箷鍏变韩
   async stopScreenShare(): Promise<void> {
     try {
-      // 鎭㈠鎽勫儚澶?
-      if (this.localStream && this.peerConnection) {
+      // 恢复摄像头轨道到各对端 PC
+      if (this.localStream) {
         const videoTrack = this.localStream.getVideoTracks()[0]
-        const sender = this.peerConnection.getSenders().find(s => 
-          s.track && s.track.kind === 'video'
-        )
-        
-        if (sender && videoTrack) {
-          await sender.replaceTrack(videoTrack)
+        for (const pc of this.peerConnections.values()) {
+          const sender = pc.getSenders().find(s =>
+            s.track && s.track.kind === 'video'
+          )
+          if (sender && videoTrack) {
+            await sender.replaceTrack(videoTrack)
+          }
         }
       }
 
@@ -313,7 +367,7 @@ export class WebRTCService {
 
   // 鍒囨崲濯掍綋璁惧
   async switchMediaDevice(deviceId: string, kind: 'audio' | 'video'): Promise<void> {
-    if (!this.localStream || !this.peerConnection) return
+    if (!this.localStream || this.peerConnections.size === 0) return
 
     const constraints: MediaStreamConstraints = {}
     
@@ -327,15 +381,20 @@ export class WebRTCService {
       const newStream = await navigator.mediaDevices.getUserMedia(constraints)
       const newTrack = newStream.getTracks()[0]
       
-      // 鏇挎崲杞ㄩ亾
-      const sender = this.peerConnection.getSenders().find(s => 
-        s.track && s.track.kind === kind
-      )
-      
-      if (sender) {
-        await sender.replaceTrack(newTrack)
-        
-        // 鏇存柊鏈湴娴?
+      // 在各对端 PC 上替换轨道
+      let replaced = false
+      for (const pc of this.peerConnections.values()) {
+        const sender = pc.getSenders().find(s =>
+          s.track && s.track.kind === kind
+        )
+        if (sender) {
+          await sender.replaceTrack(newTrack)
+          replaced = true
+        }
+      }
+
+      if (replaced) {
+        // 更新本地流
         const oldTrack = this.localStream.getTracks().find(t => t.kind === kind)
         if (oldTrack) {
           this.localStream.removeTrack(oldTrack)
@@ -349,47 +408,58 @@ export class WebRTCService {
     }
   }
 
-  // 缃戠粶璐ㄩ噺鐩戞帶
+  // 网络质量监控
   async getConnectionStats(): Promise<any> {
-    if (!this.peerConnection) return null
+    if (this.peerConnections.size === 0) return null
 
-    const stats = await this.peerConnection.getStats()
     const result: any = {}
-
-    stats.forEach((report) => {
-      if (report.type === 'inbound-rtp' || report.type === 'outbound-rtp') {
-        result[report.type] = {
-          bytesReceived: report.bytesReceived,
-          bytesSent: report.bytesSent,
-          packetsReceived: report.packetsReceived,
-          packetsSent: report.packetsSent,
-          packetsLost: report.packetsLost,
-          jitter: report.jitter,
-          roundTripTime: report.roundTripTime
+    for (const [targetUserId, pc] of this.peerConnections) {
+      const stats = await pc.getStats()
+      const entry: any = {}
+      stats.forEach((report) => {
+        if (report.type === 'inbound-rtp' || report.type === 'outbound-rtp') {
+          entry[report.type] = {
+            bytesReceived: report.bytesReceived,
+            bytesSent: report.bytesSent,
+            packetsReceived: report.packetsReceived,
+            packetsSent: report.packetsSent,
+            packetsLost: report.packetsLost,
+            jitter: report.jitter,
+            roundTripTime: report.roundTripTime
+          }
         }
-      }
-    })
+      })
+      result[targetUserId] = entry
+    }
 
     return result
   }
 
-  // 澶勭悊淇′护娑堟伅
+  // 处理信令消息：offer/answer/ice 按 from_user_id 找到对应的 PC；
+  // room-joined 携带自己的 session_id 与已在场者，供上层发起 offer。
   private handleSignalingMessage(message: any): void {
     switch (message.type) {
+      case 'room-joined':
+        this.sessionId = message.session_id ?? null
+        this.emit('roomJoined', message)
+        break
       case 'offer':
-        this.createAnswer(message.sdp)
+        this.createAnswer(message.sdp, message.from_user_id)
+          .catch((e) => console.warn('处理 offer 失败:', e))
         break
       case 'answer':
-        this.handleAnswer(message.sdp)
+        this.handleAnswer(message.sdp, message.from_user_id)
+          .catch((e) => console.warn('处理 answer 失败:', e))
         break
       case 'ice-candidate':
-        this.addIceCandidate(message.candidate)
+        this.addIceCandidate(message.candidate, message.from_user_id)
+          .catch((e) => console.warn('处理 ICE 失败:', e))
         break
       case 'participant-joined':
-        this.emit('participantJoined', message.participant)
+        this.emit('participantJoined', message)
         break
       case 'participant-left':
-        this.emit('participantLeft', message.participant)
+        this.emit('participantLeft', message)
         break
       case 'screen-share-started':
         this.emit('remoteScreenShareStarted', message)
@@ -397,13 +467,15 @@ export class WebRTCService {
       case 'screen-share-stopped':
         this.emit('remoteScreenShareStopped', message)
         break
+      case 'pong':
+        break
       default:
-        console.log('鏈煡淇′护娑堟伅绫诲瀷:', message.type)
+        console.log('未知信令消息类型:', message.type)
     }
   }
 
   // 鍙戦€佷俊浠ゆ秷鎭?
-  private sendSignalingMessage(message: any): void {
+  sendSignalingMessage(message: any): void {
     if (this.websocket && this.websocket.readyState === WebSocket.OPEN) {
       this.websocket.send(JSON.stringify(message))
     }
@@ -442,11 +514,10 @@ export class WebRTCService {
       this.localStream = null
     }
 
-    // 鍏抽棴PeerConnection
-    if (this.peerConnection) {
-      this.peerConnection.close()
-      this.peerConnection = null
-    }
+    // 关闭全部 PeerConnection
+    this.peerConnections.forEach((pc) => pc.close())
+    this.peerConnections.clear()
+    this.sessionId = null
 
     // 鏂紑WebSocket
     this.disconnectSignaling()

@@ -501,7 +501,17 @@ class RecordingService:
             # 9. 生成分辨率信息
             if recording.recording_type in [RecordingType.FULL_MEETING, RecordingType.SCREEN_SHARE]:
                 recording.resolution = await self._get_video_resolution(processed_file)
-            
+
+            # 与删除竞态：后处理跑完前用户可能已删除录制；此时不要把
+            # DELETED 写回 COMPLETED（与失败分支的同类守卫一致）。
+            status_row = await self.db.execute(
+                select(MeetingRecording.recording_status).where(
+                    MeetingRecording.id == recording_id
+                )
+            )
+            if status_row.scalar_one_or_none() == RecordingStatus.DELETED:
+                return
+
             await self.db.commit()
             await self._update_processing_progress(recording_id, 100)
             
@@ -515,14 +525,28 @@ class RecordingService:
             
         except Exception as e:
             logger.error(f"Failed to process recording {recording_id}: {e}")
-            
-            # 更新为失败状态
+
+            # 更新为失败状态。必须用带状态条件的 UPDATE 而不是 ORM 赋值
+            # 再 commit：删除可能在“查状态”和“提交”之间发生，ORM 赋值
+            # 会无条件覆盖，把已删除的录制写回 FAILED（删后 GET 应 404，
+            # 实测曾 200）。条件 UPDATE 是原子的，DELETED 的行不受影响。
+            # （另注意：同一会话的 identity map 会返回入口处加载的旧
+            # 对象，所以状态判断也不能用 _get_recording 的返回值。）
             try:
-                recording = await self._get_recording(recording_id)
-                recording.recording_status = RecordingStatus.FAILED
+                result = await self.db.execute(
+                    update(MeetingRecording)
+                    .where(
+                        MeetingRecording.id == recording_id,
+                        MeetingRecording.recording_status != RecordingStatus.DELETED,
+                    )
+                    .values(recording_status=RecordingStatus.FAILED)
+                )
                 await self.db.commit()
-                
-                await self._notify_best_effort("notify_recording_failed", recording.meeting_id, recording, str(e))
+
+                # 仅当确实把某行写成 FAILED 时才发失败通知；已被删除的
+                # 行不受影响（rowcount 为 0），不通知。
+                if result.rowcount:
+                    await self._notify_best_effort("notify_recording_failed", recording.meeting_id, recording, str(e))
             except Exception as update_error:
                 logger.error(f"Failed to update recording status: {update_error}")   
  
@@ -566,8 +590,12 @@ class RecordingService:
             chapters = await self._get_chapters(recording_id)
             
             # 7. 构建播放配置
+            # video_url 必须是浏览器能直接用的地址：file_path 只是后端
+            # 相对路径（recordings/{meeting_id}/...），没有任何静态文件
+            # 服务挂载它，<video src=file_path> 播不了。改成带播放 token
+            # 的下载端点，<video> 可直接用该 URL；下载端点用 token 鉴权。
             playback_config = {
-                'video_url': recording.file_path,
+                'video_url': f"/api/v1/meetings/recordings/{recording_id}/download?token={playback_token}",
                 'duration': recording.duration_seconds,
                 'resolution': recording.resolution,
                 'format': recording.file_format.value,
@@ -629,10 +657,189 @@ class RecordingService:
             
             logger.info(f"Recording deleted successfully: {recording_id}")
             return True
-            
+
+        except (NotFoundError, PermissionError, ValidationError):
+            # 权限/不存在是调用方要区分的业务错误，不能吞成 False——
+            # 否则路由层会把“无权删除”也报成删除成功。
+            raise
         except Exception as e:
             logger.error(f"Failed to delete recording: {e}")
             return False
+
+    async def update_recording(
+        self, recording_id: int, updates: Any, user_id: int
+    ) -> MeetingRecording:
+        """更新录制信息（改名 / 改公开 / 改密码）。
+
+        只有录制创建者或会议组织者可改；description 无模型列，
+        不在本接口接受范围（见 schemas.UpdateRecordingRequest）。
+        """
+        recording = await self._get_recording(recording_id)
+        await self._check_delete_permission(recording, user_id)
+        data = updates.model_dump(exclude_unset=True) if hasattr(updates, "model_dump") else dict(updates)
+        if "recording_name" in data and data["recording_name"] is not None:
+            name = str(data["recording_name"]).strip()
+            if not name:
+                raise ValidationError("录制名称不能为空")
+            recording.recording_name = name
+        if "is_public" in data and data["is_public"] is not None:
+            recording.is_public = bool(data["is_public"])
+        if "access_password" in data:
+            recording.access_password = data["access_password"]
+        await self.db.commit()
+        await self.db.refresh(recording)
+        return recording
+
+    async def share_recording(
+        self, recording_id: int, request: Any, user_id: int
+    ) -> Dict[str, Any]:
+        """设置录制分享（公开 / 密码）并生成分享链接。
+
+        路由层一直调本方法，但此前 RecordingService 里根本没有它，
+        分享端点恒 500。权限与删除一致：创建者或会议组织者。
+        """
+        recording = await self._get_recording(recording_id)
+        await self._check_delete_permission(recording, user_id)
+        data = request.model_dump(exclude_unset=True) if hasattr(request, "model_dump") else dict(request)
+        is_public = bool(data.get("is_public", False))
+        recording.is_public = is_public
+        recording.access_password = data.get("access_password")
+        await self.db.commit()
+        share_code = uuid.uuid4().hex[:12]
+        expires_at = data.get("expires_at")
+        return {
+            "share_url": f"/meetings/recordings/{recording_id}",
+            "share_code": share_code,
+            "expires_at": expires_at,
+        }
+
+    async def get_all_recordings(
+        self, query_params: Any, user_id: int
+    ) -> Tuple[List[MeetingRecording], int, Dict[str, Any]]:
+        """全局录制列表（不限会议），分页/筛选与按会议列表一致。
+
+        与 get_recordings 的区别仅在于不过滤 meeting_id、也不校验
+        会议存在；统计口径与之一致（本页合计大小/时长）。
+        """
+        conditions = []
+        if not getattr(query_params, 'include_deleted', False):
+            conditions.append(MeetingRecording.recording_status != RecordingStatus.DELETED)
+        recording_type = getattr(query_params, 'recording_type', None)
+        if recording_type is not None:
+            conditions.append(MeetingRecording.recording_type == recording_type)
+        status_filter = getattr(query_params, 'status', None)
+        if status_filter is not None:
+            conditions.append(MeetingRecording.recording_status == status_filter)
+        file_format = getattr(query_params, 'file_format', None)
+        if file_format is not None:
+            conditions.append(MeetingRecording.file_format == file_format)
+        start_date = getattr(query_params, 'start_date', None)
+        if start_date:
+            conditions.append(MeetingRecording.start_time >= start_date)
+        end_date = getattr(query_params, 'end_date', None)
+        if end_date:
+            conditions.append(MeetingRecording.start_time <= end_date)
+        keyword = getattr(query_params, 'keyword', None)
+        if keyword:
+            conditions.append(MeetingRecording.recording_name.ilike(f"%{keyword}%"))
+
+        where = and_(*conditions) if conditions else True
+        count_query = select(func.count(MeetingRecording.id)).where(where)
+        total_result = await self.db.execute(count_query)
+        total = total_result.scalar() or 0
+
+        sort_by = getattr(query_params, 'sort_by', 'start_time') or 'start_time'
+        sort_order = getattr(query_params, 'sort_order', 'desc') or 'desc'
+        sort_column = getattr(MeetingRecording, sort_by, MeetingRecording.start_time)
+        order_clause = asc(sort_column) if sort_order == 'asc' else desc(sort_column)
+        page = getattr(query_params, 'page', 1) or 1
+        page_size = getattr(query_params, 'page_size', 20) or 20
+        offset = (page - 1) * page_size
+        query = (
+            select(MeetingRecording)
+            .where(where)
+            .order_by(order_clause)
+            .limit(page_size)
+            .offset(offset)
+        )
+        result = await self.db.execute(query)
+        recordings = result.scalars().all()
+        total_size = sum((r.file_size or 0) for r in recordings)
+        total_duration = sum((r.duration_seconds or 0) for r in recordings)
+        statistics = {
+            'total_size_mb': total_size / (1024 * 1024) if total_size else 0,
+            'total_duration_minutes': total_duration / 60 if total_duration else 0,
+        }
+        return recordings, total, statistics
+
+    async def download_recording(
+        self, recording_id: int, user_id: Optional[int] = None,
+        token: Optional[str] = None
+    ) -> Tuple[str, str, str]:
+        """解析录制下载：返回 (磁盘绝对路径, 下载文件名, media_type)。
+
+        鉴权二选一：Bearer 登录用户（走播放权限：公开或参会人）或
+        ?token= 播放 token（播放接口签发，Redis 里 24h 有效，<video>
+        src 没法带 Authorization 请求头时用它）。文件不存在时 404，
+        不伪造空文件。成功下载时 download_count +1。
+        """
+        recording = await self._get_recording(recording_id)
+        if token:
+            token_data = await self._validate_playback_token(token, recording_id)
+            user_id = token_data.get('user_id', user_id)
+        elif user_id is not None:
+            await self._check_playback_permission(recording, user_id)
+        else:
+            raise PermissionError("无权限下载录制")
+        file_path = self._resolve_recording_file(recording.file_path)
+        if file_path is None:
+            raise NotFoundError("录制文件不存在")
+        recording.download_count = (recording.download_count or 0) + 1
+        await self.db.commit()
+        ext = (recording.file_format.value.lower()
+               if recording.file_format else "mp4")
+        safe_name = "".join(
+            ch for ch in (recording.recording_name or f"recording_{recording_id}")
+            if ch.isalnum() or ch in ("-", "_", ".", " ")
+        ).strip() or f"recording_{recording_id}"
+        media_types = {
+            "mp4": "video/mp4", "webm": "video/webm",
+            "mp3": "audio/mpeg", "m4a": "audio/mp4",
+        }
+        return str(file_path), f"{safe_name}.{ext}", media_types.get(ext, "application/octet-stream")
+
+    async def _validate_playback_token(
+        self, token: str, recording_id: int
+    ) -> Dict[str, Any]:
+        """校验播放 token：Redis 里存在、对应同一录制、未过期。"""
+        raw = await self.redis_client.get(f"playback_token:{token}")
+        if not raw:
+            raise PermissionError("播放令牌无效或已过期")
+        try:
+            token_data = json.loads(raw)
+        except (ValueError, TypeError):
+            raise PermissionError("播放令牌无效")
+        if token_data.get('recording_id') != recording_id:
+            raise PermissionError("播放令牌与录制不匹配")
+        expires_at = token_data.get('expires_at')
+        if expires_at and datetime.utcnow().timestamp() > float(expires_at):
+            raise PermissionError("播放令牌已过期")
+        return token_data
+
+    @staticmethod
+    def _resolve_recording_file(file_path: Optional[str]) -> Optional[Path]:
+        """file_path 是后端相对路径（相对 backend/ 工作目录），
+        依次尝试：绝对路径、相对当前工作目录、相对 storage base。"""
+        if not file_path:
+            return None
+        candidates = [Path(file_path)]
+        if not Path(file_path).is_absolute():
+            candidates.append(Path.cwd() / file_path)
+            candidates.append(Path(recording_config.STORAGE_BASE_PATH) / file_path)
+        for candidate in candidates:
+            if candidate.is_file():
+                return candidate.resolve()
+        return None
     
     async def get_recording_list(
         self, 
@@ -957,7 +1164,13 @@ class RecordingService:
 
         if not recording:
             raise NotFoundError(f"录制不存在: {recording_id}")
-        
+
+        # 已删除的录制视为不存在（与 get_recording_by_id 一致）：
+        # 否则删过的录制还能被再次删除/更新/分享（第二次 DELETE
+        # 曾返回 200“删除成功”，而不是 404）。
+        if recording.recording_status == RecordingStatus.DELETED:
+            raise NotFoundError(f"录制不存在: {recording_id}")
+
         return recording
     
     async def _get_active_recording(self, meeting_id: int) -> Optional[MeetingRecording]:

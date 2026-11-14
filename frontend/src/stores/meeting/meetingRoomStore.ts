@@ -1,6 +1,17 @@
 import { create } from 'zustand'
 import { subscribeWithSelector } from 'zustand/middleware'
 import type { Meeting, MeetingParticipant } from '@/types/meeting'
+import { webrtcService } from '@/services/meeting/webrtcService'
+import { chatService } from '@/services/meeting/chatService'
+import { recordingService } from '@/services/meeting/recordingService'
+import { fileService } from '@/services/fileService'
+import { meetingService } from '@/services/meeting/meetingService'
+import { apiClient, getAuthToken } from '@/services/api/client'
+
+// webrtcService 的事件回调引用：重加入房间时先 off 掉，避免重复监听。
+let roomJoinedHandler: ((msg: any) => void) | null = null
+let participantJoinedHandler: ((msg: any) => void) | null = null
+let participantLeftHandler: ((msg: any) => void) | null = null
 
 export type ConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'reconnecting' | 'error'
 export type NetworkQuality = 'excellent' | 'good' | 'poor' | 'disconnected'
@@ -83,6 +94,8 @@ interface MeetingRoomState {
   meeting: Meeting | null
   roomId: string | null
   meetingCode: string | null
+  sessionId: string | null
+  mediaError: string | null
   connectionStatus: ConnectionStatus
   isConnected: boolean
   isConnecting: boolean
@@ -97,6 +110,7 @@ interface MeetingRoomState {
   remoteStreams: Map<number, MediaStream>
   screenShareStream: MediaStream | null
   screenShareUserId: number | null
+  screenShareId: string | null
   isAudioEnabled: boolean
   isVideoEnabled: boolean
   isScreenSharing: boolean
@@ -146,8 +160,11 @@ interface MeetingRoomState {
 
 interface MeetingRoomActions {
   initializeRoom: (meeting: Meeting, participant: MeetingParticipant) => Promise<void>
-  joinRoom: (roomId: string, meetingCode?: string) => Promise<void>
+  joinRoom: (meetingId: number) => Promise<void>
   leaveRoom: () => Promise<void>
+  startLocalMedia: () => Promise<void>
+  loadMessages: () => Promise<void>
+  refreshParticipants: () => Promise<void>
   reconnect: () => Promise<void>
   updateConnectionStatus: (status: ConnectionStatus) => void
   addParticipant: (participant: MeetingParticipant) => void
@@ -215,6 +232,8 @@ const initialState: MeetingRoomState = {
   meeting: null,
   roomId: null,
   meetingCode: null,
+  sessionId: null,
+  mediaError: null,
   connectionStatus: 'disconnected',
   isConnected: false,
   isConnecting: false,
@@ -229,6 +248,7 @@ const initialState: MeetingRoomState = {
   remoteStreams: new Map(),
   screenShareStream: null,
   screenShareUserId: null,
+  screenShareId: null,
   isAudioEnabled: true,
   isVideoEnabled: true,
   isScreenSharing: false,
@@ -293,16 +313,111 @@ export const useMeetingRoomStore = create<MeetingRoomStore>()(
     initializeRoom: async (meeting, participant) => {
       set({
         meeting,
-        roomId: String(meeting.id),
+        roomId: `room_${meeting.id}`,
         meetingCode: (meeting as any).meeting_code || null,
         localParticipant: participant,
         participants: [participant],
         participantCount: 1,
-        ...setConnection('connected'),
+        // 注意：这里只完成本地初始化，不代表已连接；连接由 joinRoom 完成。
+        ...setConnection('disconnected'),
       })
     },
-    joinRoom: async (roomId, meetingCode) => set({ roomId, meetingCode: meetingCode || null, ...setConnection('connected') }),
-    leaveRoom: async () => get().cleanup(),
+    joinRoom: async (meetingId) => {
+      const state = get()
+      const meeting = state.meeting
+      if (!meeting || meeting.id !== meetingId) {
+        set({ error: '请先初始化会议室（缺少会议信息）' })
+        return
+      }
+      set({ ...setConnection('connecting'), error: null, mediaError: null })
+      try {
+        const token = getAuthToken()
+        if (!token) throw new Error('未登录，无法建立信令连接')
+        // 在场登记：只完成 WS 加入（参会人列表靠 participantJoined 更新）。
+        // 音视频已改走 Jitsi Meet（2026-11-08 用户决定），这里不再建 PC、不再拉本地流。
+        if (roomJoinedHandler) webrtcService.off('roomJoined', roomJoinedHandler)
+        if (participantJoinedHandler) webrtcService.off('participantJoined', participantJoinedHandler)
+        if (participantLeftHandler) webrtcService.off('participantLeft', participantLeftHandler)
+        roomJoinedHandler = async (msg: any) => {
+          get().setError(null)
+          const sessionId = msg.session_id as string | undefined
+          if (sessionId) set({ sessionId })
+        }
+        participantJoinedHandler = async (msg: any) => {
+          const userId = msg.user_id as number
+          if (!userId) return
+          get().addParticipant({
+            user_id: userId,
+            meeting_id: meetingId,
+            participant_role: 'PARTICIPANT',
+          } as MeetingParticipant)
+        }
+        participantLeftHandler = (msg: any) => {
+          const userId = msg.user_id as number
+          if (!userId) return
+          get().removeParticipant(userId)
+        }
+        webrtcService.on('roomJoined', roomJoinedHandler)
+        webrtcService.on('participantJoined', participantJoinedHandler)
+        webrtcService.on('participantLeft', participantLeftHandler)
+
+        await webrtcService.connectSignaling(meetingId, token)
+        set({ ...setConnection('connected') })
+      } catch (error) {
+        set({
+          ...setConnection('error'),
+          error: error instanceof Error ? error.message : '加入会议室失败',
+        })
+      }
+    },
+    startLocalMedia: async () => {
+      try {
+        const stream = await webrtcService.getLocalStream()
+        set({ localStream: stream, mediaError: null })
+      } catch {
+        set({ mediaError: '无法访问摄像头/麦克风，请检查设备权限' })
+      }
+    },
+    loadMessages: async () => {
+      const meetingId = get().meeting?.id
+      if (!meetingId) return
+      try {
+        const body: any = await chatService.getChatHistory(meetingId, { pageSize: 50 })
+        const list = body?.messages ?? []
+        set({
+          messages: list.map((m: any) => ({
+            id: String(m.id),
+            senderId: m.sender_id,
+            senderName: m.sender_name ?? `用户 ${m.sender_id}`,
+            content: m.content,
+            timestamp: m.sent_at ?? m.created_at,
+            type: 'text' as const,
+            status: 'sent' as const,
+          })),
+          unreadCount: 0,
+        })
+      } catch (error) {
+        console.warn('加载聊天记录失败:', error)
+      }
+    },
+    refreshParticipants: async () => {
+      const meetingId = get().meeting?.id
+      if (!meetingId) return
+      try {
+        const list = await meetingService.getParticipants(meetingId)
+        set({ participants: list, participantCount: list.length })
+      } catch (error) {
+        console.warn('刷新参会人失败:', error)
+      }
+    },
+    leaveRoom: async () => {
+      if (roomJoinedHandler) webrtcService.off('roomJoined', roomJoinedHandler)
+      if (participantJoinedHandler) webrtcService.off('participantJoined', participantJoinedHandler)
+      if (participantLeftHandler) webrtcService.off('participantLeft', participantLeftHandler)
+      roomJoinedHandler = participantJoinedHandler = participantLeftHandler = null
+      webrtcService.cleanup()
+      get().cleanup()
+    },
     reconnect: async () => set({ reconnectAttempts: get().reconnectAttempts + 1, ...setConnection('connected') }),
     updateConnectionStatus: (status) => set(setConnection(status)),
     addParticipant: (participant) => set((state) => {
@@ -339,18 +454,91 @@ export const useMeetingRoomStore = create<MeetingRoomStore>()(
       isScreenSharing: Boolean(screenShareStream),
     }),
     updateMediaDevices: (devices) => set((state) => ({ mediaDevices: { ...state.mediaDevices, ...devices } })),
-    selectAudioDevice: async (selectedAudioDevice) => set((state) => ({ mediaDevices: { ...state.mediaDevices, selectedAudioDevice } })),
-    selectVideoDevice: async (selectedVideoDevice) => set((state) => ({ mediaDevices: { ...state.mediaDevices, selectedVideoDevice } })),
+    selectAudioDevice: async (selectedAudioDevice) => {
+      try {
+        await webrtcService.switchMediaDevice(selectedAudioDevice, 'audio')
+      } catch (e) {
+        console.warn('切换音频设备失败:', e)
+      }
+      set((state) => ({ mediaDevices: { ...state.mediaDevices, selectedAudioDevice } }))
+    },
+    selectVideoDevice: async (selectedVideoDevice) => {
+      try {
+        await webrtcService.switchMediaDevice(selectedVideoDevice, 'video')
+      } catch (e) {
+        console.warn('切换视频设备失败:', e)
+      }
+      set((state) => ({ mediaDevices: { ...state.mediaDevices, selectedVideoDevice } }))
+    },
     updateAudioLevel: (audioLevel) => set((state) => ({ mediaDevices: { ...state.mediaDevices, audioLevel } })),
-    toggleAudio: async () => set((state) => ({ isAudioEnabled: !state.isAudioEnabled, isMuted: state.isAudioEnabled })),
-    toggleVideo: async () => set((state) => ({ isVideoEnabled: !state.isVideoEnabled, isVideoOff: state.isVideoEnabled })),
-    muteAudio: async () => set({ isAudioEnabled: false, isMuted: true }),
-    unmuteAudio: async () => set({ isAudioEnabled: true, isMuted: false }),
-    enableVideo: async () => set({ isVideoEnabled: true, isVideoOff: false }),
-    disableVideo: async () => set({ isVideoEnabled: false, isVideoOff: true }),
-    startScreenShare: async () => set({ isScreenSharing: true }),
-    stopScreenShare: () => set({ isScreenSharing: false, screenShareStream: null, screenShareUserId: null }),
+    toggleAudio: async () => {
+      // 真实开关：改本地音频轨道的 enabled；无本地流时只改状态。
+      const enabled = webrtcService.toggleAudio()
+      const hasStream = Boolean(get().localStream)
+      set((state) => ({
+        isAudioEnabled: hasStream ? enabled : !state.isAudioEnabled,
+        isMuted: hasStream ? !enabled : state.isAudioEnabled,
+      }))
+    },
+    toggleVideo: async () => {
+      const enabled = webrtcService.toggleVideo()
+      const hasStream = Boolean(get().localStream)
+      set((state) => ({
+        isVideoEnabled: hasStream ? enabled : !state.isVideoEnabled,
+        isVideoOff: hasStream ? !enabled : state.isVideoEnabled,
+      }))
+    },
+    muteAudio: async () => {
+      webrtcService.toggleAudio(false)
+      set({ isAudioEnabled: false, isMuted: true })
+    },
+    unmuteAudio: async () => {
+      webrtcService.toggleAudio(true)
+      set({ isAudioEnabled: true, isMuted: false })
+    },
+    enableVideo: async () => {
+      webrtcService.toggleVideo(true)
+      set({ isVideoEnabled: true, isVideoOff: false })
+    },
+    disableVideo: async () => {
+      webrtcService.toggleVideo(false)
+      set({ isVideoEnabled: false, isVideoOff: true })
+    },
+    startScreenShare: async () => {
+      const meetingId = get().meeting?.id
+      if (!meetingId) return
+      try {
+        const stream = await webrtcService.startScreenShare()
+        set({ screenShareStream: stream, screenShareUserId: get().localParticipant?.user_id ?? null, isScreenSharing: true })
+        // 通知后端（需要 WS 会话 ID；拿不到时只做本地共享，不报错）。
+        const sessionId = webrtcService.getSessionId()
+        if (sessionId) {
+          const resp: any = await apiClient.post(`/api/v1/meetings/${meetingId}/screen-share/start`, {
+            session_id: sessionId,
+            share_type: 'screen',
+          })
+          const shareId = resp?.data?.share_id ?? resp?.data?.data?.share_id
+          if (shareId) set({ screenShareId: shareId })
+        }
+      } catch (error) {
+        set({ error: error instanceof Error ? error.message : '开始屏幕共享失败' })
+      }
+    },
+    stopScreenShare: () => {
+      const meetingId = get().meeting?.id
+      const sessionId = webrtcService.getSessionId()
+      const shareId = get().screenShareId
+      void webrtcService.stopScreenShare()
+      if (meetingId && sessionId && shareId) {
+        apiClient.post(`/api/v1/meetings/${meetingId}/screen-share/stop`, {
+          session_id: sessionId,
+          share_id: shareId,
+        }).catch((e) => console.warn('通知后端停止屏幕共享失败:', e))
+      }
+      set({ isScreenSharing: false, screenShareStream: null, screenShareUserId: null, screenShareId: null })
+    },
     sendMessage: async (content, type = 'text', metadata) => {
+      const meetingId = get().meeting?.id
       const message: ChatMessage = {
         id: `msg-${Date.now()}`,
         senderId: get().localParticipant?.user_id || 0,
@@ -359,9 +547,31 @@ export const useMeetingRoomStore = create<MeetingRoomStore>()(
         timestamp: new Date().toISOString(),
         type,
         metadata,
-        status: 'sent',
+        status: 'sending',
       }
       get().addMessage(message)
+      if (!meetingId) {
+        get().updateMessage(message.id, { status: 'failed' })
+        return
+      }
+      try {
+        // chatService 返回的是后端 SendChatMessageResponse 信封，data 才是消息。
+        const body: any = await chatService.sendMessage(meetingId, {
+          content,
+          messageType: 'TEXT',
+        })
+        const data = body?.data ?? body
+        get().updateMessage(message.id, {
+          id: String(data?.id ?? message.id),
+          senderId: data?.sender_id ?? message.senderId,
+          senderName: data?.sender_name ?? message.senderName,
+          timestamp: data?.sent_at ?? message.timestamp,
+          status: 'sent',
+        })
+      } catch (error) {
+        get().updateMessage(message.id, { status: 'failed' })
+        set({ error: error instanceof Error ? error.message : '发送消息失败' })
+      }
     },
     addMessage: (message) => set((state) => ({ messages: [...state.messages, message], unreadCount: state.unreadCount + 1 })),
     updateMessage: (messageId, updates) => set((state) => ({
@@ -372,45 +582,127 @@ export const useMeetingRoomStore = create<MeetingRoomStore>()(
     setTyping: (isTyping) => set({ isTyping }),
     updateTypingUsers: (typingUsers) => set({ typingUsers }),
     uploadFile: async (file, onProgress) => {
-      onProgress?.(100)
+      const meetingId = get().meeting?.id
+      if (!meetingId) throw new Error('缺少会议信息，无法上传')
+      const uploaded = await fileService.uploadFile(file, { meetingId, isPublic: false }, (p) => onProgress?.(p))
       const sharedFile: SharedFile = {
-        id: `file-${Date.now()}`,
-        name: file.name,
-        size: file.size,
-        type: file.type,
-        url: URL.createObjectURL(file),
+        id: uploaded.id,
+        name: uploaded.name,
+        size: uploaded.size,
+        type: uploaded.type,
+        url: uploaded.url,
         uploadedBy: get().localParticipant?.user_id || 0,
-        uploadedByName: (get().localParticipant as any)?.user?.name || '我',
-        uploadedAt: new Date().toISOString(),
-        downloadCount: 0,
-        isPublic: true,
+        uploadedByName: uploaded.uploadedBy?.name || (get().localParticipant as any)?.user?.name || '我',
+        uploadedAt: uploaded.uploadedAt || new Date().toISOString(),
+        downloadCount: uploaded.downloadCount ?? 0,
+        isPublic: uploaded.isPublic ?? false,
         permissions: { canDownload: true, canDelete: true, canShare: true },
       }
       get().addSharedFile(sharedFile)
       return sharedFile
     },
     addSharedFile: (file) => set((state) => ({ sharedFiles: [...state.sharedFiles, file] })),
-    removeSharedFile: async (fileId) => set((state) => ({ sharedFiles: state.sharedFiles.filter((file) => file.id !== fileId) })),
-    downloadFile: async (fileId) => set((state) => ({
-      sharedFiles: state.sharedFiles.map((file) =>
-        file.id === fileId ? { ...file, downloadCount: file.downloadCount + 1 } : file,
-      ),
-    })),
+    removeSharedFile: async (fileId) => {
+      // 后端没有文件删除接口：只从本地列表移除，并告警说明。
+      get().addWarning('后端暂无文件删除接口，已仅从本地列表移除')
+      set((state) => ({ sharedFiles: state.sharedFiles.filter((file) => file.id !== fileId) }))
+    },
+    downloadFile: async (fileId) => {
+      // 后端没有文件下载接口：只本地记一次下载数，并告警说明。
+      get().addWarning('后端暂无文件下载接口，无法下载')
+      set((state) => ({
+        sharedFiles: state.sharedFiles.map((file) =>
+          file.id === fileId ? { ...file, downloadCount: file.downloadCount + 1 } : file,
+        ),
+      }))
+    },
     updateFileUploadProgress: (fileId, progress) => set((state) => {
       const uploadingFiles = new Map(state.uploadingFiles)
       const item = uploadingFiles.get(fileId)
       if (item) uploadingFiles.set(fileId, { ...item, progress })
       return { uploadingFiles }
     }),
-    connectWhiteboard: async () => set({ whiteboardConnected: true }),
+    connectWhiteboard: async () => {
+      const meetingId = get().meeting?.id
+      if (!meetingId) return
+      try {
+        const resp: any = await apiClient.get(`/api/v1/meetings/${meetingId}/whiteboard/state`)
+        const state = resp?.data ?? resp
+        set({ whiteboardData: state?.content ?? state, whiteboardConnected: true })
+      } catch (error) {
+        console.warn('加载白板状态失败:', error)
+        set({ whiteboardConnected: false })
+      }
+    },
     disconnectWhiteboard: () => set({ whiteboardConnected: false, whiteboardUsers: [] }),
     updateWhiteboard: (whiteboardData) => set({ whiteboardData }),
-    syncWhiteboardEvent: (event) => set({ whiteboardData: event }),
+    syncWhiteboardEvent: (event) => {
+      // 白板操作要落到后端：调 POST /whiteboard/action；失败只告警。
+      const meetingId = get().meeting?.id
+      const userId = get().localParticipant?.user_id
+      if (meetingId && userId && event?.action_type) {
+        apiClient.post(`/api/v1/meetings/${meetingId}/whiteboard/action`, {
+          action_type: event.action_type,
+          user_id: userId,
+          data: event.data ?? {},
+        }).then((resp: any) => {
+          const state = resp?.data?.data ?? resp?.data
+          if (state?.content) set({ whiteboardData: state.content })
+        }).catch((e) => console.warn('同步白板操作失败:', e))
+      }
+      set({ whiteboardData: event?.data ?? event })
+    },
     updateWhiteboardUsers: (whiteboardUsers) => set({ whiteboardUsers }),
-    startRecording: async () => set({ isRecording: true, recordingStatus: 'recording', recordingId: Date.now(), recordingDuration: 0 }),
-    stopRecording: async () => set({ isRecording: false, recordingStatus: 'idle' }),
-    pauseRecording: async () => set({ recordingStatus: 'pausing' }),
-    resumeRecording: async () => set({ recordingStatus: 'recording' }),
+    startRecording: async () => {
+      const meetingId = get().meeting?.id
+      if (!meetingId) return
+      set({ recordingStatus: 'starting' })
+      try {
+        const recording = await recordingService.startRecording(meetingId, {
+          name: `Meeting_${meetingId}_${new Date().toISOString().slice(0, 10)}`,
+          type: 'FULL_MEETING',
+          format: 'MP4',
+          quality: 'MEDIUM',
+        } as any)
+        set({ isRecording: true, recordingStatus: 'recording', recordingId: recording?.id ?? null, recordingDuration: 0 })
+      } catch (error) {
+        set({ recordingStatus: 'idle', error: error instanceof Error ? error.message : '开始录制失败' })
+      }
+    },
+    stopRecording: async () => {
+      const recordingId = get().recordingId
+      if (!recordingId) {
+        set({ isRecording: false, recordingStatus: 'idle' })
+        return
+      }
+      set({ recordingStatus: 'stopping' })
+      try {
+        await recordingService.stopRecording(recordingId)
+        set({ isRecording: false, recordingStatus: 'idle', recordingId: null })
+      } catch (error) {
+        set({ recordingStatus: 'recording', error: error instanceof Error ? error.message : '停止录制失败' })
+      }
+    },
+    pauseRecording: async () => {
+      const recordingId = get().recordingId
+      if (!recordingId) return
+      try {
+        await recordingService.pauseRecording(recordingId)
+        set({ recordingStatus: 'pausing' })
+      } catch (error) {
+        set({ error: error instanceof Error ? error.message : '暂停录制失败' })
+      }
+    },
+    resumeRecording: async () => {
+      const recordingId = get().recordingId
+      if (!recordingId) return
+      try {
+        await recordingService.resumeRecording(recordingId)
+        set({ recordingStatus: 'recording' })
+      } catch (error) {
+        set({ error: error instanceof Error ? error.message : '恢复录制失败' })
+      }
+    },
     updateRecordingStatus: (recordingStatus) => set({ recordingStatus, isRecording: recordingStatus === 'recording' }),
     updateRecordingDuration: (recordingDuration) => set({ recordingDuration }),
     updateNetworkQuality: (networkQuality) => set({ networkQuality }),

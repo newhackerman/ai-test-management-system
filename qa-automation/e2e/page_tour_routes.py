@@ -36,8 +36,8 @@ TOUR_ROUTES = [
     ("/test-manager/security", "安全测试", None),
     ("/meetings", "会议", None),
     ("/meetings/create", "新建会议", None),
-    ("/meetings/analytics/comparison", "会议对比", None),
-    ("/meetings/recordings", "录制", None),
+    ("/meetings/analytics/comparison", "会议对比", "选择会议"),
+    ("/meetings/recordings", "录制", "暂无录制"),
     ("/users", "用户管理", None),
     ("/roles", "角色管理", None),
     ("/roles/eight", "八角色管理", None),
@@ -77,22 +77,29 @@ PARAM_COVERED = {
     "/test-manager/test-plans/:id": "test_e2e_full_chain.py (plan detail after create)",
     "/test-manager/test-cases/:id": "test_e2e_full_chain.py (case detail after create)",
     "/test-manager/executions/manual/:testCaseId": "test_e2e_full_chain.py (manual_execution_ui)",
+    # Implemented meeting pages (2026-11-08): covered by
+    # e2e/test_e2e_meeting_pages.py with a real meeting fixture
+    # (and, for recording detail/player, a real RECORDING-status
+    # recording). MeetingRoom stays in KNOWN_GAPS_PARAM: it needs a
+    # live two-party meeting + media.
+    "/meetings/:id": "test_e2e_meeting_pages.py (detail shows the meeting title)",
+    "/meetings/:id/edit": "test_e2e_meeting_pages.py (edit form renders)",
+    "/meetings/:id/analytics": "test_e2e_meeting_pages.py (marker: 整体效果评分)",
+    "/meetings/:id/analytics/participation": "test_e2e_meeting_pages.py (marker: 参与者明细)",
+    "/meetings/:id/analytics/summary": "test_e2e_meeting_pages.py (marker: AI 会议摘要)",
+    "/meetings/:id/analytics/minutes": "test_e2e_meeting_pages.py (marker: 结构化会议纪要)",
+    "/meetings/:id/analytics/actions": "test_e2e_meeting_pages.py (marker: 行动项目管理)",
+    "/meetings/:id/analytics/reports": "test_e2e_meeting_pages.py (marker: 生成报告)",
+    "/meetings/:id/recordings": "test_e2e_meeting_pages.py (marker: 暂无录制)",
+    "/meetings/recordings/:recordingId": "test_e2e_meeting_pages.py (detail shows the record name)",
+    "/meetings/recordings/:recordingId/player": "test_e2e_meeting_pages.py (unfinished-playback error state; "
+    "no COMPLETED fixture can be produced headless, so the positive "
+    "<video> path is intentionally not asserted)",
 }
 
 KNOWN_GAPS_PARAM = {
-    "/meetings/recordings/:recordingId": "no fixture recording exists in E2E; recording needs a desktop session",
-    "/meetings/recordings/:recordingId/player": "same as above",
     "/meetings/room/:meetingId": "live meeting room needs a running meeting + media",
     "/meetings/join/:meetingCode": "same as above",
-    "/meetings/:id/edit": "no meeting fixture in E2E yet",
-    "/meetings/:id/analytics": "no meeting fixture in E2E yet",
-    "/meetings/:id/analytics/participation": "no meeting fixture in E2E yet",
-    "/meetings/:id/analytics/summary": "no meeting fixture in E2E yet",
-    "/meetings/:id/analytics/minutes": "no meeting fixture in E2E yet",
-    "/meetings/:id/analytics/actions": "no meeting fixture in E2E yet",
-    "/meetings/:id/analytics/reports": "no meeting fixture in E2E yet",
-    "/meetings/:id/recordings": "no meeting fixture in E2E yet",
-    "/meetings/:id": "no meeting fixture in E2E yet",
     "/test-manager/test-plans/:id/edit": "edit flow not covered; create + detail are",
     "/test-manager/test-cases/:id/edit": "edit flow not covered; create + detail are",
     "/test-manager/executions/:executionId": "no execution fixture asserted on detail page yet",

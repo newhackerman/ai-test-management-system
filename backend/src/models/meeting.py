@@ -127,6 +127,7 @@ class Meeting(BaseModel):
     chats = relationship("MeetingChat", back_populates="meeting", cascade="all, delete-orphan")
     files = relationship("MeetingFile", back_populates="meeting", cascade="all, delete-orphan")
     analytics = relationship("MeetingAnalytics", back_populates="meeting", uselist=False, cascade="all, delete-orphan")
+    summary = relationship("MeetingSummary", back_populates="meeting", uselist=False, cascade="all, delete-orphan")
     
     def __repr__(self):
         return f"<Meeting(id={self.id}, code='{self.meeting_code}', title='{self.title}', status='{self.status}')>"
@@ -411,6 +412,78 @@ class MeetingMinutes(BaseModel):
     
     def __repr__(self):
         return f"<MeetingMinutes(id={self.id}, meeting_id={self.meeting_id}, title='{self.title}', status='{self.status}')>"
+
+
+class MeetingSummary(BaseModel):
+    """会议摘要模型（LLM 生成后持久化，GET /summary 读库）。
+
+    每会议一条（meeting_id 唯一）；重新生成时原地更新。转录无真实
+    来源时 transcript_available=False，摘要只依据议程/聊天/文件等
+    真实上下文生成，不得编造发言内容。
+    """
+    __tablename__ = 'meeting_summaries'
+
+    meeting_id = Column(BigInteger, ForeignKey('meetings.id', ondelete='CASCADE'), nullable=False, unique=True, index=True, comment='会议ID')
+    overview = Column(Text, comment='会议概述')
+    key_points = Column(JSON, comment='关键要点（KeyPoint 形状列表）')
+    decisions = Column(JSON, comment='决策事项（Decision 形状列表）')
+    action_items = Column(JSON, comment='行动项目（ActionItem 形状列表）')
+    next_steps = Column(JSON, comment='下一步计划')
+    participants_summary = Column(JSON, comment='参与者摘要')
+    meeting_effectiveness = Column(JSON, comment='会议效果评估')
+    generation_method = Column(String(50), default='llm', comment='生成方式：llm')
+    language = Column(String(20), default='zh-CN', comment='语言')
+    model = Column(String(100), comment='生成所用模型')
+    confidence_score = Column(DECIMAL(3, 2), comment='置信度（0-1）')
+    transcript_available = Column(Boolean, default=False, comment='生成时是否有真实转录')
+    generated_at = Column(DateTime, default=datetime.utcnow, comment='生成时间')
+
+    meeting = relationship("Meeting", back_populates="summary")
+
+    def to_dict(self) -> Dict[str, Any]:
+        """转换为字典格式"""
+        return {
+            'id': self.id,
+            'meeting_id': self.meeting_id,
+            'overview': self.overview or '',
+            'key_points': self.key_points or [],
+            'decisions': self.decisions or [],
+            'action_items': self.action_items or [],
+            'next_steps': self.next_steps or [],
+            'participants_summary': self.participants_summary or {},
+            'meeting_effectiveness': self.meeting_effectiveness or {},
+            'generation_method': self.generation_method or 'llm',
+            'language': self.language or 'zh-CN',
+            'model': self.model,
+            'confidence_score': float(self.confidence_score) if self.confidence_score is not None else None,
+            'transcript_available': bool(self.transcript_available),
+            'generated_at': self.generated_at.isoformat() if self.generated_at else None,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+            'created_by': self.created_by,
+            'updated_by': self.updated_by
+        }
+
+    def to_response_dict(self) -> Dict[str, Any]:
+        """转换为 MeetingSummaryResponse 形状的字典。"""
+        d = self.to_dict()
+        generated_at = d['generated_at']
+        return {
+            'meeting_id': d['meeting_id'],
+            'overview': d['overview'],
+            'key_points': d['key_points'],
+            'decisions': d['decisions'],
+            'action_items': d['action_items'],
+            'next_steps': d['next_steps'],
+            'participants_summary': d['participants_summary'],
+            'meeting_effectiveness': d['meeting_effectiveness'],
+            'generated_at': datetime.fromisoformat(generated_at) if generated_at else datetime.utcnow(),
+            'generation_method': d['generation_method'],
+            'language': d['language'],
+        }
+
+    def __repr__(self):
+        return f"<MeetingSummary(id={self.id}, meeting_id={self.meeting_id})>"
 
 
 class MessageType(PyEnum):

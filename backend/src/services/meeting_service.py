@@ -33,7 +33,7 @@ from ..models.meeting import (
     Meeting, MeetingParticipant, MeetingType, MeetingStatus,
     ParticipantRole, InvitationStatus, AttendanceStatus,
     MeetingMinutes, MinuteType, GenerationMethod, MinuteStatus,
-    MeetingFile, FileShareStatus
+    MeetingFile, FileShareStatus, MeetingChat, MessageType
 )
 from ..models.user import User
 from ..models.project import Project
@@ -43,6 +43,12 @@ from .meeting_notification_service import MeetingNotificationService
 from .email_service import EmailService
 
 logger = logging.getLogger(__name__)
+
+
+# 白板状态（模块级内存存储）：MeetingService 每次请求新建实例，实例
+# 内存跨请求即丢；白板无专用表，先放进程内存字典，key 为 meeting_id。
+# 后端重启即丢，与房间同一约束；如需持久化再建表。
+_WHITEBOARD_STATES: Dict[int, Dict[str, Any]] = {}
 
 
 class MeetingService:
@@ -237,6 +243,20 @@ class MeetingService:
 
         raise PermissionError("无权限查看会议")
 
+    async def get_meeting_by_code(self, meeting_code: str, user_id: int) -> Meeting:
+        """按会议编码获取会议详情（供 /meetings/join/:meetingCode 入口）。
+
+        先按编码查到会议，再复用 get_meeting_by_id 做同一权限校验。
+        """
+        query = select(Meeting).where(
+            and_(Meeting.meeting_code == meeting_code, Meeting.deleted_at.is_(None))
+        )
+        result = await self.db.execute(query)
+        meeting = result.scalar_one_or_none()
+        if not meeting:
+            raise NotFoundError("会议不存在")
+        return await self.get_meeting_by_id(meeting.id, user_id)
+
     async def get_participants(self, meeting_id: int, query_params: Any, user_id: int) -> Tuple[List[MeetingParticipant], Dict[str, Any]]:
         """
         获取会议参与者列表及统计信息。
@@ -323,14 +343,86 @@ class MeetingService:
             "network_quality": getattr(meeting, "network_quality", "good"),
         }
 
+    async def send_chat_message(self, meeting_id: int, sender_id: int,
+                                request: Any) -> MeetingChat:
+        """发送聊天消息并落库到 meeting_chats 表。
+
+        路由曾调用本方法但服务类中并不存在（AttributeError -> 500），
+        会议聊天发送端点整体不可用。历史查询见 get_chat_history。
+        """
+        # 校验会议存在及访问权限
+        await self.get_meeting_by_id(meeting_id, sender_id)
+
+        if getattr(request, 'is_private', False) and not getattr(request, 'recipient_id', None):
+            raise ValidationError("私聊消息必须指定接收者")
+
+        metadata = dict(getattr(request, 'metadata', None) or {})
+        reply_to_id = getattr(request, 'reply_to_id', None)
+        if reply_to_id:
+            metadata['reply_to_id'] = reply_to_id
+
+        message = MeetingChat(
+            meeting_id=meeting_id,
+            sender_id=sender_id,
+            message_type=MessageType(getattr(request.message_type, 'value', request.message_type)),
+            content=request.content.strip(),
+            is_private=bool(getattr(request, 'is_private', False)),
+            recipient_id=getattr(request, 'recipient_id', None),
+            message_metadata=metadata or None,
+        )
+        self.db.add(message)
+        await self.db.commit()
+        await self.db.refresh(message)
+        return message
+
     async def get_chat_history(self, meeting_id: int, query_params: Any,
                                user_id: int) -> Tuple[List[Any], int]:
-        """
-        获取会议聊天历史（当前实现：无持久化存储，返回空列表）。
-        由路由层构建 ChatHistoryResponse。
-        """
+        """获取会议聊天历史（读 meeting_chats 表，按发送时间升序）。"""
         await self.get_meeting_by_id(meeting_id, user_id)
-        return [], 0
+
+        conditions = [MeetingChat.meeting_id == meeting_id]
+        if query_params:
+            include_private = getattr(query_params, 'include_private', False)
+            if not include_private:
+                # 默认只看公开消息；自己发出/收到的私聊也可见。
+                conditions.append(or_(
+                    MeetingChat.is_private == False,  # noqa: E712
+                    MeetingChat.sender_id == user_id,
+                    MeetingChat.recipient_id == user_id,
+                ))
+            message_type = getattr(query_params, 'message_type', None)
+            if message_type:
+                conditions.append(MeetingChat.message_type == MessageType(
+                    getattr(message_type, 'value', message_type)))
+            sender_id = getattr(query_params, 'sender_id', None)
+            if sender_id:
+                conditions.append(MeetingChat.sender_id == sender_id)
+            start_time = getattr(query_params, 'start_time', None)
+            if start_time:
+                conditions.append(MeetingChat.sent_at >= start_time)
+            end_time = getattr(query_params, 'end_time', None)
+            if end_time:
+                conditions.append(MeetingChat.sent_at <= end_time)
+            keyword = getattr(query_params, 'keyword', None)
+            if keyword:
+                conditions.append(MeetingChat.content.ilike(f"%{keyword}%"))
+
+        total_result = await self.db.execute(
+            select(func.count()).select_from(MeetingChat).where(and_(*conditions))
+        )
+        total = total_result.scalar_one()
+
+        page = max(getattr(query_params, 'page', 1) or 1, 1)
+        page_size = max(getattr(query_params, 'page_size', 50) or 50, 1)
+        query = (
+            select(MeetingChat)
+            .where(and_(*conditions))
+            .order_by(asc(MeetingChat.sent_at))
+            .offset((page - 1) * page_size)
+            .limit(page_size)
+        )
+        result = await self.db.execute(query)
+        return list(result.scalars().all()), total
 
     # 允许上传的文件扩展名（与上传接口文档一致：文档 / 图片 /
     # 视频 / 压缩包）。可执行与脚本类型（php/exe/sh/py/js 等）
@@ -445,10 +537,63 @@ class MeetingService:
         total_size = sum((f.file_size or 0) for f in files)
         return files, total_size
 
+    async def handle_whiteboard_action(self, meeting_id: int, user_id: int,
+                                       action: Any) -> Dict[str, Any]:
+        """执行白板操作并更新内存中的白板状态。
+
+        路由曾调用本方法但服务类中并不存在（AttributeError -> 500）。
+        白板无专用表，状态放模块级 _WHITEBOARD_STATES（进程内存，
+        重启即丢）。draw 追加一笔 stroke；erase 按 stroke id 删除；
+        clear 清空；undo 撤回最后一笔；redo 暂不支持（返回当前状态）。
+        每次操作 version + 1。
+        """
+        # 校验会议存在及访问权限
+        await self.get_meeting_by_id(meeting_id, user_id)
+
+        action_type = getattr(action, 'action_type', None)
+        data = dict(getattr(action, 'data', None) or {})
+        state = _WHITEBOARD_STATES.setdefault(meeting_id, {
+            'whiteboard_id': f"wb_{meeting_id}",
+            'meeting_id': meeting_id,
+            'content': {'strokes': []},
+            'version': 1,
+            'last_modified': datetime.utcnow(),
+            'last_modified_by': user_id,
+        })
+        strokes = state['content'].setdefault('strokes', [])
+
+        if action_type == 'draw':
+            strokes.append({**data, 'user_id': user_id})
+        elif action_type == 'erase':
+            stroke_id = data.get('stroke_id', data.get('id'))
+            if stroke_id is not None:
+                state['content']['strokes'] = [
+                    s for s in strokes if s.get('id') != stroke_id and s.get('stroke_id') != stroke_id
+                ]
+        elif action_type == 'clear':
+            state['content']['strokes'] = []
+        elif action_type == 'undo':
+            if strokes:
+                strokes.pop()
+        elif action_type == 'redo':
+            pass  # 暂无重做栈，返回当前状态
+        else:
+            raise ValidationError(f"不支持的白板操作类型: {action_type}")
+
+        state['version'] += 1
+        state['last_modified'] = datetime.utcnow()
+        state['last_modified_by'] = user_id
+        # 路由层用原始 JSONResponse 返回本字典，datetime 无法序列化会
+        # 500；这里把时间转成 ISO 字符串（GET 端走 WhiteboardState
+        # 模型解析，不受影响）。
+        result = dict(state)
+        result['last_modified'] = state['last_modified'].isoformat()
+        return result
+
     async def get_whiteboard_state(self, meeting_id: int,
                                    user_id: int) -> Dict[str, Any]:
         """
-        获取会议白板状态（当前实现：无持久化存储，返回空白状态）。
+        获取会议白板状态（读模块级内存；无操作记录时返回空白状态）。
 
         会议不存在时抛出 NotFoundError（由路由层转为 404）；
         无权限时抛出 PermissionError。
@@ -457,6 +602,9 @@ class MeetingService:
         # 校验会议存在及访问权限
         await self.get_meeting_by_id(meeting_id, user_id)
 
+        state = _WHITEBOARD_STATES.get(meeting_id)
+        if state:
+            return dict(state)
         return {
             'whiteboard_id': f"wb_{meeting_id}",
             'meeting_id': meeting_id,

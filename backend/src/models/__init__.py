@@ -124,6 +124,7 @@ from .requirement_permission import (
 )
 from .meeting import (
     Meeting, MeetingParticipant, MeetingRecording, MeetingMinutes,
+    MeetingSummary,
     MeetingChat, MeetingFile, MeetingAnalytics, MeetingTemplate,
     MeetingType, MeetingStatus, ParticipantRole, InvitationStatus,
     AttendanceStatus, RecordingType, RecordingStatus, FileFormat,
@@ -331,6 +332,7 @@ __all__ = [
     "MeetingParticipant", 
     "MeetingRecording",
     "MeetingMinutes",
+    "MeetingSummary",
     "MeetingChat",
     "MeetingFile",
     "MeetingAnalytics",

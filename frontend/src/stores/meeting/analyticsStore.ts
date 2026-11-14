@@ -1,89 +1,50 @@
 import { create } from 'zustand'
 import { devtools } from 'zustand/middleware'
+import {
+  analyticsService,
+  apiErrorMessage,
+  isNotFoundError,
+  triggerBlobDownload,
+  type ActionItem,
+  type MeetingAnalyticsResponse,
+  type MeetingMinutesResponse,
+  type MeetingSummaryResponse,
+  type ParticipationMetric,
+} from '@/services/meeting/analyticsService'
 
-export interface MeetingEffectivenessData {
-  meetingId: number
-  overallScore: number
-  participationMetrics: {
-    averageParticipation: number
-    speakingDistribution: Array<{
-      userId: number
-      userName: string
-      speakingTime: number
-      percentage: number
-    }>
-    interactionCount: number
-    engagementScore: number
-  }
-  agendaCompletion: {
-    totalItems: number
-    completedItems: number
-    completionRate: number
-    timeUtilization: number
-  }
-  decisionEfficiency: {
-    decisionsCount: number
-    averageDecisionTime: number
-    consensusRate: number
-  }
-  timeUtilization: {
-    scheduledDuration: number
-    actualDuration: number
-    productiveTime: number
-    utilizationRate: number
-  }
-  sentimentAnalysis: {
-    overallSentiment: 'positive' | 'neutral' | 'negative'
-    sentimentScore: number
-    emotionalTrends: Array<{ timestamp: string; sentiment: number }>
-  }
-  improvementSuggestions: string[]
-}
+/**
+ * 会议分析状态层：只存后端接口直接返回的数据，不编造任何数值。
+ *
+ * 数据来源：
+ * - 效果分析 / 参与度：GET /api/v1/meetings/{id}/analytics（参与度复用同一返回体的
+ *   participation_metrics 列表；接口未返回逐人数据时为空列表，页面展示“暂无数据”）。
+ * - 摘要：GET /api/v1/meetings/{id}/summary；未生成时后端返回 generation_method='pending'
+ *   的空摘要，store 记为 null（未生成），页面展示空态 + 生成入口。
+ * - 报告：POST /api/v1/meetings/{id}/analytics/reports/generate，进度按真实请求阶段推进，
+ *   不再用 setTimeout 假进度；端点未就绪（404）时进入错误态。
+ *
+ * 注意：后端当前返回的部分指标（如情感评分）仍为固定值，属后端待改造项；
+ * 前端只原样展示接口返回值，不在本地改写或“修正”数字。
+ */
+
+/** 效果分析 = 后端 MeetingAnalyticsResponse 原样 */
+export type MeetingEffectivenessData = MeetingAnalyticsResponse
 
 export interface ParticipationAnalysisData {
   meetingId: number
-  participants: Array<{
-    userId: number
-    userName: string
-    joinTime: string
-    leaveTime?: string
-    totalDuration: number
-    speakingTime: number
-    interactionCount: number
-    attentionScore: number
-    contributionScore: number
-  }>
-  overallMetrics: {
-    averageAttendance: number
-    averageSpeakingTime: number
-    totalInteractions: number
-    engagementTrend: Array<{ timeSlot: string; engagementLevel: number }>
-  }
+  participants: ParticipationMetric[]
+  /** 接口是否返回了逐人参与数据 */
+  hasData: boolean
+  averageEngagement: number | null
+  averageSpeakingTime: number | null
+  totalInteractions: number | null
 }
 
-export interface MeetingSummaryData {
-  meetingId: number
-  title: string
-  overview: string
-  keyPoints: string[]
-  decisions: Array<{
-    id: string
-    description: string
-    decisionMaker: string
-    timestamp: string
-    impact: 'high' | 'medium' | 'low'
-  }>
-  actionItems: Array<{
-    id: string
-    task: string
-    assignee: string
-    deadline: string
-    priority: 'high' | 'medium' | 'low'
-    status: 'pending' | 'in_progress' | 'completed'
-  }>
-  nextSteps: string[]
-  generatedAt: string
-}
+/** 会议摘要 = 后端 MeetingSummaryResponse 原样 */
+export type MeetingSummaryData = MeetingSummaryResponse
+
+export type MeetingMinutesData = MeetingMinutesResponse
+export type MeetingActionItemData = ActionItem
 
 export interface ChartConfig {
   type: 'bar' | 'pie' | 'line' | 'heatmap' | 'area'
@@ -98,12 +59,15 @@ export interface ReportGenerationStatus {
   progress: number
   currentStep: string
   error?: string
+  /** 生成完成后可下载的地址（后端返回的 download_url，或本地 Blob URL） */
+  downloadUrl?: string | null
+  fileName?: string | null
 }
 
 interface AnalyticsState {
   effectivenessData: Record<number, MeetingEffectivenessData>
   participationData: Record<number, ParticipationAnalysisData>
-  summaryData: Record<number, MeetingSummaryData>
+  summaryData: Record<number, MeetingSummaryData | null>
   selectedMeetingId: number | null
   activeTab: 'overview' | 'participation' | 'summary' | 'comparison'
   chartConfigs: Record<string, ChartConfig>
@@ -118,88 +82,53 @@ interface AnalyticsState {
   fetchEffectivenessData: (meetingId: number) => Promise<void>
   fetchParticipationData: (meetingId: number) => Promise<void>
   fetchSummaryData: (meetingId: number) => Promise<void>
+  generateSummary: (meetingId: number) => Promise<boolean>
   fetchAllAnalyticsData: (meetingId: number) => Promise<void>
   updateChartConfig: (chartId: string, config: ChartConfig) => void
   resetChartConfigs: () => void
-  generateReport: (meetingId: number, reportType: string, options?: any) => Promise<void>
+  generateReport: (meetingId: number, reportType: string, options?: any) => Promise<boolean>
   resetReportGeneration: () => void
   updateEffectivenessData: (meetingId: number, data: MeetingEffectivenessData) => void
   updateParticipationData: (meetingId: number, data: ParticipationAnalysisData) => void
-  updateSummaryData: (meetingId: number, data: MeetingSummaryData) => void
+  updateSummaryData: (meetingId: number, data: MeetingSummaryData | null) => void
   clearAnalyticsData: () => void
   clearMeetingData: (meetingId: number) => void
   setError: (error: string | null) => void
 }
 
-const createEffectivenessData = (meetingId: number): MeetingEffectivenessData => ({
-  meetingId,
-  overallScore: 85,
-  participationMetrics: {
-    averageParticipation: 78,
-    speakingDistribution: [
-      { userId: 1, userName: '张三', speakingTime: 15, percentage: 25 },
-      { userId: 2, userName: '李四', speakingTime: 12, percentage: 20 },
-      { userId: 3, userName: '王五', speakingTime: 18, percentage: 30 },
-      { userId: 4, userName: '赵六', speakingTime: 15, percentage: 25 },
-    ],
-    interactionCount: 45,
-    engagementScore: 82,
-  },
-  agendaCompletion: { totalItems: 5, completedItems: 4, completionRate: 80, timeUtilization: 85 },
-  decisionEfficiency: { decisionsCount: 3, averageDecisionTime: 8, consensusRate: 90 },
-  timeUtilization: { scheduledDuration: 60, actualDuration: 65, productiveTime: 55, utilizationRate: 85 },
-  sentimentAnalysis: {
-    overallSentiment: 'positive',
-    sentimentScore: 0.7,
-    emotionalTrends: [
-      { timestamp: '09:00', sentiment: 0.6 },
-      { timestamp: '09:15', sentiment: 0.8 },
-      { timestamp: '09:30', sentiment: 0.7 },
-      { timestamp: '09:45', sentiment: 0.9 },
-    ],
-  },
-  improvementSuggestions: ['建议控制会议时长，避免超时', '鼓励更多参与者发言', '提前准备议程材料'],
-})
+const deriveParticipation = (
+  meetingId: number,
+  analytics: MeetingEffectivenessData,
+): ParticipationAnalysisData => {
+  const participants = Array.isArray(analytics.participation_metrics)
+    ? analytics.participation_metrics
+    : []
+  const average = (values: number[]): number | null =>
+    values.length > 0 ? values.reduce((sum, value) => sum + value, 0) / values.length : null
+  return {
+    meetingId,
+    participants,
+    hasData: participants.length > 0,
+    averageEngagement: average(participants.map((p) => p.engagement_score)),
+    averageSpeakingTime: average(participants.map((p) => p.speaking_time_minutes)),
+    totalInteractions:
+      participants.length > 0
+        ? participants.reduce((sum, p) => sum + (p.interaction_count || 0), 0)
+        : null,
+  }
+}
 
-const createParticipationData = (meetingId: number): ParticipationAnalysisData => ({
-  meetingId,
-  participants: [
-    { userId: 1, userName: '张三', joinTime: '09:00:00', leaveTime: '10:05:00', totalDuration: 65, speakingTime: 15, interactionCount: 12, attentionScore: 85, contributionScore: 88 },
-    { userId: 2, userName: '李四', joinTime: '09:02:00', leaveTime: '10:05:00', totalDuration: 63, speakingTime: 12, interactionCount: 8, attentionScore: 78, contributionScore: 75 },
-    { userId: 3, userName: '王五', joinTime: '09:00:00', leaveTime: '10:05:00', totalDuration: 65, speakingTime: 18, interactionCount: 15, attentionScore: 92, contributionScore: 95 },
-    { userId: 4, userName: '赵六', joinTime: '09:05:00', leaveTime: '10:00:00', totalDuration: 55, speakingTime: 15, interactionCount: 10, attentionScore: 80, contributionScore: 82 },
-  ],
-  overallMetrics: {
-    averageAttendance: 95,
-    averageSpeakingTime: 15,
-    totalInteractions: 45,
-    engagementTrend: [
-      { timeSlot: '09:00-09:15', engagementLevel: 75 },
-      { timeSlot: '09:15-09:30', engagementLevel: 85 },
-      { timeSlot: '09:30-09:45', engagementLevel: 90 },
-      { timeSlot: '09:45-10:00', engagementLevel: 88 },
-    ],
-  },
-})
+/** 未生成摘要的判定：后端以 generation_method='pending' + 空 overview 表示尚未生成。 */
+const isSummaryGenerated = (summary: MeetingSummaryResponse | null | undefined): boolean => {
+  if (!summary) return false
+  if (summary.generation_method === 'pending') return false
+  return Boolean(summary.overview && summary.overview.trim().length > 0)
+}
 
-const createSummaryData = (meetingId: number): MeetingSummaryData => ({
-  meetingId,
-  title: '项目需求评审会议',
-  overview: '本次会议讨论了项目需求规格，明确核心功能模块并分配后续任务。',
-  keyPoints: ['确认用户管理模块核心功能', '讨论数据库设计方案', '评估技术风险和解决方案', '制定开发时间计划'],
-  decisions: [
-    { id: 'decision-1', description: '采用 React + TypeScript 技术栈', decisionMaker: '张三', timestamp: '09:15:00', impact: 'high' },
-    { id: 'decision-2', description: '使用 MySQL 作为主数据库', decisionMaker: '李四', timestamp: '09:30:00', impact: 'medium' },
-    { id: 'decision-3', description: '采用敏捷开发模式', decisionMaker: '王五', timestamp: '09:45:00', impact: 'high' },
-  ],
-  actionItems: [
-    { id: 'action-1', task: '完成数据库设计文档', assignee: '张三', deadline: '2026-06-08', priority: 'high', status: 'pending' },
-    { id: 'action-2', task: '搭建开发环境', assignee: '李四', deadline: '2026-06-05', priority: 'medium', status: 'in_progress' },
-    { id: 'action-3', task: '准备 UI 设计稿', assignee: '王五', deadline: '2026-06-10', priority: 'medium', status: 'pending' },
-  ],
-  nextSteps: ['下周进行技术方案评审', '开始详细设计阶段', '准备开发环境和工具'],
-  generatedAt: new Date().toISOString(),
-})
+const formatNumber = (value: number | null | undefined): string =>
+  value === null || value === undefined || Number.isNaN(value) ? '暂无数据' : value.toFixed(2)
+
+export { formatNumber }
 
 export const useAnalyticsStore = create<AnalyticsState>()(
   devtools(
@@ -223,36 +152,91 @@ export const useAnalyticsStore = create<AnalyticsState>()(
       fetchEffectivenessData: async (meetingId) => {
         set({ isLoadingEffectiveness: true, error: null })
         try {
+          const data = await analyticsService.getAnalytics(meetingId)
           set((state) => ({
-            effectivenessData: { ...state.effectivenessData, [meetingId]: createEffectivenessData(meetingId) },
+            effectivenessData: { ...state.effectivenessData, [meetingId]: data },
+            participationData: {
+              ...state.participationData,
+              [meetingId]: deriveParticipation(meetingId, data),
+            },
             isLoadingEffectiveness: false,
+            isLoadingParticipation: false,
           }))
         } catch (error) {
-          set({ error: error instanceof Error ? error.message : '获取效果分析数据失败', isLoadingEffectiveness: false })
+          set({
+            error: apiErrorMessage(error, '获取效果分析数据失败'),
+            isLoadingEffectiveness: false,
+          })
         }
       },
 
       fetchParticipationData: async (meetingId) => {
         set({ isLoadingParticipation: true, error: null })
         try {
+          const cached = get().effectivenessData[meetingId]
+          const data = cached ?? (await analyticsService.getAnalytics(meetingId))
           set((state) => ({
-            participationData: { ...state.participationData, [meetingId]: createParticipationData(meetingId) },
+            effectivenessData: { ...state.effectivenessData, [meetingId]: data },
+            participationData: {
+              ...state.participationData,
+              [meetingId]: deriveParticipation(meetingId, data),
+            },
             isLoadingParticipation: false,
+            isLoadingEffectiveness: false,
           }))
         } catch (error) {
-          set({ error: error instanceof Error ? error.message : '获取参与度分析数据失败', isLoadingParticipation: false })
+          set({
+            error: apiErrorMessage(error, '获取参与度分析数据失败'),
+            isLoadingParticipation: false,
+          })
         }
       },
 
       fetchSummaryData: async (meetingId) => {
         set({ isLoadingSummary: true, error: null })
         try {
+          const data = await analyticsService.getSummary(meetingId)
           set((state) => ({
-            summaryData: { ...state.summaryData, [meetingId]: createSummaryData(meetingId) },
+            summaryData: {
+              ...state.summaryData,
+              [meetingId]: isSummaryGenerated(data) ? data : null,
+            },
             isLoadingSummary: false,
           }))
         } catch (error) {
-          set({ error: error instanceof Error ? error.message : '获取会议摘要数据失败', isLoadingSummary: false })
+          if (isNotFoundError(error)) {
+            // 摘要尚未生成：不是错误，是空态。
+            set((state) => ({
+              summaryData: { ...state.summaryData, [meetingId]: null },
+              isLoadingSummary: false,
+            }))
+          } else {
+            set({
+              error: apiErrorMessage(error, '获取会议摘要数据失败'),
+              isLoadingSummary: false,
+            })
+          }
+        }
+      },
+
+      generateSummary: async (meetingId) => {
+        set({ isLoadingSummary: true, error: null })
+        try {
+          const data = await analyticsService.generateSummary(meetingId)
+          set((state) => ({
+            summaryData: {
+              ...state.summaryData,
+              [meetingId]: isSummaryGenerated(data) ? data : null,
+            },
+            isLoadingSummary: false,
+          }))
+          return isSummaryGenerated(data)
+        } catch (error) {
+          set({
+            error: apiErrorMessage(error, '生成会议摘要失败'),
+            isLoadingSummary: false,
+          })
+          return false
         }
       },
 
@@ -261,7 +245,6 @@ export const useAnalyticsStore = create<AnalyticsState>()(
         try {
           await Promise.all([
             get().fetchEffectivenessData(meetingId),
-            get().fetchParticipationData(meetingId),
             get().fetchSummaryData(meetingId),
           ])
         } finally {
@@ -273,25 +256,66 @@ export const useAnalyticsStore = create<AnalyticsState>()(
         set((state) => ({ chartConfigs: { ...state.chartConfigs, [chartId]: config } })),
       resetChartConfigs: () => set({ chartConfigs: {} }),
 
-      generateReport: async (_meetingId, _reportType, _options = {}) => {
-        const steps = ['准备生成报告...', '收集会议数据...', '分析参与度指标...', '生成效果评估...', '导出报告文件...']
-        set({ reportGeneration: { isGenerating: true, progress: 0, currentStep: steps[0] } })
-
-        for (let index = 0; index < steps.length; index += 1) {
+      generateReport: async (meetingId, reportType, options = {}) => {
+        const format: 'html' | 'markdown' =
+          reportType === 'html' || options?.format === 'html' ? 'html' : 'markdown'
+        const fileName =
+          options?.fileName ?? `meeting-${meetingId}-report.${format === 'html' ? 'html' : 'md'}`
+        set({
+          reportGeneration: {
+            isGenerating: true,
+            progress: 10,
+            currentStep: '正在请求后端生成报告…',
+            error: undefined,
+            downloadUrl: null,
+            fileName,
+          },
+        })
+        try {
+          const result = await analyticsService.generateReport(meetingId, format)
           set((state) => ({
-            reportGeneration: {
-              ...state.reportGeneration,
-              progress: Math.round(((index + 1) / steps.length) * 100),
-              currentStep: steps[index],
-            },
+            reportGeneration: { ...state.reportGeneration, progress: 60, currentStep: '后端已返回，正在准备下载…' },
           }))
-          await new Promise((resolve) => setTimeout(resolve, 200))
-        }
 
-        set({ reportGeneration: { isGenerating: false, progress: 100, currentStep: '报告生成完成' } })
+          let downloadUrl: string | null = result.downloadUrl ?? null
+          if (!downloadUrl && result.content) {
+            const mime = format === 'html' ? 'text/html;charset=utf-8' : 'text/markdown;charset=utf-8'
+            downloadUrl = triggerBlobDownload(new Blob([result.content], { type: mime }), fileName)
+          } else if (!downloadUrl && result.reportId !== null && result.reportId !== undefined) {
+            const blob = await analyticsService.downloadReport(meetingId, format)
+            downloadUrl = triggerBlobDownload(blob, result.fileName ?? fileName)
+          }
+
+          set({
+            reportGeneration: {
+              isGenerating: false,
+              progress: 100,
+              currentStep: downloadUrl ? '报告生成完成，可下载' : '报告生成完成',
+              downloadUrl,
+              fileName: result.fileName ?? fileName,
+            },
+          })
+          return true
+        } catch (error) {
+          const message = isNotFoundError(error)
+            ? '报告生成接口尚未就绪（后端未提供该端点，404），请等待后端组提供端点后重试。'
+            : apiErrorMessage(error, '报告生成失败')
+          set({
+            reportGeneration: {
+              isGenerating: false,
+              progress: 0,
+              currentStep: '报告生成失败',
+              error: message,
+              downloadUrl: null,
+              fileName,
+            },
+          })
+          return false
+        }
       },
 
-      resetReportGeneration: () => set({ reportGeneration: { isGenerating: false, progress: 0, currentStep: '' } }),
+      resetReportGeneration: () =>
+        set({ reportGeneration: { isGenerating: false, progress: 0, currentStep: '' } }),
       updateEffectivenessData: (meetingId, data) =>
         set((state) => ({ effectivenessData: { ...state.effectivenessData, [meetingId]: data } })),
       updateParticipationData: (meetingId, data) =>

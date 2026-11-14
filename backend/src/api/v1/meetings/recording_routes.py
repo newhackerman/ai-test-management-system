@@ -12,19 +12,22 @@
 import logging
 from typing import Optional
 from datetime import datetime
+from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Path, status
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
+from fastapi.security import HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ....core.database import get_async_session
 from ....core.exceptions import ValidationError, NotFoundError, PermissionError
 from ....services.recording_service import RecordingService, get_recording_service
 from ....services.meeting_service import MeetingService, get_meeting_service
-from ....api.auth import get_current_user
+from ....api.auth import get_current_user, security
 from ....models.user import User
 from ....schemas.recording_schemas import (
     StartRecordingRequest, StopRecordingRequest, RecordingQueryParams,
+    UpdateRecordingRequest,
     RecordingResponse, RecordingListResponse, StartRecordingResponse,
     StopRecordingResponse, PauseRecordingResponse, DeleteRecordingResponse, PlaybackInfoResponse,
     RecordingShareRequest, RecordingShareResponse, RecordingStatistics,
@@ -34,6 +37,20 @@ from ....schemas.recording_schemas import (
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+
+async def _get_optional_user(
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
+    session: AsyncSession = Depends(get_async_session),
+) -> Optional[User]:
+    """下载端点专用：有 Bearer 头就验签，无头返回 None（再由
+    ?token= 播放令牌鉴权，<video src> 没法带 Authorization 头）。"""
+    if not credentials:
+        return None
+    try:
+        return await get_current_user(credentials, session)
+    except HTTPException:
+        return None
 
 
 @router.post(
@@ -378,6 +395,104 @@ async def get_recordings(
 
 
 @router.get(
+    "/all",
+    response_model=RecordingListResponse,
+    summary="获取全局录制列表",
+    description="不限会议的全局录制列表（/meetings/recordings 页用）；筛选/分页与按会议列表一致"
+)
+async def get_all_recordings(
+    page: int = Query(1, ge=1, description="页码"),
+    page_size: int = Query(20, ge=1, le=100, description="每页数量"),
+    recording_type: Optional[RecordingTypeEnum] = Query(None, description="录制类型筛选"),
+    status_filter: Optional[RecordingStatusEnum] = Query(None, alias="status", description="录制状态筛选"),
+    file_format: Optional[FileFormatEnum] = Query(None, description="文件格式筛选"),
+    start_date: Optional[datetime] = Query(None, description="开始日期筛选"),
+    end_date: Optional[datetime] = Query(None, description="结束日期筛选"),
+    keyword: Optional[str] = Query(None, max_length=100, description="关键词搜索"),
+    sort_by: str = Query("start_time", description="排序字段"),
+    sort_order: str = Query("desc", pattern="^(asc|desc)$", description="排序方向"),
+    include_deleted: bool = Query(False, description="是否包含已删除"),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_session),
+    recording_service: RecordingService = Depends(get_recording_service)
+):
+    """全局录制列表：前端 recordingService.getAllRecordings 原调的
+    GET /api/v1/recordings 后端并不存在，最终路径定为这里
+    （挂在 meetings/recordings 下，与其余录制端点同一前缀）。
+    注意路径用 /all 而不用裸 /recordings：GET /api/v1/meetings/recordings
+    会被先注册的 GET /api/v1/meetings/{meeting_id}（meeting_id: int）
+    截获成 422；/all 须注册在 GET /{recording_id} 之前（与 /statistics
+    同理），否则又会被当成 recording_id。"""
+    try:
+        query_params = RecordingQueryParams(
+            page=page, page_size=page_size, recording_type=recording_type,
+            status=status_filter, file_format=file_format,
+            start_date=start_date, end_date=end_date, keyword=keyword,
+            sort_by=sort_by, sort_order=sort_order, include_deleted=include_deleted
+        )
+        recordings, total, statistics = await recording_service.get_all_recordings(
+            query_params, current_user.id
+        )
+        total_pages = (total + page_size - 1) // page_size
+        return RecordingListResponse(
+            recordings=[RecordingResponse.from_orm(r) for r in recordings],
+            total=total, page=page, page_size=page_size, total_pages=total_pages,
+            total_size_mb=statistics.get('total_size_mb', 0),
+            total_duration_minutes=statistics.get('total_duration_minutes', 0)
+        )
+    except PermissionError as e:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"获取全局录制列表失败: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="获取全局录制列表失败"
+        )
+
+
+@router.get(
+    "/statistics",
+    response_model=RecordingStatistics,
+    summary="获取录制统计",
+    description="获取录制的统计信息"
+)
+async def get_recording_statistics(
+    meeting_id: Optional[int] = Query(None, description="会议ID筛选"),
+    start_date: Optional[datetime] = Query(None, description="开始日期"),
+    end_date: Optional[datetime] = Query(None, description="结束日期"),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_session),
+    recording_service: RecordingService = Depends(get_recording_service)
+):
+    """注意：本路由必须注册在 GET /{recording_id} 之前，否则
+    FastAPI 按注册顺序把 "statistics" 当 recording_id 匹配，int
+    校验失败 → 422，统计端点实际不可达（此前就在文件末尾）。"""
+    try:
+        logger.info(f"用户 {current_user.id} 获取录制统计")
+        statistics = await recording_service.get_recording_statistics(
+            meeting_id=meeting_id,
+            start_date=start_date,
+            end_date=end_date,
+            user_id=current_user.id
+        )
+        return RecordingStatistics(**statistics)
+    except PermissionError as e:
+        logger.warning(f"获取录制统计权限不足: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=str(e)
+        )
+    except Exception as e:
+        logger.error(f"获取录制统计失败: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="获取录制统计失败"
+        )
+
+
+@router.get(
     "/{recording_id}",
     response_model=RecordingResponse,
     summary="获取录制详情",
@@ -432,6 +547,54 @@ async def get_recording(
         )
 
 
+@router.put(
+    "/{recording_id}",
+    response_model=RecordingResponse,
+    summary="更新录制",
+    description="更新录制信息：改名 / 改公开 / 改访问密码（无 description 列，见 schemas）"
+)
+async def update_recording(
+    recording_id: int = Path(..., description="录制ID"),
+    request: UpdateRecordingRequest = ...,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_session),
+    recording_service: RecordingService = Depends(get_recording_service)
+):
+    """更新录制：只有录制创建者或会议组织者可改。"""
+    try:
+        logger.info(f"用户 {current_user.id} 更新录制: {recording_id}")
+        recording = await recording_service.update_recording(
+            recording_id, request, current_user.id
+        )
+        return RecordingResponse.from_orm(recording)
+    except NotFoundError as e:
+        logger.warning(f"录制不存在: {recording_id}")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
+        )
+    except ValidationError as e:
+        logger.warning(f"更新录制验证失败: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except PermissionError as e:
+        logger.warning(f"更新录制权限不足: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=str(e)
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"更新录制失败: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="更新录制失败"
+        )
+
+
 @router.get(
     "/{recording_id}/playback",
     response_model=PlaybackInfoResponse,
@@ -453,20 +616,27 @@ async def get_playback_info(
     """
     try:
         logger.info(f"用户 {current_user.id} 获取播放信息: {recording_id}")
-        
+
         # 获取播放信息
         playback_info = await recording_service.get_recording_playback_info(recording_id, current_user.id)
-        
-        return PlaybackInfoResponse(
-            success=True,
-            message="获取播放信息成功",
-            data=playback_info
-        )
-        
+
+        # 服务返回的就是 PlaybackInfoResponse 的扁平结构
+        # （recording_id/playback_token/playback_config/expires_at）；
+        # 此前这里包了一层 {success, message, data}，与模型字段全对不上，
+        # 加上未捕获 ValidationError，GET /playback 恒 500。
+        return PlaybackInfoResponse(**playback_info)
+
     except NotFoundError as e:
         logger.warning(f"录制不存在: {recording_id}")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
+        )
+    except ValidationError as e:
+        # 未完成处理的录制：录制尚未完成处理 → 400，不是 500
+        logger.warning(f"获取播放信息验证失败: {recording_id}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e)
         )
     except PermissionError as e:
@@ -482,6 +652,62 @@ async def get_playback_info(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="获取播放信息失败"
+        )
+
+
+@router.get(
+    "/{recording_id}/download",
+    summary="下载录制文件",
+    description="下载录制文件：Bearer 鉴权或 ?token= 播放令牌（二选一）；复用 PR #5“生成文件 → 下载链接”的 FileResponse 套路"
+)
+async def download_recording_file(
+    recording_id: int = Path(..., description="录制ID"),
+    token: Optional[str] = Query(None, description="播放令牌（<video> src 用，见 GET /playback 返回的 video_url）"),
+    current_user: Optional[User] = Depends(_get_optional_user),
+    db: AsyncSession = Depends(get_async_session),
+    recording_service: RecordingService = Depends(get_recording_service)
+):
+    """下载录制文件。无文件（无头录制 FAILED / 文件未落盘）时 404，
+    不返回空文件；未鉴权时 403。"""
+    try:
+        user_id = current_user.id if current_user else None
+        file_path, filename, media_type = await recording_service.download_recording(
+            recording_id, user_id=user_id, token=token
+        )
+        safe_fallback = "".join(
+            ch if ch.isascii() and ch not in {'"', "\\", ";"} else "_"
+            for ch in filename
+        ) or "recording"
+        encoded = quote(filename, safe="")
+        return FileResponse(
+            path=file_path,
+            media_type=media_type,
+            headers={
+                "Content-Disposition": (
+                    f'attachment; filename="{safe_fallback}"; '
+                    f"filename*=UTF-8''{encoded}"
+                )
+            },
+        )
+    except NotFoundError as e:
+        logger.warning(f"下载录制失败（不存在/无文件）: {recording_id}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
+        )
+    except PermissionError as e:
+        logger.warning(f"下载录制权限不足: {recording_id}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=str(e)
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"下载录制失败: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="下载录制失败"
         )
 
 
@@ -608,54 +834,4 @@ async def share_recording(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="分享录制失败"
-        )
-
-
-@router.get(
-    "/statistics",
-    response_model=RecordingStatistics,
-    summary="获取录制统计",
-    description="获取录制的统计信息"
-)
-async def get_recording_statistics(
-    meeting_id: Optional[int] = Query(None, description="会议ID筛选"),
-    start_date: Optional[datetime] = Query(None, description="开始日期"),
-    end_date: Optional[datetime] = Query(None, description="结束日期"),
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_async_session),
-    recording_service: RecordingService = Depends(get_recording_service)
-):
-    """
-    获取录制统计
-    
-    - **meeting_id**: 会议ID筛选（可选）
-    - **start_date**: 开始日期（可选）
-    - **end_date**: 结束日期（可选）
-    
-    返回录制的统计信息，包括数量、大小、时长等
-    """
-    try:
-        logger.info(f"用户 {current_user.id} 获取录制统计")
-        
-        # 获取录制统计
-        statistics = await recording_service.get_recording_statistics(
-            meeting_id=meeting_id,
-            start_date=start_date,
-            end_date=end_date,
-            user_id=current_user.id
-        )
-        
-        return RecordingStatistics(**statistics)
-        
-    except PermissionError as e:
-        logger.warning(f"获取录制统计权限不足: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=str(e)
-        )
-    except Exception as e:
-        logger.error(f"获取录制统计失败: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="获取录制统计失败"
         )

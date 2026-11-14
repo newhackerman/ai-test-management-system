@@ -2,6 +2,7 @@ from fastapi import Depends, FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse
 import json
+import re
 from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
 import uvicorn
@@ -45,6 +46,10 @@ class AuthMiddleware(BaseHTTPMiddleware):
 
     # 文档路径默认公开；DOCS_REQUIRE_AUTH=true 时从白名单移除，匿名访问返回 401。
     _DOCS_PATHS = ("/api/v1/openapi.json", "/api/v1/docs", "/api/v1/redoc")
+    # 录制下载端点需匿名到达（<video src> 没法带 Authorization 请求头，
+    # 靠 ?token= 播放令牌鉴权；端点内自行校验 Bearer 或播放令牌，无凭据
+    # 时仍返回 403）。只放行精确的 /download 路径，不放行整个录制前缀。
+    _DOWNLOAD_PATH_RE = re.compile(r"^/api/v1/meetings/recordings/\d+/download$")
     WHITELIST_PREFIXES = (
         "/api/v1/auth/login",
         "/api/v1/auth/register",
@@ -67,6 +72,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
             or request.method == "OPTIONS"
             or (path == "/api/v1/openapi.json" and not settings.DOCS_REQUIRE_AUTH)
             or path.startswith(self.WHITELIST_PREFIXES)
+            or self._DOWNLOAD_PATH_RE.match(path)
         ):
             return await call_next(request)
 

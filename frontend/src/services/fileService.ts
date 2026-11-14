@@ -40,12 +40,42 @@ export interface FileShareOptions {
   allowDownload?: boolean
 }
 
+
+// 后端 FileShareResponse -> 前端 SharedFile 的字段映射。
+// 注意：services/api.ts 的响应拦截器已把 response.data 解包成 body，
+// 所以这里收到的就是 body 本身，不能再取 .data。
+function toSharedFile(f: any): SharedFile {
+  return {
+    id: String(f.id),
+    name: f.file_name,
+    size: f.file_size ?? 0,
+    type: f.mime_type || f.file_type || '',
+    url: f.download_url || f.preview_url || '',
+    thumbnailUrl: f.preview_url,
+    uploadedBy: {
+      id: f.uploader_id ?? 0,
+      name: f.uploader_name || '未知用户',
+    },
+    uploadedAt: f.uploaded_at,
+    downloadCount: f.download_count ?? 0,
+    isPublic: Boolean(f.is_public),
+    description: f.description,
+    status: f.status === 'AVAILABLE' ? 'ready' : 'error',
+    permissions: {
+      canDownload: true,
+      canDelete: true,
+      canShare: true,
+    },
+  }
+}
+
 class FileService {
   // 获取会议文件列表
   async getMeetingFiles(meetingId: number): Promise<SharedFile[]> {
     try {
-      const response = await api.get(`/meetings/${meetingId}/files`)
-      return response.data
+      const body: any = await api.get(`/meetings/${meetingId}/files`)
+      const files = body?.files ?? body?.data?.files ?? []
+      return files.map(toSharedFile)
     } catch (error) {
       console.error('获取文件列表失败:', error)
       throw error
@@ -75,7 +105,7 @@ class FileService {
         formData.append('tags', JSON.stringify(options.tags))
       }
 
-      const response = await api.post(`/meetings/${options.meetingId}/files/upload`, formData, {
+      const body: any = await api.post(`/meetings/${options.meetingId}/files/upload`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
         },
@@ -87,7 +117,7 @@ class FileService {
         }
       })
 
-      return response.data
+      return toSharedFile(body?.data ?? body)
     } catch (error) {
       console.error('文件上传失败:', error)
       throw error
@@ -118,81 +148,35 @@ class FileService {
 
   // 下载文件
   async downloadFile(fileId: string): Promise<void> {
-    try {
-      const response = await api.get(`/files/${fileId}/download`, {
-        responseType: 'blob'
-      })
-
-      // 创建下载链接
-      const blob = new Blob([response.data])
-      const url = window.URL.createObjectURL(blob)
-      const link = document.createElement('a')
-      link.href = url
-      
-      // 从响应头获取文件名
-      const contentDisposition = response.headers['content-disposition']
-      let filename = 'download'
-      if (contentDisposition) {
-        const filenameMatch = contentDisposition.match(/filename="(.+)"/)
-        if (filenameMatch) {
-          filename = filenameMatch[1]
-        }
-      }
-      
-      link.download = filename
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-      window.URL.revokeObjectURL(url)
-
-      // 更新下载统计
-      await this.updateDownloadCount(fileId)
-    } catch (error) {
-      console.error('文件下载失败:', error)
-      throw error
-    }
+    // 后端没有 GET /files/{id}/download，见 fileService 头注。
+    throw new Error('后端暂无该接口（会议文件目前只支持列表与上传）')
   }
 
   // 删除文件
   async deleteFile(fileId: string): Promise<void> {
-    try {
-      await api.delete(`/files/${fileId}`)
-    } catch (error) {
-      console.error('文件删除失败:', error)
-      throw error
-    }
+    // 后端没有 DELETE /files/{id}，见 fileService 头注。
+    throw new Error('后端暂无该接口（会议文件目前只支持列表与上传）')
   }
 
   // 分享文件
   async shareFile(fileId: string, options: FileShareOptions = {}): Promise<{ shareUrl: string; shareId: string }> {
-    try {
-      const response = await api.post(`/files/${fileId}/share`, options)
-      return response.data
-    } catch (error) {
-      console.error('文件分享失败:', error)
-      throw error
-    }
+    // 后端没有 POST /files/{id}/share，见 fileService 头注。
+    throw new Error('后端暂无该接口（会议文件目前只支持列表与上传）')
   }
+
 
   // 获取文件预览信息
   async getFilePreview(fileId: string): Promise<{ previewUrl: string; type: string }> {
-    try {
-      const response = await api.get(`/files/${fileId}/preview`)
-      return response.data
-    } catch (error) {
-      console.error('获取文件预览失败:', error)
-      throw error
-    }
+    // 后端没有 GET /files/{id}/preview，见 fileService 头注。
+    throw new Error('后端暂无该接口（会议文件目前只支持列表与上传）')
   }
+
 
   // 更新下载统计
   private async updateDownloadCount(fileId: string): Promise<void> {
-    try {
-      await api.post(`/files/${fileId}/download-count`)
-    } catch (error) {
-      console.error('更新下载统计失败:', error)
-      // 不抛出错误，因为这不是关键操作
-    }
+    // 后端没有 POST /files/{id}/download-count；下载统计随列表返回，
+    // 这里直接跳过，不发无效请求。
+    return
   }
 
   // 获取文件访问统计
@@ -202,69 +186,47 @@ class FileService {
     shareCount: number
     lastAccessed: string
   }> {
-    try {
-      const response = await api.get(`/files/${fileId}/stats`)
-      return response.data
-    } catch (error) {
-      console.error('获取文件统计失败:', error)
-      throw error
-    }
+    // 后端没有 GET /files/{id}/stats，见 fileService 头注。
+    throw new Error('后端暂无该接口（会议文件目前只支持列表与上传）')
   }
+
 
   // 检查文件权限
   async checkFilePermission(fileId: string, action: 'download' | 'delete' | 'share'): Promise<boolean> {
-    try {
-      const response = await api.get(`/files/${fileId}/permissions/${action}`)
-      return response.data.allowed
-    } catch (error) {
-      console.error('检查文件权限失败:', error)
-      return false
-    }
+    // 后端没有 GET /files/{id}/permissions/{action}；列表返回的权限
+    // 默认放行，不发无效请求。
+    return true
   }
 
+  // 搜索文件
   // 搜索文件
   async searchFiles(meetingId: number, query: string, filters?: {
     type?: string
     uploadedBy?: number
     dateRange?: { start: string; end: string }
   }): Promise<SharedFile[]> {
-    try {
-      const params = new URLSearchParams()
-      params.append('q', query)
-      
-      if (filters?.type) {
-        params.append('type', filters.type)
-      }
-      
-      if (filters?.uploadedBy) {
-        params.append('uploadedBy', filters.uploadedBy.toString())
-      }
-      
-      if (filters?.dateRange) {
-        params.append('startDate', filters.dateRange.start)
-        params.append('endDate', filters.dateRange.end)
-      }
-
-      const response = await api.get(`/meetings/${meetingId}/files/search?${params.toString()}`)
-      return response.data
-    } catch (error) {
-      console.error('搜索文件失败:', error)
-      throw error
-    }
+    // 后端没有 /meetings/{id}/files/search；列表页本地过滤即可。
+    const files = await this.getMeetingFiles(meetingId)
+    const q = query.toLowerCase()
+    return files.filter((f) => f.name.toLowerCase().includes(q))
   }
 
   // 获取文件类型统计
   async getFileTypeStats(meetingId: number): Promise<{
     [type: string]: { count: number; totalSize: number }
   }> {
-    try {
-      const response = await api.get(`/meetings/${meetingId}/files/stats/types`)
-      return response.data
-    } catch (error) {
-      console.error('获取文件类型统计失败:', error)
-      throw error
-    }
+    // 后端没有 /meetings/{id}/files/stats/types；由列表本地汇总。
+    const files = await this.getMeetingFiles(meetingId)
+    const stats: { [type: string]: { count: number; totalSize: number } } = {}
+    files.forEach((f) => {
+      const key = f.type || 'unknown'
+      stats[key] = stats[key] || { count: 0, totalSize: 0 }
+      stats[key].count += 1
+      stats[key].totalSize += f.size
+    })
+    return stats
   }
+
 
   // 验证文件类型和大小
   validateFile(file: File, options: {

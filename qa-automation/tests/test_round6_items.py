@@ -353,6 +353,13 @@ def live_recording(api):
     except Exception:
         pass
     try:
+        # 必须显式删录制：删会议不会级联删录制行，不删会留在列表里，
+        # 导致巡游 /meetings/recordings 的“暂无录制”marker 失败
+        # （2026-11-08 全量 395/396 的唯一失败就是这么来的）。
+        api.delete(f"{MEETINGS}/recordings/{recording_id}")
+    except Exception:
+        pass
+    try:
         api.delete(f"{MEETINGS}/{meeting_id}")
     except Exception:
         pass
