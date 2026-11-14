@@ -8,7 +8,7 @@
 """
 from datetime import datetime
 from typing import Optional, List, Dict, Any
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 from enum import Enum
 
 
@@ -54,6 +54,25 @@ class StopRecordingRequest(BaseModel):
     reason: Optional[str] = Field(None, description="停止原因", max_length=500)
 
 
+class UpdateRecordingRequest(BaseModel):
+    """更新录制请求模型
+
+    注意：MeetingRecording 模型没有 description 列（改描述无处落盘，
+    需模型加列 + 迁移，见报告），所以本接口只接受以下三项；
+    传 description 会被忽略——前端 updateRecording 已去掉该字段。
+    """
+    recording_name: Optional[str] = Field(None, description="录制名称", max_length=200)
+    is_public: Optional[bool] = Field(None, description="是否公开")
+    access_password: Optional[str] = Field(None, description="访问密码", max_length=100)
+
+    @field_validator('recording_name')
+    @classmethod
+    def validate_name(cls, v):
+        if v is not None and not v.strip():
+            raise ValueError('录制名称不能为空')
+        return v
+
+
 class RecordingResponse(BaseModel):
     """录制响应模型"""
     id: int = Field(..., description="录制ID")
@@ -88,21 +107,28 @@ class RecordingListResponse(BaseModel):
     page: int = Field(..., description="当前页码")
     page_size: int = Field(..., description="每页数量")
     total_pages: int = Field(..., description="总页数")
+    # 路由层一直传这两个字段，但旧模型没有声明，Pydantic 默认丢弃，
+    # 客户端永远收不到；补上声明后才真正返回。
+    total_size_mb: float = Field(0, description="本页录制总大小(MB)")
+    total_duration_minutes: float = Field(0, description="本页录制总时长(分钟)")
 
     class Config:
         from_attributes = True
 
 
 class PlaybackInfoResponse(BaseModel):
-    """播放信息响应模型"""
+    """播放信息响应模型
+
+    与 recording_service.get_recording_playback_info 的实际返回保持一致：
+    扁平结构 + playback_config 嵌套。旧模型是另一套扁平字段
+    （playback_url/duration_seconds/...）且路由还包了一层
+    {success, message, data}，两处对不上导致 GET /playback 恒 500。
+    video_url 是带播放 token 的下载地址，可直接给 <video src> 用；
+    file_path 是后端相对路径、没有静态文件服务，不可直接播放。
+    """
     recording_id: int = Field(..., description="录制ID")
-    playback_url: str = Field(..., description="播放URL")
     playback_token: str = Field(..., description="播放令牌")
-    duration_seconds: int = Field(..., description="时长(秒)")
-    resolution: Optional[str] = Field(None, description="分辨率")
-    file_format: str = Field(..., description="文件格式")
-    subtitles: Optional[List[Dict[str, Any]]] = Field(None, description="字幕信息")
-    chapters: Optional[List[Dict[str, Any]]] = Field(None, description="章节信息")
+    playback_config: Dict[str, Any] = Field(..., description="播放配置，含 video_url/duration/resolution/format/subtitles/chapters")
     expires_at: datetime = Field(..., description="令牌过期时间")
 
     class Config:
@@ -117,11 +143,15 @@ class RecordingShareRequest(BaseModel):
     allow_download: bool = Field(True, description="是否允许下载")
     custom_message: Optional[str] = Field(None, description="自定义分享消息", max_length=500)
 
-    @validator('access_password')
-    def validate_password(cls, v, values):
-        if not values.get('is_public') and not v:
+    @model_validator(mode='after')
+    def validate_password(self):
+        # 跨字段规则必须用 model_validator：字段级校验在 access_password
+        # 缺省（取默认 None）时默认不执行（validate_default=False），
+        # 此前两版（v1 @validator / v2 field_validator）都漏过了
+        # “非公开无密码”这种情况（探针：is_public=false 无密码 → 200）。
+        if not self.is_public and not self.access_password:
             raise ValueError('非公开分享必须设置访问密码')
-        return v
+        return self
 class RecordingQueryParams(BaseModel):
     """录制查询参数模型"""
     meeting_id: Optional[int] = Field(None, description="会议ID")
@@ -174,6 +204,8 @@ class RecordingShareResponse(BaseModel):
     """录制分享响应模型"""
     success: bool = Field(..., description="是否成功")
     share_url: Optional[str] = Field(None, description="分享链接")
+    share_code: Optional[str] = Field(None, description="分享码")
+    expires_at: Optional[datetime] = Field(None, description="分享过期时间")
     message: str = Field(..., description="响应消息")
 
 
