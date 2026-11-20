@@ -79,6 +79,7 @@ const MeetingControls: React.FC<MeetingControlsProps> = ({ meeting, className })
   const [showParticipantManager, setShowParticipantManager] = useState(false);
   const [showMeetingSettings, setShowMeetingSettings] = useState(false);
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
+  const [confirming, setConfirming] = useState(false);
 
   const currentUserId = useAuthStore((state) => state.user?.id) ?? 0;
   const safeParticipants = Array.isArray(participants) ? participants : [];
@@ -253,10 +254,12 @@ const MeetingControls: React.FC<MeetingControlsProps> = ({ meeting, className })
           <DropdownMenuContent align="end" className="w-48">
             <DropdownMenuLabel className="text-red-600 dark:text-red-400">紧急控制</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={handleEmergencyEnd} className="text-red-600 focus:text-red-600 dark:text-red-400">
-              <Square className="mr-2 h-4 w-4" />
-              紧急结束会议
-            </DropdownMenuItem>
+            {meeting?.status === 'IN_PROGRESS' && (
+              <DropdownMenuItem onClick={handleEmergencyEnd} className="text-red-600 focus:text-red-600 dark:text-red-400">
+                <Square className="mr-2 h-4 w-4" />
+                紧急结束会议
+              </DropdownMenuItem>
+            )}
             <DropdownMenuItem onClick={handleClearRoom} className="text-red-600 focus:text-red-600 dark:text-red-400">
               <UserX className="mr-2 h-4 w-4" />
               清空会议室
@@ -389,17 +392,24 @@ const MeetingControls: React.FC<MeetingControlsProps> = ({ meeting, className })
             <DialogDescription>{confirmAction?.message}</DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setConfirmAction(null)}>
+            <Button variant="outline" onClick={() => setConfirmAction(null)} disabled={confirming}>
               取消
             </Button>
             <Button
               variant="destructive"
+              disabled={confirming}
               onClick={async () => {
-                await confirmAction?.action();
-                setConfirmAction(null);
+                if (confirming) return;
+                setConfirming(true);
+                try {
+                  await confirmAction?.action();
+                } finally {
+                  setConfirming(false);
+                  setConfirmAction(null);
+                }
               }}
             >
-              确认
+              {confirming ? '处理中…' : '确认'}
             </Button>
           </DialogFooter>
         </DialogContent>

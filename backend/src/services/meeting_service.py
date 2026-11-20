@@ -1443,7 +1443,13 @@ class MeetingService:
         
         # 2. 验证权限
         await self._validate_end_meeting_permission(meeting, user_id)
-        
+
+        # 2b. 幂等：会议已结束时直接返回，不重复执行结束流程
+        # （重复提交/双击/多端同时结束都会走到这里；之前会抛
+        # "不能从状态 COMPLETED 转换到 COMPLETED"）
+        if meeting.status == MeetingStatus.COMPLETED:
+            return meeting
+
         # 3. 验证会议状态转换
         await self._validate_status_transition(meeting.status, MeetingStatus.COMPLETED)
         
