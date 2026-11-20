@@ -360,8 +360,12 @@ class RecordingService:
             
             # 2. 验证权限
             await self._check_stop_permission(recording, user_id)
-            
-            # 3. 检查录制状态
+
+            # 3. 检查录制状态：已暂停的录制先恢复再停，否则用户在界面上
+            # 永远停不掉它（列表/详情页的停止按钮与会议室的停止按钮都调这里）。
+            if recording.recording_status == RecordingStatus.PAUSED:
+                await self.resume_recording(recording_id, user_id)
+                recording = await self._get_recording(recording_id)
             if recording.recording_status != RecordingStatus.RECORDING:
                 raise ValidationError("录制未在进行中")
             
@@ -399,7 +403,47 @@ class RecordingService:
             logger.error(f"Failed to stop recording: {e}")
             await self.db.rollback()
             raise
-    
+
+    async def stop_all_recordings_for_meeting(self, meeting_id: int, user_id: int) -> int:
+        """会议结束/取消时停止该会议全部进行中（含已暂停）的录制。
+
+        用独立会话执行：调用方（结束会议）同一会话里还有未提交的
+        会议状态变更，复用它会让这里的 commit/rollback 误伤会议
+        本身（与 _start_post_processing 同一隔离原则）。
+
+        逐个停止，单个失败只记日志、不中断其余录制、不向调用方
+        抛错——录制收尾失败绝不能拖垮会议结束本身。
+        返回成功停止的录制数。
+        """
+        if AsyncSessionLocal is None:
+            logger.error("AsyncSessionLocal 未初始化，跳过会议结束自动停录制")
+            return 0
+        async with AsyncSessionLocal() as session:
+            service = RecordingService(session)
+            query = select(MeetingRecording).where(
+                and_(
+                    MeetingRecording.meeting_id == meeting_id,
+                    MeetingRecording.recording_status.in_(
+                        [RecordingStatus.RECORDING, RecordingStatus.PAUSED]
+                    ),
+                )
+            )
+            result = await session.execute(query)
+            recordings = result.scalars().all()
+            stopped = 0
+            for recording in recordings:
+                try:
+                    # stop_recording 只接受 RECORDING；已暂停的先恢复再停。
+                    if recording.recording_status == RecordingStatus.PAUSED:
+                        await service.resume_recording(recording.id, user_id)
+                    await service.stop_recording(recording.id, user_id)
+                    stopped += 1
+                except Exception as e:
+                    logger.error(
+                        f"Failed to stop recording {recording.id} on meeting end: {e}"
+                    )
+            return stopped
+
     async def pause_recording(self, recording_id: int, user_id: int) -> MeetingRecording:
         """暂停录制：仅 RECORDING -> PAUSED；与停止用同一权限（创建者/组织者/主持人）。
 

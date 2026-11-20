@@ -9,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import ProjectCreateModal from '@/components/projects/ProjectCreateModal'
 import { useProjects } from '@/hooks/useProjects'
 import type { CreateProjectRequest, Project, UpdateProjectRequest } from '@/types/project'
-import { getProjectPriorityLabel } from '@/utils/projectPriority'
+import { getProjectPriorityBadgeClass, getProjectPriorityLabel } from '@/utils/projectPriority'
 import { getProjectTypeLabel } from '@/utils/projectType'
 
 const statusLabels: Record<string, string> = {
@@ -172,7 +172,7 @@ const Projects: React.FC = () => {
                     </TableCell>
                     <TableCell><Badge>{statusLabels[project.status] || project.status}</Badge></TableCell>
                     <TableCell>{getProjectTypeLabel(project.project_type)}</TableCell>
-                    <TableCell>{getProjectPriorityLabel(project.priority)}</TableCell>
+                    <TableCell><Badge variant="outline" className={getProjectPriorityBadgeClass(project.priority)}>{getProjectPriorityLabel(project.priority)}</Badge></TableCell>
                     <TableCell>{project.progress_percentage || 0}%</TableCell>
                     <TableCell>{project.budget ? `¥${project.budget}` : '-'}</TableCell>
                     <TableCell>

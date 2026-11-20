@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { Eye, Loader2, Play, Plus, RefreshCw, Search, Trash2 } from 'lucide-react'
+import { Eye, Loader2, Play, Plus, RefreshCw, Search, Square, Trash2 } from 'lucide-react'
 import { message } from 'antd'
 
 import { Badge } from '@/components/ui/Badge'
@@ -113,6 +113,22 @@ export default function RecordingList() {
       await recordingService.deleteRecording(recording.id)
       message.success('录制已删除')
       await load()
+    } finally {
+      setOperatingId(null)
+    }
+  }
+
+  const handleStop = async (recording: MeetingRecording) => {
+    // 会议结束/离开会议室后，录制列表是唯一能停掉录制的地方
+    // （会议室的停止按钮依赖本页内存状态，刷新即丢）。
+    if (!window.confirm(`确定要停止录制“${recording.recording_name}”吗？`)) return
+    setOperatingId(recording.id)
+    try {
+      await recordingService.stopRecording(recording.id)
+      message.success('录制已停止')
+      await load()
+    } catch (err: any) {
+      message.error(err?.response?.data?.detail || '停止录制失败')
     } finally {
       setOperatingId(null)
     }
@@ -276,6 +292,18 @@ export default function RecordingList() {
                           {rec.recording_status === 'COMPLETED' && (
                             <Button type="button" variant="outline" size="sm" onClick={() => navigate(`/meetings/recordings/${rec.id}/player`)}>
                               <Play className="h-4 w-4" />
+                            </Button>
+                          )}
+                          {(rec.recording_status === 'RECORDING' || rec.recording_status === 'PAUSED') && (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              title="停止录制"
+                              disabled={operatingId === rec.id}
+                              onClick={() => handleStop(rec)}
+                            >
+                              <Square className="h-4 w-4" />
                             </Button>
                           )}
                           <Button

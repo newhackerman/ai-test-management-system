@@ -34,19 +34,19 @@ def _enum_name(value: Any) -> str:
     return value.name if hasattr(value, "name") else str(value)
 
 
-def _enum_value(value: Any) -> str:
-    return value.value if hasattr(value, "value") else str(value)
+def _int_or_none(value: Any) -> Optional[int]:
+    if value is None:
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
 
 
-def _status_value(result: AIOperationResult) -> str:
-    mapping = {
-        AIOperationResult.SUCCESS: "SUCCESS",
-        AIOperationResult.FAILURE: "FAILED",
-        AIOperationResult.PARTIAL_SUCCESS: "SUCCESS",
-        AIOperationResult.CANCELLED: "CANCELLED",
-        AIOperationResult.TIMEOUT: "TIMEOUT",
-    }
-    return mapping.get(result, "SUCCESS")
+def _str_or_none(value: Any) -> Optional[str]:
+    if value is None:
+        return None
+    return str(value)
 
 
 class AIOperationLogService:
@@ -66,54 +66,66 @@ class AIOperationLogService:
             logger.warning("Redis unavailable for AI operation logs: %s", exc)
 
     def _to_db_row(self, log_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Map a log dict onto the real ai_operation_logs columns.
+
+        The old version built a row for columns that do not exist in
+        the table (target_type/target_id/operation_data/request_data/
+        error_data/status/error_message/execution_time/cost/ip_address/
+        client_info), so every INSERT failed with MySQL 1054 and no AI
+        operation log was ever written. The model
+        (models/ai_operation_log.py) already has a real column for
+        each of those values; map onto them directly instead of
+        blobs. Enum columns store member names (see the live DDL),
+        hence _enum_name; JSON columns get a JSON string.
+        """
         result = log_data.get("result", AIOperationResult.SUCCESS)
-        operation_data = {
-            "priority": _enum_value(log_data.get("priority", AIOperationPriority.MEDIUM)),
-            "category": log_data.get("category"),
-            "subcategory": log_data.get("subcategory"),
-            "resource_type": log_data.get("resource_type"),
-            "resource_id": log_data.get("resource_id"),
-            "resource_name": log_data.get("resource_name"),
-            "confidence_score": log_data.get("confidence_score"),
-            "business_context": log_data.get("business_context"),
-            "metadata": log_data.get("operation_metadata") or log_data.get("metadata"),
-            "tags": log_data.get("tags"),
-            "correlation_id": log_data.get("correlation_id"),
-            "trace_id": log_data.get("trace_id"),
-        }
-        error_data = {
-            "error_code": log_data.get("error_code"),
-            "error_details": log_data.get("error_details"),
-            "result_message": log_data.get("result_message"),
-        }
-        user_id = log_data.get("user_id")
+        # created_at/updated_at 在模型里是 Python 侧 default=func.now()，
+        # 原生 SQL INSERT 不会触发它，而列是 NOT NULL 且无服务端默认值，
+        # 不显式传值会报 1364。ORM 写入不受影响（仍走模型默认值）。
+        now = datetime.utcnow()
         return {
-            "user_id": int(user_id) if user_id is not None else 0,
-            "session_id": int(log_data["session_id"]) if str(log_data.get("session_id") or "").isdigit() else None,
+            "created_at": now,
+            "updated_at": now,
+            "user_id": _int_or_none(log_data.get("user_id")),
+            "session_id": _str_or_none(log_data.get("session_id")),
             "operation_type": _enum_name(log_data.get("operation_type")),
             "operation_name": log_data.get("operation_name") or "ai_operation",
-            "target_type": log_data.get("resource_type"),
-            "target_id": int(log_data["resource_id"]) if str(log_data.get("resource_id") or "").isdigit() else None,
-            "operation_data": _json_value(operation_data),
-            "request_data": _json_value(
-                {
-                    "headers": log_data.get("request_headers"),
-                    "params": log_data.get("request_params"),
-                }
-            ),
-            "response_data": _json_value(log_data.get("response_data")),
-            "error_data": _json_value(error_data),
-            "status": _status_value(result),
+            "operation_description": log_data.get("operation_description"),
+            "result": _enum_name(result),
+            "result_message": log_data.get("result_message"),
             "error_code": log_data.get("error_code"),
-            "error_message": log_data.get("error_details") or log_data.get("result_message"),
-            "execution_time": log_data.get("processing_time"),
+            "error_details": log_data.get("error_details"),
+            "resource_type": log_data.get("resource_type"),
+            "resource_id": _str_or_none(log_data.get("resource_id")),
+            "resource_name": log_data.get("resource_name"),
             "ai_provider": log_data.get("ai_provider"),
             "ai_model": log_data.get("ai_model"),
-            "tokens_used": log_data.get("tokens_used") or 0,
-            "cost": log_data.get("cost_amount") or 0,
-            "ip_address": log_data.get("request_ip"),
+            "tokens_used": _int_or_none(log_data.get("tokens_used")),
+            "cost_amount": log_data.get("cost_amount"),
+            "processing_time": log_data.get("processing_time"),
+            "response_size": _int_or_none(log_data.get("response_size")),
+            "confidence_score": log_data.get("confidence_score"),
+            "request_ip": log_data.get("request_ip"),
             "user_agent": log_data.get("user_agent"),
-            "client_info": _json_value({"is_sensitive": log_data.get("is_sensitive", False)}),
+            "request_headers": _json_value(log_data.get("request_headers")),
+            "request_params": _json_value(log_data.get("request_params")),
+            "response_data": _json_value(log_data.get("response_data")),
+            "response_headers": _json_value(log_data.get("response_headers")),
+            "business_context": _json_value(log_data.get("business_context")),
+            "operation_metadata": _json_value(
+                log_data.get("operation_metadata") or log_data.get("metadata")
+            ),
+            "tags": _json_value(log_data.get("tags")),
+            "priority": _enum_name(log_data.get("priority", AIOperationPriority.MEDIUM)),
+            "category": log_data.get("category"),
+            "subcategory": log_data.get("subcategory"),
+            "is_sensitive": 1 if log_data.get("is_sensitive") else 0,
+            "requires_approval": 1 if log_data.get("requires_approval") else 0,
+            "approved_by": _int_or_none(log_data.get("approved_by")),
+            "approved_at": _str_or_none(log_data.get("approved_at")),
+            "parent_log_id": _int_or_none(log_data.get("parent_log_id")),
+            "correlation_id": log_data.get("correlation_id"),
+            "trace_id": log_data.get("trace_id"),
         }
 
     async def log_operation(
@@ -164,17 +176,31 @@ class AIOperationLogService:
             text(
                 """
                 INSERT INTO ai_operation_logs (
+                    created_at, updated_at,
                     user_id, session_id, operation_type, operation_name,
-                    target_type, target_id, operation_data, request_data,
-                    response_data, error_data, status, error_code, error_message,
-                    execution_time, ai_provider, ai_model, tokens_used, cost,
-                    ip_address, user_agent, client_info
+                    operation_description, result, result_message,
+                    error_code, error_details, resource_type, resource_id,
+                    resource_name, ai_provider, ai_model, tokens_used,
+                    cost_amount, processing_time, response_size,
+                    confidence_score, request_ip, user_agent,
+                    request_headers, request_params, response_data,
+                    response_headers, business_context, operation_metadata,
+                    tags, priority, category, subcategory, is_sensitive,
+                    requires_approval, approved_by, approved_at,
+                    parent_log_id, correlation_id, trace_id
                 ) VALUES (
+                    :created_at, :updated_at,
                     :user_id, :session_id, :operation_type, :operation_name,
-                    :target_type, :target_id, :operation_data, :request_data,
-                    :response_data, :error_data, :status, :error_code, :error_message,
-                    :execution_time, :ai_provider, :ai_model, :tokens_used, :cost,
-                    :ip_address, :user_agent, :client_info
+                    :operation_description, :result, :result_message,
+                    :error_code, :error_details, :resource_type, :resource_id,
+                    :resource_name, :ai_provider, :ai_model, :tokens_used,
+                    :cost_amount, :processing_time, :response_size,
+                    :confidence_score, :request_ip, :user_agent,
+                    :request_headers, :request_params, :response_data,
+                    :response_headers, :business_context, :operation_metadata,
+                    :tags, :priority, :category, :subcategory, :is_sensitive,
+                    :requires_approval, :approved_by, :approved_at,
+                    :parent_log_id, :correlation_id, :trace_id
                 )
                 """
             ),
@@ -303,18 +329,26 @@ class AIOperationLogService:
         )
 
     def _log_row_to_dict(self, row: Any) -> Dict[str, Any]:
+        # Rows now carry the model's real columns (result,
+        # processing_time, cost_amount, ...); the old blob columns
+        # (operation_data/error_data/status/...) never existed, and
+        # popping them raised KeyError for every row read.
         data = dict(row._mapping)
-        operation_data = json.loads(data.pop("operation_data") or "{}")
-        error_data = json.loads(data.pop("error_data") or "{}")
-        data["operation_type"] = data.get("operation_type")
-        data["result"] = data.pop("status", None)
-        data["processing_time"] = float(data.pop("execution_time") or 0)
-        data["cost_amount"] = float(data.pop("cost") or 0)
-        data["request_ip"] = data.pop("ip_address", None)
-        data["error_details"] = data.pop("error_message", None) or error_data.get("error_details")
-        data.update({key: value for key, value in operation_data.items() if value is not None})
-        if data.get("created_at"):
-            data["created_at"] = data["created_at"].isoformat()
+        # JSON 列：驱动可能返回 str 或已解析对象，统一成对象。
+        for key in (
+            "request_headers", "request_params", "response_data",
+            "response_headers", "business_context", "operation_metadata",
+            "tags",
+        ):
+            value = data.get(key)
+            if isinstance(value, str) and value:
+                try:
+                    data[key] = json.loads(value)
+                except json.JSONDecodeError:
+                    pass
+        for key in ("created_at", "updated_at"):
+            if data.get(key):
+                data[key] = data[key].isoformat()
         return data
 
     async def get_operation_logs(
@@ -339,8 +373,8 @@ class AIOperationLogService:
                 where.append("operation_type = :operation_type")
                 params["operation_type"] = _enum_name(operation_type)
             if result:
-                where.append("status = :status")
-                params["status"] = _status_value(result)
+                where.append("result = :result")
+                params["result"] = _enum_name(result)
             if start_date:
                 where.append("created_at >= :start_date")
                 params["start_date"] = start_date
@@ -350,8 +384,8 @@ class AIOperationLogService:
 
             where_sql = f"WHERE {' AND '.join(where)}" if where else ""
             allowed_order = {
-                "id", "user_id", "operation_type", "operation_name", "status",
-                "ai_provider", "ai_model", "tokens_used", "execution_time", "created_at",
+                "id", "user_id", "operation_type", "operation_name", "result",
+                "ai_provider", "ai_model", "tokens_used", "processing_time", "created_at",
             }
             order_column = order_by if order_by in allowed_order else "created_at"
             direction = "DESC" if order_desc else "ASC"
@@ -404,8 +438,8 @@ class AIOperationLogService:
                                 f"""
                                 SELECT COUNT(*) total_operations,
                                        COALESCE(SUM(tokens_used), 0) total_tokens,
-                                       COALESCE(SUM(cost), 0) total_cost,
-                                       COALESCE(AVG(execution_time), 0) avg_processing_time
+                                       COALESCE(SUM(cost_amount), 0) total_cost,
+                                       COALESCE(AVG(processing_time), 0) avg_processing_time
                                 FROM ai_operation_logs {where_sql}
                                 """
                             ),
@@ -416,7 +450,7 @@ class AIOperationLogService:
 
             group_expr = {
                 "operation_type": "operation_type",
-                "result": "status",
+                "result": "result",
                 "ai_provider": "ai_provider",
                 "date": "DATE(created_at)",
             }.get(group_by, "operation_type")
@@ -428,8 +462,8 @@ class AIOperationLogService:
                             SELECT {group_expr} group_key,
                                    COUNT(*) count,
                                    COALESCE(SUM(tokens_used), 0) total_tokens,
-                                   COALESCE(SUM(cost), 0) total_cost,
-                                   COALESCE(AVG(execution_time), 0) avg_processing_time
+                                   COALESCE(SUM(cost_amount), 0) total_cost,
+                                   COALESCE(AVG(processing_time), 0) avg_processing_time
                             FROM ai_operation_logs
                             {where_sql}
                             GROUP BY {group_expr}
