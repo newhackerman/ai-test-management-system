@@ -1019,7 +1019,15 @@ class MeetingService:
         
         # 7. 提交事务
         await self.db.commit()
-        
+
+        # 7b. 刷新返回对象：BaseModel 的 created_at/updated_at 是 SQL 表达式
+        # 默认值 (func.now())，flush/commit 后 Python 对象里仍是未加载状态；
+        # 路由层 ParticipantResponse.from_orm 读取 updated_at 会触发异步
+        # 上下文下的惰性加载 (MissingGreenlet) 导致 500，而记录其实已入库。
+        # refresh 是异步安全的，在返回前把服务端默认值载入对象。
+        for _participant in added_participants:
+            await self.db.refresh(_participant)
+
         # 8. 发送邀请通知
         await self._send_invitations_batch(meeting, added_participants)
         

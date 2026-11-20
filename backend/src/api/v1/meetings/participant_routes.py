@@ -69,7 +69,9 @@ async def add_participant(
         return AddParticipantResponse(
             success=True,
             message="参与者添加成功",
-            data=ParticipantResponse.from_orm(participant)
+            # 响应模型字段是 participant，不是 data：传 data 会被 pydantic
+            # 静默丢弃，客户端拿到 participant=null。
+            participant=ParticipantResponse.from_orm(participant)
         )
         
     except NotFoundError as e:
@@ -130,10 +132,14 @@ async def add_participants(
         logger.info(f"批量添加参与者完成: 成功 {len(participants)} 个, 失败 {len(failed_users)} 个")
         
         return AddParticipantsResponse(
+            # 响应模型字段是 added_count/failed_count/participants/errors：
+            # 旧代码传 data/message/failed_users，构造时即报 3 个必填字段
+            # 缺失，批量添加恒 500（此前被 MissingGreenlet 掩盖）。
             success=True,
-            message=f"批量添加参与者完成，成功 {len(participants)} 个，失败 {len(failed_users)} 个",
-            data=[ParticipantResponse.from_orm(p) for p in participants],
-            failed_users=failed_users
+            added_count=len(participants),
+            failed_count=len(failed_users),
+            participants=[ParticipantResponse.from_orm(p) for p in participants],
+            errors=[f"用户 {user_id} 添加失败" for user_id in failed_users]
         )
         
     except NotFoundError as e:
