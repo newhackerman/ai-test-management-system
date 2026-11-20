@@ -824,9 +824,9 @@ class MeetingService:
             # 更新参与者状态
             await self._update_participants_on_meeting_end(meeting_id)
             
-            # 停止所有录制
-            if meeting.is_recording_enabled:
-                await self._stop_all_recordings(meeting_id)
+            # 停止所有录制（不设 is_recording_enabled 门控：该标志不可靠，
+            # 录制完全可能在它为 False 时存在；方法内部无进行中录制时为空操作）
+            await self._stop_all_recordings(meeting_id, user_id)
         
         # 7. 发送取消通知
         await self._send_meeting_cancellation_notifications(meeting)
@@ -1472,9 +1472,9 @@ class MeetingService:
         # 5. 更新参与者出席状态和统计信息
         await self._update_participants_on_meeting_end(meeting_id)
         
-        # 6. 停止所有录制
-        if meeting.is_recording_enabled:
-            await self._stop_all_recordings(meeting_id)
+        # 6. 停止所有录制（不设 is_recording_enabled 门控：该标志不可靠，
+        # 录制完全可能在它为 False 时存在；方法内部无进行中录制时为空操作）
+        await self._stop_all_recordings(meeting_id, user_id)
         
         # 7. 计算会议统计数据
         meeting_stats = await self._calculate_meeting_statistics(meeting_id)
@@ -2033,11 +2033,6 @@ class MeetingService:
                 participant.total_duration_minutes = int(duration.total_seconds() / 60)
         
         await self.db.flush()
-    
-    async def _stop_all_recordings(self, meeting_id: int) -> None:
-        """停止所有录制"""
-        logger.info(f"Stopping all recordings for meeting {meeting_id}")
-        # 这里应该实现停止录制逻辑
     
     async def _calculate_meeting_statistics(self, meeting_id: int) -> Dict[str, Any]:
         """计算会议统计数据"""
@@ -3924,25 +3919,24 @@ class MeetingService:
         
         logger.info(f"Updated {len(participants)} participants on meeting end for meeting {meeting_id}")
     
-    async def _stop_all_recordings(self, meeting_id: int) -> None:
+    async def _stop_all_recordings(self, meeting_id: int, user_id: int) -> None:
         """
-        停止所有录制
-        
-        Args:
-            meeting_id: 会议ID
+        停止指定会议的全部进行中录制（结束/取消会议时调用）。
+
+        实现在 RecordingService.stop_all_recordings_for_meeting：独立
+        会话、逐个停止、单个失败只记日志。此前这里是空壳（只记一句
+        日志），结束会议后录制一直停留在 RECORDING 且界面无处可停。
+        收尾失败绝不能拖垮会议结束/取消本身，故这里也兜底捕获。
         """
         try:
-            # 这里应该调用录制服务来停止录制
-            # 由于录制服务可能还未实现，先记录日志
-            logger.info(f"Stopping all recordings for meeting {meeting_id}")
-            
-            # TODO: 集成录制服务
-            # from ..services.recording_service import RecordingService
-            # recording_service = RecordingService(self.db)
-            # await recording_service.stop_all_recordings_for_meeting(meeting_id)
-            
+            # 局部导入，避免服务层循环引用。
+            from .recording_service import RecordingService
+            recording_service = RecordingService(self.db)
+            stopped = await recording_service.stop_all_recordings_for_meeting(meeting_id, user_id)
+            if stopped:
+                logger.info(f"Stopped {stopped} recording(s) for meeting {meeting_id} on end/cancel")
         except Exception as e:
-            logger.error(f"Failed to stop recordings for meeting {meeting_id}: {str(e)}")
+            logger.error(f"Failed to stop recordings for meeting {meeting_id}: {e}")
     
     async def _calculate_meeting_statistics(self, meeting_id: int) -> Dict[str, Any]:
         """

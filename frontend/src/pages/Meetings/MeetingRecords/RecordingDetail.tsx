@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, Download, Loader2, Play, Share2, Trash2 } from 'lucide-react'
+import { ArrowLeft, Download, Loader2, Play, Share2, Square, Trash2 } from 'lucide-react'
 import { message } from 'antd'
 
 import { Badge } from '@/components/ui/Badge'
@@ -77,6 +77,7 @@ export default function RecordingDetail() {
   const [shareUrl, setShareUrl] = useState('')
   const [sharing, setSharing] = useState(false)
   const [downloading, setDownloading] = useState(false)
+  const [stopping, setStopping] = useState(false)
 
   const load = useCallback(async () => {
     if (!id) return
@@ -156,6 +157,23 @@ export default function RecordingDetail() {
     }
   }
 
+  const handleStop = async () => {
+    // 会议结束/离开会议室后，详情页是能停掉录制的地方之一
+    // （会议室的停止按钮依赖本页内存状态，刷新即丢）。
+    if (!recording) return
+    if (!window.confirm(`确定要停止录制“${recording.recording_name}”吗？`)) return
+    setStopping(true)
+    try {
+      await recordingService.stopRecording(id)
+      message.success('录制已停止')
+      await load()
+    } catch (err: any) {
+      message.error(err?.response?.data?.detail || '停止录制失败')
+    } finally {
+      setStopping(false)
+    }
+  }
+
   const handleDelete = async () => {
     if (!recording) return
     if (!window.confirm(`确定要删除录制“${recording.recording_name}”吗？`)) return
@@ -216,6 +234,11 @@ export default function RecordingDetail() {
           <Button type="button" variant="outline" onClick={handleDownload} disabled={downloading || !canPlay}>
             <Download className="mr-2 h-4 w-4" />下载
           </Button>
+          {(recording.recording_status === 'RECORDING' || recording.recording_status === 'PAUSED') && (
+            <Button type="button" variant="outline" onClick={handleStop} disabled={stopping}>
+              <Square className="mr-2 h-4 w-4" />{stopping ? '正在停止...' : '停止录制'}
+            </Button>
+          )}
           <Button type="button" variant="outline" onClick={handleDelete} disabled={recording.recording_status === 'RECORDING'}>
             <Trash2 className="mr-2 h-4 w-4" />删除
           </Button>
@@ -229,7 +252,7 @@ export default function RecordingDetail() {
       )}
       {recording.recording_status === 'RECORDING' && (
         <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
-          录制进行中。请在会议室或录制列表中停止录制；停止后如文件未生成，状态会变为失败并如实展示。
+          录制进行中。可在本页或录制列表中停止录制；停止后如文件未生成，状态会变为失败并如实展示。
         </div>
       )}
 
