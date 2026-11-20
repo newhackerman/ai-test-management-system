@@ -17,7 +17,7 @@ from fastapi.responses import JSONResponse, FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ....core.database import get_async_session
-from ....core.exceptions import ValidationError, NotFoundError, PermissionError
+from ....core.exceptions import ValidationError, NotFoundError, PermissionError, ConfigurationError
 from ....services.meeting_ai_service import MeetingAIService, get_meeting_ai_service
 from ....services.meeting_service import MeetingService, get_meeting_service
 from ....api.auth import get_current_user
@@ -93,6 +93,14 @@ async def generate_meeting_summary(
         logger.warning(f"生成会议摘要权限不足: {e}")
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
+            detail=str(e)
+        )
+    except ConfigurationError as e:
+        # 缺 OPENAI_API_KEY 等配置问题：服务不可用（503）并明示原因，
+        # 而不是含糊的 500。
+        logger.warning(f"生成会议摘要失败：AI 服务未配置: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=str(e)
         )
     except Exception as e:
@@ -227,6 +235,13 @@ async def generate_meeting_minutes(
         logger.warning(f"生成会议纪要权限不足: {e}")
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
+            detail=str(e)
+        )
+    except ConfigurationError as e:
+        # 纪要生成走同一条 LLM 路径，缺 key 同样返回 503 并明示原因。
+        logger.warning(f"生成会议纪要失败：AI 服务未配置: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=str(e)
         )
     except Exception as e:

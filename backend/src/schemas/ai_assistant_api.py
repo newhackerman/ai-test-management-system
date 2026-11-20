@@ -241,6 +241,11 @@ class WSMessageType(str, Enum):
     UNSUBSCRIBE = "unsubscribe"
     JOIN_ROOM = "join_room"
     LEAVE_ROOM = "leave_room"
+    # 会议通知与连接确认使用：缺失时 meeting_notification_service 的
+    # _send_websocket_notification 每次抛 AttributeError（通知全部失败且
+    # 无限重试），websocket_service 的 connect 也因此建连失败。
+    NOTIFICATION = "notification"
+    CONNECTION_STATUS = "connection_status"
 
 
 class WSMessage(BaseModel):

@@ -36,7 +36,7 @@ from sqlalchemy import select, and_, or_, func, desc, asc
 from sqlalchemy.orm import selectinload, joinedload
 
 from ..core.config import get_settings
-from ..core.exceptions import ValidationError, NotFoundError, PermissionError
+from ..core.exceptions import ValidationError, NotFoundError, PermissionError, ConfigurationError
 from ..models.meeting import (
     Meeting as MeetingORM,
     MeetingParticipant as MeetingParticipantORM,
@@ -317,7 +317,22 @@ class MeetingAIService:
         from .ai_assistant_service import AIAssistantService, AIProvider
 
         assistant = AIAssistantService()
-        response = await assistant._call_ai_service(prompt, AIProvider.OPENAI, {})
+        try:
+            response = await assistant._call_ai_service(prompt, AIProvider.OPENAI, {})
+        except RuntimeError as exc:
+            # 缺 key 是配置问题不是程序缺陷：转成 ConfigurationError，
+            # 路由层映射为 503 并明示原因，而不是含糊的 500。
+            # 已知的缺 key 文案（ai_assistant_service）：
+            # "<provider> 未配置 API Key，请在 .env 中设置后重启服务"、
+            # "OpenAI API key 未配置"。其它 RuntimeError（上游 HTTP
+            # 错误、空响应等）原样抛出，仍走 500。
+            message = str(exc)
+            if ("未配置" in message and "API Key" in message) or "API key 未配置" in message:
+                raise ConfigurationError(
+                    "AI 服务未配置 API Key，请在后端 .env 中设置 OPENAI_API_KEY 后重启服务",
+                    config_key="OPENAI_API_KEY",
+                ) from exc
+            raise
         text = (response.content or "").strip()
         # 允许模型包一层 ```json fences 或少量前后缀：取首尾大括号之间的 JSON
         start, end = text.find("{"), text.rfind("}")
