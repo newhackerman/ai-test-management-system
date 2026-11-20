@@ -17,11 +17,11 @@ Fixtures follow test_meeting_integration.py: one module project, one
 meeting, one plain second user. Everything created here is deleted in
 teardown (meeting, project, second user).
 
-Note: POST /participants currently returns 500 even though the row is
-created (ParticipantResponse.from_orm lazy-loads expired attributes
-outside the async greenlet -> MissingGreenlet). That is a pre-existing
-participant-routes bug, out of scope here; the fixture accepts the 500
-and verifies the row via GET /participants instead.
+Note: POST /participants used to return 500 even though the row was
+created (ParticipantResponse.from_orm lazy-loaded unloaded attributes
+outside the async greenlet -> MissingGreenlet); fixed 2026-11-20 as
+D-500-1 (refresh after commit + response-model fix), and the fixture
+now asserts the 201.
 """
 
 import json
@@ -101,12 +101,14 @@ def wr_second(api, wr_project, wr_meeting):
         json={"user_id": user["id"], "role_in_project": "DEVELOPER", "join_date": "2026-11-05"},
     )
     assert resp.status_code in (200, 201), f"setup: add member failed: {resp.text[:300]}"
-    api.post(
+    resp = api.post(
         f"/api/v1/meetings/{wr_meeting['id']}/participants",
         json={"user_id": user["id"], "participant_role": "PARTICIPANT"},
     )
-    # POST /participants returns 500 on response serialization (pre-existing
-    # bug) but the row is created; verify it is listed.
+    # D-500-1 (fixed 2026-11-20): this used to 500 on response
+    # serialization even though the row was created; assert the 201
+    # and still verify the row is listed.
+    assert resp.status_code == 201, f"setup: add participant failed: {resp.text[:300]}"
     listed = api.get(f"/api/v1/meetings/{wr_meeting['id']}/participants")
     assert listed.status_code == 200
     assert any(p.get("user_id") == user["id"] for p in listed.json().get("participants", [])), (
