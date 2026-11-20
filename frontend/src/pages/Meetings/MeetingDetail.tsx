@@ -1,13 +1,14 @@
 ﻿// @ts-nocheck
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, BarChart3, CalendarDays, Clock, Edit, Film, Loader2, Play, Square, Trash2, Users, Video } from 'lucide-react'
+import { ArrowLeft, BarChart3, CalendarDays, Clock, Edit, Film, Link2, Loader2, Play, Square, Trash2, Users, Video } from 'lucide-react'
 import { message } from 'antd'
 
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import meetingService from '@/services/meeting/meetingService'
+import { copyToClipboard, generateMeetingLink } from '@/utils/meeting'
 import type { Meeting } from '@/types/meeting'
 import EndMeetingMinutesDialog from './EndMeetingMinutesDialog'
 import { meetingStatusLabels, meetingTypeLabels } from './MeetingForm'
@@ -45,6 +46,7 @@ export default function MeetingDetail() {
   const [operating, setOperating] = useState('')
   const [minutesOpen, setMinutesOpen] = useState(false)
   const [minutesSubmitting, setMinutesSubmitting] = useState(false)
+  const [copied, setCopied] = useState(false)
 
   const loadMeeting = async () => {
     setLoading(true)
@@ -75,6 +77,18 @@ export default function MeetingDetail() {
       await loadMeeting()
     } finally {
       setOperating('')
+    }
+  }
+
+  const handleCopyLink = async () => {
+    if (!meeting) return
+    const ok = await copyToClipboard(generateMeetingLink(meeting.meeting_code))
+    if (ok) {
+      message.success('会议链接已复制')
+      setCopied(true)
+      window.setTimeout(() => setCopied(false), 2000)
+    } else {
+      message.error('复制失败，请手动复制链接')
     }
   }
 
@@ -128,6 +142,12 @@ export default function MeetingDetail() {
               <Badge variant="outline">{meetingTypeLabels[meeting.meeting_type] || meeting.meeting_type}</Badge>
             </div>
             <p className="text-sm text-muted-foreground">会议号：{meeting.meeting_code}</p>
+            <div className="mt-1 flex flex-wrap items-center gap-2">
+              <span className="break-all text-sm text-blue-600">{generateMeetingLink(meeting.meeting_code)}</span>
+              <Button type="button" variant="outline" size="sm" onClick={handleCopyLink}>
+                <Link2 className="mr-1 h-4 w-4" />{copied ? '已复制' : '复制会议链接'}
+              </Button>
+            </div>
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
