@@ -4,7 +4,6 @@
  * 鎻愪緵甯﹁璇佺殑API璋冪敤鏂规硶
  */
 
-import { useAuthStore } from '@/stores/auth'
 
 class ApiService {
   private baseURL: string
@@ -124,7 +123,7 @@ class ApiService {
     const limit = Math.min(params.limit || 10, 100)
     queryParams.append('limit', String(limit))
     
-    const endpoint = `/api/v1/users${queryParams.toString() ? '?' + queryParams.toString() : ''}`
+    const endpoint = `/api/v1/users${queryParams.toString() ? `?${  queryParams.toString()}` : ''}`
     return this.get(endpoint)
   }
 

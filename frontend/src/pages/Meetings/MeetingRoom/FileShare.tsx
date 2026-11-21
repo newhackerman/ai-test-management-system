@@ -59,7 +59,6 @@ import {
   CheckCircle,
   AlertCircle,
   X,
-  Paperclip,
   FolderOpen,
   Grid,
   List
@@ -94,7 +93,7 @@ interface FileItemProps {
 // 单个文件项组件
 const FileItem: React.FC<FileItemProps> = ({
   file,
-  currentUserId,
+  currentUserId: _currentUserId,
   viewMode,
   onDownload,
   onDelete,

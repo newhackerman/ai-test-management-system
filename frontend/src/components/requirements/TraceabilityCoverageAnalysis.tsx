@@ -8,7 +8,6 @@ import { Loading } from '@/components/ui/Loading'
 import { traceabilityService, downloadJson } from '@/services/traceabilityService'
 import { 
   BarChart3, 
-  PieChart, 
   TrendingUp, 
   TrendingDown,
   Target,
@@ -228,11 +227,12 @@ export function TraceabilityCoverageAnalysis({
         aValue = a.overall_coverage
         bValue = b.overall_coverage
         break
-      case 'priority':
+      case 'priority': {
         const priorityOrder = { CRITICAL: 4, HIGH: 3, MEDIUM: 2, LOW: 1 }
         aValue = priorityOrder[a.priority as keyof typeof priorityOrder]
         bValue = priorityOrder[b.priority as keyof typeof priorityOrder]
         break
+      }
       case 'type':
         aValue = a.requirement_type
         bValue = b.requirement_type

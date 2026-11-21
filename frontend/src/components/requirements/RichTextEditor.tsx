@@ -8,8 +8,6 @@ import {
   Link,
   Quote,
   Code,
-  Undo,
-  Redo,
   Eye,
   Edit
 } from 'lucide-react'

@@ -9,8 +9,7 @@ import {
   AlertCircle,
   Eye,
   Edit,
-  Plus,
-  Filter
+  Plus
 } from 'lucide-react'
 
 import { Button } from '@/components/ui/Button'
@@ -19,9 +18,8 @@ import { Badge } from '@/components/ui/Badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/Tabs'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/Select'
 import { Input } from '@/components/ui/Input'
-import { Avatar } from '@/components/ui/Avatar'
 import { Tooltip } from '@/components/ui/Tooltip'
-import { RequirementReview, ReviewStatus, ReviewType, ReviewDecision } from '@/types/requirement'
+import { RequirementReview, ReviewStatus, ReviewDecision } from '@/types/requirement'
 
 interface ReviewBoardProps {
   projectId?: number
@@ -224,12 +222,12 @@ const ReviewCard: React.FC<{
 }
 
 export const ReviewBoard: React.FC<ReviewBoardProps> = ({
-  projectId,
+  projectId: _projectId,
   onCreateReview,
   onViewReview,
   onEditReview
 }) => {
-  const [reviews, setReviews] = useState<RequirementReview[]>(mockReviews)
+  const [reviews, _setReviews] = useState<RequirementReview[]>(mockReviews)
   const [filteredReviews, setFilteredReviews] = useState<RequirementReview[]>(mockReviews)
   const [activeTab, setActiveTab] = useState<string>('all')
   const [searchTerm, setSearchTerm] = useState('')

@@ -266,7 +266,7 @@ export class RecordingService {
     return url
   }
 
-  async getDownloadUrl(recordingId: number, format?: FileFormat): Promise<string> {
+  async getDownloadUrl(recordingId: number, _format?: FileFormat): Promise<string> {
     // 仅返回下载端点路径；直接当 <a href> 用会 401（全局中间件要求
     // Bearer 头），下载请走 downloadRecording（blob），播放请走
     // getPlaybackInfo 返回的 video_url（带播放 token）。

@@ -45,7 +45,7 @@ export interface AccordionItemProps
 
 export function AccordionItem({ 
   className, 
-  value: itemValue, 
+  value: _itemValue, 
   ...props 
 }: AccordionItemProps) {
   return (

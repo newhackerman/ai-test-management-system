@@ -1,18 +1,14 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import { 
   Bell, 
-  BellRing, 
   Check, 
-  X, 
   Eye, 
   MessageSquare, 
   FileText, 
   AlertTriangle, 
   CheckCircle, 
   Clock, 
-  User, 
-  Settings,
-  Filter,
+  User,
   MoreHorizontal,
   Trash2,
   Archive
@@ -25,7 +21,6 @@ import { Switch } from '@/components/ui/Switch'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/Select'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/Tabs'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/DropdownMenu'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/Popover'
 import { ScrollArea } from '@/components/ui/ScrollArea'
 import { Separator } from '@/components/ui/Separator'
 import { Label } from '@/components/ui/Label'
@@ -519,7 +514,7 @@ const NotificationSettings: React.FC<{
 }
 
 export const NotificationCenter: React.FC<NotificationCenterProps> = ({
-  currentUserId,
+  currentUserId: _currentUserId,
   onNotificationClick,
   onNotificationAction,
   onSettingsUpdate,

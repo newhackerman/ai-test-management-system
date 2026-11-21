@@ -2,17 +2,11 @@
 import { 
   MessageSquare, 
   Plus, 
-  Edit, 
-  Trash2, 
   CheckCircle, 
   AlertTriangle, 
   Info, 
   XCircle,
-  Clock,
-  User,
-  Calendar,
-  Filter,
-  Search
+  User
 } from 'lucide-react'
 
 import { Button } from '@/components/ui/Button'
@@ -24,8 +18,6 @@ import { Input } from '@/components/ui/Input'
 import { Avatar } from '@/components/ui/Avatar'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/Dialog'
 import { Label } from '@/components/ui/Label'
-import { Separator } from '@/components/ui/Separator'
-import { Tooltip } from '@/components/ui/Tooltip'
 
 // 评审意见类型定义
 export type CommentType = 'ISSUE' | 'SUGGESTION' | 'QUESTION' | 'APPROVAL' | 'REJECTION'
@@ -212,7 +204,7 @@ const CommentCard: React.FC<{
   currentUserId: number
   canResolve: boolean
   onResolve: (commentId: number, resolution: string) => void
-}> = ({ comment, currentUserId, canResolve, onResolve }) => {
+}> = ({ comment, currentUserId: _currentUserId, canResolve, onResolve }) => {
   const [isResolving, setIsResolving] = useState(false)
   const [resolution, setResolution] = useState('')
 
@@ -537,7 +529,7 @@ export const ReviewCommentPanel: React.FC<ReviewCommentPanelProps> = ({
   canComment = true,
   canResolve = false,
   onCommentAdded,
-  onCommentUpdated,
+  onCommentUpdated: _onCommentUpdated,
   onCommentResolved
 }) => {
   const [comments, setComments] = useState<ReviewComment[]>(mockComments)

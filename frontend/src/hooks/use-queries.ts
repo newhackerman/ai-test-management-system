@@ -3,7 +3,7 @@
 
 import { useEffect, useCallback, useRef, useState } from 'react'
 import { useQuery, useMutation, useQueryStore, QueryOptions } from '@/stores/query'
-import { queryClient, createQueryKey, QueryKey, InfiniteQueryOptions, InfiniteQueryState } from '@/lib/query-client'
+import { createQueryKey, QueryKey, InfiniteQueryOptions, InfiniteQueryState } from '@/lib/query-client'
 
 // 渚濊禆鏌ヨhook
 export function useDependentQuery<T = any>(
@@ -29,10 +29,15 @@ export function useQueries<T = any[]>(
     options?: QueryOptions
   }>
 ): T {
+  // Hook-in-loop by design: the `queries` array is fixed-length per call
+  // site (no caller passes a dynamic-length array), so the hook count is
+  // stable across renders. Do not pass a changing-length array here.
+  /* eslint-disable react-hooks/rules-of-hooks */
   const results = queries.map(({ key, queryFn, options }) => {
     const queryKey = typeof key === 'string' ? key : createQueryKey(key)
     return useQuery(queryKey, queryFn, options)
   })
+  /* eslint-enable react-hooks/rules-of-hooks */
   
   return results as T
 }
@@ -43,8 +48,8 @@ export function useInfiniteQuery<T = any>(
   queryFn: ({ pageParam }: { pageParam: any }) => Promise<T>,
   options: InfiniteQueryOptions = {}
 ) {
-  const queryKey = typeof key === 'string' ? key : createQueryKey(key)
-  const store = useQueryStore()
+  const _queryKey = typeof key === 'string' ? key : createQueryKey(key)
+  const _store = useQueryStore()
   const [state, setState] = useState<InfiniteQueryState<T>>(() => ({
     data: null,
     error: null,
@@ -199,20 +204,11 @@ export function useOptimisticMutation<T = any, V = any>(
   })
   
   const mutateWithOptimisticUpdate = useCallback(async (variables: V) => {
-    let context: any
-    
-    try {
-      // 鎵ц涔愯鏇存柊
-      context = options.onMutate?.(variables)
-      
-      // 鎵ц瀹為檯鐨刴utation
-      const result = await mutation.mutate(variables)
-      
-      return result
-    } catch (error) {
-      // 濡傛灉澶辫触锛屽洖婊氫箰瑙傛洿鏂?
-      throw error
-    }
+    // Optimistic update; the original try/catch only rethrew, so the
+    // wrapper is dropped — errors propagate exactly as before.
+    options.onMutate?.(variables)
+    const result = await mutation.mutate(variables)
+    return result
   }, [mutation, options])
   
   return {

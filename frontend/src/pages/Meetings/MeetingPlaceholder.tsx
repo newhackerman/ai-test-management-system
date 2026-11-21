@@ -8,7 +8,7 @@ interface MeetingPlaceholderProps {
   title: string;
 }
 
-export const MeetingPlaceholder: React.FC<MeetingPlaceholderProps> = ({ title }) => (
+export const MeetingPlaceholder: React.FC<MeetingPlaceholderProps> = ({ title: _title }) => (
   <div className="space-y-4">
     <div className="grid gap-4 md:grid-cols-4">
       <InfoCard icon={<Calendar className="h-4 w-4" />} label="会议" value="可访问" />

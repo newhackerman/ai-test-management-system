@@ -388,7 +388,7 @@ const AIAssistant: React.FC = () => {
   const navigate = useNavigate()
   const [sessions, setSessions] = useState<ChatSession[]>([createSession()])
   const [activeSessionId, setActiveSessionId] = useState(() => sessions[0]?.id)
-  const [sessionsLoading, setSessionsLoading] = useState(true)
+  const [_sessionsLoading, setSessionsLoading] = useState(true)
   const [loadedSessionIds, setLoadedSessionIds] = useState<Set<string>>(new Set())
   const [input, setInput] = useState('')
   const [search, setSearch] = useState('')

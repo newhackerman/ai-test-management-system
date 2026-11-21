@@ -3,18 +3,14 @@
 
 import { QueryClient, useQuery, useMutation, useInfiniteQuery, UseQueryOptions, UseMutationOptions } from '@tanstack/react-query'
 import { apiServices } from './api-services'
-import { requestOptimizer, cacheUtils } from '@/lib/api-cache'
 import type {
   User,
   Project,
   TestCase,
   TestResult,
   DashboardStats,
-  PerformanceTest,
-  SecurityScan,
   AIAnalysis,
-  PaginatedResponse,
-  SearchParams
+  PaginatedResponse
 } from '@/types'
 
 /**

@@ -288,26 +288,26 @@ export const useTouchGesture = () => {
 /**
  * 闃叉姈瑙︽懜澶勭悊鍣?
  */
-export const debouncedTouch = (callback: Function, delay: number = 300) => {
+export const debouncedTouch = (callback: (...args: any[]) => void, delay: number = 300) => {
   let timeoutId: NodeJS.Timeout
 
   return (...args: any[]) => {
     clearTimeout(timeoutId)
-    timeoutId = setTimeout(() => callback.apply(null, args), delay)
+    timeoutId = setTimeout(() => callback(...args), delay)
   }
 }
 
 /**
  * 鑺傛祦瑙︽懜澶勭悊鍣?
  */
-export const throttledTouch = (callback: Function, delay: number = 100) => {
+export const throttledTouch = (callback: (...args: any[]) => void, delay: number = 100) => {
   let lastCall = 0
 
   return (...args: any[]) => {
     const now = Date.now()
     if (now - lastCall >= delay) {
       lastCall = now
-      callback.apply(null, args)
+      callback(...args)
     }
   }
 }

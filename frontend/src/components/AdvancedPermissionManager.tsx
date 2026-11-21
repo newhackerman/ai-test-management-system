@@ -1,13 +1,12 @@
 import React, { useState, useEffect } from 'react'
 import {
-  Modal, Form, Input, Select, Switch, Button, Tabs, Card, Space, Tag,
-  Table, DatePicker, TimePicker, Checkbox, Alert, message, Tooltip,
-  Typography, Row, Col, Divider, Badge, Steps, Timeline
+  Modal, Form, Input, Select, Button, Tabs, Card, Space, Tag,
+  Table, DatePicker, TimePicker, Checkbox, Alert, message,
+  Typography, Row, Col, Divider, Badge, Steps
 } from 'antd'
 import {
   SecurityScanOutlined, ClockCircleOutlined, TeamOutlined,
-  SettingOutlined, EyeOutlined, EditOutlined, DeleteOutlined,
-  CheckCircleOutlined, CloseCircleOutlined, ExclamationCircleOutlined
+  CheckCircleOutlined, CloseCircleOutlined
 } from '@ant-design/icons'
 import dayjs from 'dayjs'
 import { api } from '@/services/api'
@@ -17,7 +16,7 @@ const { TextArea } = Input
 const { TabPane } = Tabs
 const { Text, Title } = Typography
 const { RangePicker } = DatePicker
-const { Step } = Steps
+const { Step: _Step } = Steps
 
 interface AdvancedPermissionManagerProps {
   visible: boolean

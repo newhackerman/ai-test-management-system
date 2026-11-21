@@ -9,7 +9,6 @@ import {
   RequirementStatistics,
   RequirementStatisticsResponse
 } from '@/types/requirement'
-import { ApiResponse } from '@/types'
 import api from './api'
 
 const unwrap = <T>(response: unknown): T => {

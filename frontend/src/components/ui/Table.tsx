@@ -1,10 +1,9 @@
 import * as React from 'react'
-import { ChevronUp, ChevronDown, ChevronsUpDown, MoreHorizontal, Download } from 'lucide-react'
+import { ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
 import { Button } from './Button'
 import { Checkbox } from './Checkbox'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from './DropdownMenu'
 
 // 基础表格组件
 export interface TableProps extends React.HTMLAttributes<HTMLTableElement> {}
@@ -160,13 +159,13 @@ export function DataTable<T = any>({
   pagination,
   rowSelection,
   onSort,
-  onFilter,
+  onFilter: _onFilter,
   rowKey = 'id',
   className,
   size = 'middle',
   bordered = false,
   showHeader = true,
-  scroll
+  scroll: _scroll
 }: DataTableProps<T>) {
   const [sortConfig, setSortConfig] = React.useState<{
     key: string
@@ -212,7 +211,7 @@ export function DataTable<T = any>({
   const isAllSelected = rowSelection && data.length > 0 && 
     data.every(record => rowSelection.selectedRowKeys.includes(getRowKey(record, 0)))
 
-  const isIndeterminate = rowSelection && rowSelection.selectedRowKeys.length > 0 && 
+  const _isIndeterminate = rowSelection && rowSelection.selectedRowKeys.length > 0 && 
     !isAllSelected
 
   const handleSelectAll = (checked: boolean) => {

@@ -40,7 +40,7 @@ const EmptyState: React.FC<EmptyStateProps> = ({
   variant = 'default',
   secondaryActionLabel,
   onSecondaryAction,
-  secondaryActionHref,
+  secondaryActionHref: _secondaryActionHref,
   className = '',
   children,
   ...rest

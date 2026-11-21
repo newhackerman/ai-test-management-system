@@ -15,7 +15,7 @@ export const validators = {
     z.string().regex(VALIDATION.PHONE.PATTERN, message),
   
   // 密码验证
-  password: (message = '密码不符合要求') => {
+  password: (_message = '密码不符合要求') => {
     let schema = z.string().min(VALIDATION.PASSWORD.MIN_LENGTH, 
       `密码长度至少${VALIDATION.PASSWORD.MIN_LENGTH}位`)
     
@@ -40,7 +40,7 @@ export const validators = {
   },
   
   // 用户名验证
-  username: (message = '用户名格式不正确') => 
+  username: (_message = '用户名格式不正确') => 
     z.string()
       .min(VALIDATION.USERNAME.MIN_LENGTH, `用户名长度至少${VALIDATION.USERNAME.MIN_LENGTH}位`)
       .max(VALIDATION.USERNAME.MAX_LENGTH, `用户名长度不能超过${VALIDATION.USERNAME.MAX_LENGTH}位`)
@@ -97,7 +97,7 @@ export const validators = {
       .max(endDate, message || `日期不能晚于${endDate.toLocaleDateString()}`),
   
   // 确认密码验证
-  confirmPassword: (passwordField: string) => 
+  confirmPassword: (_passwordField: string) => 
     z.string().min(1, '请确认密码'),
 }
 

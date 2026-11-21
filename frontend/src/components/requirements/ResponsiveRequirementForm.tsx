@@ -3,9 +3,7 @@ import { useResponsive } from '@/hooks/useResponsive'
 import RequirementForm from './RequirementForm'
 import MobileRequirementForm from './mobile/MobileRequirementForm'
 import { 
-  Requirement, 
-  CreateRequirementRequest, 
-  UpdateRequirementRequest
+  Requirement
 } from '@/types/requirement'
 import { User } from '@/types'
 

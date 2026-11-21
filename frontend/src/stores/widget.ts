@@ -137,7 +137,7 @@ export const useWidgetStore = create<WidgetState & WidgetActions>()(
 
         removeDefinition: (id) => {
           set((state) => {
-            const { [id]: removed, ...rest } = state.definitions
+            const { [id]: _removed, ...rest } = state.definitions
             return { ...state, definitions: rest }
           })
         },

@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React from 'react'
 import { Card, Tabs, Badge, Space } from 'antd'
 import {
   MessageOutlined,
@@ -22,7 +22,7 @@ interface ProjectCollaborationProps {
 export const ProjectCollaboration: React.FC<ProjectCollaborationProps> = ({
   projectId,
   currentUser,
-  editable = false
+  editable: _editable = false
 }) => {
   // 获取未读通知数量
   const { data: unreadCount = 0 } = useQuery({

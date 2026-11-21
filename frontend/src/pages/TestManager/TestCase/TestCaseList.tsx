@@ -4,7 +4,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { Bot, Copy, Download, Play, Plus, Search, Trash2, Upload, Wand2 } from 'lucide-react'
 import { Button } from '../../../components/ui/Button'
 import { Input } from '../../../components/ui/Input'
-import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/Card'
+import { Card, CardContent } from '../../../components/ui/Card'
 import { Badge } from '../../../components/ui/Badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../components/ui/Table'
 import { Checkbox } from '../../../components/ui/Checkbox'
@@ -23,7 +23,7 @@ import {
   useTestCaseManagement,
   useTestCases,
 } from '../../../hooks/testmanager/useTestCase'
-import { AutomationLevel, Priority, TestCaseStatus, TestCaseType } from '../../../types/testmanager'
+import { Priority, TestCaseStatus, TestCaseType } from '../../../types/testmanager'
 import { formatDate } from '../../../utils/date'
 import requirementService from '../../../services/requirementService'
 import { testPlanService } from '../../../services/testmanager/testPlanService'
@@ -32,7 +32,6 @@ import type { Requirement } from '../../../types/requirement'
 import type { TestPlan } from '../../../types/testmanager'
 import type { User } from '../../../types'
 import {
-  AUTOMATION_LABELS,
   PRIORITY_LABELS,
   STATUS_LABELS,
   TEST_CASE_TYPE_LABELS,
@@ -674,7 +673,7 @@ const Field = ({ label, children }: { label: string; children: React.ReactNode }
   </label>
 )
 
-const EnumSelect = ({ value, options, onChange }: { value: string; options: Record<string, string>; onChange: (value: string) => void }) => (
+const _EnumSelect = ({ value, options, onChange }: { value: string; options: Record<string, string>; onChange: (value: string) => void }) => (
   <select
     value={value}
     onChange={(event) => onChange(event.target.value)}

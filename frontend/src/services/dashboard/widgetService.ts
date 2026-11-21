@@ -101,7 +101,7 @@ class WidgetService {
     return definitions.filter((widget) => widget.supportedRoles.includes(role) || widget.supportedRoles.includes('USER'))
   }
 
-  async checkWidgetAvailability(widgetType: string, userId?: number): Promise<WidgetAvailability> {
+  async checkWidgetAvailability(widgetType: string, _userId?: number): Promise<WidgetAvailability> {
     const exists = definitions.some((widget) => widget.type === widgetType)
     return exists ? { available: true } : { available: false, reason: `未找到组件：${widgetType}` }
   }
