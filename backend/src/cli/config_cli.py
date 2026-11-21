@@ -3,35 +3,36 @@
 配置管理CLI工具
 用于管理和验证系统配置
 """
+
 import argparse
 import json
 import os
 import sys
 from pathlib import Path
-from typing import Dict, Any
+from typing import Any, Dict
 
 # 添加项目根目录到Python路径
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from ..utils.config_manager import get_config_manager
 from ..core.config import get_settings
+from ..utils.config_manager import get_config_manager
 
 
 def validate_config():
     """验证配置"""
     print("🔍 验证系统配置...")
-    
+
     config_manager = get_config_manager()
     settings = get_settings()
-    
+
     # 验证必需的配置项
     required_configs = [
         ("DATABASE_URL", "数据库连接URL"),
         ("JWT_SECRET_KEY", "JWT密钥"),
         ("HOST", "服务器主机"),
-        ("PORT", "服务器端口")
+        ("PORT", "服务器端口"),
     ]
-    
+
     missing_configs = []
     for config_key, description in required_configs:
         value = config_manager.get_config(config_key)
@@ -39,13 +40,13 @@ def validate_config():
             missing_configs.append(f"  ❌ {config_key}: {description}")
         else:
             print(f"  ✅ {config_key}: {description}")
-    
+
     if missing_configs:
         print("\n❌ 缺少必需的配置项:")
         for config in missing_configs:
             print(config)
         return False
-    
+
     print("\n✅ 所有必需的配置项都已设置")
     return True
 
@@ -53,36 +54,41 @@ def validate_config():
 def show_config():
     """显示当前配置"""
     print("📋 当前系统配置:")
-    
+
     config_manager = get_config_manager()
-    
+
     configs = {
         "服务器配置": config_manager.get_server_config(),
         "数据库配置": {
-            k: v for k, v in config_manager.get_database_config().items()
+            k: v
+            for k, v in config_manager.get_database_config().items()
             if k not in ["password"]  # 隐藏敏感信息
         },
         "Redis配置": {
-            k: v for k, v in config_manager.get_redis_config().items()
+            k: v
+            for k, v in config_manager.get_redis_config().items()
             if k not in ["password"]  # 隐藏敏感信息
         },
         "JWT配置": {
-            k: v for k, v in config_manager.get_jwt_config().items()
+            k: v
+            for k, v in config_manager.get_jwt_config().items()
             if k not in ["secret_key"]  # 隐藏敏感信息
         },
         "CORS配置": config_manager.get_cors_config(),
         "API配置": config_manager.get_api_config(),
         "安全配置": {
-            k: v for k, v in config_manager.get_security_config().items()
+            k: v
+            for k, v in config_manager.get_security_config().items()
             if k not in ["secret_key"]  # 隐藏敏感信息
         },
         "文件配置": config_manager.get_file_config(),
         "邮件配置": {
-            k: v for k, v in config_manager.get_email_config().items()
+            k: v
+            for k, v in config_manager.get_email_config().items()
             if k not in ["smtp_password"]  # 隐藏敏感信息
-        }
+        },
     }
-    
+
     for section, config in configs.items():
         print(f"\n📁 {section}:")
         for key, value in config.items():
@@ -92,53 +98,61 @@ def show_config():
 def export_config(output_file: str):
     """导出配置到文件"""
     print(f"📤 导出配置到文件: {output_file}")
-    
+
     config_manager = get_config_manager()
-    
+
     # 收集所有配置（隐藏敏感信息）
     all_configs = {
         "server": config_manager.get_server_config(),
         "database": {
-            k: v for k, v in config_manager.get_database_config().items()
+            k: v
+            for k, v in config_manager.get_database_config().items()
             if k not in ["password"]
         },
         "redis": {
-            k: v for k, v in config_manager.get_redis_config().items()
+            k: v
+            for k, v in config_manager.get_redis_config().items()
             if k not in ["password"]
         },
         "jwt": {
-            k: v for k, v in config_manager.get_jwt_config().items()
+            k: v
+            for k, v in config_manager.get_jwt_config().items()
             if k not in ["secret_key"]
         },
         "cors": config_manager.get_cors_config(),
         "api": config_manager.get_api_config(),
         "security": {
-            k: v for k, v in config_manager.get_security_config().items()
+            k: v
+            for k, v in config_manager.get_security_config().items()
             if k not in ["secret_key"]
         },
         "file": config_manager.get_file_config(),
         "email": {
-            k: v for k, v in config_manager.get_email_config().items()
+            k: v
+            for k, v in config_manager.get_email_config().items()
             if k not in ["smtp_password"]
         },
         "ai": {
             "openai": {
-                k: v for k, v in config_manager.get_ai_config()["openai"].items()
+                k: v
+                for k, v in config_manager.get_ai_config()["openai"].items()
                 if k not in ["api_key"]
             },
             "anthropic": {
-                k: v for k, v in config_manager.get_ai_config()["anthropic"].items()
+                k: v
+                for k, v in config_manager.get_ai_config()["anthropic"].items()
                 if k not in ["api_key"]
             },
             "gemini": {
-                k: v for k, v in config_manager.get_ai_config()["gemini"].items()
+                k: v
+                for k, v in config_manager.get_ai_config()["gemini"].items()
                 if k not in ["api_key"]
-            }
-        }
+            },
+        },
     }
-    
+
     try:
-        with open(output_file, 'w', encoding='utf-8') as f:
+        with open(output_file, "w", encoding="utf-8") as f:
             json.dump(all_configs, f, indent=2, ensure_ascii=False)
         print(f"✅ 配置已导出到: {output_file}")
     except Exception as e:
@@ -148,26 +162,26 @@ def export_config(output_file: str):
 def check_env_file():
     """检查环境文件"""
     print("🔍 检查环境配置文件...")
-    
+
     env_files = [".env", "backend/.env", ".env.example", "backend/.env.example"]
-    
+
     for env_file in env_files:
         if os.path.exists(env_file):
             print(f"  ✅ 找到环境文件: {env_file}")
-            
+
             # 读取并分析环境文件
             try:
-                with open(env_file, 'r', encoding='utf-8') as f:
+                with open(env_file, "r", encoding="utf-8") as f:
                     lines = f.readlines()
-                
+
                 config_count = 0
                 for line in lines:
                     line = line.strip()
-                    if line and not line.startswith('#') and '=' in line:
+                    if line and not line.startswith("#") and "=" in line:
                         config_count += 1
-                
+
                 print(f"    📊 包含 {config_count} 个配置项")
-                
+
             except Exception as e:
                 print(f"    ❌ 读取文件失败: {e}")
         else:
@@ -177,7 +191,7 @@ def check_env_file():
 def generate_env_template():
     """生成环境变量模板"""
     print("📝 生成环境变量模板...")
-    
+
     template = """# =============================================================================
 # AI测试管理系统 - 环境配置文件
 # =============================================================================
@@ -291,10 +305,10 @@ BAIDU_BASE_URL=https://aip.baidubce.com
 ALIYUN_API_KEY=your_aliyun_api_key_here
 ALIYUN_API_ENDPOINT=https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation
 """
-    
+
     output_file = ".env.template"
     try:
-        with open(output_file, 'w', encoding='utf-8') as f:
+        with open(output_file, "w", encoding="utf-8") as f:
             f.write(template)
         print(f"✅ 环境变量模板已生成: {output_file}")
         print("💡 请复制此文件为 .env 并修改相应的配置值")
@@ -306,32 +320,34 @@ def main():
     """主函数"""
     parser = argparse.ArgumentParser(description="配置管理CLI工具")
     subparsers = parser.add_subparsers(dest="command", help="可用命令")
-    
+
     # 验证配置命令
     subparsers.add_parser("validate", help="验证系统配置")
-    
+
     # 显示配置命令
     subparsers.add_parser("show", help="显示当前配置")
-    
+
     # 导出配置命令
     export_parser = subparsers.add_parser("export", help="导出配置到文件")
-    export_parser.add_argument("--output", "-o", default="config_export.json", help="输出文件路径")
-    
+    export_parser.add_argument(
+        "--output", "-o", default="config_export.json", help="输出文件路径"
+    )
+
     # 检查环境文件命令
     subparsers.add_parser("check-env", help="检查环境配置文件")
-    
+
     # 生成环境变量模板命令
     subparsers.add_parser("generate-template", help="生成环境变量模板")
-    
+
     args = parser.parse_args()
-    
+
     if not args.command:
         parser.print_help()
         return
-    
+
     print(f"🚀 配置管理工具 - {args.command}")
     print("=" * 50)
-    
+
     try:
         if args.command == "validate":
             success = validate_config()
@@ -347,7 +363,7 @@ def main():
         else:
             print(f"❌ 未知命令: {args.command}")
             sys.exit(1)
-            
+
     except Exception as e:
         print(f"❌ 执行命令失败: {e}")
         sys.exit(1)

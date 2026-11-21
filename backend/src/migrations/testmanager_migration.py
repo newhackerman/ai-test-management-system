@@ -3,10 +3,12 @@
 
 创建测试管理模块的数据库表结构和初始数据
 """
+
 import asyncio
 import logging
 from datetime import datetime
-from sqlalchemy import text, inspect
+
+from sqlalchemy import inspect, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..core.database import async_engine, get_async_session
@@ -17,13 +19,13 @@ logger = logging.getLogger(__name__)
 
 class TestManagerMigration:
     """测试管理模块迁移类"""
-    
+
     def __init__(self):
         self.logger = logging.getLogger(__name__)
-    
+
     async def create_tables(self):
         """创建测试管理模块表结构"""
-        
+
         # 测试计划表
         test_plans_sql = """
         CREATE TABLE IF NOT EXISTS test_plans (
@@ -69,7 +71,7 @@ class TestManagerMigration:
             INDEX idx_created_at (created_at)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='测试计划表';
         """
-        
+
         # 测试用例表
         test_cases_sql = """
         CREATE TABLE IF NOT EXISTS test_cases (
@@ -123,7 +125,7 @@ class TestManagerMigration:
             INDEX idx_created_at (created_at)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='测试用例表';
         """
-        
+
         # 测试执行表
         test_executions_sql = """
         CREATE TABLE IF NOT EXISTS test_executions (
@@ -172,7 +174,7 @@ class TestManagerMigration:
             INDEX idx_created_at (created_at)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='测试执行表';
         """
-        
+
         # 缺陷表
         defects_sql = """
         CREATE TABLE IF NOT EXISTS defects (
@@ -231,7 +233,7 @@ class TestManagerMigration:
             INDEX idx_created_at (created_at)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='缺陷表';
         """
-        
+
         # 测试报告表
         test_reports_sql = """
         CREATE TABLE IF NOT EXISTS test_reports (
@@ -283,7 +285,7 @@ class TestManagerMigration:
             INDEX idx_created_at (created_at)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='测试报告表';
         """
-        
+
         # 测试环境表
         test_environments_sql = """
         CREATE TABLE IF NOT EXISTS test_environments (
@@ -320,7 +322,7 @@ class TestManagerMigration:
             INDEX idx_created_at (created_at)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='测试环境表';
         """
-        
+
         # 自动化脚本表
         automation_scripts_sql = """
         CREATE TABLE IF NOT EXISTS automation_scripts (
@@ -362,7 +364,7 @@ class TestManagerMigration:
             INDEX idx_created_at (created_at)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='自动化脚本表';
         """
-        
+
         # 执行所有建表语句
         tables = [
             ("test_plans", test_plans_sql),
@@ -371,9 +373,9 @@ class TestManagerMigration:
             ("defects", defects_sql),
             ("test_reports", test_reports_sql),
             ("test_environments", test_environments_sql),
-            ("automation_scripts", automation_scripts_sql)
+            ("automation_scripts", automation_scripts_sql),
         ]
-        
+
         async with async_engine.begin() as conn:
             for table_name, sql in tables:
                 try:
@@ -382,10 +384,10 @@ class TestManagerMigration:
                 except Exception as e:
                     self.logger.error(f"创建表 {table_name} 失败: {e}")
                     raise
-    
+
     async def insert_initial_data(self):
         """插入初始数据"""
-        
+
         # 测试环境初始数据
         test_environments_data = """
         INSERT IGNORE INTO test_environments (env_code, project_id, env_name, env_type, description, base_url, status, created_by) VALUES
@@ -393,30 +395,29 @@ class TestManagerMigration:
         ('ENV-TEST-001', 1, '测试环境', 'TEST', '功能测试环境', 'http://test.example.com', 'ACTIVE', 1),
         ('ENV-STAGING-001', 1, '预生产环境', 'STAGING', '预生产测试环境', 'http://staging.example.com', 'ACTIVE', 1);
         """
-        
+
         async with async_engine.begin() as conn:
             try:
                 await conn.execute(text(test_environments_data))
                 self.logger.info("插入测试环境初始数据成功")
             except Exception as e:
                 self.logger.error(f"插入测试环境初始数据失败: {e}")
-    
+
     async def create_indexes(self):
         """创建额外的索引"""
-        
+
         indexes = [
             # 复合索引
             "CREATE INDEX IF NOT EXISTS idx_test_cases_plan_status ON test_cases (test_plan_id, status)",
             "CREATE INDEX IF NOT EXISTS idx_test_executions_case_status ON test_executions (test_case_id, execution_status)",
             "CREATE INDEX IF NOT EXISTS idx_defects_assignee_status ON defects (assignee_id, status)",
             "CREATE INDEX IF NOT EXISTS idx_test_reports_project_type ON test_reports (project_id, report_type)",
-            
             # 全文索引
             "ALTER TABLE test_cases ADD FULLTEXT INDEX ft_case_title_desc (case_title, case_description)",
             "ALTER TABLE defects ADD FULLTEXT INDEX ft_defect_title_desc (title, description)",
-            "ALTER TABLE test_reports ADD FULLTEXT INDEX ft_report_name_summary (report_name, report_summary)"
+            "ALTER TABLE test_reports ADD FULLTEXT INDEX ft_report_name_summary (report_name, report_summary)",
         ]
-        
+
         async with async_engine.begin() as conn:
             for index_sql in indexes:
                 try:
@@ -424,65 +425,68 @@ class TestManagerMigration:
                     self.logger.info(f"创建索引成功: {index_sql[:50]}...")
                 except Exception as e:
                     self.logger.warning(f"创建索引失败: {e}")
-    
+
     async def check_table_exists(self, table_name: str) -> bool:
         """检查表是否存在"""
         try:
             async with async_engine.begin() as conn:
-                result = await conn.execute(text(
-                    "SELECT COUNT(*) FROM information_schema.tables "
-                    "WHERE table_schema = DATABASE() AND table_name = :table_name"
-                ), {"table_name": table_name})
+                result = await conn.execute(
+                    text(
+                        "SELECT COUNT(*) FROM information_schema.tables "
+                        "WHERE table_schema = DATABASE() AND table_name = :table_name"
+                    ),
+                    {"table_name": table_name},
+                )
                 count = result.scalar()
                 return count > 0
         except Exception as e:
             self.logger.error(f"检查表 {table_name} 是否存在失败: {e}")
             return False
-    
+
     async def migrate(self):
         """执行完整迁移"""
         try:
             self.logger.info("开始测试管理模块数据库迁移...")
-            
+
             # 1. 创建表结构
             await self.create_tables()
             self.logger.info("表结构创建完成")
-            
+
             # 2. 创建索引
             await self.create_indexes()
             self.logger.info("索引创建完成")
-            
+
             # 3. 插入初始数据
             await self.insert_initial_data()
             self.logger.info("初始数据插入完成")
-            
+
             # 4. 初始化权限
             async for db in get_async_session():
                 await init_testmanager_permissions(db)
                 break
             self.logger.info("权限初始化完成")
-            
+
             self.logger.info("测试管理模块数据库迁移完成")
-            
+
         except Exception as e:
             self.logger.error(f"数据库迁移失败: {e}")
             raise
-    
+
     async def rollback(self):
         """回滚迁移"""
         try:
             self.logger.info("开始回滚测试管理模块数据库迁移...")
-            
+
             tables_to_drop = [
                 "automation_scripts",
-                "test_environments", 
+                "test_environments",
                 "test_reports",
                 "defects",
                 "test_executions",
                 "test_cases",
-                "test_plans"
+                "test_plans",
             ]
-            
+
             async with async_engine.begin() as conn:
                 for table_name in tables_to_drop:
                     try:
@@ -490,15 +494,16 @@ class TestManagerMigration:
                         self.logger.info(f"删除表 {table_name} 成功")
                     except Exception as e:
                         self.logger.error(f"删除表 {table_name} 失败: {e}")
-            
+
             self.logger.info("测试管理模块数据库迁移回滚完成")
-            
+
         except Exception as e:
             self.logger.error(f"数据库迁移回滚失败: {e}")
             raise
 
 
 # 迁移执行函数
+
 
 async def run_migration():
     """运行迁移"""
@@ -514,7 +519,7 @@ async def run_rollback():
 
 if __name__ == "__main__":
     import sys
-    
+
     if len(sys.argv) > 1 and sys.argv[1] == "rollback":
         asyncio.run(run_rollback())
     else:

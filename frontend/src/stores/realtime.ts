@@ -134,7 +134,7 @@ export const useRealtimeStore = create<RealtimeState & RealtimeActions>()(
       ...initialState,
 
       // 杩炴帴绠＄悊
-      connect: async (url: string, token: string) => {
+      connect: async (_url: string, _token: string) => {
         const state = get()
         
         if (state.isConnected || state.isConnecting) {
@@ -356,7 +356,7 @@ export const useRealtimeStore = create<RealtimeState & RealtimeActions>()(
               get().updateRealtimeData(data.key || 'default', data)
               break
               
-            case 'event':
+            case 'event': {
               // 瑙﹀彂浜嬩欢澶勭悊鍣?
               const handlers = state.eventHandlers[data.event_type] || []
               handlers.forEach(handler => {
@@ -367,6 +367,7 @@ export const useRealtimeStore = create<RealtimeState & RealtimeActions>()(
                 }
               })
               break
+            }
               
             default:
               console.warn('鏈煡娑堟伅绫诲瀷:', type)

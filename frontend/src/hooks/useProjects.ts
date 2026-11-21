@@ -6,7 +6,6 @@ import type {
   ProjectFilters, 
   CreateProjectRequest, 
   UpdateProjectRequest,
-  ProjectProgress,
   ProjectStatistics
 } from '@/types/project'
 import type { PaginatedResponse } from '@/types'

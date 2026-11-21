@@ -5,49 +5,57 @@
 """
 
 import logging
-from typing import Dict, Any, List, Optional
-from sqlalchemy.orm import Session
-from fastapi import Depends
+from typing import Any, Dict, List, Optional
 
-from .test_report_service import TestReportService
-from .requirement_report_service import RequirementReportService
+from fastapi import Depends
+from sqlalchemy.orm import Session
+
 from ..core.database import get_db
+from .requirement_report_service import RequirementReportService
+from .test_report_service import TestReportService
 
 logger = logging.getLogger(__name__)
 
 
 class ReportService:
     """通用报告服务"""
-    
+
     def __init__(self, db: Session):
         self.db = db
         self.test_report_service = TestReportService(db)
         self.requirement_report_service = RequirementReportService(db)
-    
+
     async def generate_report(self, report_type: str, **kwargs) -> Dict[str, Any]:
         """
         生成报告
-        
+
         Args:
             report_type: 报告类型
             **kwargs: 报告参数
-            
+
         Returns:
             Dict[str, Any]: 报告数据
         """
         try:
             if report_type == "test":
-                return await self.test_report_service.generate_comprehensive_report(**kwargs)
+                return await self.test_report_service.generate_comprehensive_report(
+                    **kwargs
+                )
             elif report_type == "requirement":
                 return await self.requirement_report_service.generate_report(**kwargs)
             else:
                 raise ValueError(f"Unsupported report type: {report_type}")
-                
+
         except Exception as e:
             logger.error(f"生成报告失败: {str(e)}")
             raise
-    
-    async def export_report(self, report_data: Dict[str, Any], format: str, report_type: Optional[str] = None) -> tuple:
+
+    async def export_report(
+        self,
+        report_data: Dict[str, Any],
+        format: str,
+        report_type: Optional[str] = None,
+    ) -> tuple:
         """
         导出报告
 
@@ -74,22 +82,28 @@ class ReportService:
 
             if format == "json":
                 import json
-                content = json.dumps(report_data, ensure_ascii=False, indent=2, default=str).encode('utf-8')
+
+                content = json.dumps(
+                    report_data, ensure_ascii=False, indent=2, default=str
+                ).encode("utf-8")
             elif format == "csv":
                 import csv
                 import io
+
                 output = io.StringIO()
-                if isinstance(report_data, dict) and 'data' in report_data:
-                    data = report_data['data']
+                if isinstance(report_data, dict) and "data" in report_data:
+                    data = report_data["data"]
                     if isinstance(data, list) and data:
                         writer = csv.DictWriter(output, fieldnames=list(data[0].keys()))
                         writer.writeheader()
                         writer.writerows(data)
                 elif isinstance(report_data, list) and report_data:
-                    writer = csv.DictWriter(output, fieldnames=list(report_data[0].keys()))
+                    writer = csv.DictWriter(
+                        output, fieldnames=list(report_data[0].keys())
+                    )
                     writer.writeheader()
                     writer.writerows(report_data)
-                content = output.getvalue().encode('utf-8')
+                content = output.getvalue().encode("utf-8")
             else:
                 raise ValueError(f"Unsupported export format: {format}")
 
@@ -99,7 +113,9 @@ class ReportService:
             logger.error(f"导出报告失败: {str(e)}")
             raise
 
-    async def get_report_templates(self, user_id: Optional[int] = None, *args, **kwargs) -> List[Dict[str, Any]]:
+    async def get_report_templates(
+        self, user_id: Optional[int] = None, *args, **kwargs
+    ) -> List[Dict[str, Any]]:
         """获取报告模板列表
 
         历史上调用方有两种签名：
@@ -155,29 +171,27 @@ class ReportService:
             },
         ]
         # 若传了 filters/page/page_size 也做最简单的过滤，但不抛错
-        filters = kwargs.get('filters')
+        filters = kwargs.get("filters")
         if isinstance(filters, dict):
-            report_type = filters.get('template_type') or filters.get('report_type')
+            report_type = filters.get("template_type") or filters.get("report_type")
             if report_type:
-                templates = [t for t in templates if t['report_type'] == report_type]
-        page = kwargs.get('page', 1)
-        page_size = kwargs.get('page_size', 50)
+                templates = [t for t in templates if t["report_type"] == report_type]
+        page = kwargs.get("page", 1)
+        page_size = kwargs.get("page_size", 50)
         if isinstance(page, int) and isinstance(page_size, int) and page_size > 0:
             start = (max(1, page) - 1) * page_size
-            templates = templates[start:start + page_size]
+            templates = templates[start : start + page_size]
         return templates
 
 
 def get_report_service(db: Session = Depends(get_db)) -> ReportService:
     """
     获取报告服务实例
-    
+
     Args:
         db: 数据库会话（通过依赖注入）
-        
+
     Returns:
         ReportService: 报告服务实例
     """
     return ReportService(db)
-
-

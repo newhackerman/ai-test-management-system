@@ -11,13 +11,14 @@
 所有模板都基于软件工程最佳实践和需求工程标准。
 """
 
-from typing import Dict, List, Optional, Any
 from dataclasses import dataclass
 from enum import Enum
+from typing import Any, Dict, List, Optional
 
 
 class PromptTemplate(Enum):
     """提示词模板类型"""
+
     QUALITY_ANALYSIS = "quality_analysis"
     COMPLETENESS_CHECK = "completeness_check"
     CONSISTENCY_ANALYSIS = "consistency_analysis"
@@ -29,6 +30,7 @@ class PromptTemplate(Enum):
 @dataclass
 class PromptContext:
     """提示词上下文"""
+
     requirement_title: str
     requirement_description: str
     acceptance_criteria: Optional[str] = None
@@ -39,7 +41,7 @@ class PromptContext:
 
 class RequirementQualityPromptTemplates:
     """需求质量分析提示词模板类"""
-    
+
     @staticmethod
     def get_system_prompt() -> str:
         """获取系统提示词"""
@@ -60,7 +62,7 @@ class RequirementQualityPromptTemplates:
 - 保持客观和专业的评估态度
 
 请始终以JSON格式返回结构化的分析结果，确保数据的准确性和一致性。"""
-    
+
     @staticmethod
     def get_quality_analysis_prompt(context: PromptContext) -> str:
         """获取需求质量综合分析提示词"""
@@ -72,25 +74,25 @@ class RequirementQualityPromptTemplates:
 **描述**:
 {context.requirement_description}
 """
-        
+
         if context.acceptance_criteria:
             prompt += f"""
 **验收标准**:
 {context.acceptance_criteria}
 """
-        
+
         if context.requirement_type:
             prompt += f"""
 **需求类型**: {context.requirement_type}
 """
-        
+
         if context.project_context:
             prompt += f"""
 **项目背景**: {context.project_context.get('description', '未提供')}
 **技术栈**: {context.project_context.get('tech_stack', '未指定')}
 **团队规模**: {context.project_context.get('team_size', '未知')}
 """
-        
+
         prompt += """
 ## 分析要求
 
@@ -200,9 +202,9 @@ class RequirementQualityPromptTemplates:
 ```
 
 请确保分析客观准确，建议具体可行。"""
-        
+
         return prompt
-    
+
     @staticmethod
     def get_completeness_check_prompt(context: PromptContext) -> str:
         """获取需求完整性检查提示词"""
@@ -212,10 +214,10 @@ class RequirementQualityPromptTemplates:
 **标题**: {context.requirement_title}
 **描述**: {context.requirement_description}
 """
-        
+
         if context.acceptance_criteria:
             prompt += f"**验收标准**: {context.acceptance_criteria}\n"
-        
+
         prompt += """
 ## 完整性检查清单
 
@@ -286,9 +288,9 @@ class RequirementQualityPromptTemplates:
   ]
 }
 ```"""
-        
+
         return prompt
-    
+
     @staticmethod
     def get_consistency_analysis_prompt(context: PromptContext) -> str:
         """获取需求一致性分析提示词"""
@@ -298,15 +300,15 @@ class RequirementQualityPromptTemplates:
 **标题**: {context.requirement_title}
 **描述**: {context.requirement_description}
 """
-        
+
         if context.acceptance_criteria:
             prompt += f"**验收标准**: {context.acceptance_criteria}\n"
-        
+
         if context.existing_requirements:
             prompt += "\n## 相关需求\n"
             for i, req in enumerate(context.existing_requirements[:5]):
                 prompt += f"{i+1}. {req.get('title', '')}: {req.get('description', '')[:100]}...\n"
-        
+
         prompt += """
 ## 一致性分析维度
 
@@ -363,9 +365,9 @@ class RequirementQualityPromptTemplates:
   ]
 }
 ```"""
-        
+
         return prompt
-    
+
     @staticmethod
     def get_complexity_assessment_prompt(context: PromptContext) -> str:
         """获取需求复杂度评估提示词"""
@@ -375,10 +377,10 @@ class RequirementQualityPromptTemplates:
 **标题**: {context.requirement_title}
 **描述**: {context.requirement_description}
 """
-        
+
         if context.acceptance_criteria:
             prompt += f"**验收标准**: {context.acceptance_criteria}\n"
-        
+
         if context.project_context:
             prompt += f"""
 ## 项目背景
@@ -386,7 +388,7 @@ class RequirementQualityPromptTemplates:
 **团队经验**: {context.project_context.get('team_experience', '中等')}
 **时间约束**: {context.project_context.get('timeline', '正常')}
 """
-        
+
         prompt += """
 ## 复杂度评估维度
 
@@ -466,9 +468,9 @@ class RequirementQualityPromptTemplates:
   "confidence_level": 0.8
 }
 ```"""
-        
+
         return prompt
-    
+
     @staticmethod
     def get_effort_estimation_prompt(context: PromptContext) -> str:
         """获取工作量估算提示词"""
@@ -478,10 +480,10 @@ class RequirementQualityPromptTemplates:
 **标题**: {context.requirement_title}
 **描述**: {context.requirement_description}
 """
-        
+
         if context.acceptance_criteria:
             prompt += f"**验收标准**: {context.acceptance_criteria}\n"
-        
+
         if context.project_context:
             prompt += f"""
 ## 项目背景
@@ -490,7 +492,7 @@ class RequirementQualityPromptTemplates:
 **开发模式**: {context.project_context.get('dev_methodology', 'Scrum')}
 **技术栈**: {context.project_context.get('tech_stack', '未指定')}
 """
-        
+
         prompt += """
 ## 工作量估算维度
 
@@ -590,9 +592,9 @@ class RequirementQualityPromptTemplates:
   ]
 }
 ```"""
-        
+
         return prompt
-    
+
     @staticmethod
     def get_testability_analysis_prompt(context: PromptContext) -> str:
         """获取可测试性分析提示词"""
@@ -602,10 +604,10 @@ class RequirementQualityPromptTemplates:
 **标题**: {context.requirement_title}
 **描述**: {context.requirement_description}
 """
-        
+
         if context.acceptance_criteria:
             prompt += f"**验收标准**: {context.acceptance_criteria}\n"
-        
+
         prompt += """
 ## 可测试性分析维度
 
@@ -689,23 +691,23 @@ class RequirementQualityPromptTemplates:
   }
 }
 ```"""
-        
+
         return prompt
 
 
 def get_prompt_template(template_type: PromptTemplate, context: PromptContext) -> str:
     """
     获取指定类型的提示词模板
-    
+
     Args:
         template_type: 模板类型
         context: 提示词上下文
-        
+
     Returns:
         str: 格式化的提示词
     """
     templates = RequirementQualityPromptTemplates()
-    
+
     if template_type == PromptTemplate.QUALITY_ANALYSIS:
         return templates.get_quality_analysis_prompt(context)
     elif template_type == PromptTemplate.COMPLETENESS_CHECK:

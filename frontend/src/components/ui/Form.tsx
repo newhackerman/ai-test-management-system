@@ -134,6 +134,10 @@ export function FormMessage({ className, type = 'error', children, ...props }: F
   const fieldContext = React.useContext(FormFieldContext)
   let hookFormError: string | undefined
 
+  // Deliberate try/catch around the form hooks: FormMessage is also used
+  // outside a <Form>, where useFormContext throws. Provider presence never
+  // changes across renders of a given instance, so hook order is stable.
+  /* eslint-disable react-hooks/rules-of-hooks */
   try {
     const form = useFormContext()
     const { errors } = useFormState({ control: form.control, name: fieldContext?.name })
@@ -141,6 +145,7 @@ export function FormMessage({ className, type = 'error', children, ...props }: F
   } catch {
     hookFormError = undefined
   }
+  /* eslint-enable react-hooks/rules-of-hooks */
 
   const body = children || hookFormError
   if (!body) return null

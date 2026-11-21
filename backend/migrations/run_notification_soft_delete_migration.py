@@ -3,14 +3,16 @@
 通知逻辑删除 - 数据库迁移执行脚本
 为 system_notifications 表增加 is_deleted / deleted_at 字段，支持重复执行（幂等）。
 """
+
 import sys
 from pathlib import Path
 
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-from src.core.database import engine
 from sqlalchemy import text
+
+from src.core.database import engine
 
 STATEMENTS = [
     "ALTER TABLE system_notifications ADD COLUMN is_deleted BOOLEAN DEFAULT FALSE NOT NULL COMMENT '是否逻辑删除'",
@@ -28,7 +30,13 @@ def run_migration():
                 print(f"[OK] {statement}")
             except Exception as exc:  # noqa: BLE001
                 message = str(exc)
-                if "1060" in message or "Duplicate column" in message or "1061" in message or "Duplicate key" in message or "already exists" in message.lower():
+                if (
+                    "1060" in message
+                    or "Duplicate column" in message
+                    or "1061" in message
+                    or "Duplicate key" in message
+                    or "already exists" in message.lower()
+                ):
                     print(f"[SKIP] 已存在，跳过: {statement}")
                 else:
                     print(f"[FAIL] {statement} -> {message}")

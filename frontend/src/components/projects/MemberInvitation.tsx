@@ -271,7 +271,7 @@ export const MemberInvitation: React.FC<MemberInvitationProps> = ({
               <Card title={`邀请列表 (${invitations.length})`} size="small">
                 <List
                   dataSource={invitations}
-                  renderItem={(invitation, index) => (
+                  renderItem={(invitation, _index) => (
                     <List.Item
                       actions={[
                         <Button

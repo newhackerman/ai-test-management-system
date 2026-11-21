@@ -6,14 +6,17 @@ WebRTC信令相关的Pydantic模型
 - 音视频控制的响应模型
 - 网络质量等状态模型
 """
+
 from datetime import datetime
-from typing import Optional, List, Dict, Any
-from pydantic import BaseModel, Field
 from enum import Enum
+from typing import Any, Dict, List, Optional
+
+from pydantic import BaseModel, Field
 
 
 class SignalType(str, Enum):
     """信令类型枚举"""
+
     OFFER = "offer"
     ANSWER = "answer"
     ICE_CANDIDATE = "ice-candidate"
@@ -23,6 +26,7 @@ class SignalType(str, Enum):
 
 class MediaType(str, Enum):
     """媒体类型枚举"""
+
     AUDIO = "audio"
     VIDEO = "video"
     SCREEN = "screen"
@@ -30,6 +34,7 @@ class MediaType(str, Enum):
 
 class WebRTCSignalRequest(BaseModel):
     """WebRTC信令请求模型"""
+
     signal_type: SignalType = Field(..., description="信令类型")
     session_id: str = Field(..., description="会话ID")
     target_user_id: Optional[int] = Field(None, description="目标用户ID")
@@ -39,6 +44,7 @@ class WebRTCSignalRequest(BaseModel):
 
 class WebRTCOfferRequest(BaseModel):
     """WebRTC Offer请求模型"""
+
     session_id: str = Field(..., description="会话ID")
     sdp: str = Field(..., description="SDP描述")
     media_constraints: Optional[Dict[str, Any]] = Field(None, description="媒体约束")
@@ -46,12 +52,14 @@ class WebRTCOfferRequest(BaseModel):
 
 class WebRTCAnswerRequest(BaseModel):
     """WebRTC Answer请求模型"""
+
     session_id: str = Field(..., description="会话ID")
     sdp: str = Field(..., description="SDP描述")
 
 
 class ICECandidateRequest(BaseModel):
     """ICE候选请求模型"""
+
     session_id: str = Field(..., description="会话ID")
     candidate: str = Field(..., description="ICE候选")
     sdp_mid: Optional[str] = Field(None, description="SDP MID")
@@ -60,6 +68,7 @@ class ICECandidateRequest(BaseModel):
 
 class MediaControlRequest(BaseModel):
     """媒体控制请求模型"""
+
     session_id: str = Field(..., description="会话ID")
     media_type: MediaType = Field(..., description="媒体类型")
     action: str = Field(..., description="控制动作")  # mute, unmute, enable, disable
@@ -68,6 +77,7 @@ class MediaControlRequest(BaseModel):
 
 class WebRTCConfigResponse(BaseModel):
     """WebRTC配置响应模型"""
+
     ice_servers: List[Dict[str, Any]] = Field(..., description="ICE服务器配置")
     media_constraints: Dict[str, Any] = Field(..., description="媒体约束")
     room_config: Dict[str, Any] = Field(..., description="房间配置")
@@ -79,6 +89,7 @@ class WebRTCConfigResponse(BaseModel):
 
 class WebRTCSignalResponse(BaseModel):
     """WebRTC信令响应模型"""
+
     success: bool = Field(True, description="是否成功")
     message: str = Field("信令处理成功", description="响应消息")
     signal_id: Optional[str] = Field(None, description="信令ID")
@@ -90,6 +101,7 @@ class WebRTCSignalResponse(BaseModel):
 
 class ParticipantSession(BaseModel):
     """参与者会话模型"""
+
     session_id: str = Field(..., description="会话ID")
     user_id: int = Field(..., description="用户ID")
     room_id: str = Field(..., description="房间ID")
@@ -105,6 +117,7 @@ class ParticipantSession(BaseModel):
 
 class RoomInfo(BaseModel):
     """房间信息模型"""
+
     room_id: str = Field(..., description="房间ID")
     meeting_id: int = Field(..., description="会议ID")
     participant_count: int = Field(..., description="参与者数量")
@@ -119,6 +132,7 @@ class RoomInfo(BaseModel):
 
 class NetworkQuality(BaseModel):
     """网络质量模型"""
+
     user_id: int = Field(..., description="用户ID")
     session_id: str = Field(..., description="会话ID")
     upload_bandwidth: float = Field(..., description="上传带宽(kbps)")
@@ -135,6 +149,7 @@ class NetworkQuality(BaseModel):
 
 class MediaStreamInfo(BaseModel):
     """媒体流信息模型"""
+
     stream_id: str = Field(..., description="流ID")
     user_id: int = Field(..., description="用户ID")
     media_type: MediaType = Field(..., description="媒体类型")
@@ -150,6 +165,7 @@ class MediaStreamInfo(BaseModel):
 
 class ScreenShareRequest(BaseModel):
     """屏幕共享请求模型"""
+
     session_id: str = Field(..., description="会话ID")
     share_type: str = Field("screen", description="共享类型")  # screen, window, tab
     audio_enabled: bool = Field(False, description="是否包含音频")
@@ -158,6 +174,7 @@ class ScreenShareRequest(BaseModel):
 
 class ScreenShareResponse(BaseModel):
     """屏幕共享响应模型"""
+
     success: bool = Field(True, description="是否成功")
     message: str = Field("屏幕共享开始成功", description="响应消息")
     share_id: str = Field(..., description="共享ID")
@@ -169,12 +186,14 @@ class ScreenShareResponse(BaseModel):
 
 class StopScreenShareRequest(BaseModel):
     """停止屏幕共享请求模型"""
+
     session_id: str = Field(..., description="会话ID")
     share_id: str = Field(..., description="共享ID")
 
 
 class StopScreenShareResponse(BaseModel):
     """停止屏幕共享响应模型"""
+
     success: bool = Field(True, description="是否成功")
     message: str = Field("屏幕共享停止成功", description="响应消息")
 

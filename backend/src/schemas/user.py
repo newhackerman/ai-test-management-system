@@ -1,14 +1,17 @@
 """
 用户相关的数据模型
 """
-from typing import Optional, List, Any
-from pydantic import BaseModel, EmailStr, Field, validator
+
 from datetime import datetime
 from enum import Enum
+from typing import Any, List, Optional
+
+from pydantic import BaseModel, EmailStr, Field, validator
 
 
 class UserStatus(str, Enum):
     """用户状态枚举"""
+
     ACTIVE = "active"
     INACTIVE = "inactive"
     DISABLED = "disabled"
@@ -19,6 +22,7 @@ class UserStatus(str, Enum):
 
 class Gender(str, Enum):
     """性别枚举"""
+
     MALE = "male"
     FEMALE = "female"
     OTHER = "other"
@@ -27,6 +31,7 @@ class Gender(str, Enum):
 
 class UserBase(BaseModel):
     """用户基础模型"""
+
     username: str = Field(..., min_length=3, max_length=50, description="用户名")
     email: EmailStr = Field(..., description="邮箱")
     nickname: Optional[str] = Field(None, max_length=50, description="昵称")
@@ -41,16 +46,19 @@ class UserBase(BaseModel):
 
 class UserCreate(UserBase):
     """创建用户模型"""
+
     password: str = Field(..., min_length=8, description="密码")
     full_name: Optional[str] = Field(None, description="全名")
     roles: Optional[List[str]] = Field(default_factory=list, description="角色列表")
-    role_ids: Optional[List[int]] = Field(default_factory=list, description="角色ID列表")
+    role_ids: Optional[List[int]] = Field(
+        default_factory=list, description="角色ID列表"
+    )
     is_active: bool = Field(True, description="是否激活")
     # 允许创建用户时直接指定超级管理员标记；默认 False，不影响普通调用。
     # 之前由于 schema 未声明该字段，调用方传入的 is_superuser=true 会被
     # Pydantic 静默丢弃，导致依赖超级用户短路逻辑的测试账号拿不到权限。
     is_superuser: bool = Field(False, description="是否超级管理员")
-    
+
     @validator("password")
     def validate_password(cls, v):
         if len(v) < 8:
@@ -60,7 +68,10 @@ class UserCreate(UserBase):
 
 class UserUpdate(BaseModel):
     """更新用户模型"""
-    username: Optional[str] = Field(None, min_length=3, max_length=50, description="用户名")
+
+    username: Optional[str] = Field(
+        None, min_length=3, max_length=50, description="用户名"
+    )
     email: Optional[EmailStr] = Field(None, description="邮箱")
     nickname: Optional[str] = Field(None, max_length=50, description="昵称")
     phone: Optional[str] = Field(None, max_length=20, description="手机号")
@@ -82,6 +93,7 @@ class UserUpdate(BaseModel):
 
 class UserResponse(BaseModel):
     """用户响应模型"""
+
     id: int = Field(..., description="用户ID")
     username: str = Field(..., description="用户名")
     email: str = Field(..., description="邮箱")
@@ -93,7 +105,7 @@ class UserResponse(BaseModel):
     location: Optional[str] = Field(None, description="所在地")
     website: Optional[str] = Field(None, description="个人网站")
     avatar: Optional[str] = Field(None, description="头像URL")
-    
+
     # 状态相关
     status: UserStatus = Field(..., description="用户状态")
     is_active: bool = Field(..., description="是否激活")
@@ -101,13 +113,13 @@ class UserResponse(BaseModel):
     is_email_verified: bool = Field(..., description="邮箱是否已验证")
     is_phone_verified: bool = Field(..., description="手机是否已验证")
     mfa_enabled: bool = Field(..., description="是否启用多因素认证")
-    
+
     # 时间相关
     created_at: datetime = Field(..., description="创建时间")
     updated_at: datetime = Field(..., description="更新时间")
     last_login_at: Optional[datetime] = Field(None, description="最后登录时间")
     last_login_ip: Optional[str] = Field(None, description="最后登录IP")
-    
+
     # 偏好设置
     language: str = Field(default="zh-CN", description="语言设置")
     timezone: str = Field(default="Asia/Shanghai", description="时区设置")
@@ -115,14 +127,16 @@ class UserResponse(BaseModel):
     email_notifications: bool = Field(default=True, description="邮件通知")
     sms_notifications: bool = Field(default=False, description="短信通知")
     push_notifications: bool = Field(default=True, description="推送通知")
-    
+
     # 关联数据
     roles: Optional[List[Any]] = Field(default_factory=list, description="用户角色")
-    permissions: Optional[List[str]] = Field(default_factory=list, description="用户权限")
-    
+    permissions: Optional[List[str]] = Field(
+        default_factory=list, description="用户权限"
+    )
+
     class Config:
         from_attributes = True
-        
+
     @classmethod
     def from_orm(cls, obj):
         """从ORM对象创建响应模型"""
@@ -132,18 +146,24 @@ class UserResponse(BaseModel):
             for user_role in getattr(obj, "__dict__", {}).get("roles", []) or []:
                 role = getattr(user_role, "__dict__", {}).get("role")
                 if role:
-                    roles.append({
-                        "id": role.id,
-                        "code": role.code,
-                        "name": role.name,
-                        "description": role.description,
-                        "is_system_role": role.is_system_role,
-                        "is_active": role.is_active,
-                        "priority": getattr(role, "priority", 0),
-                        "created_at": role.created_at.isoformat() if role.created_at else None,
-                        "updated_at": role.updated_at.isoformat() if role.updated_at else None,
-                        "sort_order": getattr(role, "sort_order", 0),
-                    })
+                    roles.append(
+                        {
+                            "id": role.id,
+                            "code": role.code,
+                            "name": role.name,
+                            "description": role.description,
+                            "is_system_role": role.is_system_role,
+                            "is_active": role.is_active,
+                            "priority": getattr(role, "priority", 0),
+                            "created_at": (
+                                role.created_at.isoformat() if role.created_at else None
+                            ),
+                            "updated_at": (
+                                role.updated_at.isoformat() if role.updated_at else None
+                            ),
+                            "sort_order": getattr(role, "sort_order", 0),
+                        }
+                    )
 
         data = {
             "id": obj.id,
@@ -174,13 +194,14 @@ class UserResponse(BaseModel):
             "sms_notifications": obj.sms_notifications,
             "push_notifications": obj.push_notifications,
             "roles": roles,
-            "permissions": []  # TODO: 从关联表获取
+            "permissions": [],  # TODO: 从关联表获取
         }
         return cls(**data)
 
 
 class UserListResponse(BaseModel):
     """用户列表响应模型"""
+
     users: List[UserResponse] = Field(..., description="用户列表")
     total: int = Field(..., description="总数量")
     page: int = Field(..., description="当前页码")
@@ -190,6 +211,7 @@ class UserListResponse(BaseModel):
 
 class UserPermissionsResponse(BaseModel):
     """用户权限响应模型"""
+
     user_id: str = Field(..., description="用户ID")
     username: str = Field(..., description="用户名")
     roles: List[Any] = Field(..., description="用户角色")
@@ -198,14 +220,24 @@ class UserPermissionsResponse(BaseModel):
 
 class BatchUserOperation(BaseModel):
     """批量用户操作模型"""
-    action: str = Field(..., description="操作类型: activate, deactivate, delete, assign_role, remove_role")
+
+    action: str = Field(
+        ...,
+        description="操作类型: activate, deactivate, delete, assign_role, remove_role",
+    )
     user_ids: List[int] = Field(..., description="用户ID列表")
     role_id: Optional[int] = Field(None, description="角色ID（用于角色操作）")
     reason: Optional[str] = Field(None, description="操作原因")
-    
+
     @validator("action")
     def validate_action(cls, v):
-        allowed_actions = ["activate", "deactivate", "delete", "assign_role", "remove_role"]
+        allowed_actions = [
+            "activate",
+            "deactivate",
+            "delete",
+            "assign_role",
+            "remove_role",
+        ]
         if v not in allowed_actions:
             raise ValueError(f"操作类型必须是: {', '.join(allowed_actions)}")
         return v
@@ -213,6 +245,7 @@ class BatchUserOperation(BaseModel):
 
 class BatchOperationResponse(BaseModel):
     """批量操作响应模型"""
+
     success_count: int = Field(..., description="成功数量")
     failed_count: int = Field(..., description="失败数量")
     total_count: int = Field(..., description="总数量")
@@ -222,10 +255,11 @@ class BatchOperationResponse(BaseModel):
 
 class PasswordChangeRequest(BaseModel):
     """修改密码请求模型"""
+
     current_password: str = Field(..., description="当前密码")
     new_password: str = Field(..., min_length=8, description="新密码")
     confirm_password: str = Field(..., description="确认新密码")
-    
+
     @validator("confirm_password")
     def passwords_match(cls, v, values):
         if "new_password" in values and v != values["new_password"]:
@@ -235,27 +269,32 @@ class PasswordChangeRequest(BaseModel):
 
 class PasswordResetRequest(BaseModel):
     """重置密码请求模型"""
+
     new_password: str = Field(..., min_length=8, description="新密码")
     force_change: bool = Field(True, description="是否强制下次登录修改密码")
 
 
 class UserLockRequest(BaseModel):
     """锁定用户请求模型"""
+
     reason: Optional[str] = Field(None, description="锁定原因")
 
 
 class UserUnlockRequest(BaseModel):
     """解锁用户请求模型"""
+
     reason: Optional[str] = Field(None, description="解锁原因")
 
 
 class UserRoleAssignment(BaseModel):
     """用户角色分配模型"""
+
     role_ids: List[int] = Field(..., description="角色ID列表")
 
 
 class UserSearchParams(BaseModel):
     """用户搜索参数模型"""
+
     search: Optional[str] = Field(None, description="搜索关键词")
     status: Optional[UserStatus] = Field(None, description="用户状态")
     role: Optional[str] = Field(None, description="角色筛选")
@@ -269,6 +308,7 @@ class UserSearchParams(BaseModel):
 
 class UserStats(BaseModel):
     """用户统计模型"""
+
     total_users: int = Field(..., description="总用户数")
     active_users: int = Field(..., description="活跃用户数")
     inactive_users: int = Field(..., description="非活跃用户数")
@@ -280,6 +320,7 @@ class UserStats(BaseModel):
 
 class UserProfileUpdate(BaseModel):
     """用户个人资料更新模型"""
+
     nickname: Optional[str] = Field(None, max_length=50, description="昵称")
     bio: Optional[str] = Field(None, description="个人简介")
     gender: Optional[Gender] = Field(None, description="性别")

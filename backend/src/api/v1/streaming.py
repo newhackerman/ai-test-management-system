@@ -16,6 +16,7 @@
 - error: 错误信息
 - stream_end: 流结束
 """
+
 import json
 import logging
 from datetime import datetime
@@ -29,9 +30,9 @@ from sqlalchemy.orm import Session
 from ...core.database import get_db
 from ...core.fastapi_integration import Inject
 from ...models.user import User
-from ..auth import get_current_user
 from ...services.ai_assistant_service import AIAssistantService, UserQuery
 from ...services.streaming_service import StreamingService
+from ..auth import get_current_user
 
 logger = logging.getLogger(__name__)
 
@@ -43,14 +44,18 @@ _active_streams: Dict[str, bool] = {}
 
 class StreamQueryRequest(BaseModel):
     """无状态流式查询请求"""
+
     content: str = Field(..., description="查询内容", min_length=1, max_length=10000)
     context: Optional[Dict[str, Any]] = Field(None, description="查询上下文")
     conversation_id: Optional[int] = Field(None, description="对话ID（可选）")
-    preferred_model: Optional[str] = Field(None, description="用户指定的模型名称，覆盖默认模型")
+    preferred_model: Optional[str] = Field(
+        None, description="用户指定的模型名称，覆盖默认模型"
+    )
 
 
 class StreamMessageRequest(BaseModel):
     """流式消息请求"""
+
     content: str = Field(..., description="消息内容", min_length=1, max_length=10000)
     metadata: Optional[Dict[str, Any]] = Field(None, description="metadata")
 
@@ -90,8 +95,8 @@ async def stream_query(
     以 SSE 流式返回 AI 响应，不要求预先创建服务端会话。
     当传入 conversation_id 时，会自动持久化用户消息与 AI 回复到该会话。
     """
+    from ...models.ai_chat_message import ContentType, MessageRole
     from ...services.conversation_service_sync import ConversationServiceSync, Message
-    from ...models.ai_chat_message import MessageRole, ContentType
 
     user_query = UserQuery(
         content=request.content,
@@ -107,7 +112,9 @@ async def stream_query(
         stream_id = f"query_{current_user.id}_{datetime.utcnow().timestamp()}"
         _active_streams[stream_id] = True
 
-        conversation_service = ConversationServiceSync(db) if request.conversation_id else None
+        conversation_service = (
+            ConversationServiceSync(db) if request.conversation_id else None
+        )
         saved_user_msg_id = None
 
         # 当存在会话时，先持久化用户消息并加载历史上下文
@@ -129,53 +136,77 @@ async def stream_query(
                     conversation_id=request.conversation_id, limit=10
                 )
                 prior_history = [
-                    {"role": m.role.value, "content": m.content, "timestamp": m.created_at.isoformat()}
+                    {
+                        "role": m.role.value,
+                        "content": m.content,
+                        "timestamp": m.created_at.isoformat(),
+                    }
                     for m in history[:-1]
                 ]
                 user_query.context["conversation_history"] = prior_history
             except Exception as exc:
-                logger.warning(f"Failed to persist user message for conversation {request.conversation_id}: {exc}")
+                logger.warning(
+                    f"Failed to persist user message for conversation {request.conversation_id}: {exc}"
+                )
 
         ai_content = ""
         ai_provider = None
         ai_model = None
         ai_tokens = 0
         try:
-            async for chunk in ai_service.stream_user_query(user_query, user_id=current_user.id):
+            async for chunk in ai_service.stream_user_query(
+                user_query, user_id=current_user.id
+            ):
                 if chunk.type == "metadata":
                     ai_provider = chunk.metadata.get("provider")
                     ai_model = chunk.metadata.get("model")
                     yield _format_sse_data("ai_start", chunk.metadata)
                 elif chunk.type == "content":
                     ai_content = chunk.metadata.get("total_content", ai_content)
-                    yield _format_sse_data("ai_content", {
-                        "delta": chunk.content,
-                        "content": ai_content,
-                    })
+                    yield _format_sse_data(
+                        "ai_content",
+                        {
+                            "delta": chunk.content,
+                            "content": ai_content,
+                        },
+                    )
                 elif chunk.type == "complete":
                     ai_content = chunk.metadata.get("total_content", ai_content)
                     ai_provider = chunk.metadata.get("provider", ai_provider)
                     ai_model = chunk.metadata.get("model", ai_model)
                     ai_tokens = int(chunk.metadata.get("tokens_used", 0))
-                    yield _format_sse_data("ai_metadata", {
-                        "provider": ai_provider,
-                        "model": ai_model,
-                    })
-                    yield _format_sse_data("ai_complete", {
-                        "content": ai_content,
-                        "provider": ai_provider,
-                        "model": ai_model,
-                        "tokens_used": ai_tokens,
-                        "confidence_score": chunk.metadata.get("confidence_score", 0.0),
-                        "processing_time": chunk.metadata.get("processing_time"),
-                        "user_message_id": saved_user_msg_id,
-                    })
+                    yield _format_sse_data(
+                        "ai_metadata",
+                        {
+                            "provider": ai_provider,
+                            "model": ai_model,
+                        },
+                    )
+                    yield _format_sse_data(
+                        "ai_complete",
+                        {
+                            "content": ai_content,
+                            "provider": ai_provider,
+                            "model": ai_model,
+                            "tokens_used": ai_tokens,
+                            "confidence_score": chunk.metadata.get(
+                                "confidence_score", 0.0
+                            ),
+                            "processing_time": chunk.metadata.get("processing_time"),
+                            "user_message_id": saved_user_msg_id,
+                        },
+                    )
                 elif chunk.type == "error":
-                    yield _format_sse_data("error", {
-                        "message": chunk.metadata.get("error") or "AI 服务调用失败",
-                    })
+                    yield _format_sse_data(
+                        "error",
+                        {
+                            "message": chunk.metadata.get("error") or "AI 服务调用失败",
+                        },
+                    )
         except Exception as exc:
-            logger.error(f"Error in stream query for user {current_user.id}: {str(exc)}")
+            logger.error(
+                f"Error in stream query for user {current_user.id}: {str(exc)}"
+            )
             yield _format_sse_data("error", {"message": f"流式响应失败: {str(exc)}"})
         finally:
             # 流式完成后持久化 AI 回复
@@ -199,9 +230,13 @@ async def stream_query(
                         confidence_score=0.9,
                     )
                 except Exception as exc:
-                    logger.warning(f"Failed to persist AI message for conversation {request.conversation_id}: {exc}")
+                    logger.warning(
+                        f"Failed to persist AI message for conversation {request.conversation_id}: {exc}"
+                    )
             _active_streams.pop(stream_id, None)
-            yield _format_sse_data("stream_end", {"timestamp": datetime.utcnow().isoformat()})
+            yield _format_sse_data(
+                "stream_end", {"timestamp": datetime.utcnow().isoformat()}
+            )
 
     return StreamingResponse(
         generate(),
@@ -221,7 +256,9 @@ async def stream_message(
     """
     向指定会话流式发送消息并获取AI回复，会持久化用户消息与AI回复。
     """
-    logger.info(f"Starting stream for conversation {conversation_id} by user {current_user.id}")
+    logger.info(
+        f"Starting stream for conversation {conversation_id} by user {current_user.id}"
+    )
 
     streaming_service = StreamingService(ai_service)
 
@@ -261,7 +298,7 @@ async def stop_stream(
         logger.error(f"Error stopping stream {stream_id}: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"停止流式响应失败: {str(e)}"
+            detail=f"停止流式响应失败: {str(e)}",
         )
 
 
@@ -275,7 +312,8 @@ async def get_stream_status(
     获取对话的流式响应状态
     """
     active_streams = [
-        stream_id for stream_id in _active_streams
+        stream_id
+        for stream_id in _active_streams
         if stream_id.startswith(f"{conversation_id}_")
     ]
 

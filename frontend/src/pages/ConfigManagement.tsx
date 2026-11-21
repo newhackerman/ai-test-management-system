@@ -1,12 +1,11 @@
 ﻿import React, { useState, useEffect } from 'react'
 import { Card, Button, Table, Space, Input, Select, Modal, Form, Switch, Tag, Tabs, message, Drawer, Row, Col, Statistic, notification, InputNumber, Popconfirm, Progress } from 'antd'
 import { 
-  PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, 
+  PlusOutlined, EditOutlined, DeleteOutlined, 
   SyncOutlined, SettingOutlined, EyeOutlined, CopyOutlined,
-  EnvironmentOutlined, LockOutlined, UnlockOutlined, HistoryOutlined,
-  ImportOutlined, ExportOutlined, WifiOutlined
+  ImportOutlined, WifiOutlined
 } from '@ant-design/icons'
-import { ConfigService, ConfigItem, ConfigGroup, Environment as EnvType, ConfigCreateRequest, ConfigUpdateRequest } from '@/services/config-service'
+import { ConfigService, ConfigItem, ConfigGroup, Environment as EnvType } from '@/services/config-service'
 import {
   BROWSER_OPTIONS,
   EXECUTION_ENVIRONMENTS,
@@ -21,12 +20,11 @@ import {
 } from '@/services/testExecutionConfigService'
 import ConfigImportExportModal from '@/components/ConfigImportExportModal'
 import { useWebSocketContext } from '@/components/providers/WebSocketProvider'
-import { useWebSocketMessage } from '@/hooks/use-websocket'
 
 const { Search } = Input
 const { Option } = Select
 const { TextArea } = Input
-const { TabPane } = Tabs
+const { TabPane: _TabPane } = Tabs
 // 配置类型映射 - 支持15种类型
 const CONFIG_TYPE_MAP = {
   STRING: { label: '字符串', color: 'blue' },
@@ -59,7 +57,7 @@ const ENVIRONMENT_MAP = {
 export default function ConfigManagement() {
   const [configs, setConfigs] = useState<ConfigItem[]>([])
   const [groups, setGroups] = useState<ConfigGroup[]>([])
-  const [environments, setEnvironments] = useState<EnvType[]>([])
+  const [_environments, setEnvironments] = useState<EnvType[]>([])
   const [loading, setLoading] = useState(false)
   const [selectedEnvironment, setSelectedEnvironment] = useState<'dev' | 'test' | 'staging' | 'prod' | 'demo' | 'perf'>('dev')
   const [selectedGroup, setSelectedGroup] = useState<number | undefined>()
@@ -67,7 +65,7 @@ export default function ConfigManagement() {
   const [isModalVisible, setIsModalVisible] = useState(false)
   const [editingConfig, setEditingConfig] = useState<ConfigItem | null>(null)
   const [form] = Form.useForm()
-  const [activeTab, setActiveTab] = useState('configs')
+  const [_activeTab, _setActiveTab] = useState('configs')
   const [showValue, setShowValue] = useState<Record<string, boolean>>({})
   const [statsVisible, setStatsVisible] = useState(false)
   const [statsLoading, setStatsLoading] = useState(false)
@@ -142,7 +140,7 @@ export default function ConfigManagement() {
     const unsubscribeConfigChange = subscribe('config_change', (payload: any) => {
       console.log('收到配置变更通知:', payload)
       
-      const { config_key, environment, change_type, user_id } = payload.data || payload
+      const { config_key, environment, change_type, user_id: _user_id } = payload.data || payload
       
       // 只处理当前环境的变更
       if (environment && environment !== selectedEnvironment) {

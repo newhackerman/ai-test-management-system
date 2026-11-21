@@ -147,40 +147,40 @@ class FileService {
   }
 
   // 下载文件
-  async downloadFile(fileId: string): Promise<void> {
+  async downloadFile(_fileId: string): Promise<void> {
     // 后端没有 GET /files/{id}/download，见 fileService 头注。
     throw new Error('后端暂无该接口（会议文件目前只支持列表与上传）')
   }
 
   // 删除文件
-  async deleteFile(fileId: string): Promise<void> {
+  async deleteFile(_fileId: string): Promise<void> {
     // 后端没有 DELETE /files/{id}，见 fileService 头注。
     throw new Error('后端暂无该接口（会议文件目前只支持列表与上传）')
   }
 
   // 分享文件
-  async shareFile(fileId: string, options: FileShareOptions = {}): Promise<{ shareUrl: string; shareId: string }> {
+  async shareFile(fileId: string, _options: FileShareOptions = {}): Promise<{ shareUrl: string; shareId: string }> {
     // 后端没有 POST /files/{id}/share，见 fileService 头注。
     throw new Error('后端暂无该接口（会议文件目前只支持列表与上传）')
   }
 
 
   // 获取文件预览信息
-  async getFilePreview(fileId: string): Promise<{ previewUrl: string; type: string }> {
+  async getFilePreview(_fileId: string): Promise<{ previewUrl: string; type: string }> {
     // 后端没有 GET /files/{id}/preview，见 fileService 头注。
     throw new Error('后端暂无该接口（会议文件目前只支持列表与上传）')
   }
 
 
   // 更新下载统计
-  private async updateDownloadCount(fileId: string): Promise<void> {
+  private async updateDownloadCount(_fileId: string): Promise<void> {
     // 后端没有 POST /files/{id}/download-count；下载统计随列表返回，
     // 这里直接跳过，不发无效请求。
     return
   }
 
   // 获取文件访问统计
-  async getFileStats(fileId: string): Promise<{
+  async getFileStats(_fileId: string): Promise<{
     downloadCount: number
     viewCount: number
     shareCount: number
@@ -192,7 +192,7 @@ class FileService {
 
 
   // 检查文件权限
-  async checkFilePermission(fileId: string, action: 'download' | 'delete' | 'share'): Promise<boolean> {
+  async checkFilePermission(_fileId: string, _action: 'download' | 'delete' | 'share'): Promise<boolean> {
     // 后端没有 GET /files/{id}/permissions/{action}；列表返回的权限
     // 默认放行，不发无效请求。
     return true
@@ -200,7 +200,7 @@ class FileService {
 
   // 搜索文件
   // 搜索文件
-  async searchFiles(meetingId: number, query: string, filters?: {
+  async searchFiles(meetingId: number, query: string, _filters?: {
     type?: string
     uploadedBy?: number
     dateRange?: { start: string; end: string }
@@ -266,7 +266,7 @@ class FileService {
     const k = 1024
     const sizes = ['B', 'KB', 'MB', 'GB', 'TB']
     const i = Math.floor(Math.log(bytes) / Math.log(k))
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
+    return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))  } ${  sizes[i]}`
   }
 
   // 获取文件图标类型

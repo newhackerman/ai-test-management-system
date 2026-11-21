@@ -11,7 +11,11 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..core.database import get_async_session
-from ..models.ai_operation_log import AIOperationPriority, AIOperationResult, AIOperationType
+from ..models.ai_operation_log import (
+    AIOperationPriority,
+    AIOperationResult,
+    AIOperationType,
+)
 from ..utils.redis_client import get_redis_client
 
 logger = logging.getLogger(__name__)
@@ -116,7 +120,9 @@ class AIOperationLogService:
                 log_data.get("operation_metadata") or log_data.get("metadata")
             ),
             "tags": _json_value(log_data.get("tags")),
-            "priority": _enum_name(log_data.get("priority", AIOperationPriority.MEDIUM)),
+            "priority": _enum_name(
+                log_data.get("priority", AIOperationPriority.MEDIUM)
+            ),
             "category": log_data.get("category"),
             "subcategory": log_data.get("subcategory"),
             "is_sensitive": 1 if log_data.get("is_sensitive") else 0,
@@ -173,8 +179,7 @@ class AIOperationLogService:
     async def _insert_log(self, db: AsyncSession, log_data: Dict[str, Any]) -> int:
         row = self._to_db_row(log_data)
         result = await db.execute(
-            text(
-                """
+            text("""
                 INSERT INTO ai_operation_logs (
                     created_at, updated_at,
                     user_id, session_id, operation_type, operation_name,
@@ -202,8 +207,7 @@ class AIOperationLogService:
                     :requires_approval, :approved_by, :approved_at,
                     :parent_log_id, :correlation_id, :trace_id
                 )
-                """
-            ),
+                """),
             row,
         )
         await db.commit()
@@ -215,7 +219,9 @@ class AIOperationLogService:
             await self._flush_buffer()
 
     async def _check_and_flush_buffer(self):
-        if (datetime.utcnow() - self._last_flush).total_seconds() >= self._flush_interval:
+        if (
+            datetime.utcnow() - self._last_flush
+        ).total_seconds() >= self._flush_interval:
             await self._flush_buffer()
 
     async def _flush_buffer(self):
@@ -263,7 +269,14 @@ class AIOperationLogService:
             **kwargs,
         )
 
-    async def log_conversation_activity(self, user_id: int, conversation_id: str, activity_type: str, result: AIOperationResult, **kwargs):
+    async def log_conversation_activity(
+        self,
+        user_id: int,
+        conversation_id: str,
+        activity_type: str,
+        result: AIOperationResult,
+        **kwargs,
+    ):
         operation_type_map = {
             "create": AIOperationType.CONVERSATION_CREATE,
             "delete": AIOperationType.CONVERSATION_DELETE,
@@ -271,7 +284,9 @@ class AIOperationLogService:
             "receive_message": AIOperationType.MESSAGE_RECEIVE,
         }
         return await self.log_operation(
-            operation_type=operation_type_map.get(activity_type, AIOperationType.MESSAGE_SEND),
+            operation_type=operation_type_map.get(
+                activity_type, AIOperationType.MESSAGE_SEND
+            ),
             operation_name=f"conversation_{activity_type}",
             result=result,
             user_id=user_id,
@@ -283,7 +298,14 @@ class AIOperationLogService:
             **kwargs,
         )
 
-    async def log_suggestion_activity(self, user_id: int, suggestion_id: str, activity_type: str, result: AIOperationResult, **kwargs):
+    async def log_suggestion_activity(
+        self,
+        user_id: int,
+        suggestion_id: str,
+        activity_type: str,
+        result: AIOperationResult,
+        **kwargs,
+    ):
         operation_type_map = {
             "generate": AIOperationType.SUGGESTION_GENERATE,
             "accept": AIOperationType.SUGGESTION_ACCEPT,
@@ -291,7 +313,9 @@ class AIOperationLogService:
             "implement": AIOperationType.SUGGESTION_IMPLEMENT,
         }
         return await self.log_operation(
-            operation_type=operation_type_map.get(activity_type, AIOperationType.SUGGESTION_GENERATE),
+            operation_type=operation_type_map.get(
+                activity_type, AIOperationType.SUGGESTION_GENERATE
+            ),
             operation_name=f"suggestion_{activity_type}",
             result=result,
             user_id=user_id,
@@ -302,7 +326,15 @@ class AIOperationLogService:
             **kwargs,
         )
 
-    async def log_security_event(self, event_type: str, severity: str, user_id: Optional[int] = None, ip_address: Optional[str] = None, details: Optional[str] = None, **kwargs):
+    async def log_security_event(
+        self,
+        event_type: str,
+        severity: str,
+        user_id: Optional[int] = None,
+        ip_address: Optional[str] = None,
+        details: Optional[str] = None,
+        **kwargs,
+    ):
         operation_type_map = {
             "unauthorized_access": AIOperationType.UNAUTHORIZED_ACCESS,
             "rate_limit_exceeded": AIOperationType.RATE_LIMIT_EXCEEDED,
@@ -315,7 +347,9 @@ class AIOperationLogService:
             "critical": AIOperationPriority.CRITICAL,
         }
         return await self.log_operation(
-            operation_type=operation_type_map.get(event_type, AIOperationType.SUSPICIOUS_ACTIVITY),
+            operation_type=operation_type_map.get(
+                event_type, AIOperationType.SUSPICIOUS_ACTIVITY
+            ),
             operation_name=f"security_{event_type}",
             result=AIOperationResult.FAILURE,
             user_id=user_id,
@@ -336,8 +370,12 @@ class AIOperationLogService:
         data = dict(row._mapping)
         # JSON 列：驱动可能返回 str 或已解析对象，统一成对象。
         for key in (
-            "request_headers", "request_params", "response_data",
-            "response_headers", "business_context", "operation_metadata",
+            "request_headers",
+            "request_params",
+            "response_data",
+            "response_headers",
+            "business_context",
+            "operation_metadata",
             "tags",
         ):
             value = data.get(key)
@@ -365,7 +403,10 @@ class AIOperationLogService:
     ) -> Tuple[List[Dict[str, Any]], int]:
         try:
             where = []
-            params: Dict[str, Any] = {"limit": page_size, "offset": (page - 1) * page_size}
+            params: Dict[str, Any] = {
+                "limit": page_size,
+                "offset": (page - 1) * page_size,
+            }
             if user_id:
                 where.append("user_id = :user_id")
                 params["user_id"] = user_id
@@ -384,23 +425,34 @@ class AIOperationLogService:
 
             where_sql = f"WHERE {' AND '.join(where)}" if where else ""
             allowed_order = {
-                "id", "user_id", "operation_type", "operation_name", "result",
-                "ai_provider", "ai_model", "tokens_used", "processing_time", "created_at",
+                "id",
+                "user_id",
+                "operation_type",
+                "operation_name",
+                "result",
+                "ai_provider",
+                "ai_model",
+                "tokens_used",
+                "processing_time",
+                "created_at",
             }
             order_column = order_by if order_by in allowed_order else "created_at"
             direction = "DESC" if order_desc else "ASC"
             async with _managed_async_session() as db:
-                total = (await db.execute(text(f"SELECT COUNT(*) FROM ai_operation_logs {where_sql}"), params)).scalar() or 0
+                total = (
+                    await db.execute(
+                        text(f"SELECT COUNT(*) FROM ai_operation_logs {where_sql}"),
+                        params,
+                    )
+                ).scalar() or 0
                 rows = (
                     await db.execute(
-                        text(
-                            f"""
+                        text(f"""
                             SELECT * FROM ai_operation_logs
                             {where_sql}
                             ORDER BY {order_column} {direction}
                             LIMIT :limit OFFSET :offset
-                            """
-                        ),
+                            """),
                         params,
                     )
                 ).all()
@@ -434,15 +486,13 @@ class AIOperationLogService:
                 async with _managed_async_session() as db:
                     row = (
                         await db.execute(
-                            text(
-                                f"""
+                            text(f"""
                                 SELECT COUNT(*) total_operations,
                                        COALESCE(SUM(tokens_used), 0) total_tokens,
                                        COALESCE(SUM(cost_amount), 0) total_cost,
                                        COALESCE(AVG(processing_time), 0) avg_processing_time
                                 FROM ai_operation_logs {where_sql}
-                                """
-                            ),
+                                """),
                             params,
                         )
                     ).first()
@@ -457,8 +507,7 @@ class AIOperationLogService:
             async with _managed_async_session() as db:
                 rows = (
                     await db.execute(
-                        text(
-                            f"""
+                        text(f"""
                             SELECT {group_expr} group_key,
                                    COUNT(*) count,
                                    COALESCE(SUM(tokens_used), 0) total_tokens,
@@ -467,8 +516,7 @@ class AIOperationLogService:
                             FROM ai_operation_logs
                             {where_sql}
                             GROUP BY {group_expr}
-                            """
-                        ),
+                            """),
                         params,
                     )
                 ).all()
@@ -479,7 +527,9 @@ class AIOperationLogService:
                             "count": row._mapping["count"],
                             "total_tokens": row._mapping["total_tokens"],
                             "total_cost": float(row._mapping["total_cost"] or 0),
-                            "avg_processing_time": float(row._mapping["avg_processing_time"] or 0),
+                            "avg_processing_time": float(
+                                row._mapping["avg_processing_time"] or 0
+                            ),
                         }
                         for row in rows
                     },
@@ -494,18 +544,27 @@ class AIOperationLogService:
             async with _managed_async_session() as db:
                 count = (
                     await db.execute(
-                        text("SELECT COUNT(*) FROM ai_operation_logs WHERE created_at < :cutoff_date"),
+                        text(
+                            "SELECT COUNT(*) FROM ai_operation_logs WHERE created_at < :cutoff_date"
+                        ),
                         {"cutoff_date": cutoff_date},
                     )
                 ).scalar() or 0
-                await db.execute(text("DELETE FROM ai_operation_logs WHERE created_at < :cutoff_date"), {"cutoff_date": cutoff_date})
+                await db.execute(
+                    text(
+                        "DELETE FROM ai_operation_logs WHERE created_at < :cutoff_date"
+                    ),
+                    {"cutoff_date": cutoff_date},
+                )
                 await db.commit()
                 return count
         except Exception as exc:
             logger.error("Failed to cleanup AI operation logs: %s", exc)
             return 0
 
-    async def generate_daily_summary(self, target_date: Optional[datetime] = None) -> bool:
+    async def generate_daily_summary(
+        self, target_date: Optional[datetime] = None
+    ) -> bool:
         return True
 
     async def export_logs(
@@ -538,7 +597,9 @@ class AIOperationLogService:
 _log_service_instance: Optional[AIOperationLogService] = None
 
 
-async def get_ai_operation_log_service(db: AsyncSession = None) -> AIOperationLogService:
+async def get_ai_operation_log_service(
+    db: AsyncSession = None,
+) -> AIOperationLogService:
     global _log_service_instance
     if db is not None:
         service = AIOperationLogService(db)

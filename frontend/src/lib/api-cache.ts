@@ -62,7 +62,7 @@ export class RequestOptimizer {
     const {
       enableDeduplication = this.config.enableDeduplication,
       enableBatching = this.config.enableBatching,
-      priority = 'normal'
+      priority: _priority = 'normal'
     } = options
 
     // 璇锋眰鍘婚噸
@@ -340,7 +340,7 @@ export interface CacheOptions {
  * 榛樿缂撳瓨绛栫暐
  */
 export class DefaultCacheStrategy implements CacheStrategy {
-  getCacheOptions(queryKey: string[], data: any): CacheOptions {
+  getCacheOptions(_queryKey: string[], _data: any): CacheOptions {
     return {
       staleTime: 5 * 60 * 1000, // 5鍒嗛挓
       gcTime: 10 * 60 * 1000, // 10鍒嗛挓
@@ -356,7 +356,7 @@ export class DefaultCacheStrategy implements CacheStrategy {
  * 闈欐€佹暟鎹紦瀛樼瓥鐣?
  */
 export class StaticDataCacheStrategy implements CacheStrategy {
-  getCacheOptions(queryKey: string[], data: any): CacheOptions {
+  getCacheOptions(_queryKey: string[], _data: any): CacheOptions {
     return {
       staleTime: 60 * 60 * 1000, // 1灏忔椂
       gcTime: 24 * 60 * 60 * 1000, // 24灏忔椂
@@ -372,7 +372,7 @@ export class StaticDataCacheStrategy implements CacheStrategy {
  * 瀹炴椂鏁版嵁缂撳瓨绛栫暐
  */
 export class RealtimeDataCacheStrategy implements CacheStrategy {
-  getCacheOptions(queryKey: string[], data: any): CacheOptions {
+  getCacheOptions(_queryKey: string[], _data: any): CacheOptions {
     return {
       staleTime: 0, // 绔嬪嵆杩囨湡
       gcTime: 1 * 60 * 1000, // 1鍒嗛挓
@@ -388,7 +388,7 @@ export class RealtimeDataCacheStrategy implements CacheStrategy {
  * 鐢ㄦ埛鏁版嵁缂撳瓨绛栫暐
  */
 export class UserDataCacheStrategy implements CacheStrategy {
-  getCacheOptions(queryKey: string[], data: any): CacheOptions {
+  getCacheOptions(_queryKey: string[], _data: any): CacheOptions {
     return {
       staleTime: 10 * 60 * 1000, // 10鍒嗛挓
       gcTime: 30 * 60 * 1000, // 30鍒嗛挓

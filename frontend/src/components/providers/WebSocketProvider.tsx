@@ -54,7 +54,7 @@ export function WebSocketProvider({
   url,
   autoConnect = true,
   enableNotifications = true,
-  enableReconnect = true,
+  enableReconnect: _enableReconnect = true,
   maxReconnectAttempts = 5
 }: WebSocketProviderProps) {
   const { isAuthenticated, token } = useAuthStore()

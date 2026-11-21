@@ -37,7 +37,7 @@ export class WebRTCService {
   private peerConnections: Map<number, RTCPeerConnection> = new Map()
   private localStream: MediaStream | null = null
   private remoteStreams: Map<string, MediaStream> = new Map()
-  private eventListeners: Map<string, Function[]> = new Map()
+  private eventListeners: Map<string, Array<(...args: any[]) => void>> = new Map()
   // WS 加入房间后后端在 room-joined 消息里给的会话 ID，屏幕共享等
   // REST 调用需要它。
   private sessionId: string | null = null
@@ -482,14 +482,14 @@ export class WebRTCService {
   }
 
   // 浜嬩欢绯荤粺
-  on(event: string, callback: Function): void {
+  on(event: string, callback: (...args: any[]) => void): void {
     if (!this.eventListeners.has(event)) {
       this.eventListeners.set(event, [])
     }
     this.eventListeners.get(event)!.push(callback)
   }
 
-  off(event: string, callback: Function): void {
+  off(event: string, callback: (...args: any[]) => void): void {
     const listeners = this.eventListeners.get(event)
     if (listeners) {
       const index = listeners.indexOf(callback)

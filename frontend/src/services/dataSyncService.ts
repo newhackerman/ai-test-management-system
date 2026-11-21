@@ -4,7 +4,7 @@ import {
   useRealtimeStore, 
   useUserPreferencesStore 
 } from '@/stores'
-import type { DashboardConfig, WidgetConfig, OfflineAction } from '@/types/dashboard'
+import type { OfflineAction } from '@/types/dashboard'
 
 /**
  * 数据同步服务
@@ -180,7 +180,7 @@ export class DataSyncService {
       const instances = widgetStore.instances
       
       // 刷新所有组件数据
-      for (const [widgetId, instance] of Object.entries(instances)) {
+      for (const [widgetId, _instance] of Object.entries(instances)) {
         if (widgetStore.isWidgetVisible(widgetId)) {
           await this.refreshWidgetData(widgetId)
         }

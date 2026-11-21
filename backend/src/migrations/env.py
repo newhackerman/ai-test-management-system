@@ -1,20 +1,21 @@
-from logging.config import fileConfig
-from sqlalchemy import engine_from_config
-from sqlalchemy import pool
-from alembic import context
 import os
 import sys
+from logging.config import fileConfig
+
+from alembic import context
+from sqlalchemy import engine_from_config, pool
 
 # 添加项目根目录到Python路径
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+
+import src.models.audit  # noqa: F401 — 注册 audit_logs / security_events
+import src.models.dashboard  # noqa: F401 — 注册 6 张仪表板表
+from src.models import *  # 导入所有模型
 
 # 导入模型（第 11 项收敛：autogenerate 的目标元数据改用共享 Base，
 # 此前是 core.database 的独立 Base，只含 6 张仪表板表，导致自动
 # 生成的迁移看不到其余 110+ 张表）
 from src.models.base import Base
-from src.models import *  # 导入所有模型
-import src.models.audit  # noqa: F401 — 注册 audit_logs / security_events
-import src.models.dashboard  # noqa: F401 — 注册 6 张仪表板表
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -38,6 +39,7 @@ target_metadata = Base.metadata
 def get_url():
     """获取数据库URL"""
     from src.core.config import settings
+
     # 将异步驱动替换为同步驱动用于迁移
     url = settings.DATABASE_URL
     if url.startswith("mysql+asyncmy://"):
@@ -85,9 +87,7 @@ def run_migrations_online() -> None:
     )
 
     with connectable.connect() as connection:
-        context.configure(
-            connection=connection, target_metadata=target_metadata
-        )
+        context.configure(connection=connection, target_metadata=target_metadata)
 
         with context.begin_transaction():
             context.run_migrations()

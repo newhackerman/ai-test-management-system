@@ -1,22 +1,37 @@
 """
 配置审核API接口
 """
-from fastapi import APIRouter, Depends, HTTPException, Query, status, BackgroundTasks, WebSocket, WebSocketDisconnect
-from typing import List, Optional, Dict, Any
-from datetime import datetime, timedelta
-from sqlalchemy.orm import Session
-from sqlalchemy import func
 
-from ..schemas.config import (
-    ConfigAuditCreateRequest, ConfigAuditResponse, ApiResponse
-)
-from ..core.database import get_db, SessionLocal
-from ..core.security import get_current_user
-from ..models.user import User
-from ..services.config_permission import config_permission_service
-from ..models.config import ConfigAudit, ConfigAuditComment, SystemConfig, Environment, PermissionAction
-from ..utils.jwt import verify_token
 import logging
+from datetime import datetime, timedelta
+from typing import Any, Dict, List, Optional
+
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Depends,
+    HTTPException,
+    Query,
+    WebSocket,
+    WebSocketDisconnect,
+    status,
+)
+from sqlalchemy import func
+from sqlalchemy.orm import Session
+
+from ..core.database import SessionLocal, get_db
+from ..core.security import get_current_user
+from ..models.config import (
+    ConfigAudit,
+    ConfigAuditComment,
+    Environment,
+    PermissionAction,
+    SystemConfig,
+)
+from ..models.user import User
+from ..schemas.config import ApiResponse, ConfigAuditCreateRequest, ConfigAuditResponse
+from ..services.config_permission import config_permission_service
+from ..utils.jwt import verify_token
 
 logger = logging.getLogger(__name__)
 
@@ -120,7 +135,9 @@ def _build_audit_query(db: Session, filters: Dict[str, Any]):
     if filters.get("config_key"):
         query = query.filter(ConfigAudit.config_key.contains(filters["config_key"]))
     if filters.get("environment"):
-        query = query.filter(ConfigAudit.environment == Environment(filters["environment"]))
+        query = query.filter(
+            ConfigAudit.environment == Environment(filters["environment"])
+        )
     if filters.get("priority"):
         query = query.filter(ConfigAudit.priority == filters["priority"])
     if filters.get("apply_user_id"):
@@ -135,7 +152,7 @@ async def create_audit_request(
     request_data: ConfigAuditCreateRequest,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
-    background_tasks: BackgroundTasks = None
+    background_tasks: BackgroundTasks = None,
 ):
     """创建配置审核申请"""
     try:
@@ -145,18 +162,22 @@ async def create_audit_request(
         has_permission = await config_permission_service.check_config_permission(
             operator_id, request_data.config_key, model_env, PermissionAction.WRITE
         )
-        
+
         if not has_permission:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="无权限提交此配置的审核申请"
+                detail="无权限提交此配置的审核申请",
             )
-        
-        config = db.query(SystemConfig).filter(
-            SystemConfig.config_key == request_data.config_key,
-            SystemConfig.environment == model_env,
-            SystemConfig.deleted_at.is_(None),
-        ).first()
+
+        config = (
+            db.query(SystemConfig)
+            .filter(
+                SystemConfig.config_key == request_data.config_key,
+                SystemConfig.environment == model_env,
+                SystemConfig.deleted_at.is_(None),
+            )
+            .first()
+        )
 
         audit = ConfigAudit(
             audit_code=f"CA{datetime.utcnow().strftime('%Y%m%d%H%M%S%f')}",
@@ -181,16 +202,18 @@ async def create_audit_request(
         db.add(audit)
         db.commit()
         db.refresh(audit)
-        
-        return ApiResponse(success=True, data=_audit_to_dict(audit), message="审核申请创建成功")
-        
+
+        return ApiResponse(
+            success=True, data=_audit_to_dict(audit), message="审核申请创建成功"
+        )
+
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"创建审核申请失败: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"创建审核申请失败: {str(e)}"
+            detail=f"创建审核申请失败: {str(e)}",
         )
 
 
@@ -205,71 +228,76 @@ async def get_audit_list(
     page: int = Query(1, ge=1, description="页码"),
     size: int = Query(20, ge=1, le=100, description="页大小"),
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """获取审核列表"""
     try:
         # 构建过滤条件
         filters = {}
         if audit_status:
-            filters['audit_status'] = audit_status
+            filters["audit_status"] = audit_status
         if config_key:
-            filters['config_key'] = config_key
+            filters["config_key"] = config_key
         if environment:
-            filters['environment'] = environment
+            filters["environment"] = environment
         if priority:
-            filters['priority'] = priority
+            filters["priority"] = priority
         if apply_user_id:
-            filters['apply_user_id'] = apply_user_id
+            filters["apply_user_id"] = apply_user_id
         if audit_user_id:
-            filters['audit_user_id'] = audit_user_id
-        
+            filters["audit_user_id"] = audit_user_id
+
         query = _build_audit_query(db, filters)
         total = query.count()
-        audits = query.order_by(ConfigAudit.applied_at.desc(), ConfigAudit.id.desc()).offset(
-            (page - 1) * size
-        ).limit(size).all()
+        audits = (
+            query.order_by(ConfigAudit.applied_at.desc(), ConfigAudit.id.desc())
+            .offset((page - 1) * size)
+            .limit(size)
+            .all()
+        )
         result = {
             "items": [_audit_to_dict(audit) for audit in audits],
             "total": total,
             "page": page,
             "size": size,
-            "pages": (total + size - 1) // size
+            "pages": (total + size - 1) // size,
         }
-        
+
         return ApiResponse(success=True, data=result, message="获取审核列表成功")
-        
+
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"获取审核列表失败: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"获取审核列表失败: {str(e)}"
+            detail=f"获取审核列表失败: {str(e)}",
         )
 
 
 @router.get("/pending", response_model=ApiResponse[List[dict]])
 async def get_pending_audits(
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
 ):
     """获取待审核列表"""
     try:
-        audits = db.query(ConfigAudit).filter(
-            ConfigAudit.audit_status == "PENDING"
-        ).order_by(ConfigAudit.applied_at.desc(), ConfigAudit.id.desc()).all()
+        audits = (
+            db.query(ConfigAudit)
+            .filter(ConfigAudit.audit_status == "PENDING")
+            .order_by(ConfigAudit.applied_at.desc(), ConfigAudit.id.desc())
+            .all()
+        )
         result = [_audit_to_dict(audit) for audit in audits]
-        
+
         return ApiResponse(success=True, data=result, message="获取待审核列表成功")
-        
+
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"获取待审核列表失败: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"获取待审核列表失败: {str(e)}"
+            detail=f"获取待审核列表失败: {str(e)}",
         )
 
 
@@ -277,7 +305,7 @@ async def get_pending_audits(
 async def get_audit_statistics(
     time_range: Optional[str] = Query(None, description="时间范围"),
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """获取审核统计信息"""
     try:
@@ -285,7 +313,9 @@ async def get_audit_statistics(
         if time_range:
             days = {"7d": 7, "30d": 30, "90d": 90}.get(time_range)
             if days:
-                query = query.filter(ConfigAudit.applied_at >= datetime.utcnow() - timedelta(days=days))
+                query = query.filter(
+                    ConfigAudit.applied_at >= datetime.utcnow() - timedelta(days=days)
+                )
 
         total = query.count()
         status_stats = {
@@ -308,7 +338,9 @@ async def get_audit_statistics(
             "critical": query.filter(ConfigAudit.risk_level == "CRITICAL").count(),
         }
         processed_count = status_stats["approved"] + status_stats["rejected"]
-        approval_rate = (status_stats["approved"] / processed_count * 100) if processed_count else 0
+        approval_rate = (
+            (status_stats["approved"] / processed_count * 100) if processed_count else 0
+        )
         result = {
             "status_stats": status_stats,
             "priority_stats": priority_stats,
@@ -316,16 +348,16 @@ async def get_audit_statistics(
             "approval_rate": round(approval_rate, 1),
             "processed_count": processed_count,
         }
-        
+
         return ApiResponse(success=True, data=result, message="获取审核统计成功")
-        
+
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"获取审核统计失败: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"获取审核统计失败: {str(e)}"
+            detail=f"获取审核统计失败: {str(e)}",
         )
 
 
@@ -333,26 +365,27 @@ async def get_audit_statistics(
 async def get_audit_detail(
     audit_id: int,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """获取审核详情"""
     try:
         audit = db.query(ConfigAudit).filter(ConfigAudit.id == audit_id).first()
         if not audit:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="审核记录不存在"
+                status_code=status.HTTP_404_NOT_FOUND, detail="审核记录不存在"
             )
-        
-        return ApiResponse(success=True, data=_audit_to_dict(audit), message="获取审核详情成功")
-        
+
+        return ApiResponse(
+            success=True, data=_audit_to_dict(audit), message="获取审核详情成功"
+        )
+
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"获取审核详情失败: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"获取审核详情失败: {str(e)}"
+            detail=f"获取审核详情失败: {str(e)}",
         )
 
 
@@ -362,15 +395,19 @@ async def approve_audit(
     audit_reason: Optional[str] = None,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
-    background_tasks: BackgroundTasks = None
+    background_tasks: BackgroundTasks = None,
 ):
     """审核通过"""
     try:
         audit = db.query(ConfigAudit).filter(ConfigAudit.id == audit_id).first()
         if not audit:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="审核记录不存在")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="审核记录不存在"
+            )
         if _enum_value(audit.audit_status) not in ("PENDING", "IN_REVIEW"):
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="当前审核状态不允许通过")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, detail="当前审核状态不允许通过"
+            )
 
         now = datetime.utcnow()
         audit.audit_status = "APPROVED"
@@ -381,16 +418,18 @@ async def approve_audit(
         audit.updated_by = _user_id(current_user)
         db.commit()
         db.refresh(audit)
-        
-        return ApiResponse(success=True, data=_audit_to_dict(audit), message="审核通过成功")
-        
+
+        return ApiResponse(
+            success=True, data=_audit_to_dict(audit), message="审核通过成功"
+        )
+
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"审核通过失败: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"审核通过失败: {str(e)}"
+            detail=f"审核通过失败: {str(e)}",
         )
 
 
@@ -399,21 +438,24 @@ async def reject_audit(
     audit_id: int,
     audit_reason: str,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """审核驳回"""
     try:
         if not audit_reason or audit_reason.strip() == "":
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="驳回原因不能为空"
+                status_code=status.HTTP_400_BAD_REQUEST, detail="驳回原因不能为空"
             )
-        
+
         audit = db.query(ConfigAudit).filter(ConfigAudit.id == audit_id).first()
         if not audit:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="审核记录不存在")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="审核记录不存在"
+            )
         if _enum_value(audit.audit_status) not in ("PENDING", "IN_REVIEW"):
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="当前审核状态不允许驳回")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, detail="当前审核状态不允许驳回"
+            )
 
         audit.audit_status = "REJECTED"
         audit.audit_user_id = _user_id(current_user)
@@ -422,16 +464,18 @@ async def reject_audit(
         audit.updated_by = _user_id(current_user)
         db.commit()
         db.refresh(audit)
-        
-        return ApiResponse(success=True, data=_audit_to_dict(audit), message="审核驳回成功")
-        
+
+        return ApiResponse(
+            success=True, data=_audit_to_dict(audit), message="审核驳回成功"
+        )
+
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"审核驳回失败: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"审核驳回失败: {str(e)}"
+            detail=f"审核驳回失败: {str(e)}",
         )
 
 
@@ -440,32 +484,33 @@ async def add_audit_comment(
     audit_id: int,
     comment: str,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """添加审核意见"""
     try:
         if not comment or comment.strip() == "":
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="审核意见不能为空"
+                status_code=status.HTTP_400_BAD_REQUEST, detail="审核意见不能为空"
             )
 
         audit = db.query(ConfigAudit).filter(ConfigAudit.id == audit_id).first()
         if not audit:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="审核记录不存在"
+                status_code=status.HTTP_404_NOT_FOUND, detail="审核记录不存在"
             )
         if _enum_value(audit.audit_status) not in ("PENDING", "IN_REVIEW"):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="当前审核状态不允许添加意见"
+                detail="当前审核状态不允许添加意见",
             )
 
         record = ConfigAuditComment(
             audit_id=audit_id,
             user_id=_user_id(current_user),
-            username=_username(current_user) or _audit_usernames(db, [_user_id(current_user)]).get(_user_id(current_user), ""),
+            username=_username(current_user)
+            or _audit_usernames(db, [_user_id(current_user)]).get(
+                _user_id(current_user), ""
+            ),
             comment=comment.strip(),
             created_by=_user_id(current_user),
             updated_by=_user_id(current_user),
@@ -475,9 +520,7 @@ async def add_audit_comment(
         db.refresh(record)
 
         return ApiResponse(
-            success=True,
-            data=_comment_to_dict(record),
-            message="审核意见添加成功"
+            success=True, data=_comment_to_dict(record), message="审核意见添加成功"
         )
 
     except HTTPException:
@@ -486,7 +529,7 @@ async def add_audit_comment(
         logger.error(f"添加审核意见失败: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"添加审核意见失败: {str(e)}"
+            detail=f"添加审核意见失败: {str(e)}",
         )
 
 
@@ -495,27 +538,25 @@ async def cancel_audit(
     audit_id: int,
     cancel_reason: str,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """取消审核申请"""
     try:
         audit = db.query(ConfigAudit).filter(ConfigAudit.id == audit_id).first()
         if not audit:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="审核记录不存在"
+                status_code=status.HTTP_404_NOT_FOUND, detail="审核记录不存在"
             )
 
         operator_id = _user_id(current_user)
         if audit.apply_user_id != operator_id and not _is_superuser(db, operator_id):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="只有申请人或管理员可以取消审核"
+                detail="只有申请人或管理员可以取消审核",
             )
         if _enum_value(audit.audit_status) not in ("PENDING", "IN_REVIEW"):
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="当前审核状态不允许取消"
+                status_code=status.HTTP_400_BAD_REQUEST, detail="当前审核状态不允许取消"
             )
 
         audit.audit_status = "CANCELLED"
@@ -526,9 +567,7 @@ async def cancel_audit(
         db.refresh(audit)
 
         return ApiResponse(
-            success=True,
-            data=_audit_to_dict(audit),
-            message="审核申请已取消"
+            success=True, data=_audit_to_dict(audit), message="审核申请已取消"
         )
 
     except HTTPException:
@@ -537,7 +576,7 @@ async def cancel_audit(
         logger.error(f"取消审核申请失败: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"取消审核申请失败: {str(e)}"
+            detail=f"取消审核申请失败: {str(e)}",
         )
 
 
@@ -545,20 +584,22 @@ async def cancel_audit(
 async def get_audit_history(
     audit_id: int,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """获取审核历史"""
     try:
         audit = db.query(ConfigAudit).filter(ConfigAudit.id == audit_id).first()
         if not audit:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="审核记录不存在"
+                status_code=status.HTTP_404_NOT_FOUND, detail="审核记录不存在"
             )
 
-        comments = db.query(ConfigAuditComment).filter(
-            ConfigAuditComment.audit_id == audit_id
-        ).order_by(ConfigAuditComment.created_at.asc(), ConfigAuditComment.id.asc()).all()
+        comments = (
+            db.query(ConfigAuditComment)
+            .filter(ConfigAuditComment.audit_id == audit_id)
+            .order_by(ConfigAuditComment.created_at.asc(), ConfigAuditComment.id.asc())
+            .all()
+        )
 
         user_ids = [audit.apply_user_id, audit.audit_user_id]
         user_ids += [c.user_id for c in comments]
@@ -576,28 +617,60 @@ async def get_audit_history(
                 "_seq": seq,
             }
 
-        events = [_event("submitted", audit.apply_user_id, "提交审核申请", audit.applied_at, 0)]
+        events = [
+            _event(
+                "submitted", audit.apply_user_id, "提交审核申请", audit.applied_at, 0
+            )
+        ]
         status_value = _enum_value(audit.audit_status)
         if audit.audited_at:
-            action = "approved" if status_value == "APPROVED" else (
-                "rejected" if status_value == "REJECTED" else "reviewed"
+            action = (
+                "approved"
+                if status_value == "APPROVED"
+                else ("rejected" if status_value == "REJECTED" else "reviewed")
             )
-            events.append(_event(action, audit.audit_user_id, audit.audit_reason or "", audit.audited_at, 2))
+            events.append(
+                _event(
+                    action,
+                    audit.audit_user_id,
+                    audit.audit_reason or "",
+                    audit.audited_at,
+                    2,
+                )
+            )
         if status_value == "CANCELLED":
-            events.append(_event("cancelled", audit.audit_user_id, audit.audit_reason or "取消审核申请", audit.updated_at, 3))
+            events.append(
+                _event(
+                    "cancelled",
+                    audit.audit_user_id,
+                    audit.audit_reason or "取消审核申请",
+                    audit.updated_at,
+                    3,
+                )
+            )
         if audit.executed_at and status_value == "APPROVED":
-            events.append(_event("executed", audit.audit_user_id, "审核通过后执行", audit.executed_at, 4))
+            events.append(
+                _event(
+                    "executed",
+                    audit.audit_user_id,
+                    "审核通过后执行",
+                    audit.executed_at,
+                    4,
+                )
+            )
         for c in comments:
-            events.append({
-                "id": c.id,
-                "action": "comment",
-                "user_id": c.user_id,
-                "user_name": c.username or names.get(c.user_id, ""),
-                "comment": c.comment,
-                "created_at": c.created_at.isoformat() if c.created_at else None,
-                "_sort": c.created_at or datetime.min,
-                "_seq": 1,
-            })
+            events.append(
+                {
+                    "id": c.id,
+                    "action": "comment",
+                    "user_id": c.user_id,
+                    "user_name": c.username or names.get(c.user_id, ""),
+                    "comment": c.comment,
+                    "created_at": c.created_at.isoformat() if c.created_at else None,
+                    "_sort": c.created_at or datetime.min,
+                    "_seq": 1,
+                }
+            )
 
         events.sort(key=lambda e: (e["_sort"], e["_seq"]))
         for e in events:
@@ -612,13 +685,15 @@ async def get_audit_history(
         logger.error(f"获取审核历史失败: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"获取审核历史失败: {str(e)}"
+            detail=f"获取审核历史失败: {str(e)}",
         )
 
 
 # 审核相关的WebSocket通知端点
 @router.websocket("/ws/{audit_id}")
-async def audit_websocket_endpoint(websocket: WebSocket, audit_id: int, token: Optional[str] = Query(None)):
+async def audit_websocket_endpoint(
+    websocket: WebSocket, audit_id: int, token: Optional[str] = Query(None)
+):
     """审核状态实时推送
 
     连接时用 ?token=<JWT> 鉴权，握手后先推送一次当前审核状态快照；
@@ -636,6 +711,7 @@ async def audit_websocket_endpoint(websocket: WebSocket, audit_id: int, token: O
     await websocket.accept()
     db = SessionLocal()
     try:
+
         def _snapshot():
             audit = db.query(ConfigAudit).filter(ConfigAudit.id == audit_id).first()
             if not audit:

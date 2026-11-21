@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { useEffect, useCallback, useRef } from 'react'
+import { useEffect } from 'react'
 
 export interface QueryState<T = any> {
   data: T | null
@@ -373,7 +373,7 @@ const startCacheCleanup = () => {
 }
 
 // 停止缓存清理
-const stopCacheCleanup = () => {
+const _stopCacheCleanup = () => {
   if (cacheCleanupTimer) {
     clearInterval(cacheCleanupTimer)
     cacheCleanupTimer = null

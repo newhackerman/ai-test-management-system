@@ -43,7 +43,7 @@ export interface SendMessageRequest {
 export class ChatService {
   private baseUrl = '/api/v1/meetings'
   private websocket: WebSocket | null = null
-  private eventListeners: Map<string, Function[]> = new Map()
+  private eventListeners: Map<string, Array<(...args: any[]) => void>> = new Map()
 
   // WebSocket连接管理
   async connectChat(meetingId: number, token: string): Promise<void> {
@@ -189,7 +189,7 @@ export class ChatService {
   // 文件上传
   async uploadAttachments(meetingId: number, files: File[]): Promise<ChatAttachment[]> {
     const formData = new FormData()
-    files.forEach((file, index) => {
+    files.forEach((file, _index) => {
       formData.append(`files`, file)
     })
 
@@ -376,14 +376,14 @@ export class ChatService {
   }
 
   // 事件系统
-  on(event: string, callback: Function): void {
+  on(event: string, callback: (...args: any[]) => void): void {
     if (!this.eventListeners.has(event)) {
       this.eventListeners.set(event, [])
     }
     this.eventListeners.get(event)!.push(callback)
   }
 
-  off(event: string, callback: Function): void {
+  off(event: string, callback: (...args: any[]) => void): void {
     const listeners = this.eventListeners.get(event)
     if (listeners) {
       const index = listeners.indexOf(callback)

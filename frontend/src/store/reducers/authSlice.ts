@@ -42,7 +42,7 @@ const authSlice = createSlice({
   initialState,
   reducers: {
     // 登录请求
-    loginRequest: (state, action: PayloadAction<{ username: string; password: string; captcha?: string; captcha_key?: string }>) => {
+    loginRequest: (state, _action: PayloadAction<{ username: string; password: string; captcha?: string; captcha_key?: string }>) => {
       state.loading = true;
       state.error = null;
     },
@@ -65,7 +65,7 @@ const authSlice = createSlice({
       state.error = action.payload;
     },
     // 注册请求
-    registerRequest: (state, action: PayloadAction<{ username: string; email: string; password: string; captcha: string; captcha_key: string }>) => {
+    registerRequest: (state, _action: PayloadAction<{ username: string; email: string; password: string; captcha: string; captcha_key: string }>) => {
       state.loading = true;
       state.error = null;
     },

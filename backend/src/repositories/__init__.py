@@ -8,7 +8,7 @@
 """
 
 from .base_repository import BaseRepository, IBaseRepository
-from .requirement_repository import RequirementRepository, IRequirementRepository
+from .requirement_repository import IRequirementRepository, RequirementRepository
 
 __all__ = [
     "BaseRepository",

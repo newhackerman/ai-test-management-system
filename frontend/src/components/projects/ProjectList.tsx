@@ -9,16 +9,13 @@ import {
   SortDesc,
   Download,
   RefreshCw,
-  Settings,
   FolderOpen
 } from 'lucide-react'
 
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Badge } from '@/components/ui/Badge'
-import { Select } from '@/components/ui/Select'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuCheckboxItem } from '@/components/ui/DropdownMenu'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/Tabs'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuCheckboxItem } from '@/components/ui/DropdownMenu'
 import { Skeleton } from '@/components/ui/Skeleton'
 import ProjectCard from './ProjectCard'
 import type { Project, ProjectFilters } from '@/types/project'
@@ -109,7 +106,7 @@ const ProjectList: React.FC<ProjectListProps> = ({
 
   // Filter and sort projects
   const filteredAndSortedProjects = useMemo(() => {
-    let filtered = projects.filter(project => {
+    const filtered = projects.filter(project => {
       // Search filter
       const matchesSearch = !searchQuery || 
         project.project_name.toLowerCase().includes(searchQuery.toLowerCase()) ||

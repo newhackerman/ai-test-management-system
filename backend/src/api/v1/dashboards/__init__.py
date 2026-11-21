@@ -2,12 +2,13 @@
 仪表板管理API模块
 """
 from fastapi import APIRouter
+
+from .color_schemes import router as color_router
 from .dashboard_config import router as config_router
 from .dashboard_data import router as data_router
-from .widget_management import router as widget_router
-from .color_schemes import router as color_router
-from .websocket_api import router as websocket_router
 from .report_export import router as report_router
+from .websocket_api import router as websocket_router
+from .widget_management import router as widget_router
 
 # 创建仪表板主路由
 router = APIRouter()

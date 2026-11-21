@@ -7,7 +7,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { debounce } from 'lodash-es';
-import { Project, ProjectQueryParams, CreateProjectRequest, UpdateProjectRequest } from '../../types/project';
+import { ProjectQueryParams, CreateProjectRequest, UpdateProjectRequest } from '../../types/project';
 import { projectService } from '../../services/projectService';
 
 // 鏌ヨ閿伐鍘?
@@ -52,7 +52,7 @@ export const useOptimizedProjectList = (initialParams?: Partial<ProjectQueryPara
     refetch,
   } = useQuery({
     queryKey: projectKeys.list(params),
-    queryFn: async ({ signal }) => {
+    queryFn: async ({ signal: _signal }) => {
       // 鍙栨秷涔嬪墠鐨勮姹?
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();

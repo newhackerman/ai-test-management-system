@@ -1,7 +1,7 @@
 ﻿// @ts-nocheck
 // 楂樼骇鏌ヨ瀹㈡埛绔?- 绫讳技React Query鐨勫姛鑳?
 
-import { useQueryStore, QueryOptions, QueryState, MutationState } from '@/stores/query'
+import { useQueryStore, QueryOptions, QueryState } from '@/stores/query'
 
 export interface QueryKey {
     scope: string
@@ -75,7 +75,7 @@ export class QueryClient {
 
         if (typeof data === 'function') {
             const oldData = this.getQueryData<T>(queryKey)
-            const newData = (data as Function)(oldData)
+            const newData = (data as (oldData: T | undefined) => T)(oldData)
             this.store.getState().setQueryData(queryKey, newData)
         } else {
             this.store.getState().setQueryData(queryKey, data)
@@ -136,7 +136,7 @@ export class QueryClient {
     async prefetchQuery<T = any>(
         key: string | QueryKey,
         queryFn: () => Promise<T>,
-        options: QueryOptions = {}
+        _options: QueryOptions = {}
     ): Promise<T> {
         const queryKey = typeof key === 'string' ? key : createQueryKey(key)
         const store = this.store.getState()

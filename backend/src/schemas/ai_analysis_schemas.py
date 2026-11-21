@@ -6,16 +6,19 @@ AI分析相关的Pydantic模型
 - 会议纪要生成的请求和响应模型
 - 会议分析数据的响应模型
 """
-from datetime import datetime
-from typing import Optional, List, Dict, Any
-from pydantic import BaseModel, Field, validator
-from enum import Enum
 
-from ..models.meeting import MinuteType, GenerationMethod, MinuteStatus
+from datetime import datetime
+from enum import Enum
+from typing import Any, Dict, List, Optional
+
+from pydantic import BaseModel, Field, validator
+
+from ..models.meeting import GenerationMethod, MinuteStatus, MinuteType
 
 
 class MinuteTypeEnum(str, Enum):
     """纪要类型枚举"""
+
     AUTO_GENERATED = "AUTO_GENERATED"
     MANUAL_CREATED = "MANUAL_CREATED"
     AI_ENHANCED = "AI_ENHANCED"
@@ -24,6 +27,7 @@ class MinuteTypeEnum(str, Enum):
 
 class GenerationMethodEnum(str, Enum):
     """生成方式枚举"""
+
     SPEECH_TO_TEXT = "SPEECH_TO_TEXT"
     MANUAL_INPUT = "MANUAL_INPUT"
     AI_ANALYSIS = "AI_ANALYSIS"
@@ -32,6 +36,7 @@ class GenerationMethodEnum(str, Enum):
 
 class MinuteStatusEnum(str, Enum):
     """纪要状态枚举"""
+
     DRAFT = "DRAFT"
     UNDER_REVIEW = "UNDER_REVIEW"
     APPROVED = "APPROVED"
@@ -41,17 +46,23 @@ class MinuteStatusEnum(str, Enum):
 
 class GenerateSummaryRequest(BaseModel):
     """生成会议摘要请求模型"""
+
     include_transcript: bool = Field(True, description="是否包含转录内容")
     include_chat: bool = Field(True, description="是否包含聊天记录")
     include_files: bool = Field(False, description="是否包含文件信息")
-    summary_length: str = Field("medium", description="摘要长度", pattern="^(short|medium|long|detailed)$")
+    summary_length: str = Field(
+        "medium", description="摘要长度", pattern="^(short|medium|long|detailed)$"
+    )
     language: str = Field("zh-CN", description="摘要语言")
     focus_areas: Optional[List[str]] = Field(None, description="重点关注领域")
-    custom_prompt: Optional[str] = Field(None, description="自定义提示词", max_length=1000)
+    custom_prompt: Optional[str] = Field(
+        None, description="自定义提示词", max_length=1000
+    )
 
 
 class KeyPoint(BaseModel):
     """关键要点模型"""
+
     title: str = Field(..., description="要点标题")
     content: str = Field(..., description="要点内容")
     importance: int = Field(..., description="重要性评分(1-5)", ge=1, le=5)
@@ -61,11 +72,14 @@ class KeyPoint(BaseModel):
 
 class Decision(BaseModel):
     """决策事项模型"""
+
     decision_id: str = Field(..., description="决策ID")
     title: str = Field(..., description="决策标题")
     description: str = Field(..., description="决策描述")
     decision_maker: Optional[str] = Field(None, description="决策者")
-    impact_level: str = Field("medium", description="影响级别", pattern="^(low|medium|high|critical)$")
+    impact_level: str = Field(
+        "medium", description="影响级别", pattern="^(low|medium|high|critical)$"
+    )
     implementation_date: Optional[datetime] = Field(None, description="实施日期")
     status: str = Field("pending", description="决策状态")
     related_requirements: Optional[List[str]] = Field(None, description="相关需求")
@@ -73,12 +87,15 @@ class Decision(BaseModel):
 
 class ActionItem(BaseModel):
     """行动项目模型"""
+
     action_id: str = Field(..., description="行动项ID")
     title: str = Field(..., description="行动项标题")
     description: str = Field(..., description="行动项描述")
     assignee: Optional[str] = Field(None, description="负责人")
     due_date: Optional[datetime] = Field(None, description="截止日期")
-    priority: str = Field("medium", description="优先级", pattern="^(low|medium|high|urgent)$")
+    priority: str = Field(
+        "medium", description="优先级", pattern="^(low|medium|high|urgent)$"
+    )
     status: str = Field("pending", description="状态")
     estimated_hours: Optional[float] = Field(None, description="预估工时")
     dependencies: Optional[List[str]] = Field(None, description="依赖项")
@@ -86,6 +103,7 @@ class ActionItem(BaseModel):
 
 class MeetingSummaryResponse(BaseModel):
     """会议摘要响应模型"""
+
     meeting_id: int = Field(..., description="会议ID")
     overview: str = Field(..., description="会议概述")
     key_points: List[KeyPoint] = Field(..., description="关键要点")
@@ -104,6 +122,7 @@ class MeetingSummaryResponse(BaseModel):
 
 class GenerateSummaryResponse(BaseModel):
     """生成会议摘要响应模型"""
+
     success: bool = Field(True, description="是否成功")
     message: str = Field("会议摘要生成成功", description="响应消息")
     data: MeetingSummaryResponse = Field(..., description="摘要数据")
@@ -114,11 +133,14 @@ class GenerateSummaryResponse(BaseModel):
 
 class GenerateMinutesRequest(BaseModel):
     """生成会议纪要请求模型"""
+
     template_type: str = Field("standard", description="纪要模板类型")
     include_summary: bool = Field(True, description="是否包含摘要")
     include_transcript: bool = Field(False, description="是否包含完整转录")
     include_attachments: bool = Field(True, description="是否包含附件信息")
-    format_style: str = Field("formal", description="格式风格", pattern="^(formal|casual|technical)$")
+    format_style: str = Field(
+        "formal", description="格式风格", pattern="^(formal|casual|technical)$"
+    )
     language: str = Field("zh-CN", description="纪要语言")
     auto_structure: bool = Field(True, description="是否自动结构化")
     custom_sections: Optional[List[str]] = Field(None, description="自定义章节")
@@ -126,6 +148,7 @@ class GenerateMinutesRequest(BaseModel):
 
 class MeetingMinutesResponse(BaseModel):
     """会议纪要响应模型"""
+
     id: int = Field(..., description="纪要ID")
     meeting_id: int = Field(..., description="会议ID")
     title: str = Field(..., description="纪要标题")
@@ -154,6 +177,7 @@ class MeetingMinutesResponse(BaseModel):
 
 class GenerateMinutesResponse(BaseModel):
     """生成会议纪要响应模型"""
+
     success: bool = Field(True, description="是否成功")
     message: str = Field("会议纪要生成成功", description="响应消息")
     data: MeetingMinutesResponse = Field(..., description="纪要数据")
@@ -164,6 +188,7 @@ class GenerateMinutesResponse(BaseModel):
 
 class ParticipationMetrics(BaseModel):
     """参与度指标模型"""
+
     user_id: int = Field(..., description="用户ID")
     user_name: str = Field(..., description="用户姓名")
     speaking_time_minutes: float = Field(..., description="发言时长(分钟)")
@@ -176,9 +201,12 @@ class ParticipationMetrics(BaseModel):
 
 class MeetingAnalyticsResponse(BaseModel):
     """会议分析响应模型"""
+
     meeting_id: int = Field(..., description="会议ID")
     overall_effectiveness: float = Field(..., description="整体效果评分(1-5)")
-    participation_metrics: List[ParticipationMetrics] = Field(..., description="参与度指标")
+    participation_metrics: List[ParticipationMetrics] = Field(
+        ..., description="参与度指标"
+    )
     agenda_completion_rate: float = Field(..., description="议程完成率(%)")
     decision_efficiency: float = Field(..., description="决策效率评分(1-5)")
     time_utilization: float = Field(..., description="时间利用率(%)")
@@ -198,36 +226,55 @@ class MeetingAnalyticsResponse(BaseModel):
 
 class CreateActionItemRequest(BaseModel):
     """新建行动项请求模型（基于 meeting_tasks + project_tasks）"""
+
     title: str = Field(..., description="行动项标题", max_length=200)
     description: Optional[str] = Field(None, description="行动项描述")
     assignee_id: Optional[int] = Field(None, description="负责人用户ID")
-    assignee: Optional[str] = Field(None, description="负责人用户名/昵称（assignee_id 为空时按名查找）")
+    assignee: Optional[str] = Field(
+        None, description="负责人用户名/昵称（assignee_id 为空时按名查找）"
+    )
     due_date: Optional[datetime] = Field(None, description="截止日期")
-    priority: str = Field("medium", description="优先级", pattern="^(low|medium|high|urgent)$")
-    status: str = Field("pending", description="状态", pattern="^(pending|in_progress|completed|cancelled)$")
+    priority: str = Field(
+        "medium", description="优先级", pattern="^(low|medium|high|urgent)$"
+    )
+    status: str = Field(
+        "pending",
+        description="状态",
+        pattern="^(pending|in_progress|completed|cancelled)$",
+    )
     estimated_hours: Optional[float] = Field(None, description="预估工时", ge=0)
 
 
 class UpdateActionItemRequest(BaseModel):
     """更新行动项请求模型（全部字段可选）"""
+
     title: Optional[str] = Field(None, description="行动项标题", max_length=200)
     description: Optional[str] = Field(None, description="行动项描述")
     assignee_id: Optional[int] = Field(None, description="负责人用户ID")
     assignee: Optional[str] = Field(None, description="负责人用户名/昵称")
     due_date: Optional[datetime] = Field(None, description="截止日期")
-    priority: Optional[str] = Field(None, description="优先级", pattern="^(low|medium|high|urgent)$")
-    status: Optional[str] = Field(None, description="状态", pattern="^(pending|in_progress|completed|cancelled)$")
+    priority: Optional[str] = Field(
+        None, description="优先级", pattern="^(low|medium|high|urgent)$"
+    )
+    status: Optional[str] = Field(
+        None, description="状态", pattern="^(pending|in_progress|completed|cancelled)$"
+    )
     estimated_hours: Optional[float] = Field(None, description="预估工时", ge=0)
 
 
 class GenerateReportRequest(BaseModel):
     """生成会议报告请求模型"""
-    report_type: str = Field("full", description="报告类型（full/effectiveness/summary，聚合内容相同，按类型命名）")
+
+    report_type: str = Field(
+        "full",
+        description="报告类型（full/effectiveness/summary，聚合内容相同，按类型命名）",
+    )
     format: str = Field("markdown", description="导出格式", pattern="^(html|markdown)$")
 
 
 class GenerateReportResponse(BaseModel):
     """生成会议报告响应模型"""
+
     report_id: str = Field(..., description="报告ID（用于下载）")
     meeting_id: int = Field(..., description="会议ID")
     report_type: str = Field(..., description="报告类型")
@@ -241,6 +288,7 @@ class GenerateReportResponse(BaseModel):
 
 class GetAnalyticsResponse(BaseModel):
     """获取会议分析响应模型"""
+
     success: bool = Field(True, description="是否成功")
     message: str = Field("会议分析获取成功", description="响应消息")
     data: MeetingAnalyticsResponse = Field(..., description="分析数据")
@@ -251,6 +299,7 @@ class GetAnalyticsResponse(BaseModel):
 
 class TranscriptionSegment(BaseModel):
     """转录片段模型"""
+
     start_time: float = Field(..., description="开始时间(秒)")
     end_time: float = Field(..., description="结束时间(秒)")
     speaker_id: Optional[int] = Field(None, description="发言人ID")
@@ -262,6 +311,7 @@ class TranscriptionSegment(BaseModel):
 
 class TranscriptionResponse(BaseModel):
     """转录响应模型"""
+
     meeting_id: int = Field(..., description="会议ID")
     segments: List[TranscriptionSegment] = Field(..., description="转录片段")
     full_text: str = Field(..., description="完整转录文本")
@@ -276,7 +326,10 @@ class TranscriptionResponse(BaseModel):
 
 class SentimentAnalysis(BaseModel):
     """情感分析模型"""
-    overall_sentiment: str = Field(..., description="整体情感")  # positive, neutral, negative
+
+    overall_sentiment: str = Field(
+        ..., description="整体情感"
+    )  # positive, neutral, negative
     sentiment_score: float = Field(..., description="情感评分(-1到1)")
     emotion_distribution: Dict[str, float] = Field(..., description="情感分布")
     engagement_level: str = Field(..., description="参与度水平")  # low, medium, high
@@ -286,6 +339,7 @@ class SentimentAnalysis(BaseModel):
 
 class TopicAnalysis(BaseModel):
     """主题分析模型"""
+
     main_topics: List[str] = Field(..., description="主要话题")
     topic_distribution: Dict[str, float] = Field(..., description="话题分布")
     topic_transitions: List[Dict[str, Any]] = Field(..., description="话题转换")
@@ -295,6 +349,7 @@ class TopicAnalysis(BaseModel):
 
 class AdvancedAnalyticsResponse(BaseModel):
     """高级分析响应模型"""
+
     meeting_id: int = Field(..., description="会议ID")
     transcription: TranscriptionResponse = Field(..., description="转录结果")
     sentiment_analysis: SentimentAnalysis = Field(..., description="情感分析")

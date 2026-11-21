@@ -1,9 +1,11 @@
 """
 认证相关功能
 """
-from typing import Dict, Any, Optional
+
+from typing import Any, Dict, Optional
+
 from fastapi import Depends, HTTPException, status
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from .security import verify_token
 
@@ -35,7 +37,9 @@ class _UserAttrDict(dict):
         self[name] = value
 
 
-async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)) -> _UserAttrDict:
+async def get_current_user(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+) -> _UserAttrDict:
     """
     获取当前用户信息
 
@@ -67,27 +71,33 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
         # 目前返回基本信息。is_admin/is_superuser/role 通过 _UserAttrDict 的
         # 安全默认值返回（见 _UserAttrDict.__getattr__），避免在每次认证请求
         # 里做同步 DB 查询导致连接池耗尽与事件循环阻塞。
-        return _UserAttrDict({
-            "id": int(user_id),
-            "username": payload.get("username"),
-            "email": payload.get("email"),
-            "is_active": payload.get("is_active", True),
-            "is_superuser": payload.get("is_superuser", payload.get("is_admin", False)),
-            "is_admin": payload.get("is_admin", payload.get("is_superuser", False)),
-            "role": payload.get("role"),
-        })
+        return _UserAttrDict(
+            {
+                "id": int(user_id),
+                "username": payload.get("username"),
+                "email": payload.get("email"),
+                "is_active": payload.get("is_active", True),
+                "is_superuser": payload.get(
+                    "is_superuser", payload.get("is_admin", False)
+                ),
+                "is_admin": payload.get("is_admin", payload.get("is_superuser", False)),
+                "role": payload.get("role"),
+            }
+        )
 
     except Exception:
         raise credentials_exception
 
 
-def get_current_user_optional(credentials: HTTPAuthorizationCredentials = Depends(security)) -> Optional[Dict[str, Any]]:
+def get_current_user_optional(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+) -> Optional[Dict[str, Any]]:
     """
     获取当前用户信息（可选）
-    
+
     Args:
         credentials: HTTP认证凭据
-        
+
     Returns:
         Optional[Dict[str, Any]]: 用户信息，认证失败返回None
     """
@@ -100,28 +110,34 @@ def get_current_user_optional(credentials: HTTPAuthorizationCredentials = Depend
 def require_permission(permission: str):
     """
     权限装饰器
-    
+
     Args:
         permission: 所需权限
     """
+
     def decorator(func):
         async def wrapper(*args, **kwargs):
             # 这里可以实现权限检查逻辑
             return await func(*args, **kwargs)
+
         return wrapper
+
     return decorator
 
 
 def require_role(role: str):
     """
     角色装饰器
-    
+
     Args:
         role: 所需角色
     """
+
     def decorator(func):
         async def wrapper(*args, **kwargs):
             # 这里可以实现角色检查逻辑
             return await func(*args, **kwargs)
+
         return wrapper
+
     return decorator

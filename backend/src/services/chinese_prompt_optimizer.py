@@ -19,42 +19,51 @@
 import asyncio
 import logging
 import re
-from typing import Dict, List, Optional, Any, Tuple
-from datetime import datetime
 from dataclasses import dataclass
+from datetime import datetime
 from enum import Enum
+from typing import Any, Dict, List, Optional, Tuple
 
-from .prompt_service import PromptService, TemplateRenderer
-from .multilingual_response_service import MultilingualResponseService, SupportedLanguage
 from ..schemas.prompt_template import (
-    PromptTemplateCreate, TemplateVariable, TemplateCategory, TemplateVisibility
+    PromptTemplateCreate,
+    TemplateCategory,
+    TemplateVariable,
+    TemplateVisibility,
 )
+from .multilingual_response_service import (
+    MultilingualResponseService,
+    SupportedLanguage,
+)
+from .prompt_service import PromptService, TemplateRenderer
 
 logger = logging.getLogger(__name__)
 
 
 class ChineseFormalityLevel(str, Enum):
     """中文正式程度枚举"""
-    VERY_FORMAL = "very_formal"      # 非常正式（书面语、官方文档）
-    FORMAL = "formal"                # 正式（商务交流、学术讨论）
-    SEMI_FORMAL = "semi_formal"      # 半正式（工作沟通、技术交流）
-    CASUAL = "casual"                # 随意（日常对话、朋友交流）
-    VERY_CASUAL = "very_casual"      # 非常随意（网络用语、口语化）
+
+    VERY_FORMAL = "very_formal"  # 非常正式（书面语、官方文档）
+    FORMAL = "formal"  # 正式（商务交流、学术讨论）
+    SEMI_FORMAL = "semi_formal"  # 半正式（工作沟通、技术交流）
+    CASUAL = "casual"  # 随意（日常对话、朋友交流）
+    VERY_CASUAL = "very_casual"  # 非常随意（网络用语、口语化）
 
 
 class ChineseContextType(str, Enum):
     """中文上下文类型枚举"""
-    TECHNICAL = "technical"          # 技术类
-    BUSINESS = "business"            # 商务类
-    ACADEMIC = "academic"            # 学术类
-    EDUCATIONAL = "educational"      # 教育类
-    CREATIVE = "creative"            # 创意类
-    DAILY = "daily"                  # 日常类
+
+    TECHNICAL = "technical"  # 技术类
+    BUSINESS = "business"  # 商务类
+    ACADEMIC = "academic"  # 学术类
+    EDUCATIONAL = "educational"  # 教育类
+    CREATIVE = "creative"  # 创意类
+    DAILY = "daily"  # 日常类
 
 
 @dataclass
 class ChineseOptimizationConfig:
     """中文优化配置"""
+
     formality_level: ChineseFormalityLevel = ChineseFormalityLevel.SEMI_FORMAL
     context_type: ChineseContextType = ChineseContextType.TECHNICAL
     use_honorifics: bool = True
@@ -67,16 +76,19 @@ class ChineseOptimizationConfig:
 
 class ChinesePromptOptimizer:
     """中文提示词优化器"""
-    
-    def __init__(self, prompt_service: PromptService, 
-                 multilingual_service: MultilingualResponseService):
+
+    def __init__(
+        self,
+        prompt_service: PromptService,
+        multilingual_service: MultilingualResponseService,
+    ):
         self.prompt_service = prompt_service
         self.multilingual_service = multilingual_service
         self.logger = logging.getLogger(__name__)
-        
+
         # 中文优化规则
         self._load_optimization_rules()
-    
+
     def _load_optimization_rules(self):
         """加载中文优化规则"""
         # 正式程度词汇映射
@@ -87,111 +99,130 @@ class ChinesePromptOptimizer:
                 "什么": "何种",
                 "好的": "好的，明白了",
                 "可以": "能够",
-                "帮助": "协助"
+                "帮助": "协助",
             },
             ChineseFormalityLevel.FORMAL: {
                 "你": "您",
                 "怎么": "如何",
                 "好的": "好的",
-                "可以": "能够"
+                "可以": "能够",
             },
             ChineseFormalityLevel.SEMI_FORMAL: {
                 "你": "你",
                 "怎么": "怎么",
-                "好的": "好的"
-            }
-        }      
-  
+                "好的": "好的",
+            },
+        }
+
         # 专业术语词典
         self.technical_terms = {
             "测试": ["测试", "检测", "验证", "校验"],
             "需求": ["需求", "要求", "规格", "规范"],
             "分析": ["分析", "解析", "剖析", "研究"],
             "优化": ["优化", "改进", "完善", "提升"],
-            "实现": ["实现", "完成", "达成", "执行"]
+            "实现": ["实现", "完成", "达成", "执行"],
         }
-        
+
         # 文化背景表达
         self.cultural_expressions = {
             "greeting": ["您好", "你好", "欢迎", "很高兴为您服务"],
             "politeness": ["请", "麻烦", "劳烦", "不好意思"],
             "gratitude": ["谢谢", "感谢", "多谢", "非常感谢"],
-            "apology": ["抱歉", "对不起", "不好意思", "很遗憾"]
+            "apology": ["抱歉", "对不起", "不好意思", "很遗憾"],
         }
-        
+
         # AI理解优化关键词
         self.ai_optimization_keywords = [
-            "请详细说明", "具体来说", "举例说明", "步骤如下",
-            "需要注意的是", "重点是", "关键在于", "总结一下"
+            "请详细说明",
+            "具体来说",
+            "举例说明",
+            "步骤如下",
+            "需要注意的是",
+            "重点是",
+            "关键在于",
+            "总结一下",
         ]
-    
-    async def optimize_chinese_prompt(self, 
-                                    original_prompt: str,
-                                    config: ChineseOptimizationConfig) -> str:
+
+    async def optimize_chinese_prompt(
+        self, original_prompt: str, config: ChineseOptimizationConfig
+    ) -> str:
         """优化中文提示词"""
         try:
             self.logger.info("开始优化中文提示词")
-            
+
             optimized_prompt = original_prompt
-            
+
             # 1. 正式程度调整
             optimized_prompt = self._adjust_formality_level(optimized_prompt, config)
-            
+
             # 2. 文化背景适配
             if config.include_cultural_context:
                 optimized_prompt = self._add_cultural_context(optimized_prompt, config)
-            
+
             # 3. 专业术语优化
             if config.domain_specific:
                 optimized_prompt = self._optimize_domain_terms(optimized_prompt, config)
-            
+
             # 4. AI理解优化
             if config.optimize_for_ai_understanding:
                 optimized_prompt = self._optimize_for_ai(optimized_prompt, config)
-            
+
             # 5. 语法和表达优化
-            optimized_prompt = self._optimize_grammar_and_expression(optimized_prompt, config)
-            
+            optimized_prompt = self._optimize_grammar_and_expression(
+                optimized_prompt, config
+            )
+
             self.logger.info("中文提示词优化完成")
             return optimized_prompt
-            
+
         except Exception as e:
             self.logger.error(f"中文提示词优化失败: {e}")
             return original_prompt
-    
-    def _adjust_formality_level(self, prompt: str, config: ChineseOptimizationConfig) -> str:
+
+    def _adjust_formality_level(
+        self, prompt: str, config: ChineseOptimizationConfig
+    ) -> str:
         """调整正式程度"""
         if config.formality_level not in self.formality_mappings:
             return prompt
-        
+
         mappings = self.formality_mappings[config.formality_level]
         optimized = prompt
-        
+
         for informal, formal in mappings.items():
             optimized = optimized.replace(informal, formal)
-        
+
         return optimized
-    
-    def _add_cultural_context(self, prompt: str, config: ChineseOptimizationConfig) -> str:
+
+    def _add_cultural_context(
+        self, prompt: str, config: ChineseOptimizationConfig
+    ) -> str:
         """添加文化背景适配"""
         optimized = prompt
-        
+
         # 添加礼貌用语
-        if config.use_honorifics and not any(greeting in prompt for greeting in self.cultural_expressions["greeting"]):
+        if config.use_honorifics and not any(
+            greeting in prompt for greeting in self.cultural_expressions["greeting"]
+        ):
             optimized = f"您好！{optimized}"
-        
+
         # 添加礼貌结尾
-        if config.formality_level in [ChineseFormalityLevel.FORMAL, ChineseFormalityLevel.VERY_FORMAL]:
+        if config.formality_level in [
+            ChineseFormalityLevel.FORMAL,
+            ChineseFormalityLevel.VERY_FORMAL,
+        ]:
             if not optimized.endswith(("。", "！", "？")):
                 optimized += "。"
             optimized += "谢谢！"
-        
+
         return optimized
-    
-    def _optimize_domain_terms(self, prompt: str, config: ChineseOptimizationConfig) -> str:
+
+    def _optimize_domain_terms(
+        self, prompt: str, config: ChineseOptimizationConfig
+    ) -> str:
         """优化专业术语"""
         optimized = prompt
-        
+
         # 根据领域调整术语
         if config.domain_specific == "testing":
             # 测试领域术语优化
@@ -199,95 +230,110 @@ class ChinesePromptOptimizer:
                 "bug": "缺陷",
                 "test case": "测试用例",
                 "coverage": "覆盖率",
-                "automation": "自动化"
+                "automation": "自动化",
             }
             for en_term, zh_term in replacements.items():
                 optimized = optimized.replace(en_term, zh_term)
-        
+
         return optimized
-    
+
     def _optimize_for_ai(self, prompt: str, config: ChineseOptimizationConfig) -> str:
         """针对AI理解进行优化"""
         optimized = prompt
-        
+
         # 添加结构化指示词
         if "请" not in optimized and "帮我" not in optimized:
             optimized = f"请{optimized}"
-        
+
         # 添加明确的输出要求
-        if not any(keyword in optimized for keyword in ["输出", "返回", "生成", "提供"]):
+        if not any(
+            keyword in optimized for keyword in ["输出", "返回", "生成", "提供"]
+        ):
             optimized += "，请提供详细的回答。"
-        
+
         # 添加格式要求
         if config.context_type == ChineseContextType.TECHNICAL:
             if "步骤" not in optimized and "方法" not in optimized:
                 optimized += "请按步骤说明。"
-        
+
         return optimized
-    
-    def _optimize_grammar_and_expression(self, prompt: str, config: ChineseOptimizationConfig) -> str:
+
+    def _optimize_grammar_and_expression(
+        self, prompt: str, config: ChineseOptimizationConfig
+    ) -> str:
         """优化语法和表达"""
         optimized = prompt
-        
+
         # 修正常见语法问题
         grammar_fixes = {
             "的的": "的",
             "了了": "了",
             "。。": "。",
             "？？": "？",
-            "！！": "！"
+            "！！": "！",
         }
-        
+
         for wrong, correct in grammar_fixes.items():
             optimized = optimized.replace(wrong, correct)
-        
+
         # 优化表达习惯
         expression_improvements = {
             "能不能": "是否能够",
             "可不可以": "是否可以",
-            "行不行": "是否可行"
+            "行不行": "是否可行",
         }
-        
+
         for casual, formal in expression_improvements.items():
-            if config.formality_level in [ChineseFormalityLevel.FORMAL, ChineseFormalityLevel.VERY_FORMAL]:
+            if config.formality_level in [
+                ChineseFormalityLevel.FORMAL,
+                ChineseFormalityLevel.VERY_FORMAL,
+            ]:
                 optimized = optimized.replace(casual, formal)
-        
+
         return optimized
-    
-    async def create_optimized_chinese_templates(self, db, user_id: int) -> List[Dict[str, Any]]:
+
+    async def create_optimized_chinese_templates(
+        self, db, user_id: int
+    ) -> List[Dict[str, Any]]:
         """创建优化的中文提示词模板"""
         try:
             self.logger.info("开始创建优化的中文提示词模板")
-            
+
             templates = []
-            
+
             # 1. 测试用例生成模板
             test_case_template = await self._create_test_case_template(db, user_id)
             templates.append(test_case_template)
-            
+
             # 2. 需求分析模板
-            requirement_analysis_template = await self._create_requirement_analysis_template(db, user_id)
+            requirement_analysis_template = (
+                await self._create_requirement_analysis_template(db, user_id)
+            )
             templates.append(requirement_analysis_template)
-            
+
             # 3. 代码审查模板
             code_review_template = await self._create_code_review_template(db, user_id)
             templates.append(code_review_template)
-            
+
             # 4. 文档生成模板
-            document_generation_template = await self._create_document_generation_template(db, user_id)
+            document_generation_template = (
+                await self._create_document_generation_template(db, user_id)
+            )
             templates.append(document_generation_template)
-            
+
             # 5. 问题分析模板
-            problem_analysis_template = await self._create_problem_analysis_template(db, user_id)
+            problem_analysis_template = await self._create_problem_analysis_template(
+                db, user_id
+            )
             templates.append(problem_analysis_template)
-            
+
             self.logger.info(f"成功创建 {len(templates)} 个中文优化模板")
             return templates
-            
+
         except Exception as e:
             self.logger.error(f"创建中文优化模板失败: {e}")
             return []
-    
+
     async def _create_test_case_template(self, db, user_id: int) -> Dict[str, Any]:
         """创建测试用例生成模板"""
         template_data = PromptTemplateCreate(
@@ -333,48 +379,56 @@ class ChinesePromptOptimizer:
                     type="string",
                     description="功能描述",
                     required=True,
-                    example="用户登录功能"
+                    example="用户登录功能",
                 ),
                 TemplateVariable(
                     name="requirement_source",
                     type="string",
                     description="需求来源",
                     required=False,
-                    default_value="产品需求文档"
+                    default_value="产品需求文档",
                 ),
                 TemplateVariable(
                     name="test_type",
                     type="string",
                     description="测试类型",
                     required=False,
-                    default_value="功能测试"
+                    default_value="功能测试",
                 ),
                 TemplateVariable(
                     name="preconditions",
                     type="string",
                     description="前置条件",
                     required=False,
-                    default_value="系统正常运行，用户数据准备完毕"
+                    default_value="系统正常运行，用户数据准备完毕",
                 ),
                 TemplateVariable(
                     name="priority",
                     type="string",
                     description="优先级",
                     required=False,
-                    default_value="高"
-                )
+                    default_value="高",
+                ),
             ],
             supported_providers=["文心一言", "通义千问", "ChatGLM", "OpenAI", "Claude"],
-            supported_models=["文心一言4.0", "通义千问-max", "ChatGLM-4", "GPT-4", "Claude-3"],
+            supported_models=[
+                "文心一言4.0",
+                "通义千问-max",
+                "ChatGLM-4",
+                "GPT-4",
+                "Claude-3",
+            ],
             use_cases=["功能测试", "回归测试", "验收测试", "系统测试"],
             tags=["中文优化", "测试用例", "功能测试", "质量保证"],
-            visibility=TemplateVisibility.PUBLIC
+            visibility=TemplateVisibility.PUBLIC,
         )
-        
+
         template = await self.prompt_service.create_template(db, template_data, user_id)
         return {"template": template, "type": "test_case"}
-    
-    async def _create_requirement_analysis_template(self, db, user_id: int) -> Dict[str, Any]:
+
+    async def _create_requirement_analysis_template(
+        self, db, user_id: int
+    ) -> Dict[str, Any]:
         """创建需求分析模板"""
         template_data = PromptTemplateCreate(
             name="chinese_requirement_analysis",
@@ -435,39 +489,39 @@ class ChinesePromptOptimizer:
                     type="string",
                     description="需求标题",
                     required=True,
-                    example="用户注册功能需求"
+                    example="用户注册功能需求",
                 ),
                 TemplateVariable(
                     name="requirement_description",
                     type="string",
                     description="需求描述",
                     required=True,
-                    example="系统应支持用户通过邮箱和手机号进行注册"
+                    example="系统应支持用户通过邮箱和手机号进行注册",
                 ),
                 TemplateVariable(
                     name="acceptance_criteria",
                     type="string",
                     description="验收标准",
                     required=False,
-                    default_value="待补充"
+                    default_value="待补充",
                 ),
                 TemplateVariable(
                     name="business_value",
                     type="string",
                     description="业务价值",
                     required=False,
-                    default_value="待补充"
-                )
+                    default_value="待补充",
+                ),
             ],
             supported_providers=["文心一言", "通义千问", "ChatGLM", "OpenAI", "Claude"],
             use_cases=["需求评审", "质量分析", "项目管理", "产品设计"],
             tags=["中文优化", "需求分析", "质量评估", "项目管理"],
-            visibility=TemplateVisibility.PUBLIC
+            visibility=TemplateVisibility.PUBLIC,
         )
-        
+
         template = await self.prompt_service.create_template(db, template_data, user_id)
-        return {"template": template, "type": "requirement_analysis"} 
-   
+        return {"template": template, "type": "requirement_analysis"}
+
     async def _create_code_review_template(self, db, user_id: int) -> Dict[str, Any]:
         """创建代码审查模板"""
         template_data = PromptTemplateCreate(
@@ -548,40 +602,42 @@ class ChinesePromptOptimizer:
                     type="string",
                     description="编程语言",
                     required=True,
-                    example="Python"
+                    example="Python",
                 ),
                 TemplateVariable(
                     name="module_name",
                     type="string",
                     description="代码模块名称",
                     required=False,
-                    default_value="待审查模块"
+                    default_value="待审查模块",
                 ),
                 TemplateVariable(
                     name="review_focus",
                     type="string",
                     description="审查重点",
                     required=False,
-                    default_value="全面审查"
+                    default_value="全面审查",
                 ),
                 TemplateVariable(
                     name="code_content",
                     type="string",
                     description="代码内容",
                     required=True,
-                    example="def example_function():\n    pass"
-                )
+                    example="def example_function():\n    pass",
+                ),
             ],
             supported_providers=["文心一言", "通义千问", "ChatGLM", "OpenAI", "Claude"],
             use_cases=["代码审查", "质量控制", "团队协作", "技术指导"],
             tags=["中文优化", "代码审查", "质量控制", "开发规范"],
-            visibility=TemplateVisibility.PUBLIC
+            visibility=TemplateVisibility.PUBLIC,
         )
-        
+
         template = await self.prompt_service.create_template(db, template_data, user_id)
         return {"template": template, "type": "code_review"}
-    
-    async def _create_document_generation_template(self, db, user_id: int) -> Dict[str, Any]:
+
+    async def _create_document_generation_template(
+        self, db, user_id: int
+    ) -> Dict[str, Any]:
         """创建文档生成模板"""
         template_data = PromptTemplateCreate(
             name="chinese_document_generation",
@@ -652,40 +708,42 @@ class ChinesePromptOptimizer:
                     type="string",
                     description="文档类型",
                     required=True,
-                    example="API接口文档"
+                    example="API接口文档",
                 ),
                 TemplateVariable(
                     name="project_name",
                     type="string",
                     description="项目名称",
                     required=True,
-                    example="AI测试管理系统"
+                    example="AI测试管理系统",
                 ),
                 TemplateVariable(
                     name="target_audience",
                     type="string",
                     description="目标读者",
                     required=False,
-                    default_value="开发人员和测试人员"
+                    default_value="开发人员和测试人员",
                 ),
                 TemplateVariable(
                     name="detail_level",
                     type="string",
                     description="详细程度",
                     required=False,
-                    default_value="详细"
-                )
+                    default_value="详细",
+                ),
             ],
             supported_providers=["文心一言", "通义千问", "ChatGLM", "OpenAI", "Claude"],
             use_cases=["技术文档", "用户手册", "API文档", "设计文档"],
             tags=["中文优化", "文档生成", "技术写作", "项目管理"],
-            visibility=TemplateVisibility.PUBLIC
+            visibility=TemplateVisibility.PUBLIC,
         )
-        
+
         template = await self.prompt_service.create_template(db, template_data, user_id)
         return {"template": template, "type": "document_generation"}
-    
-    async def _create_problem_analysis_template(self, db, user_id: int) -> Dict[str, Any]:
+
+    async def _create_problem_analysis_template(
+        self, db, user_id: int
+    ) -> Dict[str, Any]:
         """创建问题分析模板"""
         template_data = PromptTemplateCreate(
             name="chinese_problem_analysis",
@@ -773,36 +831,36 @@ class ChinesePromptOptimizer:
                     type="string",
                     description="问题描述",
                     required=True,
-                    example="系统响应缓慢，用户体验不佳"
+                    example="系统响应缓慢，用户体验不佳",
                 ),
                 TemplateVariable(
                     name="environment",
                     type="string",
                     description="发生环境",
                     required=False,
-                    default_value="生产环境"
+                    default_value="生产环境",
                 ),
                 TemplateVariable(
                     name="impact_scope",
                     type="string",
                     description="影响范围",
                     required=False,
-                    default_value="部分用户"
+                    default_value="部分用户",
                 ),
                 TemplateVariable(
                     name="urgency_level",
                     type="string",
                     description="紧急程度",
                     required=False,
-                    default_value="中等"
-                )
+                    default_value="中等",
+                ),
             ],
             supported_providers=["文心一言", "通义千问", "ChatGLM", "OpenAI", "Claude"],
             use_cases=["问题诊断", "根因分析", "解决方案", "流程改进"],
             tags=["中文优化", "问题分析", "根因分析", "解决方案"],
-            visibility=TemplateVisibility.PUBLIC
+            visibility=TemplateVisibility.PUBLIC,
         )
-        
+
         template = await self.prompt_service.create_template(db, template_data, user_id)
         return {"template": template, "type": "problem_analysis"}
 
@@ -811,14 +869,18 @@ class ChinesePromptOptimizer:
 _chinese_optimizer_instance: Optional[ChinesePromptOptimizer] = None
 
 
-async def get_chinese_prompt_optimizer(prompt_service: PromptService = None,
-                                     multilingual_service: MultilingualResponseService = None) -> ChinesePromptOptimizer:
+async def get_chinese_prompt_optimizer(
+    prompt_service: PromptService = None,
+    multilingual_service: MultilingualResponseService = None,
+) -> ChinesePromptOptimizer:
     """获取中文提示词优化器实例"""
     global _chinese_optimizer_instance
-    
+
     if _chinese_optimizer_instance is None:
         if not prompt_service or not multilingual_service:
             raise ValueError("需要提供 prompt_service 和 multilingual_service 实例")
-        _chinese_optimizer_instance = ChinesePromptOptimizer(prompt_service, multilingual_service)
-    
+        _chinese_optimizer_instance = ChinesePromptOptimizer(
+            prompt_service, multilingual_service
+        )
+
     return _chinese_optimizer_instance

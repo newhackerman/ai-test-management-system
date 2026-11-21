@@ -5,6 +5,7 @@
 导致引用它的模块一被加载就报 ModuleNotFoundError。main.py 已通过
 logging.basicConfig 配置根日志，本模块只提供统一的获取入口。
 """
+
 import logging
 
 logger = logging.getLogger("ai_test_management_system")

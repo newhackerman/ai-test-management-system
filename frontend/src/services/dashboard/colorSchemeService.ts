@@ -325,10 +325,10 @@ class ColorSchemeService {
       const g = parseInt(rgbMatch[2]);
       const b = parseInt(rgbMatch[3]);
       
-      return '#' + [r, g, b].map(x => {
+      return `#${  [r, g, b].map(x => {
         const hex = x.toString(16);
-        return hex.length === 1 ? '0' + hex : hex;
-      }).join('');
+        return hex.length === 1 ? `0${  hex}` : hex;
+      }).join('')}`;
     }
 
     return color;

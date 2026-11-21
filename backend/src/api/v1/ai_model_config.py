@@ -1,27 +1,29 @@
 """
 AI模型配置管理API
 """
+
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, Query, BackgroundTasks
+
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...core.database import get_async_session
+from ...core.exceptions import NotFoundError, ValidationError
 from ...decorators.permission import get_current_user, require_permission
-from ...services.ai_model_config_service import AIModelConfigService
-from ...services.simple_health_check_service import HealthCheckService
 from ...schemas.ai_model_config import (
     AIModelConfigCreate,
-    AIModelConfigUpdate,
-    AIModelConfigResponse,
     AIModelConfigList,
-    AIProviderStats,
+    AIModelConfigResponse,
+    AIModelConfigUpdate,
     AIModelHealthCheck,
     AIModelTestRequest,
     AIModelTestResponse,
+    AIProviderEnum,
+    AIProviderStats,
     BatchHealthCheckResponse,
-    AIProviderEnum
 )
-from ...core.exceptions import ValidationError, NotFoundError
+from ...services.ai_model_config_service import AIModelConfigService
+from ...services.simple_health_check_service import HealthCheckService
 
 router = APIRouter()
 
@@ -37,14 +39,14 @@ async def create_model_config(
     config_data: AIModelConfigCreate,
     db: AsyncSession = Depends(get_async_session),
     current_user: dict = Depends(require_permission("ai_config_manage")),
-    service: AIModelConfigService = Depends(get_ai_model_config_service)
+    service: AIModelConfigService = Depends(get_ai_model_config_service),
 ):
     """
     创建AI模型配置
-    
+
     需要权限: ai_config_manage
     """
-    
+
     try:
         return await service.create_model_config(db, config_data)
     except ValidationError as e:
@@ -62,14 +64,14 @@ async def get_model_configs(
     limit: int = Query(100, ge=1, le=1000, description="限制数量"),
     db: AsyncSession = Depends(get_async_session),
     current_user: dict = Depends(require_permission("ai_config_view")),
-    service: AIModelConfigService = Depends(get_ai_model_config_service)
+    service: AIModelConfigService = Depends(get_ai_model_config_service),
 ):
     """
     获取AI模型配置列表
-    
+
     需要权限: ai_config_view
     """
-    
+
     try:
         return await service.get_model_configs(
             db,
@@ -77,7 +79,7 @@ async def get_model_configs(
             enabled_only=enabled_only,
             public_only=public_only,
             skip=skip,
-            limit=limit
+            limit=limit,
         )
     except HTTPException:
         raise
@@ -89,14 +91,14 @@ async def get_model_configs(
 async def get_provider_stats(
     db: AsyncSession = Depends(get_async_session),
     current_user: dict = Depends(require_permission("ai_config_view")),
-    service: AIModelConfigService = Depends(get_ai_model_config_service)
+    service: AIModelConfigService = Depends(get_ai_model_config_service),
 ):
     """
     获取AI服务提供商统计信息
-    
+
     需要权限: ai_config_view
     """
-    
+
     try:
         return await service.get_provider_stats(db)
     except Exception as e:
@@ -108,14 +110,14 @@ async def get_model_config(
     config_id: int,
     db: AsyncSession = Depends(get_async_session),
     current_user: dict = Depends(require_permission("ai_config_view")),
-    service: AIModelConfigService = Depends(get_ai_model_config_service)
+    service: AIModelConfigService = Depends(get_ai_model_config_service),
 ):
     """
     获取单个AI模型配置
-    
+
     需要权限: ai_config_view
     """
-    
+
     try:
         return await service.get_model_config(db, config_id)
     except NotFoundError as e:
@@ -130,14 +132,14 @@ async def update_model_config(
     update_data: AIModelConfigUpdate,
     db: AsyncSession = Depends(get_async_session),
     current_user: dict = Depends(require_permission("ai_config_manage")),
-    service: AIModelConfigService = Depends(get_ai_model_config_service)
+    service: AIModelConfigService = Depends(get_ai_model_config_service),
 ):
     """
     更新AI模型配置
-    
+
     需要权限: ai_config_manage
     """
-    
+
     try:
         return await service.update_model_config(db, config_id, update_data)
     except NotFoundError as e:
@@ -153,14 +155,14 @@ async def delete_model_config(
     config_id: int,
     db: AsyncSession = Depends(get_async_session),
     current_user: dict = Depends(require_permission("ai_config_manage")),
-    service: AIModelConfigService = Depends(get_ai_model_config_service)
+    service: AIModelConfigService = Depends(get_ai_model_config_service),
 ):
     """
     删除AI模型配置
-    
+
     需要权限: ai_config_manage
     """
-    
+
     try:
         await service.delete_model_config(db, config_id)
         return {"message": "配置删除成功"}
@@ -175,14 +177,14 @@ async def health_check_model(
     config_id: int,
     db: AsyncSession = Depends(get_async_session),
     current_user: dict = Depends(require_permission("ai_config_manage")),
-    service: AIModelConfigService = Depends(get_ai_model_config_service)
+    service: AIModelConfigService = Depends(get_ai_model_config_service),
 ):
     """
     检查AI模型健康状态
-    
+
     需要权限: ai_config_manage
     """
-    
+
     try:
         return await service.health_check_model(db, config_id)
     except NotFoundError as e:
@@ -196,14 +198,14 @@ async def batch_health_check(
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_async_session),
     current_user: dict = Depends(require_permission("ai_config_manage")),
-    service: AIModelConfigService = Depends(get_ai_model_config_service)
+    service: AIModelConfigService = Depends(get_ai_model_config_service),
 ):
     """
     批量健康检查所有启用的模型
-    
+
     需要权限: ai_config_manage
     """
-    
+
     try:
         # 在后台任务中执行批量健康检查
         results = await service.batch_health_check(db)
@@ -218,47 +220,44 @@ async def test_model(
     test_request: AIModelTestRequest,
     db: AsyncSession = Depends(get_async_session),
     current_user: dict = Depends(require_permission("ai_config_manage")),
-    service: AIModelConfigService = Depends(get_ai_model_config_service)
+    service: AIModelConfigService = Depends(get_ai_model_config_service),
 ):
     """
     测试AI模型
-    
+
     需要权限: ai_config_manage
     """
-    
+
     try:
         # 获取模型配置
         config = await service.get_model_config(db, config_id)
-        
+
         # 这里应该调用实际的AI服务进行测试
         # 为了简化，这里返回模拟结果
-        from datetime import datetime
         import time
-        
+        from datetime import datetime
+
         start_time = time.time()
-        
+
         # 模拟AI调用
         await asyncio.sleep(0.5)  # 模拟网络延迟
-        
+
         response_time = time.time() - start_time
-        
+
         return AIModelTestResponse(
             success=True,
             response_text=f"这是来自 {config.display_name} 的测试响应：{test_request.test_message}",
             response_time=response_time,
             tokens_used=50,
             cost=0.001,
-            tested_at=datetime.utcnow()
+            tested_at=datetime.utcnow(),
         )
-        
+
     except NotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
         return AIModelTestResponse(
-            success=False,
-            response_time=0.0,
-            error=str(e),
-            tested_at=datetime.utcnow()
+            success=False, response_time=0.0, error=str(e), tested_at=datetime.utcnow()
         )
 
 
@@ -267,22 +266,22 @@ async def toggle_model_status(
     config_id: int,
     db: AsyncSession = Depends(get_async_session),
     current_user: dict = Depends(require_permission("ai_config_manage")),
-    service: AIModelConfigService = Depends(get_ai_model_config_service)
+    service: AIModelConfigService = Depends(get_ai_model_config_service),
 ):
     """
     切换AI模型启用/禁用状态
-    
+
     需要权限: ai_config_manage
     """
-    
+
     try:
         # 获取当前配置
         config = await service.get_model_config(db, config_id)
-        
+
         # 切换状态
         update_data = AIModelConfigUpdate(is_enabled=not config.is_enabled)
         return await service.update_model_config(db, config_id, update_data)
-        
+
     except NotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
@@ -294,18 +293,18 @@ async def set_default_model(
     config_id: int,
     db: AsyncSession = Depends(get_async_session),
     current_user: dict = Depends(require_permission("ai_config_manage")),
-    service: AIModelConfigService = Depends(get_ai_model_config_service)
+    service: AIModelConfigService = Depends(get_ai_model_config_service),
 ):
     """
     设置为默认模型
-    
+
     需要权限: ai_config_manage
     """
-    
+
     try:
         update_data = AIModelConfigUpdate(is_default=True)
         return await service.update_model_config(db, config_id, update_data)
-        
+
     except NotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:

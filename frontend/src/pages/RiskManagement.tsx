@@ -2,14 +2,12 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
   AlertCircle,
-  AlertTriangle,
   BarChart3,
   CalendarDays,
   ChevronLeft,
   ChevronRight,
   Edit,
   Eye,
-  Filter,
   Plus,
   RefreshCw,
   Save,
@@ -105,7 +103,7 @@ const tomorrowInput = () => {
   return `${year}-${month}-${day}`
 }
 
-const optionLabel = (options, value) => options.find((item) => item.value === value)?.label || value || '-'
+const _optionLabel = (options, value) => options.find((item) => item.value === value)?.label || value || '-'
 const formatDate = (value) => (value ? new Date(value).toLocaleDateString('zh-CN') : '-')
 const formatDateTime = (value) => (value ? new Date(value).toLocaleString('zh-CN', { hour12: false }) : '-')
 const scoreValue = (risk) => Number(risk?.risk_score ?? Number(risk?.probability || 0) * Number(risk?.impact_score || 0))
@@ -322,7 +320,7 @@ function RiskManagement() {
     try {
       const payload = buildPayload()
       if (editingRisk) {
-        const { project_id, ...updatePayload } = payload
+        const { project_id: _project_id, ...updatePayload } = payload
         await riskService.updateRisk(editingRisk.id, updatePayload)
         setNotice('风险已更新')
       } else {

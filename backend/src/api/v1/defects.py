@@ -8,29 +8,54 @@
 - 缺陷协作和通知功能
 """
 
+import logging
 from datetime import datetime, timedelta
 from pathlib import Path as FilePath
-from typing import Optional, List, Dict, Any
-from fastapi import APIRouter, Depends, HTTPException, Query, Path, Body, UploadFile, File, Response
+from typing import Any, Dict, List, Optional
+
+from fastapi import (
+    APIRouter,
+    Body,
+    Depends,
+    File,
+    HTTPException,
+    Path,
+    Query,
+    Response,
+    UploadFile,
+)
 from fastapi.security import HTTPBearer
+from pydantic import BaseModel, Field
 from sqlalchemy import or_
 from sqlalchemy.orm import Session, aliased
-from pydantic import BaseModel, Field
-import logging
 
 from ...core.database import get_db
-from ...core.exceptions import ValidationError, PermissionError, NotFoundError, BusinessLogicError
-from ...services.defect_service import DefectService
-from ...services.defect_analysis_service import DefectAnalysisService
-from ...services.defect_trend_service import DefectTrendService
-from ...services.defect_notification_service import DefectNotificationService
-from ...services.auth_dependencies import get_current_user
-from ...models.user import User
-from ...models.test_case import Defect, DefectType, DefectSeverity, DefectStatus, DefectResolution, TestCasePriority, TestCase, TestExecution
-from ...models.requirement import Requirement
-from ...models.test_plan import TestPlan
+from ...core.exceptions import (
+    BusinessLogicError,
+    NotFoundError,
+    PermissionError,
+    ValidationError,
+)
 from ...models.defect_comment import DefectComment
+from ...models.requirement import Requirement
+from ...models.test_case import (
+    Defect,
+    DefectResolution,
+    DefectSeverity,
+    DefectStatus,
+    DefectType,
+    TestCase,
+    TestCasePriority,
+    TestExecution,
+)
+from ...models.test_plan import TestPlan
+from ...models.user import User
 from ...schemas.base import BaseResponse, PaginatedResponse
+from ...services.auth_dependencies import get_current_user
+from ...services.defect_analysis_service import DefectAnalysisService
+from ...services.defect_notification_service import DefectNotificationService
+from ...services.defect_service import DefectService
+from ...services.defect_trend_service import DefectTrendService
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/defects", tags=["缺陷管理"])
@@ -71,7 +96,7 @@ def _build_defect_response(defect):
         verified_at=defect.verified_at,
         attachments=defect.attachments,
         created_at=defect.created_at,
-        updated_at=defect.updated_at
+        updated_at=defect.updated_at,
     )
 
 
@@ -81,7 +106,12 @@ def _apply_test_plan_filter(query, test_plan_id: Optional[int]):
     return (
         query.outerjoin(TestCase, Defect.test_case_id == TestCase.id)
         .outerjoin(TestExecution, Defect.test_execution_id == TestExecution.id)
-        .filter(or_(TestCase.test_plan_id == test_plan_id, TestExecution.test_plan_id == test_plan_id))
+        .filter(
+            or_(
+                TestCase.test_plan_id == test_plan_id,
+                TestExecution.test_plan_id == test_plan_id,
+            )
+        )
     )
 
 
@@ -94,6 +124,7 @@ def _generate_defect_code(db: Session) -> str:
 # 请求模式
 class CreateDefectRequest(BaseModel):
     """创建缺陷请求"""
+
     test_execution_id: Optional[int] = Field(None, description="关联测试执行ID")
     test_case_id: Optional[int] = Field(None, description="关联测试用例ID")
     requirement_id: Optional[int] = Field(None, description="关联需求ID")
@@ -111,10 +142,13 @@ class CreateDefectRequest(BaseModel):
 
 class UpdateDefectRequest(BaseModel):
     """更新缺陷请求"""
+
     test_execution_id: Optional[int] = Field(None, description="关联测试执行ID")
     test_case_id: Optional[int] = Field(None, description="关联测试用例ID")
     requirement_id: Optional[int] = Field(None, description="关联需求ID")
-    title: Optional[str] = Field(None, min_length=1, max_length=200, description="缺陷标题")
+    title: Optional[str] = Field(
+        None, min_length=1, max_length=200, description="缺陷标题"
+    )
     description: Optional[str] = Field(None, min_length=1, description="缺陷描述")
     steps_to_reproduce: Optional[str] = Field(None, description="重现步骤")
     defect_type: Optional[DefectType] = Field(None, description="缺陷类型")
@@ -129,6 +163,7 @@ class UpdateDefectRequest(BaseModel):
 
 class UpdateDefectStatusRequest(BaseModel):
     """更新缺陷状态请求"""
+
     status: DefectStatus = Field(..., description="新状态")
     resolution: Optional[DefectResolution] = Field(None, description="解决方案")
     notes: Optional[str] = Field(None, description="状态变更备注")
@@ -137,18 +172,21 @@ class UpdateDefectStatusRequest(BaseModel):
 
 class BatchUpdateDefectsRequest(BaseModel):
     """批量更新缺陷请求"""
+
     defect_ids: List[int] = Field(..., description="缺陷ID列表")
     update_data: UpdateDefectRequest = Field(..., description="更新数据")
 
 
 class DefectCommentRequest(BaseModel):
     """缺陷评论请求"""
+
     content: str = Field(..., min_length=1, description="评论内容")
     parent_id: Optional[int] = Field(None, description="父评论ID")
 
 
 class DefectQueryParams(BaseModel):
     """缺陷查询参数"""
+
     test_execution_id: Optional[int] = Field(None, description="测试执行ID")
     test_case_id: Optional[int] = Field(None, description="测试用例ID")
     requirement_id: Optional[int] = Field(None, description="需求ID")
@@ -167,6 +205,7 @@ class DefectQueryParams(BaseModel):
 # 响应模式
 class DefectResponse(BaseModel):
     """缺陷响应"""
+
     id: int = Field(..., description="缺陷ID")
     defect_code: str = Field(..., description="缺陷编码")
     test_execution_id: Optional[int] = Field(None, description="关联测试执行ID")
@@ -197,6 +236,7 @@ class DefectResponse(BaseModel):
 
 class DefectCommentResponse(BaseModel):
     """缺陷评论响应"""
+
     id: int = Field(..., description="评论ID")
     defect_id: int = Field(..., description="缺陷ID")
     user_id: int = Field(..., description="用户ID")
@@ -208,6 +248,7 @@ class DefectCommentResponse(BaseModel):
 
 class DefectStatisticsResponse(BaseModel):
     """缺陷统计响应"""
+
     total_defects: int = Field(..., description="总缺陷数")
     defects_by_severity: Dict[str, int] = Field(..., description="按严重程度分布")
     defects_by_type: Dict[str, int] = Field(..., description="按类型分布")
@@ -220,6 +261,7 @@ class DefectStatisticsResponse(BaseModel):
 
 class DefectTrendResponse(BaseModel):
     """缺陷趋势响应"""
+
     project_id: int = Field(..., description="项目ID")
     time_range: str = Field(..., description="时间范围")
     trend_data: DefectStatisticsResponse = Field(..., description="趋势数据")
@@ -233,11 +275,11 @@ class DefectTrendResponse(BaseModel):
 async def create_defect(
     request: CreateDefectRequest,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """
     创建缺陷
-    
+
     创建新的缺陷记录，支持AI辅助分类和智能分配。
     """
     try:
@@ -245,13 +287,25 @@ async def create_defect(
         # test_case_id / test_execution_id / requirement_id 会静默
         # 创建孤儿缺陷（与已修复的需求孤儿问题同类）
         if request.test_case_id is not None:
-            if not db.query(TestCase).filter(TestCase.id == request.test_case_id).first():
+            if (
+                not db.query(TestCase)
+                .filter(TestCase.id == request.test_case_id)
+                .first()
+            ):
                 raise ValidationError("指定的测试用例不存在")
         if request.test_execution_id is not None:
-            if not db.query(TestExecution).filter(TestExecution.id == request.test_execution_id).first():
+            if (
+                not db.query(TestExecution)
+                .filter(TestExecution.id == request.test_execution_id)
+                .first()
+            ):
                 raise ValidationError("指定的测试执行不存在")
         if request.requirement_id is not None:
-            if not db.query(Requirement).filter(Requirement.id == request.requirement_id).first():
+            if (
+                not db.query(Requirement)
+                .filter(Requirement.id == request.requirement_id)
+                .first()
+            ):
                 raise ValidationError("指定的需求不存在")
 
         now = datetime.utcnow()
@@ -272,18 +326,16 @@ async def create_defect(
             assignee_id=request.assignee_id,
             assigned_at=now if request.assignee_id else None,
             attachments=request.attachments,
-            status=DefectStatus.ASSIGNED if request.assignee_id else DefectStatus.NEW
+            status=DefectStatus.ASSIGNED if request.assignee_id else DefectStatus.NEW,
         )
         db.add(defect)
         db.commit()
         db.refresh(defect)
-        
+
         return BaseResponse(
-            success=True,
-            message="缺陷创建成功",
-            data=_build_defect_response(defect)
+            success=True, message="缺陷创建成功", data=_build_defect_response(defect)
         )
-        
+
     except ValidationError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except PermissionError as e:
@@ -298,42 +350,61 @@ async def create_defect(
 async def get_defect_statistics_alias(
     test_plan_id: Optional[int] = Query(None, description="测试计划ID"),
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """获取缺陷统计信息（兼容前端旧路径，使用真实数据库统计）。"""
     try:
         base_query = _apply_test_plan_filter(db.query(Defect), test_plan_id)
         total = base_query.count()
         status_counts = {
-            status.value: _apply_test_plan_filter(db.query(Defect), test_plan_id).filter(Defect.status == status).count()
+            status.value: _apply_test_plan_filter(db.query(Defect), test_plan_id)
+            .filter(Defect.status == status)
+            .count()
             for status in DefectStatus
         }
         severity_counts = {
-            severity.value: _apply_test_plan_filter(db.query(Defect), test_plan_id).filter(Defect.severity == severity).count()
+            severity.value: _apply_test_plan_filter(db.query(Defect), test_plan_id)
+            .filter(Defect.severity == severity)
+            .count()
             for severity in DefectSeverity
         }
         type_counts = {
-            defect_type.value: _apply_test_plan_filter(db.query(Defect), test_plan_id).filter(Defect.defect_type == defect_type).count()
+            defect_type.value: _apply_test_plan_filter(db.query(Defect), test_plan_id)
+            .filter(Defect.defect_type == defect_type)
+            .count()
             for defect_type in DefectType
         }
 
         new_count = status_counts.get(DefectStatus.NEW.value, 0)
-        resolved = sum(status_counts.get(status.value, 0) for status in [DefectStatus.RESOLVED, DefectStatus.VERIFIED, DefectStatus.CLOSED])
+        resolved = sum(
+            status_counts.get(status.value, 0)
+            for status in [
+                DefectStatus.RESOLVED,
+                DefectStatus.VERIFIED,
+                DefectStatus.CLOSED,
+            ]
+        )
         critical = severity_counts.get(DefectSeverity.CRITICAL.value, 0)
         high = severity_counts.get(DefectSeverity.HIGH.value, 0)
         resolution_rate = round(resolved / total * 100, 1) if total else 0
-        resolved_rows = _apply_test_plan_filter(db.query(Defect), test_plan_id).filter(
-            Defect.resolved_at.isnot(None),
-            Defect.reported_at.isnot(None)
-        ).all()
+        resolved_rows = (
+            _apply_test_plan_filter(db.query(Defect), test_plan_id)
+            .filter(Defect.resolved_at.isnot(None), Defect.reported_at.isnot(None))
+            .all()
+        )
         avg_resolution_time = 0
         if resolved_rows:
-            total_seconds = sum((row.resolved_at - row.reported_at).total_seconds() for row in resolved_rows)
+            total_seconds = sum(
+                (row.resolved_at - row.reported_at).total_seconds()
+                for row in resolved_rows
+            )
             avg_resolution_time = round(total_seconds / len(resolved_rows) / 86400, 1)
     except Exception as e:
         if not _is_missing_table_error(e):
             raise
-        total = new_count = resolved = critical = high = resolution_rate = avg_resolution_time = 0
+        total = new_count = resolved = critical = high = resolution_rate = (
+            avg_resolution_time
+        ) = 0
         status_counts = {status.value: 0 for status in DefectStatus}
         severity_counts = {severity.value: 0 for severity in DefectSeverity}
         type_counts = {defect_type.value: 0 for defect_type in DefectType}
@@ -348,15 +419,25 @@ async def get_defect_statistics_alias(
             "high_defects": high,
             "medium_defects": severity_counts.get(DefectSeverity.MEDIUM.value, 0),
             "low_defects": severity_counts.get(DefectSeverity.LOW.value, 0),
-            "trivial_defects": severity_counts.get(getattr(DefectSeverity, "TRIVIAL").value, 0) if hasattr(DefectSeverity, "TRIVIAL") else 0,
+            "trivial_defects": (
+                severity_counts.get(getattr(DefectSeverity, "TRIVIAL").value, 0)
+                if hasattr(DefectSeverity, "TRIVIAL")
+                else 0
+            ),
             "resolution_rate": resolution_rate,
             "avg_resolution_time": avg_resolution_time,
             "defect_density": 0,
-            "reopen_rate": round(status_counts.get(DefectStatus.REOPENED.value, 0) / total * 100, 1) if total else 0,
+            "reopen_rate": (
+                round(
+                    status_counts.get(DefectStatus.REOPENED.value, 0) / total * 100, 1
+                )
+                if total
+                else 0
+            ),
             "defects_by_status": status_counts,
             "defects_by_severity": severity_counts,
-            "defects_by_type": type_counts
-        }
+            "defects_by_type": type_counts,
+        },
     )
 
 
@@ -365,7 +446,7 @@ async def get_defect_trends_alias(
     time_range: str = Query("30d", description="时间范围"),
     test_plan_id: Optional[int] = Query(None, description="测试计划ID"),
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """获取缺陷趋势（兼容前端旧路径）"""
     days_by_range = {"7d": 7, "30d": 30, "90d": 90, "1y": 365}
@@ -374,36 +455,44 @@ async def get_defect_trends_alias(
     start_date = end_date - timedelta(days=days - 1)
     try:
         start_datetime = datetime.combine(start_date, datetime.min.time())
-        defects = _apply_test_plan_filter(db.query(Defect), test_plan_id).filter(Defect.reported_at >= start_datetime).all()
-        running_total = _apply_test_plan_filter(db.query(Defect), test_plan_id).filter(Defect.reported_at < start_datetime).count()
+        defects = (
+            _apply_test_plan_filter(db.query(Defect), test_plan_id)
+            .filter(Defect.reported_at >= start_datetime)
+            .all()
+        )
+        running_total = (
+            _apply_test_plan_filter(db.query(Defect), test_plan_id)
+            .filter(Defect.reported_at < start_datetime)
+            .count()
+        )
         trend_rows = []
         for index in range(days):
             current_date = start_date + timedelta(days=index)
             created_today = [
-                defect for defect in defects
+                defect
+                for defect in defects
                 if defect.reported_at and defect.reported_at.date() == current_date
             ]
             resolved_today = [
-                defect for defect in defects
+                defect
+                for defect in defects
                 if defect.resolved_at and defect.resolved_at.date() == current_date
             ]
             running_total += len(created_today)
-            trend_rows.append({
-                "date": current_date.isoformat(),
-                "new_defects": len(created_today),
-                "resolved_defects": len(resolved_today),
-                "total_defects": running_total
-            })
+            trend_rows.append(
+                {
+                    "date": current_date.isoformat(),
+                    "new_defects": len(created_today),
+                    "resolved_defects": len(resolved_today),
+                    "total_defects": running_total,
+                }
+            )
     except Exception as e:
         if not _is_missing_table_error(e):
             raise
         trend_rows = []
 
-    return BaseResponse(
-        success=True,
-        message="获取缺陷趋势成功",
-        data=trend_rows
-    )
+    return BaseResponse(success=True, message="获取缺陷趋势成功", data=trend_rows)
 
 
 @router.get("/export")
@@ -415,7 +504,7 @@ async def export_defects(
     search: Optional[str] = Query(None, description="搜索关键词"),
     format: str = Query("csv", description="导出格式"),
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """导出缺陷列表为CSV。"""
     query = _apply_test_plan_filter(db.query(Defect), test_plan_id)
@@ -427,23 +516,31 @@ async def export_defects(
         query = query.filter(Defect.defect_type == defect_type)
     if search:
         search_term = f"%{search}%"
-        query = query.filter((Defect.title.like(search_term)) | (Defect.defect_code.like(search_term)))
+        query = query.filter(
+            (Defect.title.like(search_term)) | (Defect.defect_code.like(search_term))
+        )
 
     rows = ["缺陷编号,标题,类型,严重程度,优先级,状态,报告时间"]
     for defect in query.order_by(Defect.reported_at.desc()).all():
-        rows.append(",".join([
-            defect.defect_code or "",
-            (defect.title or "").replace(",", "，"),
-            defect.defect_type.value if defect.defect_type else "",
-            defect.severity.value if defect.severity else "",
-            defect.priority.value if defect.priority else "",
-            defect.status.value if defect.status else "",
-            defect.reported_at.isoformat() if defect.reported_at else ""
-        ]))
+        rows.append(
+            ",".join(
+                [
+                    defect.defect_code or "",
+                    (defect.title or "").replace(",", "，"),
+                    defect.defect_type.value if defect.defect_type else "",
+                    defect.severity.value if defect.severity else "",
+                    defect.priority.value if defect.priority else "",
+                    defect.status.value if defect.status else "",
+                    defect.reported_at.isoformat() if defect.reported_at else "",
+                ]
+            )
+        )
     return Response(
         content="\ufeff" + "\n".join(rows),
         media_type="text/csv; charset=utf-8",
-        headers={"Content-Disposition": f"attachment; filename=defects.{format if format in {'csv', 'txt'} else 'csv'}"}
+        headers={
+            "Content-Disposition": f"attachment; filename=defects.{format if format in {'csv', 'txt'} else 'csv'}"
+        },
     )
 
 
@@ -451,24 +548,24 @@ async def export_defects(
 async def get_defect(
     defect_id: int = Path(..., description="缺陷ID"),
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """
     获取缺陷详情
-    
+
     根据缺陷ID获取详细信息。
     """
     try:
         defect = db.query(Defect).filter(Defect.id == defect_id).first()
         if not defect:
             raise HTTPException(status_code=404, detail="缺陷不存在")
-        
+
         return BaseResponse(
             success=True,
             message="获取缺陷详情成功",
-            data=_build_defect_response(defect)
+            data=_build_defect_response(defect),
         )
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -481,11 +578,11 @@ async def update_defect(
     defect_id: int = Path(..., description="缺陷ID"),
     request: UpdateDefectRequest = Body(...),
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """
     更新缺陷
-    
+
     更新缺陷的基本信息。
     """
     try:
@@ -500,13 +597,11 @@ async def update_defect(
         defect.updated_at = datetime.utcnow()
         db.commit()
         db.refresh(defect)
-        
+
         return BaseResponse(
-            success=True,
-            message="缺陷更新成功",
-            data=_build_defect_response(defect)
+            success=True, message="缺陷更新成功", data=_build_defect_response(defect)
         )
-        
+
     except ValidationError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except PermissionError as e:
@@ -529,11 +624,11 @@ async def update_defect_status(
     defect_id: int = Path(..., description="缺陷ID"),
     request: UpdateDefectStatusRequest = Body(...),
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """
     更新缺陷状态
-    
+
     更新缺陷的状态，支持状态流转验证。
     """
     try:
@@ -556,20 +651,22 @@ async def update_defect_status(
             defect.verified_at = defect.verified_at or now
         defect.updated_at = now
         if request.notes and request.notes.strip():
-            db.add(DefectComment(
-                defect_id=defect_id,
-                user_id=current_user.id,
-                content=f"状态流转为 {request.status.value}：{request.notes.strip()}",
-            ))
+            db.add(
+                DefectComment(
+                    defect_id=defect_id,
+                    user_id=current_user.id,
+                    content=f"状态流转为 {request.status.value}：{request.notes.strip()}",
+                )
+            )
         db.commit()
         db.refresh(defect)
-        
+
         return BaseResponse(
             success=True,
             message="缺陷状态更新成功",
-            data=_build_defect_response(defect)
+            data=_build_defect_response(defect),
         )
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -582,11 +679,11 @@ async def update_defect_status(
 async def delete_defect(
     defect_id: int = Path(..., description="缺陷ID"),
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """
     删除缺陷
-    
+
     删除指定的缺陷记录。
     """
     try:
@@ -594,18 +691,20 @@ async def delete_defect(
         if not defect:
             raise HTTPException(status_code=404, detail="缺陷不存在")
         if defect.status not in [DefectStatus.NEW, DefectStatus.REJECTED]:
-            raise HTTPException(status_code=422, detail="只能删除新建或已拒绝状态的缺陷")
+            raise HTTPException(
+                status_code=422, detail="只能删除新建或已拒绝状态的缺陷"
+            )
 
-        db.query(DefectComment).filter(DefectComment.defect_id == defect_id).delete(synchronize_session=False)
-        db.query(Defect).filter(Defect.id == defect_id).delete(synchronize_session=False)
-        db.commit()
-        
-        return BaseResponse(
-            success=True,
-            message="缺陷删除成功",
-            data=True
+        db.query(DefectComment).filter(DefectComment.defect_id == defect_id).delete(
+            synchronize_session=False
         )
-        
+        db.query(Defect).filter(Defect.id == defect_id).delete(
+            synchronize_session=False
+        )
+        db.commit()
+
+        return BaseResponse(success=True, message="缺陷删除成功", data=True)
+
     except PermissionError as e:
         raise HTTPException(status_code=403, detail=str(e))
     except NotFoundError as e:
@@ -639,11 +738,11 @@ async def list_defects(
     page: int = Query(1, ge=1, description="页码"),
     page_size: int = Query(20, ge=1, le=100, description="每页大小"),
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """
     获取缺陷列表
-    
+
     支持多条件过滤和分页查询。
     """
     try:
@@ -656,7 +755,12 @@ async def list_defects(
             query = (
                 query.outerjoin(TestCase, Defect.test_case_id == TestCase.id)
                 .outerjoin(TestExecution, Defect.test_execution_id == TestExecution.id)
-                .filter(or_(TestCase.test_plan_id == test_plan_id, TestExecution.test_plan_id == test_plan_id))
+                .filter(
+                    or_(
+                        TestCase.test_plan_id == test_plan_id,
+                        TestExecution.test_plan_id == test_plan_id,
+                    )
+                )
             )
         if requirement_id:
             query = query.filter(Defect.requirement_id == requirement_id)
@@ -681,31 +785,33 @@ async def list_defects(
         if search:
             search_term = f"%{search}%"
             query = query.filter(
-                (Defect.title.like(search_term)) |
-                (Defect.description.like(search_term)) |
-                (Defect.defect_code.like(search_term))
+                (Defect.title.like(search_term))
+                | (Defect.description.like(search_term))
+                | (Defect.defect_code.like(search_term))
             )
 
         total = query.count()
-        defects = query.order_by(Defect.reported_at.desc()) \
-            .offset((page - 1) * page_size) \
-            .limit(page_size) \
+        defects = (
+            query.order_by(Defect.reported_at.desc())
+            .offset((page - 1) * page_size)
+            .limit(page_size)
             .all()
-        
+        )
+
         # 构建响应数据
         response_data = []
         for defect in defects:
             response_data.append(_build_defect_response(defect))
-        
+
         return PaginatedResponse(
             success=True,
             message="获取缺陷列表成功",
             data=response_data,
             total=total,
             page=page,
-            page_size=page_size
+            page_size=page_size,
         )
-        
+
     except Exception as e:
         if _is_missing_table_error(e):
             return PaginatedResponse(
@@ -714,7 +820,7 @@ async def list_defects(
                 data=[],
                 total=0,
                 page=page,
-                page_size=page_size
+                page_size=page_size,
             )
         logger.error(f"获取缺陷列表失败: {str(e)}")
         raise HTTPException(status_code=500, detail="内部服务器错误")
@@ -724,75 +830,83 @@ async def list_defects(
 async def batch_update_defects(
     request: BatchUpdateDefectsRequest,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """
     批量更新缺陷
-    
+
     批量更新多个缺陷的信息。
     """
     try:
         service = DefectService(db)
-        
+
         # 转换更新数据
-        update_data = {k: v for k, v in request.update_data.dict().items() if v is not None}
-        
+        update_data = {
+            k: v for k, v in request.update_data.dict().items() if v is not None
+        }
+
         # 批量更新缺陷
-        updated_defects = await service.batch_update_defects(request.defect_ids, update_data, current_user.id)
-        
+        updated_defects = await service.batch_update_defects(
+            request.defect_ids, update_data, current_user.id
+        )
+
         # 构建响应数据
         response_data = []
         for defect in updated_defects:
-            response_data.append(DefectResponse(
-                id=defect.id,
-                defect_code=defect.defect_code,
-                test_execution_id=defect.test_execution_id,
-                test_case_id=defect.test_case_id,
-                requirement_id=defect.requirement_id,
-                title=defect.title,
-                description=defect.description,
-                steps_to_reproduce=defect.steps_to_reproduce,
-                defect_type=defect.defect_type,
-                severity=defect.severity,
-                priority=defect.priority,
-                status=defect.status,
-                resolution=defect.resolution,
-                found_in_version=defect.found_in_version,
-                fixed_in_version=defect.fixed_in_version,
-                test_environment=defect.test_environment,
-                reporter_id=defect.reporter_id,
-                assignee_id=defect.assignee_id,
-                resolver_id=defect.resolver_id,
-                reported_at=defect.reported_at,
-                assigned_at=defect.assigned_at,
-                resolved_at=defect.resolved_at,
-                verified_at=defect.verified_at,
-                attachments=defect.attachments,
-                created_at=defect.created_at,
-                updated_at=defect.updated_at
-            ))
-        
+            response_data.append(
+                DefectResponse(
+                    id=defect.id,
+                    defect_code=defect.defect_code,
+                    test_execution_id=defect.test_execution_id,
+                    test_case_id=defect.test_case_id,
+                    requirement_id=defect.requirement_id,
+                    title=defect.title,
+                    description=defect.description,
+                    steps_to_reproduce=defect.steps_to_reproduce,
+                    defect_type=defect.defect_type,
+                    severity=defect.severity,
+                    priority=defect.priority,
+                    status=defect.status,
+                    resolution=defect.resolution,
+                    found_in_version=defect.found_in_version,
+                    fixed_in_version=defect.fixed_in_version,
+                    test_environment=defect.test_environment,
+                    reporter_id=defect.reporter_id,
+                    assignee_id=defect.assignee_id,
+                    resolver_id=defect.resolver_id,
+                    reported_at=defect.reported_at,
+                    assigned_at=defect.assigned_at,
+                    resolved_at=defect.resolved_at,
+                    verified_at=defect.verified_at,
+                    attachments=defect.attachments,
+                    created_at=defect.created_at,
+                    updated_at=defect.updated_at,
+                )
+            )
+
         return BaseResponse(
             success=True,
             message=f"批量更新缺陷成功，共更新{len(response_data)}个缺陷",
-            data=response_data
+            data=response_data,
         )
-        
+
     except Exception as e:
         logger.error(f"批量更新缺陷失败: {str(e)}")
         raise HTTPException(status_code=500, detail="内部服务器错误")
 
 
-@router.post("/{defect_id}/comments", response_model=BaseResponse[DefectCommentResponse])
+@router.post(
+    "/{defect_id}/comments", response_model=BaseResponse[DefectCommentResponse]
+)
 async def add_defect_comment(
     defect_id: int = Path(..., description="缺陷ID"),
     request: DefectCommentRequest = Body(...),
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """
     添加缺陷评论
-    
+
     为缺陷添加评论或回复。
     """
     try:
@@ -816,15 +930,13 @@ async def add_defect_comment(
             content=comment.content,
             parent_id=None,
             created_at=comment.created_at,
-            updated_at=comment.updated_at
+            updated_at=comment.updated_at,
         )
-        
+
         return BaseResponse(
-            success=True,
-            message="缺陷评论添加成功",
-            data=response_data
+            success=True, message="缺陷评论添加成功", data=response_data
         )
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -833,17 +945,19 @@ async def add_defect_comment(
         raise HTTPException(status_code=500, detail="内部服务器错误")
 
 
-@router.get("/{defect_id}/comments", response_model=PaginatedResponse[DefectCommentResponse])
+@router.get(
+    "/{defect_id}/comments", response_model=PaginatedResponse[DefectCommentResponse]
+)
 async def get_defect_comments(
     defect_id: int = Path(..., description="缺陷ID"),
     page: int = Query(1, ge=1, description="页码"),
     page_size: int = Query(20, ge=1, le=100, description="每页大小"),
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """
     获取缺陷评论列表
-    
+
     获取指定缺陷的评论列表。
     """
     try:
@@ -862,25 +976,27 @@ async def get_defect_comments(
 
         response_data = []
         for comment in comments:
-            response_data.append(DefectCommentResponse(
-                id=comment.id,
-                defect_id=comment.defect_id,
-                user_id=comment.user_id,
-                content=comment.content,
-                parent_id=None,
-                created_at=comment.created_at,
-                updated_at=comment.updated_at
-            ))
-        
+            response_data.append(
+                DefectCommentResponse(
+                    id=comment.id,
+                    defect_id=comment.defect_id,
+                    user_id=comment.user_id,
+                    content=comment.content,
+                    parent_id=None,
+                    created_at=comment.created_at,
+                    updated_at=comment.updated_at,
+                )
+            )
+
         return PaginatedResponse(
             success=True,
             message="获取缺陷评论列表成功",
             data=response_data,
             total=total,
             page=page,
-            page_size=page_size
+            page_size=page_size,
         )
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -891,7 +1007,7 @@ async def get_defect_comments(
                 data=[],
                 total=0,
                 page=page,
-                page_size=page_size
+                page_size=page_size,
             )
         logger.error(f"获取缺陷评论列表失败: {str(e)}")
         raise HTTPException(status_code=500, detail="内部服务器错误")
@@ -902,7 +1018,7 @@ async def upload_defect_attachment(
     defect_id: int = Path(..., description="缺陷ID"),
     attachment: UploadFile = File(...),
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """上传缺陷附件并写回缺陷附件元数据。"""
     try:
@@ -913,7 +1029,9 @@ async def upload_defect_attachment(
         upload_dir = FilePath("uploads/defects/attachments")
         upload_dir.mkdir(parents=True, exist_ok=True)
         safe_name = FilePath(attachment.filename or "attachment").name
-        file_name = f"{defect_id}_{datetime.utcnow().strftime('%Y%m%d%H%M%S')}_{safe_name}"
+        file_name = (
+            f"{defect_id}_{datetime.utcnow().strftime('%Y%m%d%H%M%S')}_{safe_name}"
+        )
         file_path = upload_dir / file_name
         file_size = 0
 
@@ -956,14 +1074,16 @@ async def upload_defect_attachment(
         raise HTTPException(status_code=500, detail="内部服务器错误")
 
 
-@router.get("/statistics/summary", response_model=BaseResponse[DefectStatisticsResponse])
+@router.get(
+    "/statistics/summary", response_model=BaseResponse[DefectStatisticsResponse]
+)
 async def get_defect_statistics(
     project_id: Optional[int] = Query(None, description="项目ID"),
     test_plan_id: Optional[int] = Query(None, description="测试计划ID"),
     start_date: Optional[datetime] = Query(None, description="开始日期"),
     end_date: Optional[datetime] = Query(None, description="结束日期"),
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """
     获取缺陷统计信息
@@ -981,8 +1101,15 @@ async def get_defect_statistics(
                 base_query.outerjoin(TestCase, Defect.test_case_id == TestCase.id)
                 .outerjoin(TestPlan, TestCase.test_plan_id == TestPlan.id)
                 .outerjoin(TestExecution, Defect.test_execution_id == TestExecution.id)
-                .outerjoin(ExecutionPlan, TestExecution.test_plan_id == ExecutionPlan.id)
-                .filter(or_(TestPlan.project_id == project_id, ExecutionPlan.project_id == project_id))
+                .outerjoin(
+                    ExecutionPlan, TestExecution.test_plan_id == ExecutionPlan.id
+                )
+                .filter(
+                    or_(
+                        TestPlan.project_id == project_id,
+                        ExecutionPlan.project_id == project_id,
+                    )
+                )
             )
         if test_plan_id:
             base_query = _apply_test_plan_filter(base_query, test_plan_id)
@@ -996,18 +1123,21 @@ async def get_defect_statistics(
             s.value: base_query.filter(Defect.status == s).count() for s in DefectStatus
         }
         defects_by_severity = {
-            sev.value: base_query.filter(Defect.severity == sev).count() for sev in DefectSeverity
+            sev.value: base_query.filter(Defect.severity == sev).count()
+            for sev in DefectSeverity
         }
         defects_by_type = {
-            t.value: base_query.filter(Defect.defect_type == t).count() for t in DefectType
+            t.value: base_query.filter(Defect.defect_type == t).count()
+            for t in DefectType
         }
         resolved_rows = base_query.filter(
-            Defect.resolved_at.isnot(None),
-            Defect.reported_at.isnot(None)
+            Defect.resolved_at.isnot(None), Defect.reported_at.isnot(None)
         ).all()
         avg_resolution = 0.0
         if resolved_rows:
-            total_seconds = sum((r.resolved_at - r.reported_at).total_seconds() for r in resolved_rows)
+            total_seconds = sum(
+                (r.resolved_at - r.reported_at).total_seconds() for r in resolved_rows
+            )
             avg_resolution = round(total_seconds / len(resolved_rows) / 86400, 2)
 
         response_data = DefectStatisticsResponse(
@@ -1018,13 +1148,11 @@ async def get_defect_statistics(
             defects_by_module={},
             resolution_time_avg=avg_resolution,
             defect_density=0.0,
-            escape_rate=0.0
+            escape_rate=0.0,
         )
 
         return BaseResponse(
-            success=True,
-            message="获取缺陷统计成功",
-            data=response_data
+            success=True, message="获取缺陷统计成功", data=response_data
         )
 
     except Exception as e:
@@ -1037,9 +1165,11 @@ async def get_defect_statistics(
                 defects_by_module={},
                 resolution_time_avg=0.0,
                 defect_density=0.0,
-                escape_rate=0.0
+                escape_rate=0.0,
             )
-            return BaseResponse(success=True, message="获取缺陷统计成功", data=response_data)
+            return BaseResponse(
+                success=True, message="获取缺陷统计成功", data=response_data
+            )
         logger.error(f"获取缺陷统计失败: {str(e)}")
         raise HTTPException(status_code=500, detail="内部服务器错误")
 
@@ -1049,7 +1179,7 @@ async def get_defect_trends(
     project_id: int = Query(..., description="项目ID"),
     time_range: str = Query("30d", description="时间范围"),
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """
     获取缺陷趋势分析
@@ -1072,28 +1202,51 @@ async def get_defect_trends(
             .outerjoin(TestPlan, TestCase.test_plan_id == TestPlan.id)
             .outerjoin(TestExecution, Defect.test_execution_id == TestExecution.id)
             .outerjoin(ExecutionPlan, TestExecution.test_plan_id == ExecutionPlan.id)
-            .filter(or_(TestPlan.project_id == project_id, ExecutionPlan.project_id == project_id))
+            .filter(
+                or_(
+                    TestPlan.project_id == project_id,
+                    ExecutionPlan.project_id == project_id,
+                )
+            )
         )
         trend_rows = base_query.filter(Defect.reported_at >= start_datetime).all()
 
         total = base_query.count()
-        defects_by_status = {s.value: base_query.filter(Defect.status == s).count() for s in DefectStatus}
-        defects_by_severity = {sev.value: base_query.filter(Defect.severity == sev).count() for sev in DefectSeverity}
-        defects_by_type = {t.value: base_query.filter(Defect.defect_type == t).count() for t in DefectType}
+        defects_by_status = {
+            s.value: base_query.filter(Defect.status == s).count() for s in DefectStatus
+        }
+        defects_by_severity = {
+            sev.value: base_query.filter(Defect.severity == sev).count()
+            for sev in DefectSeverity
+        }
+        defects_by_type = {
+            t.value: base_query.filter(Defect.defect_type == t).count()
+            for t in DefectType
+        }
 
         daily_trend = []
         running_total = base_query.filter(Defect.reported_at < start_datetime).count()
         for idx in range(days):
             cur_date = start_date + timedelta(days=idx)
-            created = sum(1 for d in trend_rows if d.reported_at and d.reported_at.date() == cur_date)
-            resolved = sum(1 for d in trend_rows if d.resolved_at and d.resolved_at.date() == cur_date)
+            created = sum(
+                1
+                for d in trend_rows
+                if d.reported_at and d.reported_at.date() == cur_date
+            )
+            resolved = sum(
+                1
+                for d in trend_rows
+                if d.resolved_at and d.resolved_at.date() == cur_date
+            )
             running_total += created
-            daily_trend.append({
-                "date": cur_date.isoformat(),
-                "new_defects": created,
-                "resolved_defects": resolved,
-                "total_defects": running_total
-            })
+            daily_trend.append(
+                {
+                    "date": cur_date.isoformat(),
+                    "new_defects": created,
+                    "resolved_defects": resolved,
+                    "total_defects": running_total,
+                }
+            )
 
         trend_data = DefectStatisticsResponse(
             total_defects=total,
@@ -1103,7 +1256,7 @@ async def get_defect_trends(
             defects_by_module={},
             resolution_time_avg=0.0,
             defect_density=0.0,
-            escape_rate=0.0
+            escape_rate=0.0,
         )
 
         response_data = DefectTrendResponse(
@@ -1112,13 +1265,11 @@ async def get_defect_trends(
             trend_data=trend_data,
             predictions={"daily_trend": daily_trend},
             suggestions=[],
-            generated_at=datetime.utcnow().isoformat()
+            generated_at=datetime.utcnow().isoformat(),
         )
 
         return BaseResponse(
-            success=True,
-            message="获取缺陷趋势分析成功",
-            data=response_data
+            success=True, message="获取缺陷趋势分析成功", data=response_data
         )
 
     except Exception as e:
@@ -1131,7 +1282,7 @@ async def get_defect_trends(
                 defects_by_module={},
                 resolution_time_avg=0.0,
                 defect_density=0.0,
-                escape_rate=0.0
+                escape_rate=0.0,
             )
             response_data = DefectTrendResponse(
                 project_id=project_id,
@@ -1139,11 +1290,15 @@ async def get_defect_trends(
                 trend_data=trend_data,
                 predictions=None,
                 suggestions=[],
-                generated_at=datetime.utcnow().isoformat()
+                generated_at=datetime.utcnow().isoformat(),
             )
-            return BaseResponse(success=True, message="获取缺陷趋势分析成功", data=response_data)
+            return BaseResponse(
+                success=True, message="获取缺陷趋势分析成功", data=response_data
+            )
         logger.error(f"获取缺陷趋势分析失败: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"内部服务器错误: {type(e).__name__}: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"内部服务器错误: {type(e).__name__}: {str(e)}"
+        )
 
 
 @router.post("/{defect_id}/assign", response_model=BaseResponse[DefectResponse])
@@ -1151,11 +1306,11 @@ async def assign_defect(
     defect_id: int = Path(..., description="缺陷ID"),
     payload: Dict[str, Any] = Body(...),
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """
     分配缺陷
-    
+
     将缺陷分配给指定的处理人员。
     """
     try:
@@ -1171,13 +1326,11 @@ async def assign_defect(
         defect.updated_at = datetime.utcnow()
         db.commit()
         db.refresh(defect)
-        
+
         return BaseResponse(
-            success=True,
-            message="缺陷分配成功",
-            data=_build_defect_response(defect)
+            success=True, message="缺陷分配成功", data=_build_defect_response(defect)
         )
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -1192,19 +1345,21 @@ async def mark_defect_duplicate(
     duplicate_of: int = Body(..., description="重复的原始缺陷ID"),
     notes: Optional[str] = Body(None, description="备注"),
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """
     标记缺陷为重复
-    
+
     将缺陷标记为另一个缺陷的重复。
     """
     try:
         service = DefectService(db)
-        
+
         # 标记为重复
-        defect = await service.mark_defect_duplicate(defect_id, duplicate_of, current_user.id, notes)
-        
+        defect = await service.mark_defect_duplicate(
+            defect_id, duplicate_of, current_user.id, notes
+        )
+
         # 构建响应
         response_data = DefectResponse(
             id=defect.id,
@@ -1232,15 +1387,13 @@ async def mark_defect_duplicate(
             verified_at=defect.verified_at,
             attachments=defect.attachments,
             created_at=defect.created_at,
-            updated_at=defect.updated_at
+            updated_at=defect.updated_at,
         )
-        
+
         return BaseResponse(
-            success=True,
-            message="缺陷标记为重复成功",
-            data=response_data
+            success=True, message="缺陷标记为重复成功", data=response_data
         )
-        
+
     except Exception as e:
         logger.error(f"标记缺陷为重复失败: {str(e)}")
         raise HTTPException(status_code=500, detail="内部服务器错误")

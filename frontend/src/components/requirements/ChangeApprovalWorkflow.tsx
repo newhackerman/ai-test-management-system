@@ -16,7 +16,7 @@ import {
   ArrowRight,
   AlertTriangle
 } from 'lucide-react'
-import { RequirementChangeRequest, ChangeStatus } from '@/types/requirement'
+import { RequirementChangeRequest } from '@/types/requirement'
 import { useAuthStore } from '@/stores/auth'
 import { formatDate } from '@/utils/date'
 

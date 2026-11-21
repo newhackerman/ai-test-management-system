@@ -65,10 +65,10 @@ const createApiClient = (): DataApiClient => {
 
     const token = getAuthToken()
     if (token) {
-      ;(config.headers as any).Authorization = `Bearer ${token}`
+      (config.headers as any).Authorization = `Bearer ${token}`
     }
 
-    ;(config.headers as any)['X-Request-ID'] = generateRequestId()
+    (config.headers as any)['X-Request-ID'] = generateRequestId()
     return config
   })
 

@@ -6,14 +6,17 @@
 - 录制详情、列表、播放信息的响应模型
 - 录制类型、状态等枚举模型
 """
+
 from datetime import datetime
-from typing import Optional, List, Dict, Any
-from pydantic import BaseModel, Field, field_validator, model_validator
 from enum import Enum
+from typing import Any, Dict, List, Optional
+
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 class RecordingTypeEnum(str, Enum):
     """录制类型枚举"""
+
     FULL_MEETING = "FULL_MEETING"
     SCREEN_SHARE = "SCREEN_SHARE"
     AUDIO_ONLY = "AUDIO_ONLY"
@@ -22,6 +25,7 @@ class RecordingTypeEnum(str, Enum):
 
 class RecordingStatusEnum(str, Enum):
     """录制状态枚举"""
+
     RECORDING = "RECORDING"
     PAUSED = "PAUSED"
     PROCESSING = "PROCESSING"
@@ -32,6 +36,7 @@ class RecordingStatusEnum(str, Enum):
 
 class FileFormatEnum(str, Enum):
     """文件格式枚举"""
+
     MP4 = "MP4"
     WEBM = "WEBM"
     MP3 = "MP3"
@@ -40,10 +45,15 @@ class FileFormatEnum(str, Enum):
 
 class StartRecordingRequest(BaseModel):
     """开始录制请求模型"""
+
     recording_name: Optional[str] = Field(None, description="录制名称", max_length=200)
-    recording_type: RecordingTypeEnum = Field(RecordingTypeEnum.FULL_MEETING, description="录制类型")
+    recording_type: RecordingTypeEnum = Field(
+        RecordingTypeEnum.FULL_MEETING, description="录制类型"
+    )
     file_format: FileFormatEnum = Field(FileFormatEnum.MP4, description="文件格式")
-    quality: str = Field("standard", description="录制质量", pattern="^(low|standard|high)$")
+    quality: str = Field(
+        "standard", description="录制质量", pattern="^(low|standard|high)$"
+    )
     auto_transcription: bool = Field(True, description="是否自动转录")
     include_chat: bool = Field(True, description="是否包含聊天记录")
     include_whiteboard: bool = Field(True, description="是否包含白板内容")
@@ -51,6 +61,7 @@ class StartRecordingRequest(BaseModel):
 
 class StopRecordingRequest(BaseModel):
     """停止录制请求模型"""
+
     reason: Optional[str] = Field(None, description="停止原因", max_length=500)
 
 
@@ -61,20 +72,22 @@ class UpdateRecordingRequest(BaseModel):
     需模型加列 + 迁移，见报告），所以本接口只接受以下三项；
     传 description 会被忽略——前端 updateRecording 已去掉该字段。
     """
+
     recording_name: Optional[str] = Field(None, description="录制名称", max_length=200)
     is_public: Optional[bool] = Field(None, description="是否公开")
     access_password: Optional[str] = Field(None, description="访问密码", max_length=100)
 
-    @field_validator('recording_name')
+    @field_validator("recording_name")
     @classmethod
     def validate_name(cls, v):
         if v is not None and not v.strip():
-            raise ValueError('录制名称不能为空')
+            raise ValueError("录制名称不能为空")
         return v
 
 
 class RecordingResponse(BaseModel):
     """录制响应模型"""
+
     id: int = Field(..., description="录制ID")
     meeting_id: int = Field(..., description="会议ID")
     recording_name: str = Field(..., description="录制名称")
@@ -102,6 +115,7 @@ class RecordingResponse(BaseModel):
 
 class RecordingListResponse(BaseModel):
     """录制列表响应模型"""
+
     recordings: List[RecordingResponse] = Field(..., description="录制列表")
     total: int = Field(..., description="总数量")
     page: int = Field(..., description="当前页码")
@@ -126,9 +140,13 @@ class PlaybackInfoResponse(BaseModel):
     video_url 是带播放 token 的下载地址，可直接给 <video src> 用；
     file_path 是后端相对路径、没有静态文件服务，不可直接播放。
     """
+
     recording_id: int = Field(..., description="录制ID")
     playback_token: str = Field(..., description="播放令牌")
-    playback_config: Dict[str, Any] = Field(..., description="播放配置，含 video_url/duration/resolution/format/subtitles/chapters")
+    playback_config: Dict[str, Any] = Field(
+        ...,
+        description="播放配置，含 video_url/duration/resolution/format/subtitles/chapters",
+    )
     expires_at: datetime = Field(..., description="令牌过期时间")
 
     class Config:
@@ -137,23 +155,29 @@ class PlaybackInfoResponse(BaseModel):
 
 class RecordingShareRequest(BaseModel):
     """录制分享请求模型"""
+
     is_public: bool = Field(False, description="是否公开")
     access_password: Optional[str] = Field(None, description="访问密码", max_length=100)
     expires_at: Optional[datetime] = Field(None, description="分享过期时间")
     allow_download: bool = Field(True, description="是否允许下载")
-    custom_message: Optional[str] = Field(None, description="自定义分享消息", max_length=500)
+    custom_message: Optional[str] = Field(
+        None, description="自定义分享消息", max_length=500
+    )
 
-    @model_validator(mode='after')
+    @model_validator(mode="after")
     def validate_password(self):
         # 跨字段规则必须用 model_validator：字段级校验在 access_password
         # 缺省（取默认 None）时默认不执行（validate_default=False），
         # 此前两版（v1 @validator / v2 field_validator）都漏过了
         # “非公开无密码”这种情况（探针：is_public=false 无密码 → 200）。
         if not self.is_public and not self.access_password:
-            raise ValueError('非公开分享必须设置访问密码')
+            raise ValueError("非公开分享必须设置访问密码")
         return self
+
+
 class RecordingQueryParams(BaseModel):
     """录制查询参数模型"""
+
     meeting_id: Optional[int] = Field(None, description="会议ID")
     recording_type: Optional[RecordingTypeEnum] = Field(None, description="录制类型")
     status: Optional[RecordingStatusEnum] = Field(None, description="录制状态")
@@ -169,6 +193,7 @@ class RecordingQueryParams(BaseModel):
 
 class StartRecordingResponse(BaseModel):
     """开始录制响应模型"""
+
     success: bool = Field(..., description="是否成功")
     recording_id: Optional[int] = Field(None, description="录制ID")
     message: str = Field(..., description="响应消息")
@@ -180,6 +205,7 @@ class StartRecordingResponse(BaseModel):
 
 class PauseRecordingResponse(BaseModel):
     """暂停/恢复录制响应模型：data 为更新后的录制记录"""
+
     success: bool = Field(..., description="是否成功")
     message: str = Field(..., description="响应消息")
     data: RecordingResponse = Field(..., description="更新后的录制记录")
@@ -187,6 +213,7 @@ class PauseRecordingResponse(BaseModel):
 
 class StopRecordingResponse(BaseModel):
     """停止录制响应模型"""
+
     success: bool = Field(..., description="是否成功")
     recording_id: int = Field(..., description="录制ID")
     file_size: Optional[int] = Field(None, description="文件大小(字节)")
@@ -196,12 +223,14 @@ class StopRecordingResponse(BaseModel):
 
 class DeleteRecordingResponse(BaseModel):
     """删除录制响应模型"""
+
     success: bool = Field(..., description="是否成功")
     message: str = Field(..., description="响应消息")
 
 
 class RecordingShareResponse(BaseModel):
     """录制分享响应模型"""
+
     success: bool = Field(..., description="是否成功")
     share_url: Optional[str] = Field(None, description="分享链接")
     share_code: Optional[str] = Field(None, description="分享码")
@@ -211,6 +240,7 @@ class RecordingShareResponse(BaseModel):
 
 class RecordingStatistics(BaseModel):
     """录制统计模型"""
+
     total_recordings: int = Field(..., description="总录制数")
     active_recordings: int = Field(..., description="进行中录制数")
     completed_recordings: int = Field(..., description="已完成录制数")

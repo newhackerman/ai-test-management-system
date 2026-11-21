@@ -1,14 +1,16 @@
+import logging
 from contextlib import asynccontextmanager
+
 from sqlalchemy import create_engine, text
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import QueuePool
-import logging
 
 from .config import settings
 
 logger = logging.getLogger(__name__)
+
 
 def _ensure_mysql_charset(url: str) -> str:
     if not url.startswith("mysql") or "charset=" in url:
@@ -28,7 +30,7 @@ try:
         pool_pre_ping=True,
         pool_recycle=3600,
         echo=settings.DEBUG,
-        future=True
+        future=True,
     )
 except Exception as e:
     logger.warning(f"Failed to create async engine: {e}. Falling back to sync only.")
@@ -47,15 +49,13 @@ engine = create_engine(
     connect_args={
         "charset": "utf8mb4",
         "autocommit": False,
-    }
+    },
 )
 
 # 创建异步会话工厂
 if async_engine:
     AsyncSessionLocal = async_sessionmaker(
-        bind=async_engine,
-        class_=AsyncSession,
-        expire_on_commit=False
+        bind=async_engine, class_=AsyncSession, expire_on_commit=False
     )
 else:
     AsyncSessionLocal = None
@@ -92,11 +92,13 @@ def _ensure_test_execution_charset():
               AND character_set_name <> 'utf8mb4'
         """)).fetchall()
         if rows:
-            connection.execute(text(
-                "ALTER TABLE test_executions "
-                "CONVERT TO CHARACTER SET utf8mb4 "
-                "COLLATE utf8mb4_unicode_ci"
-            ))
+            connection.execute(
+                text(
+                    "ALTER TABLE test_executions "
+                    "CONVERT TO CHARACTER SET utf8mb4 "
+                    "COLLATE utf8mb4_unicode_ci"
+                )
+            )
             logger.info("test_executions 字符集已修复为 utf8mb4")
 
 
@@ -107,14 +109,12 @@ def _ensure_table_utf8mb4(table_name: str):
 
     with engine.begin() as connection:
         row = connection.execute(
-            text(
-                """
+            text("""
                 SELECT table_collation
                 FROM information_schema.TABLES
                 WHERE table_schema = DATABASE()
                   AND table_name = :table_name
-                """
-            ),
+                """),
             {"table_name": table_name},
         ).fetchone()
         if row and row[0] and not str(row[0]).startswith("utf8mb4"):
@@ -199,6 +199,7 @@ async def init_database():
         # 仪表板表）。第 11 项收敛：启动建表与 rebuild_db.py 现在用
         # 同一份共享元数据做全量 create_all，不再分三处拼表。
         import src.models  # noqa: F401
+
         from ..models import audit as _audit_models  # noqa: F401
         from ..models import dashboard as _dashboard_models  # noqa: F401
         from ..models.base import Base as ModelBase
@@ -221,7 +222,7 @@ async def init_database():
             _ensure_table_utf8mb4(table_name)
         _ensure_table_utf8mb4("system_notifications")
         logger.info("数据库表结构初始化完成")
-        
+
     except Exception as e:
         logger.error(f"数据库初始化失败: {e}")
         # 即使初始化失败也不阻止服务启动

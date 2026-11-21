@@ -8,21 +8,54 @@
 - API参数验证和错误处理
 """
 
-from datetime import datetime
-from typing import Optional, List, Dict, Any
-from fastapi import APIRouter, Depends, HTTPException, Query, Path, Body, UploadFile, File, Form, Response
-from fastapi.security import HTTPBearer
-from sqlalchemy.orm import Session
-from pydantic import BaseModel, Field
 import csv
 import io
 import json
 import logging
+from datetime import datetime
+from typing import Any, Dict, List, Optional
+
+from fastapi import (
+    APIRouter,
+    Body,
+    Depends,
+    File,
+    Form,
+    HTTPException,
+    Path,
+    Query,
+    Response,
+    UploadFile,
+)
+from fastapi.security import HTTPBearer
+from pydantic import BaseModel, Field
+from sqlalchemy.orm import Session
 
 from ...core.database import get_db
-from ...core.exceptions import ValidationError, PermissionError, NotFoundError, BusinessLogicError
-from ...services.test_case_service import TestCaseService
-from ...services.ai_test_case_generator import AITestCaseGenerator, GenerationConfig, GenerationTemplate
+from ...core.exceptions import (
+    BusinessLogicError,
+    NotFoundError,
+    PermissionError,
+    ValidationError,
+)
+from ...models.requirement import Complexity as RequirementComplexity
+from ...models.requirement import Priority as RequirementPriority
+from ...models.requirement import Requirement, RequirementType
+from ...models.test_case import (
+    AutomationScript,
+    TestCase,
+    TestCasePriority,
+    TestCaseStatus,
+    TestCaseType,
+)
+from ...models.user import User
+from ...schemas.base import BaseResponse, PaginatedResponse
+from ...services.ai_test_case_generator import (
+    AITestCaseGenerator,
+    GenerationConfig,
+    GenerationTemplate,
+)
+from ...services.auth_dependencies import get_current_user
 from ...services.automation_script_generator import (
     AutomationConfig,
     AutomationFramework,
@@ -30,16 +63,7 @@ from ...services.automation_script_generator import (
     BrowserType,
     ProgrammingLanguage,
 )
-from ...services.auth_dependencies import get_current_user
-from ...models.user import User
-from ...models.test_case import TestCase, TestCaseType, TestCasePriority, TestCaseStatus, AutomationScript
-from ...models.requirement import (
-    Complexity as RequirementComplexity,
-    Priority as RequirementPriority,
-    Requirement,
-    RequirementType,
-)
-from ...schemas.base import BaseResponse, PaginatedResponse
+from ...services.test_case_service import TestCaseService
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/test-cases", tags=["测试用例管理"])
@@ -98,7 +122,13 @@ COLUMN_ALIASES = {
     "module": {"module", "模块", "功能模块"},
     "preconditions": {"preconditions", "precondition", "前置条件", "前提条件"},
     "test_steps": {"test_steps", "steps", "step", "测试步骤", "操作步骤", "步骤"},
-    "expected_result": {"expected_result", "expected", "expect", "预期结果", "期望结果"},
+    "expected_result": {
+        "expected_result",
+        "expected",
+        "expect",
+        "预期结果",
+        "期望结果",
+    },
     "test_data": {"test_data", "data", "测试数据", "数据"},
     "priority": {"priority", "优先级"},
     "requirement_id": {"requirement_id", "需求ID", "需求id", "关联需求"},
@@ -125,20 +155,33 @@ COLUMN_ALIASES = {
 }
 
 
-COLUMN_ALIASES.update({
-    "case_title": COLUMN_ALIASES["case_title"] | {"\u7528\u4f8b\u6807\u9898", "\u6807\u9898", "\u540d\u79f0"},
-    "case_description": COLUMN_ALIASES["case_description"] | {"\u7528\u4f8b\u63cf\u8ff0", "\u63cf\u8ff0"},
-    "module": COLUMN_ALIASES["module"] | {"\u6a21\u5757", "\u529f\u80fd\u6a21\u5757"},
-    "preconditions": COLUMN_ALIASES["preconditions"] | {"\u524d\u7f6e\u6761\u4ef6", "\u524d\u63d0\u6761\u4ef6"},
-    "test_steps": COLUMN_ALIASES["test_steps"] | {"\u6d4b\u8bd5\u6b65\u9aa4", "\u64cd\u4f5c\u6b65\u9aa4", "\u6b65\u9aa4"},
-    "expected_result": COLUMN_ALIASES["expected_result"] | {"\u9884\u671f\u7ed3\u679c", "\u671f\u671b\u7ed3\u679c"},
-    "test_data": COLUMN_ALIASES["test_data"] | {"\u6d4b\u8bd5\u6570\u636e", "\u6570\u636e"},
-    "priority": COLUMN_ALIASES["priority"] | {"\u4f18\u5148\u7ea7"},
-    "requirement_id": COLUMN_ALIASES["requirement_id"] | {"\u9700\u6c42ID", "\u9700\u6c42id", "\u5173\u8054\u9700\u6c42"},
-    "script_name": COLUMN_ALIASES["script_name"] | {"\u811a\u672c\u540d\u79f0", "\u811a\u672c\u540d"},
-    "script_content": COLUMN_ALIASES["script_content"] | {"\u811a\u672c", "\u811a\u672c\u5185\u5bb9"},
-    "script_format": COLUMN_ALIASES["script_format"] | {"\u811a\u672c\u7c7b\u578b", "\u811a\u672c\u683c\u5f0f"},
-})
+COLUMN_ALIASES.update(
+    {
+        "case_title": COLUMN_ALIASES["case_title"]
+        | {"\u7528\u4f8b\u6807\u9898", "\u6807\u9898", "\u540d\u79f0"},
+        "case_description": COLUMN_ALIASES["case_description"]
+        | {"\u7528\u4f8b\u63cf\u8ff0", "\u63cf\u8ff0"},
+        "module": COLUMN_ALIASES["module"]
+        | {"\u6a21\u5757", "\u529f\u80fd\u6a21\u5757"},
+        "preconditions": COLUMN_ALIASES["preconditions"]
+        | {"\u524d\u7f6e\u6761\u4ef6", "\u524d\u63d0\u6761\u4ef6"},
+        "test_steps": COLUMN_ALIASES["test_steps"]
+        | {"\u6d4b\u8bd5\u6b65\u9aa4", "\u64cd\u4f5c\u6b65\u9aa4", "\u6b65\u9aa4"},
+        "expected_result": COLUMN_ALIASES["expected_result"]
+        | {"\u9884\u671f\u7ed3\u679c", "\u671f\u671b\u7ed3\u679c"},
+        "test_data": COLUMN_ALIASES["test_data"]
+        | {"\u6d4b\u8bd5\u6570\u636e", "\u6570\u636e"},
+        "priority": COLUMN_ALIASES["priority"] | {"\u4f18\u5148\u7ea7"},
+        "requirement_id": COLUMN_ALIASES["requirement_id"]
+        | {"\u9700\u6c42ID", "\u9700\u6c42id", "\u5173\u8054\u9700\u6c42"},
+        "script_name": COLUMN_ALIASES["script_name"]
+        | {"\u811a\u672c\u540d\u79f0", "\u811a\u672c\u540d"},
+        "script_content": COLUMN_ALIASES["script_content"]
+        | {"\u811a\u672c", "\u811a\u672c\u5185\u5bb9"},
+        "script_format": COLUMN_ALIASES["script_format"]
+        | {"\u811a\u672c\u7c7b\u578b", "\u811a\u672c\u683c\u5f0f"},
+    }
+)
 
 
 def _normalize_import_category(value: Optional[str]) -> str:
@@ -156,19 +199,21 @@ def _normalize_import_category(value: Optional[str]) -> str:
         "安全": "security",
         "安全用例": "security",
     }
-    aliases.update({
-        "\u529f\u80fd": "functional",
-        "\u529f\u80fd\u7528\u4f8b": "functional",
-        "\u63a5\u53e3": "interface",
-        "\u63a5\u53e3\u6d4b\u8bd5": "interface",
-        "\u63a5\u53e3\u7528\u4f8b": "interface",
-        "\u81ea\u52a8\u5316": "automation",
-        "\u81ea\u52a8\u5316\u7528\u4f8b": "automation",
-        "\u6027\u80fd": "performance",
-        "\u6027\u80fd\u7528\u4f8b": "performance",
-        "\u5b89\u5168": "security",
-        "\u5b89\u5168\u7528\u4f8b": "security",
-    })
+    aliases.update(
+        {
+            "\u529f\u80fd": "functional",
+            "\u529f\u80fd\u7528\u4f8b": "functional",
+            "\u63a5\u53e3": "interface",
+            "\u63a5\u53e3\u6d4b\u8bd5": "interface",
+            "\u63a5\u53e3\u7528\u4f8b": "interface",
+            "\u81ea\u52a8\u5316": "automation",
+            "\u81ea\u52a8\u5316\u7528\u4f8b": "automation",
+            "\u6027\u80fd": "performance",
+            "\u6027\u80fd\u7528\u4f8b": "performance",
+            "\u5b89\u5168": "security",
+            "\u5b89\u5168\u7528\u4f8b": "security",
+        }
+    )
     normalized = aliases.get(normalized, normalized)
     if normalized not in IMPORT_CATEGORY_CONFIG:
         raise BusinessLogicError("Unsupported import category")
@@ -226,7 +271,11 @@ def _infer_script_format(script_content: str = "", filename: str = "") -> Option
         return "sqlmap"
     if "burpsuite" in lower_content or "burp suite" in lower_content:
         return "burpsuite"
-    if "owasp zap" in lower_content or "owasp_zap" in lower_content or "zapv2" in lower_content:
+    if (
+        "owasp zap" in lower_content
+        or "owasp_zap" in lower_content
+        or "zapv2" in lower_content
+    ):
         return "owasp_zap"
 
     extension_map = {
@@ -242,9 +291,15 @@ def _infer_script_format(script_content: str = "", filename: str = "") -> Option
 
     if not lower_content:
         return None
-    if lower_content.startswith(("def ", "import ", "from ")) or "\ndef " in lower_content:
+    if (
+        lower_content.startswith(("def ", "import ", "from "))
+        or "\ndef " in lower_content
+    ):
         return "python"
-    if lower_content.startswith(("const ", "let ", "var ", "function ")) or "module.exports" in lower_content:
+    if (
+        lower_content.startswith(("const ", "let ", "var ", "function "))
+        or "module.exports" in lower_content
+    ):
         return "js"
     return None
 
@@ -254,7 +309,9 @@ def _normalize_import_header(value: Any) -> str:
 
 
 def _get_import_value(row: Dict[str, Any], field: str) -> str:
-    aliases = {_normalize_import_header(item) for item in COLUMN_ALIASES.get(field, {field})}
+    aliases = {
+        _normalize_import_header(item) for item in COLUMN_ALIASES.get(field, {field})
+    }
     for key, value in row.items():
         if _normalize_import_header(key) in aliases:
             return _clean_import_cell(value)
@@ -275,25 +332,30 @@ def _parse_import_priority(value: str) -> str:
         "低": "LOW",
         "LOW": "LOW",
     }
-    mapping.update({
-        "\u7d27\u6025": "CRITICAL",
-        "\u6025": "CRITICAL",
-        "\u6700\u9ad8": "CRITICAL",
-        "\u9ad8": "HIGH",
-        "\u4e2d": "MEDIUM",
-        "\u4f4e": "LOW",
-    })
+    mapping.update(
+        {
+            "\u7d27\u6025": "CRITICAL",
+            "\u6025": "CRITICAL",
+            "\u6700\u9ad8": "CRITICAL",
+            "\u9ad8": "HIGH",
+            "\u4e2d": "MEDIUM",
+            "\u4f4e": "LOW",
+        }
+    )
     return mapping.get(normalized, "MEDIUM")
 
 
 def _parse_import_steps(raw_steps: str, expected_result: str) -> List[Dict[str, Any]]:
     text = _clean_import_cell(raw_steps)
     if not text:
-        return [{
-            "step_number": 1,
-            "action": "Review imported script or requirement description",
-            "expected_result": expected_result or "Result matches the expected behavior",
-        }]
+        return [
+            {
+                "step_number": 1,
+                "action": "Review imported script or requirement description",
+                "expected_result": expected_result
+                or "Result matches the expected behavior",
+            }
+        ]
 
     try:
         parsed = json.loads(text)
@@ -301,17 +363,31 @@ def _parse_import_steps(raw_steps: str, expected_result: str) -> List[Dict[str, 
             steps = []
             for index, item in enumerate(parsed, start=1):
                 if isinstance(item, dict):
-                    steps.append({
-                        "step_number": int(item.get("step_number") or item.get("number") or index),
-                        "action": _clean_import_cell(item.get("action") or item.get("step") or item.get("description")),
-                        "expected_result": _clean_import_cell(item.get("expected_result") or item.get("expected") or expected_result),
-                    })
+                    steps.append(
+                        {
+                            "step_number": int(
+                                item.get("step_number") or item.get("number") or index
+                            ),
+                            "action": _clean_import_cell(
+                                item.get("action")
+                                or item.get("step")
+                                or item.get("description")
+                            ),
+                            "expected_result": _clean_import_cell(
+                                item.get("expected_result")
+                                or item.get("expected")
+                                or expected_result
+                            ),
+                        }
+                    )
                 else:
-                    steps.append({
-                        "step_number": index,
-                        "action": _clean_import_cell(item),
-                        "expected_result": expected_result,
-                    })
+                    steps.append(
+                        {
+                            "step_number": index,
+                            "action": _clean_import_cell(item),
+                            "expected_result": expected_result,
+                        }
+                    )
             return [step for step in steps if step["action"]]
     except HTTPException:
         raise
@@ -319,14 +395,15 @@ def _parse_import_steps(raw_steps: str, expected_result: str) -> List[Dict[str, 
         pass
 
     text = (
-        text
-        .replace("\u9884\u671f\uff1a", "=>")
+        text.replace("\u9884\u671f\uff1a", "=>")
         .replace("\u9884\u671f:", "=>")
         .replace("\u671f\u671b\uff1a", "=>")
         .replace("\u671f\u671b:", "=>")
     )
     raw_lines = []
-    for line in text.replace("\r", "\n").replace("；", "\n").replace(";", "\n").split("\n"):
+    for line in (
+        text.replace("\r", "\n").replace("；", "\n").replace(";", "\n").split("\n")
+    ):
         cleaned = line.strip().lstrip("-* ").strip()
         if cleaned:
             raw_lines.append(cleaned)
@@ -339,16 +416,20 @@ def _parse_import_steps(raw_steps: str, expected_result: str) -> List[Dict[str, 
             if sep in line:
                 action, expected = line.split(sep, 1)
                 break
-        steps.append({
-            "step_number": index,
-            "action": action.strip(),
-            "expected_result": expected.strip() or expected_result,
-        })
-    return steps or [{
-        "step_number": 1,
-        "action": text,
-        "expected_result": expected_result,
-    }]
+        steps.append(
+            {
+                "step_number": index,
+                "action": action.strip(),
+                "expected_result": expected.strip() or expected_result,
+            }
+        )
+    return steps or [
+        {
+            "step_number": 1,
+            "action": text,
+            "expected_result": expected_result,
+        }
+    ]
 
 
 def _read_import_rows(filename: str, content: bytes) -> List[Dict[str, Any]]:
@@ -361,9 +442,15 @@ def _read_import_rows(filename: str, content: bytes) -> List[Dict[str, Any]]:
         rows = list(sheet.iter_rows(values_only=True))
         if not rows:
             return []
-        headers = [_clean_import_cell(cell) or f"column_{index}" for index, cell in enumerate(rows[0], start=1)]
+        headers = [
+            _clean_import_cell(cell) or f"column_{index}"
+            for index, cell in enumerate(rows[0], start=1)
+        ]
         return [
-            {headers[index]: row[index] if index < len(row) else None for index in range(len(headers))}
+            {
+                headers[index]: row[index] if index < len(row) else None
+                for index in range(len(headers))
+            }
             for row in rows[1:]
             if any(_clean_import_cell(cell) for cell in row)
         ]
@@ -380,13 +467,21 @@ def _read_import_rows(filename: str, content: bytes) -> List[Dict[str, Any]]:
 
     script_text = _decode_import_text(content)
     inferred_format = _infer_script_format(script_text, filename)
-    base_name = (filename or "imported-script").rsplit(".", 1)[0].replace("_", " ").replace("-", " ").strip()
-    return [{
-        "case_title": base_name or filename or "Imported script test case",
-        "case_description": f"Imported from script file {filename}",
-        "script_format": inferred_format,
-        "script_content": script_text,
-    }]
+    base_name = (
+        (filename or "imported-script")
+        .rsplit(".", 1)[0]
+        .replace("_", " ")
+        .replace("-", " ")
+        .strip()
+    )
+    return [
+        {
+            "case_title": base_name or filename or "Imported script test case",
+            "case_description": f"Imported from script file {filename}",
+            "script_format": inferred_format,
+            "script_content": script_text,
+        }
+    ]
 
 
 def _build_import_case_data(
@@ -396,7 +491,11 @@ def _build_import_case_data(
     test_plan_id: Optional[int],
 ) -> Dict[str, Any]:
     config = IMPORT_CATEGORY_CONFIG[category]
-    title = _get_import_value(row, "case_title") or _get_import_value(row, "script_name") or "Imported test case"
+    title = (
+        _get_import_value(row, "case_title")
+        or _get_import_value(row, "script_name")
+        or "Imported test case"
+    )
     expected_result = _get_import_value(row, "expected_result")
     script_content = _get_import_value(row, "script_content")
     row_script_format = (
@@ -405,7 +504,11 @@ def _build_import_case_data(
         or _infer_script_format(script_content, title)
     )
     allowed_formats = config.get("script_formats")
-    if row_script_format and allowed_formats and row_script_format not in allowed_formats:
+    if (
+        row_script_format
+        and allowed_formats
+        and row_script_format not in allowed_formats
+    ):
         raise BusinessLogicError(
             f"Script format '{row_script_format}' is not supported by {category} imports"
         )
@@ -434,15 +537,19 @@ def _build_import_case_data(
         "test_plan_id": test_plan_id,
         "requirement_id": int(_get_import_value(row, "requirement_id") or 0) or None,
         "case_title": title[:200],
-        "case_description": _get_import_value(row, "case_description") or f"Imported {category} test case",
+        "case_description": _get_import_value(row, "case_description")
+        or f"Imported {category} test case",
         "case_type": config["case_type"].value,
         "module": _get_import_value(row, "module") or None,
         "priority": _parse_import_priority(_get_import_value(row, "priority")),
         "complexity": "MEDIUM",
         "automation_level": config["automation_level"],
         "preconditions": _get_import_value(row, "preconditions") or None,
-        "test_steps": _parse_import_steps(_get_import_value(row, "test_steps"), expected_result),
-        "expected_result": expected_result or "Result matches the imported test objective",
+        "test_steps": _parse_import_steps(
+            _get_import_value(row, "test_steps"), expected_result
+        ),
+        "expected_result": expected_result
+        or "Result matches the imported test objective",
         "test_data": test_data or None,
         "tags": tags,
     }
@@ -461,7 +568,9 @@ def _automation_script_payload(
     if not script_content:
         return None
 
-    normalized_format = _normalize_script_format(script_info.get("format") or script_format) or "python"
+    normalized_format = (
+        _normalize_script_format(script_info.get("format") or script_format) or "python"
+    )
     framework = "PYTEST"
     language = "PYTHON"
     browser = None
@@ -490,13 +599,23 @@ def _automation_script_payload(
     }
 
 
-def _build_automation_config(request: "GenerateAutomationScriptRequest") -> AutomationConfig:
+def _build_automation_config(
+    request: "GenerateAutomationScriptRequest",
+) -> AutomationConfig:
     config = AutomationConfig()
     automation_config = request.automation_config or {}
 
-    framework_value = _normalize_automation_value(request.framework) or AutomationFramework.PLAYWRIGHT.value
-    language_value = _normalize_automation_value(request.language) or ProgrammingLanguage.PYTHON.value
-    browser_value = _normalize_automation_value(request.browser) or BrowserType.CHROME.value
+    framework_value = (
+        _normalize_automation_value(request.framework)
+        or AutomationFramework.PLAYWRIGHT.value
+    )
+    language_value = (
+        _normalize_automation_value(request.language)
+        or ProgrammingLanguage.PYTHON.value
+    )
+    browser_value = (
+        _normalize_automation_value(request.browser) or BrowserType.CHROME.value
+    )
 
     aliases = {
         "CHROMIUM": "CHROME",
@@ -525,7 +644,12 @@ def _build_automation_config(request: "GenerateAutomationScriptRequest") -> Auto
     except ValueError:
         config.browser = BrowserType.CHROME
 
-    for attr in ("use_page_object_model", "include_error_handling", "include_screenshots", "include_logging"):
+    for attr in (
+        "use_page_object_model",
+        "include_error_handling",
+        "include_screenshots",
+        "include_logging",
+    ):
         if attr in automation_config:
             setattr(config, attr, bool(automation_config[attr]))
 
@@ -541,32 +665,51 @@ def _text_contains_any(text: str, keywords: List[str]) -> bool:
     return any(keyword in text for keyword in keywords)
 
 
-def _infer_case_type(requirement: Requirement, requested_type: Optional[TestCaseType]) -> TestCaseType:
+def _infer_case_type(
+    requirement: Requirement, requested_type: Optional[TestCaseType]
+) -> TestCaseType:
     if requested_type:
         return requested_type
 
-    text = " ".join([
-        requirement.title or "",
-        requirement.description or "",
-        requirement.acceptance_criteria or "",
-        requirement.category or "",
-        " ".join(requirement.tags or []) if isinstance(requirement.tags, list) else "",
-    ]).lower()
+    text = " ".join(
+        [
+            requirement.title or "",
+            requirement.description or "",
+            requirement.acceptance_criteria or "",
+            requirement.category or "",
+            (
+                " ".join(requirement.tags or [])
+                if isinstance(requirement.tags, list)
+                else ""
+            ),
+        ]
+    ).lower()
 
-    if requirement.requirement_type == RequirementType.INTERFACE or _text_contains_any(text, ["api", "接口", "http", "webhook"]):
+    if requirement.requirement_type == RequirementType.INTERFACE or _text_contains_any(
+        text, ["api", "接口", "http", "webhook"]
+    ):
         return TestCaseType.INTEGRATION
-    if _text_contains_any(text, ["性能", "并发", "响应时间", "吞吐", "压测", "load", "performance"]):
+    if _text_contains_any(
+        text, ["性能", "并发", "响应时间", "吞吐", "压测", "load", "performance"]
+    ):
         return TestCaseType.PERFORMANCE
-    if _text_contains_any(text, ["安全", "权限", "加密", "认证", "授权", "漏洞", "security", "auth"]):
+    if _text_contains_any(
+        text, ["安全", "权限", "加密", "认证", "授权", "漏洞", "security", "auth"]
+    ):
         return TestCaseType.SECURITY
     if _text_contains_any(text, ["易用", "体验", "可用性", "ui", "ux", "usability"]):
         return TestCaseType.USABILITY
-    if requirement.requirement_type in {RequirementType.NON_FUNCTIONAL, RequirementType.CONSTRAINT}:
+    if requirement.requirement_type in {
+        RequirementType.NON_FUNCTIONAL,
+        RequirementType.CONSTRAINT,
+    }:
         return TestCaseType.NON_FUNCTIONAL
     return TestCaseType.FUNCTIONAL
 
 
-def _infer_priority(requirement: Requirement, requested_priority: Optional[TestCasePriority]) -> TestCasePriority:
+def _infer_priority(
+    requirement: Requirement, requested_priority: Optional[TestCasePriority]
+) -> TestCasePriority:
     if requested_priority:
         return requested_priority
 
@@ -588,7 +731,9 @@ def _infer_max_cases(requirement: Requirement) -> int:
         RequirementComplexity.VERY_COMPLEX: 10,
     }
     max_cases = complexity_cases.get(requirement.complexity, 6)
-    content_length = len(requirement.description or "") + len(requirement.acceptance_criteria or "")
+    content_length = len(requirement.description or "") + len(
+        requirement.acceptance_criteria or ""
+    )
     if content_length > 2500:
         max_cases += 2
     elif content_length > 1200:
@@ -605,8 +750,12 @@ def _template_for_case_type(case_type: TestCaseType) -> GenerationTemplate:
     }.get(case_type, GenerationTemplate.FUNCTIONAL_BASIC)
 
 
-def _build_generation_config(request: "GenerateTestCasesRequest", db: Session) -> GenerationConfig:
-    requirement = db.query(Requirement).filter(Requirement.id == request.requirement_id).first()
+def _build_generation_config(
+    request: "GenerateTestCasesRequest", db: Session
+) -> GenerationConfig:
+    requirement = (
+        db.query(Requirement).filter(Requirement.id == request.requirement_id).first()
+    )
     if not requirement:
         raise NotFoundError("需求不存在")
 
@@ -615,7 +764,10 @@ def _build_generation_config(request: "GenerateTestCasesRequest", db: Session) -
     config.priority = _infer_priority(requirement, request.priority)
     config.template = _template_for_case_type(config.case_type)
     config.max_cases = _infer_max_cases(requirement)
-    if requirement.complexity in {RequirementComplexity.COMPLEX, RequirementComplexity.VERY_COMPLEX}:
+    if requirement.complexity in {
+        RequirementComplexity.COMPLEX,
+        RequirementComplexity.VERY_COMPLEX,
+    }:
         config.detail_level = "high"
     elif requirement.complexity == RequirementComplexity.SIMPLE:
         config.detail_level = "low"
@@ -658,22 +810,29 @@ def _build_test_case_response(test_case):
         pass_count=test_case.pass_count,
         fail_count=test_case.fail_count,
         last_execution_date=test_case.last_execution_date,
-        last_execution_status=_enum_value(test_case.last_execution_status) if test_case.last_execution_status else None,
+        last_execution_status=(
+            _enum_value(test_case.last_execution_status)
+            if test_case.last_execution_status
+            else None
+        ),
         estimated_execution_time=test_case.estimated_execution_time,
         actual_execution_time=test_case.actual_execution_time,
         tags=test_case.tags,
         version=test_case.version,
         created_at=test_case.created_at,
-        updated_at=test_case.updated_at
+        updated_at=test_case.updated_at,
     )
 
 
 # 请求模式
 class CreateTestCaseRequest(BaseModel):
     """创建测试用例请求"""
+
     test_plan_id: Optional[int] = Field(None, description="测试计划ID")
     requirement_id: Optional[int] = Field(None, description="关联需求ID")
-    case_title: str = Field(..., min_length=1, max_length=200, description="测试用例标题")
+    case_title: str = Field(
+        ..., min_length=1, max_length=200, description="测试用例标题"
+    )
     case_description: Optional[str] = Field(None, description="测试用例描述")
     case_type: TestCaseType = Field(..., description="用例类型")
     module: Optional[str] = Field(None, description="功能模块")
@@ -690,9 +849,12 @@ class CreateTestCaseRequest(BaseModel):
 
 class UpdateTestCaseRequest(BaseModel):
     """更新测试用例请求"""
+
     test_plan_id: Optional[int] = Field(None, description="关联测试计划ID")
     requirement_id: Optional[int] = Field(None, description="关联需求ID")
-    case_title: Optional[str] = Field(None, min_length=1, max_length=200, description="测试用例标题")
+    case_title: Optional[str] = Field(
+        None, min_length=1, max_length=200, description="测试用例标题"
+    )
     case_description: Optional[str] = Field(None, description="测试用例描述")
     case_type: Optional[TestCaseType] = Field(None, description="用例类型")
     module: Optional[str] = Field(None, description="功能模块")
@@ -710,12 +872,14 @@ class UpdateTestCaseRequest(BaseModel):
 
 class BatchUpdateTestCasesRequest(BaseModel):
     """批量更新测试用例请求"""
+
     case_ids: List[int] = Field(..., description="用例ID列表")
     update_data: UpdateTestCaseRequest = Field(..., description="更新数据")
 
 
 class CopyTestCaseRequest(BaseModel):
     """复制测试用例请求"""
+
     source_case_id: int = Field(..., description="源用例ID")
     target_plan_id: Optional[int] = Field(None, description="目标计划ID")
     case_title: Optional[str] = Field(None, description="新用例标题")
@@ -723,6 +887,7 @@ class CopyTestCaseRequest(BaseModel):
 
 class GenerateTestCasesRequest(BaseModel):
     """AI生成测试用例请求"""
+
     requirement_id: int = Field(..., description="需求ID")
     case_type: Optional[TestCaseType] = Field(None, description="用例类型")
     priority: Optional[TestCasePriority] = Field(None, description="优先级")
@@ -732,6 +897,7 @@ class GenerateTestCasesRequest(BaseModel):
 
 class GenerateAutomationScriptRequest(BaseModel):
     """生成自动化脚本请求"""
+
     test_case_id: int = Field(..., description="测试用例ID")
     framework: str = Field(..., description="自动化框架")
     language: str = Field("python", description="编程语言")
@@ -742,6 +908,7 @@ class GenerateAutomationScriptRequest(BaseModel):
 # 响应模式
 class TestCaseResponse(BaseModel):
     """测试用例响应"""
+
     id: int = Field(..., description="测试用例ID")
     case_code: str = Field(..., description="测试用例编码")
     test_plan_id: Optional[int] = Field(None, description="测试计划ID")
@@ -776,6 +943,7 @@ class TestCaseResponse(BaseModel):
 
 class GeneratedTestCaseResponse(BaseModel):
     """AI生成测试用例响应"""
+
     case_title: str = Field(..., description="用例标题")
     case_description: str = Field(..., description="用例描述")
     test_steps: List[Dict[str, Any]] = Field(..., description="测试步骤")
@@ -788,6 +956,7 @@ class GeneratedTestCaseResponse(BaseModel):
 
 class AutomationScriptResponse(BaseModel):
     """自动化脚本响应"""
+
     script_id: int = Field(..., description="脚本ID")
     test_case_id: int = Field(..., description="测试用例ID")
     script_name: str = Field(..., description="脚本名称")
@@ -802,6 +971,7 @@ class AutomationScriptResponse(BaseModel):
 
 class TestCaseCoverageResponse(BaseModel):
     """测试用例覆盖率响应"""
+
     case_id: int = Field(..., description="用例ID")
     case_code: str = Field(..., description="用例编码")
     requirement_coverage: int = Field(..., description="需求覆盖")
@@ -818,31 +988,29 @@ class TestCaseCoverageResponse(BaseModel):
 async def create_test_case(
     request: CreateTestCaseRequest,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """
     创建测试用例
-    
+
     创建新的测试用例，支持完整的用例信息定义。
     包含AI质量检查和自动编码生成。
     """
     try:
         service = TestCaseService(db)
-        
+
         # 转换请求数据
         case_data = request.dict()
-        
+
         # 创建测试用例
         test_case = await service.create_test_case(case_data, current_user.id)
-        
+
         response_data = _build_test_case_response(test_case)
-        
+
         return BaseResponse(
-            success=True,
-            message="测试用例创建成功",
-            data=response_data
+            success=True, message="测试用例创建成功", data=response_data
         )
-        
+
     except ValidationError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except PermissionError as e:
@@ -858,21 +1026,23 @@ async def create_test_case(
 async def copy_test_case_compat(
     request: CopyTestCaseRequest,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """复制测试用例（放在动态ID路由前，避免被 /{case_id} 拦截）。"""
     try:
         service = TestCaseService(db)
         new_case = await service.copy_test_case(
-            request.source_case_id,
-            request.target_plan_id,
-            current_user.id
+            request.source_case_id, request.target_plan_id, current_user.id
         )
         if request.case_title:
             new_case.case_title = request.case_title
             db.commit()
             db.refresh(new_case)
-        return BaseResponse(success=True, message="测试用例复制成功", data=_build_test_case_response(new_case))
+        return BaseResponse(
+            success=True,
+            message="测试用例复制成功",
+            data=_build_test_case_response(new_case),
+        )
     except NotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except HTTPException:
@@ -887,17 +1057,17 @@ async def duplicate_test_case_compat(
     case_id: int = Path(..., description="测试用例ID"),
     request: Dict[str, Any] = Body(...),
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """复制测试用例（兼容前端旧路径）。"""
     return await copy_test_case_compat(
         CopyTestCaseRequest(
             source_case_id=case_id,
             target_plan_id=request.get("target_plan_id"),
-            case_title=request.get("case_title")
+            case_title=request.get("case_title"),
         ),
         current_user,
-        db
+        db,
     )
 
 
@@ -905,17 +1075,21 @@ async def duplicate_test_case_compat(
 async def batch_update_test_cases_compat(
     request: BatchUpdateTestCasesRequest,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """批量更新测试用例（兼容前端批量操作）。"""
     try:
         service = TestCaseService(db)
-        update_data = {k: v for k, v in request.update_data.dict().items() if v is not None}
-        updated_cases = await service.batch_update_cases(request.case_ids, update_data, current_user.id)
+        update_data = {
+            k: v for k, v in request.update_data.dict().items() if v is not None
+        }
+        updated_cases = await service.batch_update_cases(
+            request.case_ids, update_data, current_user.id
+        )
         return BaseResponse(
             success=True,
             message=f"批量更新测试用例成功，共更新{len(updated_cases)}个用例",
-            data=[_build_test_case_response(case) for case in updated_cases]
+            data=[_build_test_case_response(case) for case in updated_cases],
         )
     except HTTPException:
         raise
@@ -928,7 +1102,7 @@ async def batch_update_test_cases_compat(
 async def batch_delete_test_cases(
     request: Dict[str, List[int]] = Body(...),
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """批量删除测试用例。"""
     try:
@@ -936,7 +1110,9 @@ async def batch_delete_test_cases(
         service = TestCaseService(db)
         for case_id in ids:
             await service.delete_test_case(case_id, current_user.id)
-        return BaseResponse(success=True, message=f"批量删除成功，共处理{len(ids)}个用例", data=True)
+        return BaseResponse(
+            success=True, message=f"批量删除成功，共处理{len(ids)}个用例", data=True
+        )
     except HTTPException:
         raise
     except Exception as e:
@@ -953,7 +1129,7 @@ async def export_test_cases(
     search: Optional[str] = Query(None, description="搜索关键词"),
     format: str = Query("csv", description="导出格式"),
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """导出测试用例列表为CSV。"""
     query = db.query(TestCase)
@@ -967,23 +1143,32 @@ async def export_test_cases(
         query = query.filter(TestCase.priority == priority)
     if search:
         search_term = f"%{search}%"
-        query = query.filter((TestCase.case_title.like(search_term)) | (TestCase.case_code.like(search_term)))
+        query = query.filter(
+            (TestCase.case_title.like(search_term))
+            | (TestCase.case_code.like(search_term))
+        )
 
     rows = ["用例编号,标题,类型,优先级,状态,模块,更新时间"]
     for case in query.order_by(TestCase.created_at.desc()).all():
-        rows.append(",".join([
-            case.case_code or "",
-            (case.case_title or "").replace(",", "，"),
-            case.case_type.value if case.case_type else "",
-            case.priority.value if case.priority else "",
-            case.status.value if case.status else "",
-            (case.module or "").replace(",", "，"),
-            case.updated_at.isoformat() if case.updated_at else ""
-        ]))
+        rows.append(
+            ",".join(
+                [
+                    case.case_code or "",
+                    (case.case_title or "").replace(",", "，"),
+                    case.case_type.value if case.case_type else "",
+                    case.priority.value if case.priority else "",
+                    case.status.value if case.status else "",
+                    (case.module or "").replace(",", "，"),
+                    case.updated_at.isoformat() if case.updated_at else "",
+                ]
+            )
+        )
     return Response(
         content="\ufeff" + "\n".join(rows),
         media_type="text/csv; charset=utf-8",
-        headers={"Content-Disposition": f"attachment; filename=test-cases.{format if format in {'csv', 'txt'} else 'csv'}"}
+        headers={
+            "Content-Disposition": f"attachment; filename=test-cases.{format if format in {'csv', 'txt'} else 'csv'}"
+        },
     )
 
 
@@ -1001,8 +1186,14 @@ async def import_test_cases(
         category = _normalize_import_category(import_category)
         normalized_script_format = _normalize_script_format(script_format)
         allowed_formats = IMPORT_CATEGORY_CONFIG[category].get("script_formats")
-        if normalized_script_format and allowed_formats and normalized_script_format not in allowed_formats:
-            raise BusinessLogicError("Script format is not supported by the selected import category")
+        if (
+            normalized_script_format
+            and allowed_formats
+            and normalized_script_format not in allowed_formats
+        ):
+            raise BusinessLogicError(
+                "Script format is not supported by the selected import category"
+            )
 
         content = await file.read()
         if not content:
@@ -1020,9 +1211,13 @@ async def import_test_cases(
 
         for index, row in enumerate(rows, start=2):
             try:
-                case_data = _build_import_case_data(row, category, normalized_script_format, test_plan_id)
+                case_data = _build_import_case_data(
+                    row, category, normalized_script_format, test_plan_id
+                )
                 test_case = await service.create_test_case(case_data, current_user.id)
-                script_payload = _automation_script_payload(test_case, case_data, category, normalized_script_format)
+                script_payload = _automation_script_payload(
+                    test_case, case_data, category, normalized_script_format
+                )
                 if script_payload:
                     automation_script = AutomationScript(
                         test_case_id=test_case.id,
@@ -1044,10 +1239,12 @@ async def import_test_cases(
             except Exception as row_error:
                 db.rollback()
                 failed_count += 1
-                errors.append({
-                    "row": index,
-                    "message": str(row_error),
-                })
+                errors.append(
+                    {
+                        "row": index,
+                        "message": str(row_error),
+                    }
+                )
                 logger.warning(f"Import test case row {index} failed: {row_error}")
 
         if success_count == 0 and errors:
@@ -1078,7 +1275,7 @@ async def import_test_cases(
 async def generate_test_cases_persisted(
     request: GenerateTestCasesRequest,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """Generate test cases from a requirement and save them as real test cases."""
     try:
@@ -1088,18 +1285,22 @@ async def generate_test_cases_persisted(
         generation_result = await generator.generate_test_cases_from_requirement(
             requirement_id=request.requirement_id,
             config=config,
-            user_id=current_user.id
+            user_id=current_user.id,
         )
         saved_cases = await generator.batch_save_generated_cases(
             generated_cases=generation_result.get("generated_cases", []),
             test_plan_id=request.test_plan_id,
             requirement_id=request.requirement_id,
-            user_id=current_user.id
+            user_id=current_user.id,
         )
         if not saved_cases:
             raise BusinessLogicError("AI未生成可保存的测试用例，请调整需求内容后重试")
         response_data = [_build_test_case_response(case) for case in saved_cases]
-        return BaseResponse(success=True, message=f"AI生成测试用例成功，共保存{len(response_data)}个用例", data=response_data)
+        return BaseResponse(
+            success=True,
+            message=f"AI生成测试用例成功，共保存{len(response_data)}个用例",
+            data=response_data,
+        )
     except NotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except ValidationError as e:
@@ -1114,11 +1315,14 @@ async def generate_test_cases_persisted(
         raise HTTPException(status_code=500, detail="AI生成测试用例失败")
 
 
-@router.post("/generate-preview-legacy", response_model=BaseResponse[List[GeneratedTestCaseResponse]])
+@router.post(
+    "/generate-preview-legacy",
+    response_model=BaseResponse[List[GeneratedTestCaseResponse]],
+)
 async def generate_test_cases_compat(
     request: GenerateTestCasesRequest,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """AI生成测试用例（放在动态ID路由前，避免被 /{case_id} 拦截）。"""
     try:
@@ -1127,23 +1331,27 @@ async def generate_test_cases_compat(
         generation_result = await generator.generate_test_cases_from_requirement(
             requirement_id=request.requirement_id,
             config=config,
-            user_id=current_user.id
+            user_id=current_user.id,
         )
         generated_cases = generation_result.get("generated_cases", [])
         response_data = [
             GeneratedTestCaseResponse(
-                case_title=case.get('case_title', ''),
-                case_description=case.get('case_description', ''),
-                test_steps=case.get('test_steps', []),
-                expected_result=case.get('expected_result', ''),
-                test_data=case.get('test_data'),
-                priority=TestCasePriority(case.get('priority', 'MEDIUM')),
-                complexity=case.get('complexity', 'MEDIUM'),
-                quality_score=case.get('quality_score')
+                case_title=case.get("case_title", ""),
+                case_description=case.get("case_description", ""),
+                test_steps=case.get("test_steps", []),
+                expected_result=case.get("expected_result", ""),
+                test_data=case.get("test_data"),
+                priority=TestCasePriority(case.get("priority", "MEDIUM")),
+                complexity=case.get("complexity", "MEDIUM"),
+                quality_score=case.get("quality_score"),
             )
             for case in generated_cases
         ]
-        return BaseResponse(success=True, message=f"AI生成测试用例成功，共生成{len(response_data)}个用例", data=response_data)
+        return BaseResponse(
+            success=True,
+            message=f"AI生成测试用例成功，共生成{len(response_data)}个用例",
+            data=response_data,
+        )
     except HTTPException:
         raise
     except Exception as e:
@@ -1155,14 +1363,18 @@ async def generate_test_cases_compat(
 async def get_test_case_real(
     case_id: int = Path(..., description="测试用例ID"),
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """Get test case detail using the same response builder as the list endpoint."""
     try:
         test_case = db.query(TestCase).filter(TestCase.id == case_id).first()
         if not test_case:
             raise HTTPException(status_code=404, detail="测试用例不存在")
-        return BaseResponse(success=True, message="获取测试用例成功", data=_build_test_case_response(test_case))
+        return BaseResponse(
+            success=True,
+            message="获取测试用例成功",
+            data=_build_test_case_response(test_case),
+        )
     except HTTPException:
         raise
     except HTTPException:
@@ -1177,22 +1389,24 @@ async def update_test_case(
     case_id: int = Path(..., description="测试用例ID"),
     request: UpdateTestCaseRequest = Body(...),
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """
     更新测试用例
-    
+
     更新测试用例的信息，支持版本控制。
     """
     try:
         service = TestCaseService(db)
-        
+
         # 转换请求数据，过滤None值
         update_data = request.dict(exclude_unset=True)
-        
+
         # 更新测试用例
-        test_case = await service.update_test_case(case_id, update_data, current_user.id)
-        
+        test_case = await service.update_test_case(
+            case_id, update_data, current_user.id
+        )
+
         # 构建响应
         response_data = TestCaseResponse(
             id=test_case.id,
@@ -1218,21 +1432,23 @@ async def update_test_case(
             pass_count=test_case.pass_count,
             fail_count=test_case.fail_count,
             last_execution_date=test_case.last_execution_date,
-            last_execution_status=_enum_value(test_case.last_execution_status) if test_case.last_execution_status else None,
+            last_execution_status=(
+                _enum_value(test_case.last_execution_status)
+                if test_case.last_execution_status
+                else None
+            ),
             estimated_execution_time=test_case.estimated_execution_time,
             actual_execution_time=test_case.actual_execution_time,
             tags=test_case.tags,
             version=test_case.version,
             created_at=test_case.created_at,
-            updated_at=test_case.updated_at
+            updated_at=test_case.updated_at,
         )
-        
+
         return BaseResponse(
-            success=True,
-            message="测试用例更新成功",
-            data=response_data
+            success=True, message="测试用例更新成功", data=response_data
         )
-        
+
     except ValidationError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except PermissionError as e:
@@ -1252,25 +1468,21 @@ async def update_test_case(
 async def delete_test_case(
     case_id: int = Path(..., description="测试用例ID"),
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """
     删除测试用例
-    
+
     删除或归档测试用例。已执行的用例只能归档。
     """
     try:
         service = TestCaseService(db)
-        
+
         # 删除测试用例
         result = await service.delete_test_case(case_id, current_user.id)
-        
-        return BaseResponse(
-            success=True,
-            message="测试用例删除成功",
-            data=result
-        )
-        
+
+        return BaseResponse(success=True, message="测试用例删除成功", data=result)
+
     except PermissionError as e:
         raise HTTPException(status_code=403, detail=str(e))
     except NotFoundError as e:
@@ -1298,79 +1510,93 @@ async def list_test_cases(
     page: int = Query(1, ge=1, description="页码"),
     page_size: int = Query(20, ge=1, le=100, description="每页大小"),
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """
     获取测试用例列表
-    
+
     支持多条件过滤和分页查询。
     """
     try:
         service = TestCaseService(db)
-        
+
         # 构建过滤条件
         filters = {}
         if case_type:
-            filters['case_type'] = case_type.value
+            filters["case_type"] = case_type.value
         if priority:
-            filters['priority'] = priority.value
+            filters["priority"] = priority.value
         if status:
-            filters['status'] = status.value
+            filters["status"] = status.value
         if module:
-            filters['module'] = module
+            filters["module"] = module
         if assignee_id:
-            filters['assignee_id'] = assignee_id
+            filters["assignee_id"] = assignee_id
         if automation_level:
-            filters['automation_level'] = automation_level
+            filters["automation_level"] = automation_level
         if search:
-            filters['search'] = search
-        
+            filters["search"] = search
+
         # 查询测试用例列表
         if test_plan_id:
-            cases, total = await service.get_test_cases_by_plan(test_plan_id, filters, page, page_size)
+            cases, total = await service.get_test_cases_by_plan(
+                test_plan_id, filters, page, page_size
+            )
         elif requirement_id:
-            cases, total = await service.get_test_cases_by_requirement(requirement_id, page, page_size)
+            cases, total = await service.get_test_cases_by_requirement(
+                requirement_id, page, page_size
+            )
         else:
             query = db.query(TestCase)
-            if filters.get('case_type'):
-                query = query.filter(TestCase.case_type == TestCaseType(filters['case_type']))
-            if filters.get('priority'):
-                query = query.filter(TestCase.priority == TestCasePriority(filters['priority']))
-            if filters.get('status'):
-                query = query.filter(TestCase.status == TestCaseStatus(filters['status']))
-            if filters.get('module'):
-                query = query.filter(TestCase.module == filters['module'])
-            if filters.get('assignee_id'):
-                query = query.filter(TestCase.assignee_id == filters['assignee_id'])
-            if filters.get('automation_level'):
-                query = query.filter(TestCase.automation_level == filters['automation_level'])
-            if filters.get('search'):
+            if filters.get("case_type"):
+                query = query.filter(
+                    TestCase.case_type == TestCaseType(filters["case_type"])
+                )
+            if filters.get("priority"):
+                query = query.filter(
+                    TestCase.priority == TestCasePriority(filters["priority"])
+                )
+            if filters.get("status"):
+                query = query.filter(
+                    TestCase.status == TestCaseStatus(filters["status"])
+                )
+            if filters.get("module"):
+                query = query.filter(TestCase.module == filters["module"])
+            if filters.get("assignee_id"):
+                query = query.filter(TestCase.assignee_id == filters["assignee_id"])
+            if filters.get("automation_level"):
+                query = query.filter(
+                    TestCase.automation_level == filters["automation_level"]
+                )
+            if filters.get("search"):
                 search_term = f"%{filters['search']}%"
                 query = query.filter(
-                    (TestCase.case_title.like(search_term)) |
-                    (TestCase.case_description.like(search_term)) |
-                    (TestCase.case_code.like(search_term))
+                    (TestCase.case_title.like(search_term))
+                    | (TestCase.case_description.like(search_term))
+                    | (TestCase.case_code.like(search_term))
                 )
             total = query.count()
-            cases = query.order_by(TestCase.created_at.desc()) \
-                .offset((page - 1) * page_size) \
-                .limit(page_size) \
+            cases = (
+                query.order_by(TestCase.created_at.desc())
+                .offset((page - 1) * page_size)
+                .limit(page_size)
                 .all()
-        
+            )
+
         # 构建响应数据
         response_data = []
         for case in cases:
             response_data.append(_build_test_case_response(case))
-        
+
         return PaginatedResponse(
             success=True,
             message="获取测试用例列表成功",
             data=response_data,
             total=total,
             page=page,
-            page_size=page_size
+            page_size=page_size,
         )
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -1381,55 +1607,61 @@ async def list_test_cases(
                 data=[],
                 total=0,
                 page=page,
-                page_size=page_size
+                page_size=page_size,
             )
         logger.error(f"获取测试用例列表失败: {str(e)}")
         raise HTTPException(status_code=500, detail="内部服务器错误")
 
 
-@router.post("/generate-preview-internal-unused", response_model=BaseResponse[List[GeneratedTestCaseResponse]], include_in_schema=False)
+@router.post(
+    "/generate-preview-internal-unused",
+    response_model=BaseResponse[List[GeneratedTestCaseResponse]],
+    include_in_schema=False,
+)
 async def generate_test_cases(
     request: GenerateTestCasesRequest,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """
     AI生成测试用例
-    
+
     基于需求描述使用AI生成测试用例。
     """
     try:
         generator = AITestCaseGenerator(db)
-        
+
         # 生成测试用例
         config = _build_generation_config(request, db)
         generation_result = await generator.generate_test_cases_from_requirement(
             requirement_id=request.requirement_id,
             config=config,
-            user_id=current_user.id
+            user_id=current_user.id,
         )
         generated_cases = generation_result.get("generated_cases", [])
-        
+
         # 构建响应数据
         response_data = []
         for case in generated_cases:
-            response_data.append(GeneratedTestCaseResponse(
-                case_title=case.get('case_title', ''),
-                case_description=case.get('case_description', ''),
-                test_steps=case.get('test_steps', []),
-                expected_result=case.get('expected_result', ''),
-                test_data=case.get('test_data'),
-                priority=TestCasePriority(case.get('priority', 'MEDIUM')),
-                complexity=case.get('complexity', 'MEDIUM'),
-                quality_score=case.get('quality_score')
-            ))
-        
+            response_data.append(
+                GeneratedTestCaseResponse(
+                    case_title=case.get("case_title", ""),
+                    case_description=case.get("case_description", ""),
+                    test_steps=case.get("test_steps", []),
+                    expected_result=case.get("expected_result", ""),
+                    test_data=case.get("test_data"),
+                    priority=TestCasePriority(case.get("priority", "MEDIUM")),
+                    complexity=case.get("complexity", "MEDIUM"),
+                    quality_score=case.get("quality_score"),
+                )
+            )
+
         return BaseResponse(
             success=True,
             message=f"AI生成测试用例成功，共生成{len(response_data)}个用例",
-            data=response_data
+            data=response_data,
         )
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -1441,22 +1673,20 @@ async def generate_test_cases(
 async def generate_automation_script(
     request: GenerateAutomationScriptRequest,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """
     生成自动化测试脚本
-    
+
     基于手动测试用例生成自动化测试脚本。
     """
     try:
         generator = AutomationScriptGenerator(db)
-        
+
         # 生成自动化脚本
         config = _build_automation_config(request)
         generation_result = await generator.generate_automation_script(
-            request.test_case_id,
-            config,
-            current_user.id
+            request.test_case_id, config, current_user.id
         )
         script = await generator.save_automation_script(
             request.test_case_id,
@@ -1473,9 +1703,9 @@ async def generate_automation_script(
                     "script_metadata": generation_result.get("script_metadata"),
                 },
             },
-            current_user.id
+            current_user.id,
         )
-        
+
         # 构建响应
         response_data = AutomationScriptResponse(
             script_id=script.id,
@@ -1487,15 +1717,13 @@ async def generate_automation_script(
             script_path=script.script_path,
             dependencies=script.dependencies,
             is_active=script.is_active,
-            created_at=script.created_at
+            created_at=script.created_at,
         )
-        
+
         return BaseResponse(
-            success=True,
-            message="自动化脚本生成成功",
-            data=response_data
+            success=True, message="自动化脚本生成成功", data=response_data
         )
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -1503,32 +1731,32 @@ async def generate_automation_script(
         raise HTTPException(status_code=500, detail="内部服务器错误")
 
 
-@router.get("/{case_id}/coverage", response_model=BaseResponse[TestCaseCoverageResponse])
+@router.get(
+    "/{case_id}/coverage", response_model=BaseResponse[TestCaseCoverageResponse]
+)
 async def get_test_case_coverage(
     case_id: int = Path(..., description="测试用例ID"),
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """
     获取测试用例覆盖率分析
-    
+
     分析测试用例的覆盖率和执行情况。
     """
     try:
         service = TestCaseService(db)
-        
+
         # 获取覆盖率分析
         coverage_analysis = await service.get_case_coverage_analysis(case_id)
-        
+
         # 构建响应
         response_data = TestCaseCoverageResponse(**coverage_analysis)
-        
+
         return BaseResponse(
-            success=True,
-            message="获取测试用例覆盖率成功",
-            data=response_data
+            success=True, message="获取测试用例覆盖率成功", data=response_data
         )
-        
+
     except NotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except HTTPException:
@@ -1544,33 +1772,35 @@ async def get_test_case_executions(
     page: int = Query(1, ge=1, description="页码"),
     page_size: int = Query(10, ge=1, le=50, description="每页大小"),
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """
     获取测试用例执行历史
-    
+
     获取测试用例的执行记录历史。
     """
     try:
         service = TestCaseService(db)
-        
+
         # 获取执行历史
-        executions, total = await service.get_case_execution_history(case_id, page, page_size)
-        
+        executions, total = await service.get_case_execution_history(
+            case_id, page, page_size
+        )
+
         # 构建响应数据
         response_data = []
         for execution in executions:
             response_data.append(execution.to_dict())
-        
+
         return PaginatedResponse(
             success=True,
             message="获取测试用例执行历史成功",
             data=response_data,
             total=total,
             page=page,
-            page_size=page_size
+            page_size=page_size,
         )
-        
+
     except HTTPException:
         raise
     except Exception as e:

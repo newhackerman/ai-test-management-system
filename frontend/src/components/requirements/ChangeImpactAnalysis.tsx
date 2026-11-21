@@ -9,10 +9,8 @@ import {
   TrendingUp, 
   AlertTriangle, 
   Clock, 
-  DollarSign, 
   Users, 
   FileText,
-  GitBranch,
   Target,
   Zap,
   Shield,
@@ -169,7 +167,7 @@ interface ChangeImpactAnalysisProps {
 
 export function ChangeImpactAnalysis({
   changeRequest,
-  onClose
+  onClose: _onClose
 }: ChangeImpactAnalysisProps) {
   const [analysisData, setAnalysisData] = useState<ImpactAnalysisData | null>(null)
   const [rawAnalysis, setRawAnalysis] = useState<ChangeImpactAnalysisResponse | null>(null)

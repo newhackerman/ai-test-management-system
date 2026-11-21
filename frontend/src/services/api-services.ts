@@ -13,8 +13,7 @@ import type {
   AIAnalysis,
   SystemConfig,
   Notification,
-  PaginatedResponse,
-  ApiResponse
+  PaginatedResponse
 } from '@/types'
 
 /**
@@ -289,7 +288,7 @@ export const projectService = {
     sortBy?: string
     sortOrder?: 'asc' | 'desc'
   }): Promise<PaginatedResponse<Project>> {
-    const queryString = params ? '?' + new URLSearchParams(params as any).toString() : ''
+    const queryString = params ? `?${  new URLSearchParams(params as any).toString()}` : ''
     return apiClient.get<PaginatedResponse<Project>>(`/api/projects${queryString}`)
   },
 
@@ -367,7 +366,7 @@ export const requirementService = {
     status?: string
     priority?: string
   }): Promise<PaginatedResponse<any>> {
-    const queryString = params ? '?' + new URLSearchParams(params as any).toString() : ''
+    const queryString = params ? `?${  new URLSearchParams(params as any).toString()}` : ''
     return apiClient.get(`/api/requirements${queryString}`)
   },
 
@@ -437,7 +436,7 @@ export const testCaseService = {
     }
     
     const queryString = searchParams.toString()
-    return apiClient.get<PaginatedResponse<TestCase>>(`/api/test-cases${queryString ? '?' + queryString : ''}`)
+    return apiClient.get<PaginatedResponse<TestCase>>(`/api/test-cases${queryString ? `?${  queryString}` : ''}`)
   },
 
   /**

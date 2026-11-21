@@ -9,14 +9,12 @@ import {
   Target,
   AlertTriangle,
   BarChart3,
-  FileText,
   Settings,
   MoreHorizontal,
   Download,
   Copy,
   Archive,
   Trash2,
-  Play,
   Pause,
   CheckCircle,
   Clock,
@@ -226,7 +224,7 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({
   const typeConfig = getTypeConfig(project.project_type)
   const progressTrend = getProgressTrend()
   const progressPercentage = Number(project.progress_percentage) || 0
-  const StatusIcon = statusConfig.icon
+  const _StatusIcon = statusConfig.icon
   const TrendIcon = progressTrend.icon
 
   return (

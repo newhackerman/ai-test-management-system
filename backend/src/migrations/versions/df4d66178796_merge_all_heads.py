@@ -5,13 +5,19 @@ Revises: 006_create_ai_file_storage, 007_add_performance_indexes, 012_optimize_p
 Create Date: 2025-09-20 16:35:00.516686
 
 """
-from alembic import op
-import sqlalchemy as sa
 
+import sqlalchemy as sa
+from alembic import op
 
 # revision identifiers, used by Alembic.
-revision = 'df4d66178796'
-down_revision = ('006_create_ai_file_storage', '007_add_performance_indexes', '012_optimize_project_models', 'add_ai_alert_config_tables', 'create_ai_suggestion_tables_006')
+revision = "df4d66178796"
+down_revision = (
+    "006_create_ai_file_storage",
+    "007_add_performance_indexes",
+    "012_optimize_project_models",
+    "add_ai_alert_config_tables",
+    "create_ai_suggestion_tables_006",
+)
 branch_labels = None
 depends_on = None
 

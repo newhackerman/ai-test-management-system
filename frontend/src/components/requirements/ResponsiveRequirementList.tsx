@@ -3,8 +3,7 @@ import { useResponsive } from '@/hooks/useResponsive'
 import RequirementList from './RequirementList'
 import MobileRequirementList from './mobile/MobileRequirementList'
 import { 
-  Requirement, 
-  RequirementFilters
+  Requirement
 } from '@/types/requirement'
 
 interface ResponsiveRequirementListProps {

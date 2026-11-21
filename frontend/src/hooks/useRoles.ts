@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { roleService } from '@/services/role-service'
-import type { Role, RoleFilters } from '@/types'
+import type { RoleFilters } from '@/types'
 import { toast } from 'react-hot-toast'
 
 // 查询键

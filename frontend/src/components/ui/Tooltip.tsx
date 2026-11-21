@@ -19,13 +19,15 @@ export function Tooltip({
   delayDuration = 700,
   className
 }: TooltipProps) {
-  if (content === undefined) {
-    return <div className="relative inline-block">{children}</div>
-  }
-
   const [isVisible, setIsVisible] = React.useState(false)
   const [timeoutId, setTimeoutId] = React.useState<NodeJS.Timeout | null>(null)
   const tooltipRef = React.useRef<HTMLDivElement>(null)
+
+  // Hooks stay above the early return: hook order must not depend on
+  // whether `content` is defined on this render.
+  if (content === undefined) {
+    return <div className="relative inline-block">{children}</div>
+  }
 
   const showTooltip = () => {
     if (timeoutId) {

@@ -6,17 +6,19 @@
 - 项目相关的响应模式
 - 数据验证和序列化
 """
+
 from datetime import date, datetime
-from typing import Optional, List, Dict, Any
 from decimal import Decimal
 from enum import Enum
+from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel, Field, validator, root_validator
-from pydantic.types import constr, condecimal
+from pydantic import BaseModel, Field, root_validator, validator
+from pydantic.types import condecimal, constr
 
 
 class ProjectType(str, Enum):
     """项目类型枚举"""
+
     BUSINESS_SYSTEM = "BUSINESS_SYSTEM"
     MOBILE_APP = "MOBILE_APP"
     API_SERVICE = "API_SERVICE"
@@ -34,6 +36,7 @@ class ProjectType(str, Enum):
 
 class ProjectPriority(str, Enum):
     """项目优先级枚举"""
+
     LOW = "LOW"
     MEDIUM = "MEDIUM"
     HIGH = "HIGH"
@@ -42,6 +45,7 @@ class ProjectPriority(str, Enum):
 
 class ProjectStatus(str, Enum):
     """项目状态枚举"""
+
     PLANNING = "PLANNING"
     IN_PROGRESS = "IN_PROGRESS"
     ON_HOLD = "ON_HOLD"
@@ -52,6 +56,7 @@ class ProjectStatus(str, Enum):
 
 class RiskLevel(str, Enum):
     """风险等级枚举"""
+
     LOW = "LOW"
     MEDIUM = "MEDIUM"
     HIGH = "HIGH"
@@ -60,6 +65,7 @@ class RiskLevel(str, Enum):
 
 class ProjectMemberRole(str, Enum):
     """项目成员角色枚举"""
+
     ADMIN = "ADMIN"
     PROJECT_MANAGER = "PROJECT_MANAGER"
     REQUIREMENT_MANAGER = "REQUIREMENT_MANAGER"
@@ -74,93 +80,108 @@ class ProjectMemberRole(str, Enum):
 # 请求模式
 class CreateProjectRequest(BaseModel):
     """创建项目请求模式"""
-    project_name: constr(min_length=1, max_length=200) = Field(..., description="项目名称")
+
+    project_name: constr(min_length=1, max_length=200) = Field(
+        ..., description="项目名称"
+    )
     description: Optional[str] = Field(None, description="项目描述")
     project_type: ProjectType = Field(..., description="项目类型")
     priority: ProjectPriority = Field(ProjectPriority.MEDIUM, description="项目优先级")
-    
+
     # 时间管理
     planned_start_date: date = Field(..., description="计划开始日期")
     planned_end_date: date = Field(..., description="计划结束日期")
-    
+
     # 人员管理
     project_manager_id: int = Field(..., description="项目经理ID")
     test_manager_id: Optional[int] = Field(None, description="测试经理ID")
-    client_contact: Optional[constr(max_length=200)] = Field(None, description="客户联系人")
-    
+    client_contact: Optional[constr(max_length=200)] = Field(
+        None, description="客户联系人"
+    )
+
     # 预算管理
-    budget: Optional[condecimal(max_digits=15, decimal_places=2)] = Field(None, description="项目预算")
-    
+    budget: Optional[condecimal(max_digits=15, decimal_places=2)] = Field(
+        None, description="项目预算"
+    )
+
     # 元数据
     tags: Optional[List[str]] = Field(None, description="项目标签")
     custom_fields: Optional[Dict[str, Any]] = Field(None, description="自定义字段")
-    
-    @validator('planned_end_date')
+
+    @validator("planned_end_date")
     def validate_end_date(cls, v, values):
         """验证结束日期必须晚于开始日期"""
-        if 'planned_start_date' in values and v <= values['planned_start_date']:
-            raise ValueError('计划结束日期必须晚于计划开始日期')
+        if "planned_start_date" in values and v <= values["planned_start_date"]:
+            raise ValueError("计划结束日期必须晚于计划开始日期")
         return v
-    
-    @validator('project_name')
+
+    @validator("project_name")
     def validate_project_name(cls, v):
         """验证项目名称格式"""
         if not v or not v.strip():
-            raise ValueError('项目名称不能为空')
+            raise ValueError("项目名称不能为空")
         return v.strip()
 
 
 class UpdateProjectRequest(BaseModel):
     """更新项目请求模式"""
-    project_name: Optional[constr(min_length=1, max_length=200)] = Field(None, description="项目名称")
+
+    project_name: Optional[constr(min_length=1, max_length=200)] = Field(
+        None, description="项目名称"
+    )
     description: Optional[str] = Field(None, description="项目描述")
     project_type: Optional[ProjectType] = Field(None, description="项目类型")
     priority: Optional[ProjectPriority] = Field(None, description="项目优先级")
     status: Optional[ProjectStatus] = Field(None, description="项目状态")
-    
+
     # 时间管理
     planned_start_date: Optional[date] = Field(None, description="计划开始日期")
     planned_end_date: Optional[date] = Field(None, description="计划结束日期")
     actual_start_date: Optional[date] = Field(None, description="实际开始日期")
     actual_end_date: Optional[date] = Field(None, description="实际结束日期")
-    
+
     # 人员管理
     project_manager_id: Optional[int] = Field(None, description="项目经理ID")
     test_manager_id: Optional[int] = Field(None, description="测试经理ID")
-    client_contact: Optional[constr(max_length=200)] = Field(None, description="客户联系人")
-    
+    client_contact: Optional[constr(max_length=200)] = Field(
+        None, description="客户联系人"
+    )
+
     # 预算管理
-    budget: Optional[condecimal(max_digits=15, decimal_places=2)] = Field(None, description="项目预算")
-    
+    budget: Optional[condecimal(max_digits=15, decimal_places=2)] = Field(
+        None, description="项目预算"
+    )
+
     # 健康度和风险
     health_score: Optional[int] = Field(None, ge=0, le=100, description="项目健康度")
     risk_level: Optional[RiskLevel] = Field(None, description="风险等级")
-    
+
     # 元数据
     tags: Optional[List[str]] = Field(None, description="项目标签")
     custom_fields: Optional[Dict[str, Any]] = Field(None, description="自定义字段")
-    
+
     @root_validator(skip_on_failure=True)
     def validate_dates(cls, values):
         """验证日期逻辑"""
-        planned_start = values.get('planned_start_date')
-        planned_end = values.get('planned_end_date')
-        actual_start = values.get('actual_start_date')
-        actual_end = values.get('actual_end_date')
-        
+        planned_start = values.get("planned_start_date")
+        planned_end = values.get("planned_end_date")
+        actual_start = values.get("actual_start_date")
+        actual_end = values.get("actual_end_date")
+
         # 计划日期验证
         if planned_start and planned_end and planned_end <= planned_start:
-            raise ValueError('计划结束日期必须晚于计划开始日期')
-        
+            raise ValueError("计划结束日期必须晚于计划开始日期")
+
         # 实际日期验证
         if actual_start and actual_end and actual_end < actual_start:
-            raise ValueError('实际结束日期不能早于实际开始日期')
-        
+            raise ValueError("实际结束日期不能早于实际开始日期")
+
         return values
 
 
 class ProjectQueryParams(BaseModel):
     """项目查询参数"""
+
     page: int = Field(1, ge=1, description="页码")
     size: int = Field(20, ge=1, le=100, description="每页大小")
     status: Optional[List[ProjectStatus]] = Field(None, description="状态过滤")
@@ -173,12 +194,15 @@ class ProjectQueryParams(BaseModel):
     end_date_from: Optional[date] = Field(None, description="结束日期范围-起始")
     end_date_to: Optional[date] = Field(None, description="结束日期范围-结束")
     sort_by: Optional[str] = Field("updated_at", description="排序字段")
-    sort_order: Optional[str] = Field("desc", pattern="^(asc|desc)$", description="排序方向")
+    sort_order: Optional[str] = Field(
+        "desc", pattern="^(asc|desc)$", description="排序方向"
+    )
 
 
 # 响应模式
 class ProjectResponse(BaseModel):
     """项目响应模式"""
+
     id: int
     project_code: str
     project_name: str
@@ -188,18 +212,18 @@ class ProjectResponse(BaseModel):
     status: ProjectStatus
     health_score: int
     risk_level: RiskLevel
-    
+
     # 时间管理
     planned_start_date: Optional[date]
     planned_end_date: Optional[date]
     actual_start_date: Optional[date]
     actual_end_date: Optional[date]
-    
+
     # 人员管理
     project_manager_id: int
     test_manager_id: Optional[int]
     client_contact: Optional[str]
-    
+
     # 预算管理
     budget: Optional[Decimal]
     actual_cost: Optional[Decimal]
@@ -208,28 +232,29 @@ class ProjectResponse(BaseModel):
     progress_percentage: Optional[Decimal]
     task_count: int
     completed_task_count: int
-    
+
     # 质量管理
     test_case_count: int
     passed_test_count: int
     defect_count: int
-    
+
     # 元数据
     tags: Optional[List[str]]
     custom_fields: Optional[Dict[str, Any]]
-    
+
     # 审计字段
     created_by: int
     updated_by: Optional[int]
     created_at: datetime
     updated_at: datetime
-    
+
     class Config:
         from_attributes = True
 
 
 class ProjectListResponse(BaseModel):
     """项目列表响应模式"""
+
     projects: List[ProjectResponse]
     total: int
     page: int
@@ -239,6 +264,7 @@ class ProjectListResponse(BaseModel):
 
 class ProjectSummaryResponse(BaseModel):
     """项目摘要响应模式"""
+
     id: int
     project_code: str
     project_name: str
@@ -259,6 +285,7 @@ class ProjectSummaryResponse(BaseModel):
 
 class CreateProjectResponse(BaseModel):
     """创建项目响应模式"""
+
     success: bool
     message: str
     project: ProjectResponse
@@ -266,6 +293,7 @@ class CreateProjectResponse(BaseModel):
 
 class UpdateProjectResponse(BaseModel):
     """更新项目响应模式"""
+
     success: bool
     message: str
     project: ProjectResponse
@@ -273,6 +301,7 @@ class UpdateProjectResponse(BaseModel):
 
 class DeleteProjectResponse(BaseModel):
     """删除项目响应模式"""
+
     success: bool
     message: str
     project_id: int
@@ -282,6 +311,7 @@ class DeleteProjectResponse(BaseModel):
 # 项目成员相关模式
 class ProjectMemberResponse(BaseModel):
     """项目成员响应模式"""
+
     id: int
     project_id: int
     user_id: int
@@ -295,7 +325,7 @@ class ProjectMemberResponse(BaseModel):
     responsibilities: Optional[str]
     created_at: datetime
     updated_at: datetime
-    
+
     class Config:
         from_attributes = True
 
@@ -303,6 +333,7 @@ class ProjectMemberResponse(BaseModel):
 # 项目统计相关模式
 class ProjectStatistics(BaseModel):
     """项目统计信息"""
+
     total_projects: int
     active_projects: int
     completed_projects: int
@@ -316,6 +347,7 @@ class ProjectStatistics(BaseModel):
 
 class ProjectHealthMetrics(BaseModel):
     """项目健康度指标"""
+
     project_id: int
     health_score: int
     risk_level: RiskLevel

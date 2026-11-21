@@ -12,6 +12,8 @@ The route list lives in ``page_tour_routes.py``; the guard in
 the app without landing in a coverage bucket.
 """
 
+import uuid
+
 import pytest
 from playwright.sync_api import expect
 
@@ -27,7 +29,7 @@ def test_page_tour_renders(logged_in_page, path, label, marker):
 
 
 @pytest.mark.e2e
-def test_page_tour_primary_buttons_do_something(logged_in_page):
+def test_page_tour_primary_buttons_do_something(logged_in_page, api):
     """Spot-check: the main action on key list pages must react.
 
     This is the failure mode the tour's render checks cannot see — a
@@ -49,16 +51,45 @@ def test_page_tour_primary_buttons_do_something(logged_in_page):
     page.get_by_role("button", name="创建测试计划").first.click()
     expect(page.get_by_placeholder("请输入测试计划名称")).to_be_visible(timeout=10000)
 
-    # Reports: the list renders and the first row's preview opens the
-    # detail dialog; its 下载 button must actually download a file.
+    # Reports: the list renders and the preview of an imported report
+    # opens the detail dialog; its 下载 button must actually download
+    # a file. The report is imported via the API first: the seed data
+    # contains no reports, so on a fresh database (CI) the list is
+    # empty and there is no preview button to click at all — the tour
+    # failed that way on 2026-11-20. It is deleted afterwards.
     # (The 2026-11-07 user-reported bug was a button that did nothing;
     # the custom Dialog has no role="dialog", so the modal is located
     # by its overlay container, not by role.)
-    assert_page_renders(page, "/test-manager/reports")
-    page.locator("button[title='预览']").first.click()
-    modal = page.locator("div.fixed.inset-0.z-50").first
-    expect(modal).to_be_visible(timeout=10000)
-    with page.expect_download(timeout=15000) as dl_info:
-        modal.get_by_role("button", name="下载").click()
-    download = dl_info.value
-    assert download.suggested_filename, "download produced no file"
+    marker = uuid.uuid4().hex[:8]
+    html = (
+        f"<html><head><title>QA tour {marker}</title></head>"
+        f"<body><h1>tour-{marker}</h1></body></html>"
+    ).encode()
+    import_id = None
+    try:
+        resp = api.post(
+            "/api/v1/reports/import",
+            files={"file": (f"qa-tour-{marker}.html", html, "text/html")},
+            data={"source_type": "custom"},
+        )
+        assert resp.status_code in (200, 201), (
+            f"setup: report import failed: {resp.text[:300]}"
+        )
+        import_id = (resp.json().get("data") or resp.json())["import_id"]
+
+        assert_page_renders(page, "/test-manager/reports")
+        row = page.locator("tr", has_text=f"qa-tour-{marker}")
+        expect(row).to_be_visible(timeout=10000)
+        row.locator("button[title='预览']").click()
+        modal = page.locator("div.fixed.inset-0.z-50").first
+        expect(modal).to_be_visible(timeout=10000)
+        with page.expect_download(timeout=15000) as dl_info:
+            modal.get_by_role("button", name="下载").click()
+        download = dl_info.value
+        assert download.suggested_filename, "download produced no file"
+    finally:
+        if import_id:
+            try:
+                api.delete(f"/api/v1/reports/imported/{import_id}")
+            except Exception:
+                pass

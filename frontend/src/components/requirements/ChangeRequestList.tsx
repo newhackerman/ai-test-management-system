@@ -6,15 +6,12 @@ import { Table } from '@/components/ui/Table'
 import { Loading } from '@/components/ui/Loading'
 import { 
   Eye, 
-  Edit, 
   Check, 
   X, 
   Clock, 
-  AlertTriangle, 
   FileText,
   TrendingUp,
-  Calendar,
-  User
+  Calendar
 } from 'lucide-react'
 import { RequirementChangeRequest, ChangeStatus, ChangePriority, ChangeType } from '@/types/requirement'
 import { formatDate } from '@/utils/date'

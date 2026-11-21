@@ -80,7 +80,7 @@ api.interceptors.request.use(
     }
 
     if (token) {
-      ;(config.headers as any).Authorization = `Bearer ${token}`
+      (config.headers as any).Authorization = `Bearer ${token}`
     }
 
     return config

@@ -22,9 +22,13 @@ MASKED_SECRET = "********"
 
 
 class SystemSettings(BaseModel):
-    systemName: str = Field(default="AI自动化测试管理系统", min_length=1, max_length=100)
+    systemName: str = Field(
+        default="AI自动化测试管理系统", min_length=1, max_length=100
+    )
     systemVersion: str = Field(default="v1.0.0", min_length=1, max_length=50)
-    systemDescription: str = Field(default="基于 AI 的自动化测试管理平台", max_length=500)
+    systemDescription: str = Field(
+        default="基于 AI 的自动化测试管理平台", max_length=500
+    )
 
     passwordMinLength: int = Field(default=8, ge=6, le=20)
     passwordRequireUppercase: bool = True
@@ -44,10 +48,14 @@ class SystemSettings(BaseModel):
     smtpPassword: str = Field(default="", max_length=255)
 
     maxFileSize: int = Field(default=10, ge=1, le=100)
-    allowedFileTypes: str = Field(default="jpg,png,pdf,doc,docx,xls,xlsx", max_length=500)
+    allowedFileTypes: str = Field(
+        default="jpg,png,pdf,doc,docx,xls,xlsx", max_length=500
+    )
 
     maintenanceMode: bool = False
-    maintenanceMessage: str = Field(default="系统正在维护中，请稍后再试。", max_length=500)
+    maintenanceMessage: str = Field(
+        default="系统正在维护中，请稍后再试。", max_length=500
+    )
 
 
 def _default_settings() -> Dict[str, Any]:
@@ -80,7 +88,10 @@ def _decode_settings(config: SystemConfig | None) -> Dict[str, Any]:
     try:
         stored = json.loads(config.config_value)
     except (TypeError, json.JSONDecodeError):
-        logger.warning("Invalid system settings JSON in sys_config id=%s", getattr(config, "id", None))
+        logger.warning(
+            "Invalid system settings JSON in sys_config id=%s",
+            getattr(config, "id", None),
+        )
         return defaults
 
     if not isinstance(stored, dict):
@@ -89,7 +100,11 @@ def _decode_settings(config: SystemConfig | None) -> Dict[str, Any]:
     try:
         return SystemSettings(**{**defaults, **stored}).model_dump()
     except Exception as exc:
-        logger.warning("Invalid system settings values in sys_config id=%s: %s", getattr(config, "id", None), exc)
+        logger.warning(
+            "Invalid system settings values in sys_config id=%s: %s",
+            getattr(config, "id", None),
+            exc,
+        )
         return defaults
 
 
@@ -169,7 +184,7 @@ async def reset_settings(
     config = await _get_settings_config(session)
     settings = _default_settings()
     try:
-      await _save_settings(session, settings, current_user, config)
+        await _save_settings(session, settings, current_user, config)
     except Exception as exc:
         logger.error("Reset system settings failed: %s", exc)
         raise HTTPException(

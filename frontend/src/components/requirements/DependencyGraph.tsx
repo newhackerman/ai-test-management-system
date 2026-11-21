@@ -1,8 +1,7 @@
-﻿import React, { useState, useEffect, useRef } from 'react'
+﻿import React, { useState, useRef } from 'react'
 import { RequirementDependency, Requirement, DependencyType } from '@/types/requirement'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
-import { Button } from '@/components/ui/Button'
 import { Tooltip } from '@/components/ui/Tooltip'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/Select'
 import { cn } from '@/lib/utils'
@@ -229,9 +228,9 @@ interface DependencyGraphProps {
 export const DependencyGraph: React.FC<DependencyGraphProps> = ({
   requirements,
   dependencies,
-  selectedRequirementId,
+  selectedRequirementId: _selectedRequirementId,
   onRequirementSelect,
-  onDependencyCreate,
+  onDependencyCreate: _onDependencyCreate,
   className
 }) => {
   const [selectedRequirement, setSelectedRequirement] = useState<Requirement | null>(null)
@@ -299,7 +298,7 @@ export const DependencyGraph: React.FC<DependencyGraphProps> = ({
         reqIds.forEach((reqId, index) => {
           positions[reqId] = {
             x: nodeWidth * (index + 1),
-            y: y
+            y
           }
         })
       })

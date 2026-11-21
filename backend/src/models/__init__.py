@@ -1,136 +1,259 @@
 """
 模型初始化文件
 """
-from .base import Base
-from .user import User, UserRole, UserSession, UserLog, UserStatus, Gender
-from .role import Role
-from .permission import (
-    Permission, PermissionType, RolePermission, UserPermission,
-    PermissionGroup, PermissionGroupItem, DataPermission, UserDataPermission,
-    PermissionEffect
-)
-from .config import (
-    SystemConfig, ConfigGroup, ConfigHistory, ConfigAudit, ConfigAuditComment,
-    SystemEnvironment, ConfigPermission, ConfigType, Environment
-)
-from .config_template import ConfigTemplate
-from .advanced_permissions import (
-    AdvancedPermissionRule, TemporaryPermission, ScheduledPermission,
-    RowLevelPermission, ColumnLevelPermission, PermissionAuditLog,
-    PermissionApproval
-)
-from .ai_chat_session import AIChatSession, SessionStatus
-from .ai_chat_message import AIChatMessage, MessageRole, ContentType
-from .ai_model_config import AIModelConfig
-from .ai_prompt_template import AIPromptTemplate, AIPromptTemplateUsage, TemplateCategory, TemplateVisibility
-from .ai_usage_stats import AIUsageStats, AISystemStats
-from .ai_suggestion import (
-    AISuggestion, AIRequirementsAnalysis, AIRequirementsSuggestion,
-    SuggestionType, SuggestionStatus, SuggestionPriority, SuggestionCategory
-)
-from .ai_file_storage import (
-    AIFileStorage, AIFileShare, AIFileAccessLog,
-    FileType, FileCategory, StorageProvider, FileStatus
-)
-from .ai_alert_config import (
-    AIAlertConfig, AIAlertHistory, AIAlertSuppression,
-    AlertType, AlertLevel, AlertStatus, NotificationChannel
-)
-from .ai_operation_log import (
-    AIOperationLog, AIOperationLogSummary,
-    AIOperationType, AIOperationResult, AIOperationPriority
-)
-from .system_notification import SystemNotification
-from .project import (
-    Project, ProjectMember, Task, Milestone, WorkLog, ProjectRisk,
-    ProjectMetrics, ProjectChangeHistory, ProjectStatistics
-)
-from .requirement import (
-    Requirement, RequirementStatusHistory, RequirementDependency,
-    RequirementReview, RequirementReviewComment, RequirementChangeRequest,
-    RequirementTraceabilityLink, RequirementType, RequirementStatus,
-    Priority, BusinessValue, Complexity, DependencyType, ReviewType,
-    ReviewStatus, ReviewDecision, CommentType, CommentSeverity,
-    CommentStatus, ChangeType, ChangeStatus, ChangePriority,
-    TraceabilityLinkType
-)
-from .test_plan import (
-    TestPlan, TestPhase, TestResource,
-    TestType, TestPlanStatus, TestPhaseStatus
-)
-from .test_case import (
-    TestCase, TestExecution, Defect, TestCoverage, AutomationScript,
-    TestCaseType, TestCasePriority, TestCaseStatus, ExecutionStatus,
-    DefectSeverity, DefectStatus, DefectType, DefectResolution
-)
-from .test_report import (
-    TestReportRecord, TestReportTemplate, TestReportSchedule, TestReportShare, TestReportComment
-)
-from .test_report_subscription import (
-    TestReportSubscription, TestReportDistribution, TestReportVersion, TestReportAccessLog,
-    SubscriptionType, DeliveryChannel, SubscriptionStatus
-)
-from .test_environment import (
-    TestEnvironment, EnvironmentReservation, EnvironmentDeployment, TestData,
-    EnvironmentStatus, EnvironmentType, ReservationStatus
-)
-from .defect_comment import DefectComment
-from .requirement_classification import (
-    RequirementClassificationDimension, RequirementClassificationCategory,
-    RequirementClassification, RequirementClassificationSuggestion,
-    RequirementTag, RequirementTagAssignment,
-    ClassificationDimension, ClassificationStatus, ClassificationSuggestionStatus
-)
-# Dashboard management models
-from .dashboard_config import (
-    DashboardConfig, RoleType
-)
-from .widget_definition import (
-    WidgetDefinition, WidgetCategory, DataSourceType
-)
-from .color_scheme import (
-    ColorScheme, UserColorPreference, SchemeType, SchemeCategory
-)
-from .dashboard_data_cache import (
-    DashboardDataCache, CacheStatistics, CacheDataType, CacheStatus
-)
-from .websocket_connection import (
-    WebSocketConnection, WebSocketEvent, ConnectionPool,
-    ConnectionStatus, EventType, ClientType
-)
-
-# 注册用 import：dashboard.py 的 6 张表（与单文件版同名，不导出，
-# 避免与上面导出的同名类冲突）。只 import 模块即可把表注册进
-# 共享 Base，供 create_all / alembic autogenerate 覆盖。
-from . import dashboard  # noqa: F401
 # 注册用 import：infrastructure.py 的 5 张表（lighthouse_results、
 # system_metrics、system_alerts、recovery_actions、backup_records）。
 # 此前该模块用自己独立的 declarative_base，create_all 建不出这些
 # 表，/api/v1/auto-recovery/statistics 在干净库上 500（2026-11-07
 # 巡游发现）。其旧 AuditLogs 类已删除：与 audit.py 的 audit_logs
 # 同名且列定义不同、无任何调用方。
+# 注册用 import：dashboard.py 的 6 张表（与单文件版同名，不导出，
+# 避免与上面导出的同名类冲突）。只 import 模块即可把表注册进
+# 共享 Base，供 create_all / alembic autogenerate 覆盖。
+from . import dashboard  # noqa: F401
 from . import infrastructure  # noqa: F401
-from .requirement_priority import (
-    RequirementPriorityConfig, RequirementPriorityEvaluation,
-    RequirementPriorityConflict, RequirementPriorityHistory,
-    PriorityCalculationMethod, PriorityFactorType, ConflictResolutionStrategy,
-    PriorityConflictStatus
+from .advanced_permissions import (
+    AdvancedPermissionRule,
+    ColumnLevelPermission,
+    PermissionApproval,
+    PermissionAuditLog,
+    RowLevelPermission,
+    ScheduledPermission,
+    TemporaryPermission,
+)
+from .ai_alert_config import (
+    AIAlertConfig,
+    AIAlertHistory,
+    AIAlertSuppression,
+    AlertLevel,
+    AlertStatus,
+    AlertType,
+    NotificationChannel,
+)
+from .ai_chat_message import AIChatMessage, ContentType, MessageRole
+from .ai_chat_session import AIChatSession, SessionStatus
+from .ai_file_storage import (
+    AIFileAccessLog,
+    AIFileShare,
+    AIFileStorage,
+    FileCategory,
+    FileStatus,
+    FileType,
+    StorageProvider,
+)
+from .ai_model_config import AIModelConfig
+from .ai_operation_log import (
+    AIOperationLog,
+    AIOperationLogSummary,
+    AIOperationPriority,
+    AIOperationResult,
+    AIOperationType,
+)
+from .ai_prompt_template import (
+    AIPromptTemplate,
+    AIPromptTemplateUsage,
+    TemplateCategory,
+    TemplateVisibility,
+)
+from .ai_suggestion import (
+    AIRequirementsAnalysis,
+    AIRequirementsSuggestion,
+    AISuggestion,
+    SuggestionCategory,
+    SuggestionPriority,
+    SuggestionStatus,
+    SuggestionType,
+)
+from .ai_usage_stats import AISystemStats, AIUsageStats
+from .base import Base
+from .color_scheme import ColorScheme, SchemeCategory, SchemeType, UserColorPreference
+from .config import (
+    ConfigAudit,
+    ConfigAuditComment,
+    ConfigGroup,
+    ConfigHistory,
+    ConfigPermission,
+    ConfigType,
+    Environment,
+    SystemConfig,
+    SystemEnvironment,
+)
+from .config_template import ConfigTemplate
+
+# Dashboard management models
+from .dashboard_config import DashboardConfig, RoleType
+from .dashboard_data_cache import (
+    CacheDataType,
+    CacheStatistics,
+    CacheStatus,
+    DashboardDataCache,
+)
+from .defect_comment import DefectComment
+from .meeting import (
+    AttendanceStatus,
+    FileFormat,
+    FileShareStatus,
+    GenerationMethod,
+    InvitationStatus,
+    Meeting,
+    MeetingAnalytics,
+    MeetingChat,
+    MeetingFile,
+    MeetingMinutes,
+    MeetingParticipant,
+    MeetingRecording,
+    MeetingStatus,
+    MeetingSummary,
+    MeetingTemplate,
+    MeetingType,
+    MessageType,
+    MinuteStatus,
+    MinuteType,
+    ParticipantRole,
+    RecordingStatus,
+    RecordingType,
+    TemplateCategory,
+)
+from .permission import (
+    DataPermission,
+    Permission,
+    PermissionEffect,
+    PermissionGroup,
+    PermissionGroupItem,
+    PermissionType,
+    RolePermission,
+    UserDataPermission,
+    UserPermission,
+)
+from .project import (
+    Milestone,
+    Project,
+    ProjectChangeHistory,
+    ProjectMember,
+    ProjectMetrics,
+    ProjectRisk,
+    ProjectStatistics,
+    Task,
+    WorkLog,
+)
+from .requirement import (
+    BusinessValue,
+    ChangePriority,
+    ChangeStatus,
+    ChangeType,
+    CommentSeverity,
+    CommentStatus,
+    CommentType,
+    Complexity,
+    DependencyType,
+    Priority,
+    Requirement,
+    RequirementChangeRequest,
+    RequirementDependency,
+    RequirementReview,
+    RequirementReviewComment,
+    RequirementStatus,
+    RequirementStatusHistory,
+    RequirementTraceabilityLink,
+    RequirementType,
+    ReviewDecision,
+    ReviewStatus,
+    ReviewType,
+    TraceabilityLinkType,
+)
+from .requirement_classification import (
+    ClassificationDimension,
+    ClassificationStatus,
+    ClassificationSuggestionStatus,
+    RequirementClassification,
+    RequirementClassificationCategory,
+    RequirementClassificationDimension,
+    RequirementClassificationSuggestion,
+    RequirementTag,
+    RequirementTagAssignment,
 )
 from .requirement_permission import (
-    RequirementRolePermission, RequirementUserPermission, RequirementResourcePermission,
-    RequirementAuditLog, RequirementPermissionTemplate,
-    RequirementPermissionType, RequirementDataScope, RequirementPermissionEffect,
-    RequirementAuditAction, RequirementAuditResult
+    RequirementAuditAction,
+    RequirementAuditLog,
+    RequirementAuditResult,
+    RequirementDataScope,
+    RequirementPermissionEffect,
+    RequirementPermissionTemplate,
+    RequirementPermissionType,
+    RequirementResourcePermission,
+    RequirementRolePermission,
+    RequirementUserPermission,
 )
-from .meeting import (
-    Meeting, MeetingParticipant, MeetingRecording, MeetingMinutes,
-    MeetingSummary,
-    MeetingChat, MeetingFile, MeetingAnalytics, MeetingTemplate,
-    MeetingType, MeetingStatus, ParticipantRole, InvitationStatus,
-    AttendanceStatus, RecordingType, RecordingStatus, FileFormat,
-    MinuteType, GenerationMethod, MinuteStatus, MessageType,
-    FileShareStatus, TemplateCategory
+from .requirement_priority import (
+    ConflictResolutionStrategy,
+    PriorityCalculationMethod,
+    PriorityConflictStatus,
+    PriorityFactorType,
+    RequirementPriorityConfig,
+    RequirementPriorityConflict,
+    RequirementPriorityEvaluation,
+    RequirementPriorityHistory,
 )
+from .role import Role
+from .system_notification import SystemNotification
+from .test_case import (
+    AutomationScript,
+    Defect,
+    DefectResolution,
+    DefectSeverity,
+    DefectStatus,
+    DefectType,
+    ExecutionStatus,
+    TestCase,
+    TestCasePriority,
+    TestCaseStatus,
+    TestCaseType,
+    TestCoverage,
+    TestExecution,
+)
+from .test_environment import (
+    EnvironmentDeployment,
+    EnvironmentReservation,
+    EnvironmentStatus,
+    EnvironmentType,
+    ReservationStatus,
+    TestData,
+    TestEnvironment,
+)
+from .test_plan import (
+    TestPhase,
+    TestPhaseStatus,
+    TestPlan,
+    TestPlanStatus,
+    TestResource,
+    TestType,
+)
+from .test_report import (
+    TestReportComment,
+    TestReportRecord,
+    TestReportSchedule,
+    TestReportShare,
+    TestReportTemplate,
+)
+from .test_report_subscription import (
+    DeliveryChannel,
+    SubscriptionStatus,
+    SubscriptionType,
+    TestReportAccessLog,
+    TestReportDistribution,
+    TestReportSubscription,
+    TestReportVersion,
+)
+from .user import Gender, User, UserLog, UserRole, UserSession, UserStatus
+from .websocket_connection import (
+    ClientType,
+    ConnectionPool,
+    ConnectionStatus,
+    EventType,
+    WebSocketConnection,
+    WebSocketEvent,
+)
+from .widget_definition import DataSourceType, WidgetCategory, WidgetDefinition
 
 # 导出所有模型
 __all__ = [

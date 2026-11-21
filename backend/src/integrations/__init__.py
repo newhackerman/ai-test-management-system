@@ -3,55 +3,48 @@
 提供统一的测试工具集成接口和管理功能
 """
 
-from .playwright_integration import (
-    PlaywrightIntegration,
-    PlaywrightConfig,
-    TestCase as PlaywrightTestCase,
-    TestStep,
-    ExecutionResult as PlaywrightExecutionResult,
-    BrowserType,
-    ExecutionStatus as PlaywrightExecutionStatus
-)
-
-from .jmeter_integration import (
-    JMeterIntegration,
-    JMeterConfig,
-    HttpRequest,
-    LoadModel,
-    LoadPattern,
-    TestType,
-    PerformanceMetrics,
-    TestResult as JMeterTestResult
-)
-
-from .security_tools import (
-    SecurityTestIntegration,
-    SecurityConfig,
-    Vulnerability,
-    ScanResult,
-    SeverityLevel,
-    ScanType,
-    VulnerabilityType
-)
-
 from .allure_integration import (
-    AllureIntegration,
     AllureConfig,
-    AllureTestResult,
-    AllureStatus,
+    AllureIntegration,
     AllureSeverity,
-    AttachmentType
+    AllureStatus,
+    AllureTestResult,
+    AttachmentType,
 )
-
 from .cicd_integration import (
+    BuildInfo,
+    BuildStatus,
     CICDIntegration,
     CIConfig,
-    TestTriggerConfig,
-    BuildInfo,
-    WebhookPayload,
     CIPlatform,
-    BuildStatus,
-    TriggerType
+    TestTriggerConfig,
+    TriggerType,
+    WebhookPayload,
+)
+from .jmeter_integration import (
+    HttpRequest,
+    JMeterConfig,
+    JMeterIntegration,
+    LoadModel,
+    LoadPattern,
+    PerformanceMetrics,
+)
+from .jmeter_integration import TestResult as JMeterTestResult
+from .jmeter_integration import TestType
+from .playwright_integration import BrowserType
+from .playwright_integration import ExecutionResult as PlaywrightExecutionResult
+from .playwright_integration import ExecutionStatus as PlaywrightExecutionStatus
+from .playwright_integration import PlaywrightConfig, PlaywrightIntegration
+from .playwright_integration import TestCase as PlaywrightTestCase
+from .playwright_integration import TestStep
+from .security_tools import (
+    ScanResult,
+    ScanType,
+    SecurityConfig,
+    SecurityTestIntegration,
+    SeverityLevel,
+    Vulnerability,
+    VulnerabilityType,
 )
 
 __all__ = [

@@ -277,8 +277,8 @@ export const useChartOptimization = (
   config: Partial<RenderOptimizationConfig> = {}
 ) => {
   const optimizationConfig = { ...DEFAULT_OPTIMIZATION_CONFIG, ...config };
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [isLoading, _setIsLoading] = useState(false);
+  const [error, _setError] = useState<string | null>(null);
   const renderCountRef = useRef(0);
   const lastRenderTimeRef = useRef(0);
 

@@ -38,7 +38,7 @@ interface UseToastReturn {
 
 // 全局 toast 状态管理
 let globalToasts: Toast[] = [];
-let globalListeners: Set<(toasts: Toast[]) => void> = new Set();
+const globalListeners: Set<(toasts: Toast[]) => void> = new Set();
 
 const notifyListeners = () => {
   globalListeners.forEach(listener => listener([...globalToasts]));
@@ -89,7 +89,7 @@ export function useToast(): UseToastReturn {
   }
 
   // 清理监听器
-  const cleanup = useCallback(() => {
+  const _cleanup = useCallback(() => {
     if (listenerRef.current) {
       globalListeners.delete(listenerRef.current);
     }

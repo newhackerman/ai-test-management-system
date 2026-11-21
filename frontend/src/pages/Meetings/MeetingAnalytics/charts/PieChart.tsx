@@ -38,7 +38,7 @@ const PieChart: React.FC<PieChartProps> = ({
   className,
   colors = defaultColors
 }) => {
-  const renderLabel = ({ name, value, percent }: any) => {
+  const renderLabel = ({ name, value: _value, percent }: any) => {
     if (!showLabels) return null
     return `${name}: ${(percent * 100).toFixed(1)}%`
   }

@@ -12,14 +12,15 @@
 - 项目集成管理
 """
 from fastapi import APIRouter
+
+from .ai_analysis_routes import router as ai_analysis_router
+from .collaboration_routes import router as collaboration_router
+from .meeting_control_routes import router as control_router
 from .meeting_routes import router as meeting_router
 from .participant_routes import router as participant_router
-from .meeting_control_routes import router as control_router
-from .webrtc_routes import router as webrtc_router
-from .collaboration_routes import router as collaboration_router
-from .recording_routes import router as recording_router
-from .ai_analysis_routes import router as ai_analysis_router
 from .project_integration_routes import router as project_integration_router
+from .recording_routes import router as recording_router
+from .webrtc_routes import router as webrtc_router
 
 # 创建会议管理主路由
 meetings_router = APIRouter()

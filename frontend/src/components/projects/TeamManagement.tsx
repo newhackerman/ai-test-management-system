@@ -2,7 +2,6 @@ import React, { useState } from 'react'
 import { Card, Tabs, Button, Space, Spin } from 'antd'
 import { 
   TeamOutlined, 
-  UserAddOutlined, 
   BarChartOutlined,
   MailOutlined 
 } from '@ant-design/icons'

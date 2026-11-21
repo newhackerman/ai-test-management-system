@@ -7,31 +7,54 @@
 - 会议任务创建
 - 项目成员自动邀请
 """
-from typing import List, Dict, Any, Optional
-from datetime import date, datetime, time, timedelta
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_, func
 
-from ..models.meeting import Meeting, MeetingParticipant, MeetingTask, ParticipantRole, InvitationStatus
-from ..models.project import Project, ProjectMember, Task, Milestone
+from datetime import date, datetime, time, timedelta
+from typing import Any, Dict, List, Optional
+
+from sqlalchemy import and_, func, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from ..core.exceptions import NotFoundError, PermissionError, ValidationError
+from ..models.meeting import (
+    InvitationStatus,
+    Meeting,
+    MeetingParticipant,
+    MeetingTask,
+    ParticipantRole,
+)
+from ..models.project import Milestone, Project, ProjectMember, Task
 from ..models.user import User
-from ..core.exceptions import ValidationError, PermissionError, NotFoundError
 
 # 任务类型 / 状态取值的白名单（与 Task 模型的 Enum 列一致）
-VALID_TASK_TYPES = frozenset({
-    "REQUIREMENT_ANALYSIS", "TEST_DESIGN", "TEST_EXECUTION",
-    "AUTOMATION_DEVELOPMENT", "PERFORMANCE_TEST", "SECURITY_TEST",
-    "ENVIRONMENT_SETUP", "DOCUMENTATION",
-})
-VALID_TASK_STATUSES = frozenset({
-    "TODO", "ASSIGNED", "IN_PROGRESS", "ON_HOLD", "BLOCKED",
-    "PENDING_REVIEW", "COMPLETED", "CANCELLED",
-})
+VALID_TASK_TYPES = frozenset(
+    {
+        "REQUIREMENT_ANALYSIS",
+        "TEST_DESIGN",
+        "TEST_EXECUTION",
+        "AUTOMATION_DEVELOPMENT",
+        "PERFORMANCE_TEST",
+        "SECURITY_TEST",
+        "ENVIRONMENT_SETUP",
+        "DOCUMENTATION",
+    }
+)
+VALID_TASK_STATUSES = frozenset(
+    {
+        "TODO",
+        "ASSIGNED",
+        "IN_PROGRESS",
+        "ON_HOLD",
+        "BLOCKED",
+        "PENDING_REVIEW",
+        "COMPLETED",
+        "CANCELLED",
+    }
+)
 
 
 class MeetingProjectIntegrationService:
     """会议项目集成服务"""
-    
+
     def __init__(self, db_session: AsyncSession):
         self.db_session = db_session
 
@@ -58,11 +81,13 @@ class MeetingProjectIntegrationService:
         if meeting.organizer_id == user_id:
             return
         if meeting.project_id:
-            member_query = select(ProjectMember).where(and_(
-                ProjectMember.project_id == meeting.project_id,
-                ProjectMember.user_id == user_id,
-                ProjectMember.status == "ACTIVE",
-            ))
+            member_query = select(ProjectMember).where(
+                and_(
+                    ProjectMember.project_id == meeting.project_id,
+                    ProjectMember.user_id == user_id,
+                    ProjectMember.status == "ACTIVE",
+                )
+            )
             member_result = await self.db_session.execute(member_query)
             if member_result.scalar_one_or_none() is not None:
                 return
@@ -96,11 +121,16 @@ class MeetingProjectIntegrationService:
         user_id: Optional[int] = None,
         meeting_type: Optional[str] = None,
         status: Optional[str] = None,
-        date_range=None
+        date_range=None,
     ) -> List[Meeting]:
         """获取项目相关的会议列表（支持按用户/类型/状态/日期范围过滤）。"""
         from sqlalchemy.orm import selectinload
-        query = select(Meeting).options(selectinload(Meeting.project)).where(Meeting.project_id == project_id)
+
+        query = (
+            select(Meeting)
+            .options(selectinload(Meeting.project))
+            .where(Meeting.project_id == project_id)
+        )
         if meeting_type is not None:
             query = query.where(Meeting.meeting_type == meeting_type)
         if status is not None:
@@ -146,9 +176,7 @@ class MeetingProjectIntegrationService:
         meeting = await meeting_service.create_meeting(data, creator_id)
 
         if auto_invite_team:
-            await self.auto_invite_project_members(
-                meeting.id, project_id, creator_id
-            )
+            await self.auto_invite_project_members(meeting.id, project_id, creator_id)
             await self.db_session.flush()
 
         return meeting
@@ -299,11 +327,13 @@ class MeetingProjectIntegrationService:
             )
             self.db_session.add(task)
             await self.db_session.flush()
-            self.db_session.add(MeetingTask(
-                meeting_id=meeting_id,
-                task_id=task.id,
-                linked_by=user_id,
-            ))
+            self.db_session.add(
+                MeetingTask(
+                    meeting_id=meeting_id,
+                    task_id=task.id,
+                    linked_by=user_id,
+                )
+            )
             created_task_ids.append(task.id)
 
         await self.db_session.flush()
@@ -369,17 +399,21 @@ class MeetingProjectIntegrationService:
             raise ValidationError("任务不属于该会议所属项目")
 
         existing_result = await self.db_session.execute(
-            select(MeetingTask).where(and_(
-                MeetingTask.meeting_id == meeting_id,
-                MeetingTask.task_id == task_id,
-            ))
+            select(MeetingTask).where(
+                and_(
+                    MeetingTask.meeting_id == meeting_id,
+                    MeetingTask.task_id == task_id,
+                )
+            )
         )
         if existing_result.scalar_one_or_none() is None:
-            self.db_session.add(MeetingTask(
-                meeting_id=meeting_id,
-                task_id=task_id,
-                linked_by=user_id,
-            ))
+            self.db_session.add(
+                MeetingTask(
+                    meeting_id=meeting_id,
+                    task_id=task_id,
+                    linked_by=user_id,
+                )
+            )
             await self.db_session.flush()
         return task
 
@@ -391,12 +425,12 @@ class MeetingProjectIntegrationService:
     ) -> List[Task]:
         """根据会议进展更新任务状态。
 
-        每条更新须含 task_id（或 id）且任务已关联到该会议；
-        可更新 status（须为 Task 状态枚举值）与 actual_hours；
-        未显式给 status 但给了 progress_percentage 时按进度推导状态
-       （100 → COMPLETED，>0 → IN_PROGRESS，0 → TODO）。
-        Task 模型没有 progress_percentage 列，进度只用于推导状态，
-        不做存储。
+         每条更新须含 task_id（或 id）且任务已关联到该会议；
+         可更新 status（须为 Task 状态枚举值）与 actual_hours；
+         未显式给 status 但给了 progress_percentage 时按进度推导状态
+        （100 → COMPLETED，>0 → IN_PROGRESS，0 → TODO）。
+         Task 模型没有 progress_percentage 列，进度只用于推导状态，
+         不做存储。
         """
         meeting = await self._get_meeting_or_404(meeting_id)
         await self._require_meeting_access(meeting, user_id)
@@ -408,10 +442,12 @@ class MeetingProjectIntegrationService:
                 raise ValidationError("任务更新缺少 task_id")
             task = await self._get_task_or_404(task_id)
             link_result = await self.db_session.execute(
-                select(MeetingTask).where(and_(
-                    MeetingTask.meeting_id == meeting_id,
-                    MeetingTask.task_id == task_id,
-                ))
+                select(MeetingTask).where(
+                    and_(
+                        MeetingTask.meeting_id == meeting_id,
+                        MeetingTask.task_id == task_id,
+                    )
+                )
             )
             if link_result.scalar_one_or_none() is None:
                 raise ValidationError(f"任务 {task_id} 未关联到该会议")
@@ -441,7 +477,7 @@ class MeetingProjectIntegrationService:
         self,
         project_id: int,
         user_id: Optional[int] = None,
-        schedule_config: Optional[Dict[str, Any]] = None
+        schedule_config: Optional[Dict[str, Any]] = None,
     ) -> List[Dict[str, Any]]:
         """生成项目会议计划（返回建议的会议计划项列表）。
 
@@ -450,30 +486,34 @@ class MeetingProjectIntegrationService:
         """
         config = schedule_config or {}
         meeting_types = config.get("meeting_types") or [
-            "PROJECT_KICKOFF", "REQUIREMENT_REVIEW", "DESIGN_REVIEW",
-            "CODE_REVIEW", "TEST_REVIEW", "PROGRESS_SYNC", "PROJECT_SUMMARY"
+            "PROJECT_KICKOFF",
+            "REQUIREMENT_REVIEW",
+            "DESIGN_REVIEW",
+            "CODE_REVIEW",
+            "TEST_REVIEW",
+            "PROGRESS_SYNC",
+            "PROJECT_SUMMARY",
         ]
         schedule: List[Dict[str, Any]] = []
         # 以当前日期为基准，为每个计划项分配一个具体日期（依次顺延一天），
         # 以满足响应模型 MeetingScheduleItem.scheduled_date 的非空约束。
         base_date = date.today()
         for index, meeting_type in enumerate(meeting_types):
-            schedule.append({
-                "type": meeting_type,
-                "title": f"{meeting_type} 会议",
-                "scheduled_date": base_date + timedelta(days=index),
-                "duration": 60,
-                "priority": "medium",
-                "auto_create": False,
-                "recurring": False,
-            })
+            schedule.append(
+                {
+                    "type": meeting_type,
+                    "title": f"{meeting_type} 会议",
+                    "scheduled_date": base_date + timedelta(days=index),
+                    "duration": 60,
+                    "priority": "medium",
+                    "auto_create": False,
+                    "recurring": False,
+                }
+            )
         return schedule
-    
+
     async def auto_invite_project_members(
-        self,
-        meeting_id: int,
-        project_id: int,
-        organizer_id: int
+        self, meeting_id: int, project_id: int, organizer_id: int
     ) -> List[MeetingParticipant]:
         """自动邀请项目成员参加会议。
 
@@ -507,11 +547,14 @@ class MeetingProjectIntegrationService:
             participant = MeetingParticipant(
                 meeting_id=meeting_id,
                 user_id=member.user_id,
-                participant_role=self._map_project_role_to_meeting_role(member.role_in_project),
-                can_share_screen=member.role_in_project in ("PROJECT_MANAGER", "ARCHITECT"),
+                participant_role=self._map_project_role_to_meeting_role(
+                    member.role_in_project
+                ),
+                can_share_screen=member.role_in_project
+                in ("PROJECT_MANAGER", "ARCHITECT"),
                 can_use_chat=True,
                 invitation_status=InvitationStatus.PENDING,
-                invited_at=datetime.now()
+                invited_at=datetime.now(),
             )
 
             self.db_session.add(participant)
@@ -528,58 +571,55 @@ class MeetingProjectIntegrationService:
         PARTICIPANT / OBSERVER）完全对不上；此处按真实枚举修正。
         """
         role_mapping = {
-            'PROJECT_MANAGER': ParticipantRole.MODERATOR,
-            'ARCHITECT': ParticipantRole.PRESENTER,
-            'DESIGNER': ParticipantRole.PRESENTER,
-            'REQUIREMENT_MANAGER': ParticipantRole.PRESENTER,
+            "PROJECT_MANAGER": ParticipantRole.MODERATOR,
+            "ARCHITECT": ParticipantRole.PRESENTER,
+            "DESIGNER": ParticipantRole.PRESENTER,
+            "REQUIREMENT_MANAGER": ParticipantRole.PRESENTER,
         }
 
-        return role_mapping.get((project_role or "").upper(), ParticipantRole.PARTICIPANT)
-    
+        return role_mapping.get(
+            (project_role or "").upper(), ParticipantRole.PARTICIPANT
+        )
+
     async def check_project_meeting_permission(
-        self,
-        user_id: int,
-        meeting_id: int,
-        permission: str
+        self, user_id: int, meeting_id: int, permission: str
     ) -> bool:
         """检查用户在项目会议中的权限"""
         # 获取会议信息
         meeting_query = select(Meeting).where(Meeting.id == meeting_id)
         meeting_result = await self.db_session.execute(meeting_query)
         meeting = meeting_result.scalar_one_or_none()
-        
+
         if not meeting or not meeting.project_id:
             return False
-        
+
         # 检查用户是否是项目成员
         member_query = select(ProjectMember).where(
             and_(
                 ProjectMember.project_id == meeting.project_id,
-                ProjectMember.user_id == user_id
+                ProjectMember.user_id == user_id,
             )
         )
         member_result = await self.db_session.execute(member_query)
         project_member = member_result.scalar_one_or_none()
-        
+
         if not project_member:
             return False
-        
+
         # 根据权限类型检查
         permission_mapping = {
-            'join_meeting': ['view_project'],
-            'manage_meeting': ['manage_project', 'manage_meetings'],
-            'share_screen': ['manage_meetings'],
-            'record_meeting': ['manage_meetings'],
-            'invite_participants': ['manage_meetings']
+            "join_meeting": ["view_project"],
+            "manage_meeting": ["manage_project", "manage_meetings"],
+            "share_screen": ["manage_meetings"],
+            "record_meeting": ["manage_meetings"],
+            "invite_participants": ["manage_meetings"],
         }
-        
+
         required_permissions = permission_mapping.get(permission, [])
         return any(perm in project_member.permissions for perm in required_permissions)
 
     async def get_meeting_related_tasks(
-        self,
-        meeting_id: int,
-        user_id: Optional[int] = None
+        self, meeting_id: int, user_id: Optional[int] = None
     ) -> List[Task]:
         """获取会议相关的任务列表。
 
@@ -600,9 +640,11 @@ class MeetingProjectIntegrationService:
         if user_id is not None:
             await self._require_meeting_access(meeting, user_id)
 
-        link_query = select(MeetingTask.task_id).where(
-            MeetingTask.meeting_id == meeting_id
-        ).order_by(MeetingTask.id)
+        link_query = (
+            select(MeetingTask.task_id)
+            .where(MeetingTask.meeting_id == meeting_id)
+            .order_by(MeetingTask.id)
+        )
         link_result = await self.db_session.execute(link_query)
         task_ids = link_result.scalars().all()
         if not task_ids:
@@ -613,9 +655,7 @@ class MeetingProjectIntegrationService:
         return list(task_result.scalars().all())
 
     async def get_meeting_task_progress_summary(
-        self,
-        meeting_id: int,
-        user_id: Optional[int] = None
+        self, meeting_id: int, user_id: Optional[int] = None
     ) -> Dict[str, Any]:
         """获取会议任务进度摘要。
 
@@ -626,19 +666,29 @@ class MeetingProjectIntegrationService:
         tasks = await self.get_meeting_related_tasks(meeting_id, user_id)
 
         total_tasks = len(tasks)
-        completed_tasks = len([t for t in tasks if getattr(t, 'status', None) == 'COMPLETED'])
-        in_progress_tasks = len([t for t in tasks if getattr(t, 'status', None) == 'IN_PROGRESS'])
-        pending_tasks = len([t for t in tasks if getattr(t, 'status', None) in ('TODO', 'ASSIGNED')])
-        blocked_tasks = len([t for t in tasks if getattr(t, 'status', None) == 'BLOCKED'])
+        completed_tasks = len(
+            [t for t in tasks if getattr(t, "status", None) == "COMPLETED"]
+        )
+        in_progress_tasks = len(
+            [t for t in tasks if getattr(t, "status", None) == "IN_PROGRESS"]
+        )
+        pending_tasks = len(
+            [t for t in tasks if getattr(t, "status", None) in ("TODO", "ASSIGNED")]
+        )
+        blocked_tasks = len(
+            [t for t in tasks if getattr(t, "status", None) == "BLOCKED"]
+        )
 
-        overall_progress = (completed_tasks / total_tasks * 100) if total_tasks > 0 else 0.0
+        overall_progress = (
+            (completed_tasks / total_tasks * 100) if total_tasks > 0 else 0.0
+        )
 
         return {
-            'meeting_id': meeting_id,
-            'total_tasks': total_tasks,
-            'completed_tasks': completed_tasks,
-            'in_progress_tasks': in_progress_tasks,
-            'pending_tasks': pending_tasks,
-            'blocked_tasks': blocked_tasks,
-            'overall_progress': round(overall_progress, 2),
+            "meeting_id": meeting_id,
+            "total_tasks": total_tasks,
+            "completed_tasks": completed_tasks,
+            "in_progress_tasks": in_progress_tasks,
+            "pending_tasks": pending_tasks,
+            "blocked_tasks": blocked_tasks,
+            "overall_progress": round(overall_progress, 2),
         }

@@ -15,20 +15,12 @@ import {
   Badge,
   Descriptions,
   Timeline,
-  Progress,
-  Statistic,
-  Row,
-  Col,
-  Tooltip,
-  Popconfirm
+  Tooltip
 } from 'antd'
 import {
   CheckOutlined,
   CloseOutlined,
   EyeOutlined,
-  MessageOutlined,
-  HistoryOutlined,
-  ExclamationCircleOutlined,
   ClockCircleOutlined,
   UserOutlined,
   SettingOutlined
@@ -226,7 +218,7 @@ export default function AuditManagement() {
       form.resetFields();
       loadData();
     } catch (error) {
-      message.error('审核通过失败: ' + (error as any).response?.data?.message || '未知错误');
+      message.error(`审核通过失败: ${  (error as any).response?.data?.message}` || '未知错误');
     }
   }
 
@@ -244,7 +236,7 @@ export default function AuditManagement() {
       form.resetFields();
       loadData();
     } catch (error) {
-      message.error('审核驳回失败: ' + (error as any).response?.data?.message || '未知错误');
+      message.error(`审核驳回失败: ${  (error as any).response?.data?.message}` || '未知错误');
     }
   }
 

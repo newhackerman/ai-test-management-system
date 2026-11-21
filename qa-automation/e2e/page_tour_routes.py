@@ -37,7 +37,11 @@ TOUR_ROUTES = [
     ("/meetings", "会议", None),
     ("/meetings/create", "新建会议", None),
     ("/meetings/analytics/comparison", "会议对比", "选择会议"),
-    ("/meetings/recordings", "录制", "暂无录制"),
+    # Marker is the list heading, not the "暂无录制" empty state: the
+    # empty text is absent whenever recordings exist (e.g. FAILED rows
+    # left behind by a failed recording start), which made the tour
+    # fail in CI even though the page rendered fine.
+    ("/meetings/recordings", "录制", "录制列表"),
     ("/users", "用户管理", None),
     ("/roles", "角色管理", None),
     ("/roles/eight", "八角色管理", None),

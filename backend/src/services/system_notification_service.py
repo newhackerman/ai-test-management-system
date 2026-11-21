@@ -1,6 +1,7 @@
 """
 Persistent in-app notification service.
 """
+
 from datetime import datetime
 from typing import Any, Dict, Iterable, List, Optional
 
@@ -110,7 +111,11 @@ class SystemNotificationService:
         )
         if unread_only:
             query = query.where(SystemNotification.is_read.is_(False))
-        query = query.order_by(desc(SystemNotification.created_at)).offset(offset).limit(limit)
+        query = (
+            query.order_by(desc(SystemNotification.created_at))
+            .offset(offset)
+            .limit(limit)
+        )
         result = await self.db.execute(query)
         return list(result.scalars().all())
 
@@ -124,7 +129,9 @@ class SystemNotificationService:
         )
         return int(result.scalar() or 0)
 
-    async def mark_read(self, user_id: int, notification_id: int) -> Optional[SystemNotification]:
+    async def mark_read(
+        self, user_id: int, notification_id: int
+    ) -> Optional[SystemNotification]:
         result = await self.db.execute(
             select(SystemNotification).where(
                 SystemNotification.id == notification_id,

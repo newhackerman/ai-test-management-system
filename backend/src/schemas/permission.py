@@ -1,14 +1,17 @@
 """
 权限相关的数据模型
 """
-from typing import Optional, List, Any
-from pydantic import BaseModel, Field, validator
+
 from datetime import datetime
 from enum import Enum
+from typing import Any, List, Optional
+
+from pydantic import BaseModel, Field, validator
 
 
 class PermissionType(str, Enum):
     """权限类型枚举"""
+
     MENU = "menu"
     BUTTON = "button"
     API = "api"
@@ -18,12 +21,14 @@ class PermissionType(str, Enum):
 
 class PermissionEffect(str, Enum):
     """权限效果枚举"""
+
     ALLOW = "allow"
     DENY = "deny"
 
 
 class PermissionBase(BaseModel):
     """权限基础模型"""
+
     code: str = Field(..., min_length=1, max_length=100, description="权限代码")
     name: str = Field(..., min_length=1, max_length=100, description="权限名称")
     description: Optional[str] = Field(None, description="权限描述")
@@ -35,6 +40,7 @@ class PermissionBase(BaseModel):
 
 class PermissionCreate(PermissionBase):
     """创建权限模型"""
+
     parent_id: Optional[int] = Field(None, description="父权限ID")
     level: int = Field(1, ge=1, le=10, description="权限层级")
     sort_order: int = Field(0, description="排序顺序")
@@ -45,10 +51,17 @@ class PermissionCreate(PermissionBase):
 
 class PermissionUpdate(BaseModel):
     """更新权限模型"""
-    name: Optional[str] = Field(None, min_length=1, max_length=100, description="权限名称")
+
+    name: Optional[str] = Field(
+        None, min_length=1, max_length=100, description="权限名称"
+    )
     description: Optional[str] = Field(None, description="权限描述")
-    module: Optional[str] = Field(None, min_length=1, max_length=50, description="所属模块")
-    action: Optional[str] = Field(None, min_length=1, max_length=50, description="操作类型")
+    module: Optional[str] = Field(
+        None, min_length=1, max_length=50, description="所属模块"
+    )
+    action: Optional[str] = Field(
+        None, min_length=1, max_length=50, description="操作类型"
+    )
     resource: Optional[str] = Field(None, max_length=100, description="资源标识")
     permission_type: Optional[PermissionType] = Field(None, description="权限类型")
     sort_order: Optional[int] = Field(None, description="排序顺序")
@@ -59,6 +72,7 @@ class PermissionUpdate(BaseModel):
 
 class PermissionResponse(BaseModel):
     """权限响应模型"""
+
     id: int = Field(..., description="权限ID")
     code: str = Field(..., description="权限代码")
     name: str = Field(..., description="权限名称")
@@ -77,10 +91,10 @@ class PermissionResponse(BaseModel):
     is_active: bool = Field(..., description="是否激活")
     created_at: datetime = Field(..., description="创建时间")
     updated_at: datetime = Field(..., description="更新时间")
-    
+
     class Config:
         from_attributes = True
-        
+
     @classmethod
     def from_orm(cls, obj):
         """从ORM对象创建响应模型"""
@@ -102,12 +116,13 @@ class PermissionResponse(BaseModel):
             is_system_permission=obj.is_system_permission,
             is_active=obj.is_active,
             created_at=obj.created_at,
-            updated_at=obj.updated_at
+            updated_at=obj.updated_at,
         )
 
 
 class PermissionListResponse(BaseModel):
     """权限列表响应模型"""
+
     permissions: List[Any] = Field(..., description="权限列表")
     total: int = Field(..., description="总数量")
     page: int = Field(..., description="当前页码")
@@ -117,6 +132,7 @@ class PermissionListResponse(BaseModel):
 
 class UserPermissionAssignment(BaseModel):
     """用户权限分配模型"""
+
     permission_id: int = Field(..., description="权限ID")
     effect: PermissionEffect = Field(PermissionEffect.ALLOW, description="权限效果")
     expires_at: Optional[str] = Field(None, description="过期时间")
@@ -125,6 +141,7 @@ class UserPermissionAssignment(BaseModel):
 
 class RolePermissionAssignment(BaseModel):
     """角色权限分配模型"""
+
     permission_ids: List[int] = Field(..., description="权限ID列表")
     effect: PermissionEffect = Field(PermissionEffect.ALLOW, description="权限效果")
     conditions: Optional[dict] = Field(None, description="权限条件")
@@ -132,17 +149,20 @@ class RolePermissionAssignment(BaseModel):
 
 class PermissionCheckRequest(BaseModel):
     """权限检查请求模型"""
+
     permission_codes: List[str] = Field(..., description="权限代码列表")
     user_id: Optional[int] = Field(None, description="用户ID（可选）")
 
 
 class PermissionCheckResponse(BaseModel):
     """权限检查响应模型"""
+
     permissions: dict = Field(..., description="权限检查结果")
 
 
 class PermissionTreeNode(BaseModel):
     """权限树节点模型"""
+
     id: int = Field(..., description="权限ID")
     code: str = Field(..., description="权限代码")
     name: str = Field(..., description="权限名称")
@@ -155,11 +175,14 @@ class PermissionTreeNode(BaseModel):
     parent_id: Optional[int] = Field(None, description="父权限ID")
     sort_order: int = Field(..., description="排序顺序")
     is_active: bool = Field(..., description="是否激活")
-    children: List['PermissionTreeNode'] = Field(default_factory=list, description="子权限")
+    children: List["PermissionTreeNode"] = Field(
+        default_factory=list, description="子权限"
+    )
 
 
 class PermissionGroupBase(BaseModel):
     """权限组基础模型"""
+
     code: str = Field(..., min_length=1, max_length=100, description="权限组代码")
     name: str = Field(..., min_length=1, max_length=100, description="权限组名称")
     description: Optional[str] = Field(None, description="权限组描述")
@@ -169,13 +192,17 @@ class PermissionGroupBase(BaseModel):
 
 class PermissionGroupCreate(PermissionGroupBase):
     """创建权限组模型"""
+
     sort_order: int = Field(0, description="排序顺序")
     permission_ids: List[int] = Field(default_factory=list, description="权限ID列表")
 
 
 class PermissionGroupUpdate(BaseModel):
     """更新权限组模型"""
-    name: Optional[str] = Field(None, min_length=1, max_length=100, description="权限组名称")
+
+    name: Optional[str] = Field(
+        None, min_length=1, max_length=100, description="权限组名称"
+    )
     description: Optional[str] = Field(None, description="权限组描述")
     color: Optional[str] = Field(None, max_length=20, description="显示颜色")
     icon: Optional[str] = Field(None, max_length=50, description="图标")
@@ -186,6 +213,7 @@ class PermissionGroupUpdate(BaseModel):
 
 class PermissionGroupResponse(BaseModel):
     """权限组响应模型"""
+
     id: int = Field(..., description="权限组ID")
     code: str = Field(..., description="权限组代码")
     name: str = Field(..., description="权限组名称")
@@ -197,14 +225,17 @@ class PermissionGroupResponse(BaseModel):
     permission_count: int = Field(..., description="权限数量")
     created_at: datetime = Field(..., description="创建时间")
     updated_at: datetime = Field(..., description="更新时间")
-    permissions: List[PermissionResponse] = Field(default_factory=list, description="权限列表")
-    
+    permissions: List[PermissionResponse] = Field(
+        default_factory=list, description="权限列表"
+    )
+
     class Config:
         from_attributes = True
 
 
 class DataPermissionBase(BaseModel):
     """数据权限基础模型"""
+
     name: str = Field(..., min_length=1, max_length=100, description="数据权限名称")
     description: Optional[str] = Field(None, description="权限描述")
     resource_type: str = Field(..., min_length=1, max_length=50, description="资源类型")
@@ -216,12 +247,16 @@ class DataPermissionBase(BaseModel):
 
 class DataPermissionCreate(DataPermissionBase):
     """创建数据权限模型"""
+
     priority: int = Field(0, description="优先级")
 
 
 class DataPermissionUpdate(BaseModel):
     """更新数据权限模型"""
-    name: Optional[str] = Field(None, min_length=1, max_length=100, description="数据权限名称")
+
+    name: Optional[str] = Field(
+        None, min_length=1, max_length=100, description="数据权限名称"
+    )
     description: Optional[str] = Field(None, description="权限描述")
     scope_type: Optional[str] = Field(None, description="范围类型")
     scope_value: Optional[dict] = Field(None, description="范围值")
@@ -233,6 +268,7 @@ class DataPermissionUpdate(BaseModel):
 
 class DataPermissionResponse(BaseModel):
     """数据权限响应模型"""
+
     id: int = Field(..., description="数据权限ID")
     name: str = Field(..., description="数据权限名称")
     description: Optional[str] = Field(None, description="权限描述")
@@ -245,7 +281,7 @@ class DataPermissionResponse(BaseModel):
     priority: int = Field(..., description="优先级")
     created_at: datetime = Field(..., description="创建时间")
     updated_at: datetime = Field(..., description="更新时间")
-    
+
     class Config:
         from_attributes = True
 

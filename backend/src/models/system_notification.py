@@ -1,10 +1,22 @@
 """
 Persistent in-app notifications.
 """
+
 from datetime import datetime
 from typing import Any, Dict
 
-from sqlalchemy import Boolean, Column, BigInteger, DateTime, ForeignKey, Index, Integer, JSON, String, Text
+from sqlalchemy import (
+    JSON,
+    BigInteger,
+    Boolean,
+    Column,
+    DateTime,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
+)
 
 from .base import BaseModel
 
@@ -14,17 +26,32 @@ class SystemNotification(BaseModel):
 
     __tablename__ = "system_notifications"
 
-    user_id = Column(BigInteger, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True, comment="接收用户ID")
-    sender_id = Column(BigInteger, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, comment="发送用户ID")
+    user_id = Column(
+        BigInteger,
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+        comment="接收用户ID",
+    )
+    sender_id = Column(
+        BigInteger,
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+        comment="发送用户ID",
+    )
     category = Column(String(40), nullable=False, index=True, comment="通知分类")
     title = Column(String(200), nullable=False, comment="标题")
     content = Column(Text, nullable=True, comment="内容")
     related_type = Column(String(40), nullable=True, index=True, comment="关联对象类型")
     related_id = Column(BigInteger, nullable=True, index=True, comment="关联对象ID")
     payload = Column(JSON, nullable=True, comment="附加数据")
-    is_read = Column(Boolean, default=False, nullable=False, index=True, comment="是否已读")
+    is_read = Column(
+        Boolean, default=False, nullable=False, index=True, comment="是否已读"
+    )
     read_at = Column(DateTime, nullable=True, comment="已读时间")
-    is_deleted = Column(Boolean, default=False, nullable=False, index=True, comment="是否逻辑删除")
+    is_deleted = Column(
+        Boolean, default=False, nullable=False, index=True, comment="是否逻辑删除"
+    )
     deleted_at = Column(DateTime, nullable=True, comment="删除时间")
 
     __table_args__ = (

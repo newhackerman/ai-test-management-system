@@ -122,6 +122,8 @@ export async function streamAiQuery(
   }
 
   try {
+    // Intentional read loop: exits via `break` when the stream ends.
+    // eslint-disable-next-line no-constant-condition
     while (true) {
       const { done, value } = await reader.read()
       if (done) break

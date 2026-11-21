@@ -1,5 +1,5 @@
 ﻿import React, { useState, useEffect } from 'react'
-import { Card, Button, Table, Space, Modal, Form, Input, Switch, ColorPicker, Select, message, Tag } from 'antd'
+import { Card, Button, Table, Space, Modal, Form, Input, Switch, Select, message, Tag } from 'antd'
 import { PlusOutlined, EditOutlined, DeleteOutlined, FolderOutlined } from '@ant-design/icons'
 import { ConfigService, ConfigGroup } from '@/services/config-service'
 

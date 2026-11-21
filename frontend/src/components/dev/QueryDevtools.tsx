@@ -5,26 +5,19 @@ import React, { useState, useEffect } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
-  Bug, 
   Database, 
   RefreshCw, 
   Trash2, 
-  Eye, 
-  EyeOff, 
   Clock,
   AlertCircle,
   CheckCircle,
   Loader,
   X,
-  ChevronDown,
-  ChevronRight,
-  Search,
-  Filter,
-  BarChart3
+  Search
 } from 'lucide-react'
 
 import { Button } from '@/components/ui/Button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { Input } from '@/components/ui/Input'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/Tabs'

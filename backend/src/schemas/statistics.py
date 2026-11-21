@@ -7,14 +7,17 @@
 - 趋势分析数据模式
 - KPI指标数据模式
 """
-from datetime import datetime, date
-from typing import List, Optional, Dict, Any, Union
-from pydantic import BaseModel, Field, validator
+
+from datetime import date, datetime
 from enum import Enum
+from typing import Any, Dict, List, Optional, Union
+
+from pydantic import BaseModel, Field, validator
 
 
 class MetricType(str, Enum):
     """指标类型枚举"""
+
     PROGRESS = "progress"
     QUALITY = "quality"
     EFFICIENCY = "efficiency"
@@ -25,6 +28,7 @@ class MetricType(str, Enum):
 
 class TrendDirection(str, Enum):
     """趋势方向枚举"""
+
     INCREASING = "increasing"
     DECREASING = "decreasing"
     STABLE = "stable"
@@ -32,6 +36,7 @@ class TrendDirection(str, Enum):
 
 class PerformanceLevel(str, Enum):
     """绩效等级枚举"""
+
     EXCELLENT = "excellent"
     GOOD = "good"
     SATISFACTORY = "satisfactory"
@@ -40,6 +45,7 @@ class PerformanceLevel(str, Enum):
 
 class TeamMaturityLevel(str, Enum):
     """团队成熟度等级枚举"""
+
     HIGH_PERFORMING = "high_performing"
     PERFORMING = "performing"
     FORMING = "forming"
@@ -49,6 +55,7 @@ class TeamMaturityLevel(str, Enum):
 # 基础数据模式
 class TimeProgressSchema(BaseModel):
     """时间进度模式"""
+
     progress_rate: float = Field(..., ge=0, le=1, description="进度比率")
     deviation: float = Field(..., description="偏差")
     days_elapsed: int = Field(..., ge=0, description="已用天数")
@@ -59,6 +66,7 @@ class TimeProgressSchema(BaseModel):
 
 class TaskProgressSchema(BaseModel):
     """任务进度模式"""
+
     progress_rate: float = Field(..., ge=0, le=1, description="进度比率")
     total_tasks: int = Field(..., ge=0, description="任务总数")
     completed_tasks: int = Field(..., ge=0, description="已完成任务数")
@@ -70,6 +78,7 @@ class TaskProgressSchema(BaseModel):
 
 class QualityProgressSchema(BaseModel):
     """质量进度模式"""
+
     progress_rate: float = Field(..., ge=0, le=1, description="质量进度比率")
     test_case_count: int = Field(..., ge=0, description="测试用例总数")
     passed_test_count: int = Field(..., ge=0, description="通过测试数")
@@ -82,6 +91,7 @@ class QualityProgressSchema(BaseModel):
 
 class MilestoneProgressSchema(BaseModel):
     """里程碑进度模式"""
+
     progress_rate: float = Field(..., ge=0, le=1, description="里程碑进度比率")
     total_milestones: int = Field(..., ge=0, description="里程碑总数")
     completed_milestones: int = Field(..., ge=0, description="已完成里程碑数")
@@ -91,6 +101,7 @@ class MilestoneProgressSchema(BaseModel):
 
 class EfficiencyMetricsSchema(BaseModel):
     """效率指标模式"""
+
     productivity_rate: float = Field(..., ge=0, description="生产率")
     avg_hours_per_day: float = Field(..., ge=0, description="日均工时")
     total_hours: float = Field(..., ge=0, description="总工时")
@@ -101,6 +112,7 @@ class EfficiencyMetricsSchema(BaseModel):
 
 class CostMetricsSchema(BaseModel):
     """成本指标模式"""
+
     budget: float = Field(..., ge=0, description="预算")
     actual_cost: float = Field(..., ge=0, description="实际成本")
     cost_variance: float = Field(..., description="成本偏差")
@@ -112,15 +124,19 @@ class CostMetricsSchema(BaseModel):
 
 class RiskMetricsSchema(BaseModel):
     """风险指标模式"""
+
     total_risks: int = Field(..., ge=0, description="风险总数")
     high_risks: int = Field(..., ge=0, description="高风险数量")
     open_risks: int = Field(..., ge=0, description="开放风险数量")
     avg_risk_score: float = Field(..., ge=0, description="平均风险评分")
-    risk_distribution: Dict[str, Dict[str, Union[int, float]]] = Field(..., description="风险分布")
+    risk_distribution: Dict[str, Dict[str, Union[int, float]]] = Field(
+        ..., description="风险分布"
+    )
 
 
 class CollaborationMetricsSchema(BaseModel):
     """协作指标模式"""
+
     team_size: int = Field(..., ge=0, description="团队规模")
     avg_allocation: float = Field(..., ge=0, le=100, description="平均分配比例")
     role_distribution: Dict[str, int] = Field(..., description="角色分布")
@@ -130,13 +146,17 @@ class CollaborationMetricsSchema(BaseModel):
 # 统计分析请求和响应模式
 class ProjectStatisticsRequest(BaseModel):
     """项目统计请求"""
+
     project_id: int = Field(..., gt=0, description="项目ID")
     include_predictions: bool = Field(default=False, description="是否包含预测数据")
-    cache_duration: int = Field(default=300, ge=0, le=3600, description="缓存时长（秒）")
+    cache_duration: int = Field(
+        default=300, ge=0, le=3600, description="缓存时长（秒）"
+    )
 
 
 class ProjectStatisticsResponse(BaseModel):
     """项目统计响应"""
+
     project_id: int = Field(..., description="项目ID")
     time_progress: TimeProgressSchema = Field(..., description="时间进度")
     task_progress: TaskProgressSchema = Field(..., description="任务进度")
@@ -146,12 +166,15 @@ class ProjectStatisticsResponse(BaseModel):
     efficiency_metrics: EfficiencyMetricsSchema = Field(..., description="效率指标")
     cost_metrics: CostMetricsSchema = Field(..., description="成本指标")
     risk_metrics: RiskMetricsSchema = Field(..., description="风险指标")
-    collaboration_metrics: CollaborationMetricsSchema = Field(..., description="协作指标")
+    collaboration_metrics: CollaborationMetricsSchema = Field(
+        ..., description="协作指标"
+    )
     calculated_at: datetime = Field(..., description="计算时间")
 
 
 class TrendAnalysisRequest(BaseModel):
     """趋势分析请求"""
+
     project_id: int = Field(..., gt=0, description="项目ID")
     metric_name: str = Field(..., description="指标名称")
     days: int = Field(default=30, ge=7, le=365, description="分析天数")
@@ -160,6 +183,7 @@ class TrendAnalysisRequest(BaseModel):
 
 class TimeSeriesDataPoint(BaseModel):
     """时间序列数据点"""
+
     date: str = Field(..., description="日期")
     value: float = Field(..., description="值")
     metric_name: str = Field(..., description="指标名称")
@@ -167,7 +191,10 @@ class TimeSeriesDataPoint(BaseModel):
 
 class PredictionData(BaseModel):
     """预测数据"""
-    predicted_values: List[Dict[str, Union[int, float]]] = Field(..., description="预测值列表")
+
+    predicted_values: List[Dict[str, Union[int, float]]] = Field(
+        ..., description="预测值列表"
+    )
     method: str = Field(..., description="预测方法")
     slope: Optional[float] = Field(None, description="斜率")
     intercept: Optional[float] = Field(None, description="截距")
@@ -175,6 +202,7 @@ class PredictionData(BaseModel):
 
 class TrendAnalysisResponse(BaseModel):
     """趋势分析响应"""
+
     metric_name: str = Field(..., description="指标名称")
     time_series_data: List[TimeSeriesDataPoint] = Field(..., description="时间序列数据")
     trend_direction: TrendDirection = Field(..., description="趋势方向")
@@ -187,6 +215,7 @@ class TrendAnalysisResponse(BaseModel):
 # 绩效评估相关模式
 class IndividualPerformanceRequest(BaseModel):
     """个人绩效评估请求"""
+
     user_id: int = Field(..., gt=0, description="用户ID")
     project_id: Optional[int] = Field(None, gt=0, description="项目ID（可选）")
     start_date: Optional[date] = Field(None, description="开始日期")
@@ -196,6 +225,7 @@ class IndividualPerformanceRequest(BaseModel):
 
 class DetailedMetrics(BaseModel):
     """详细指标"""
+
     efficiency: Dict[str, float] = Field(..., description="效率指标")
     quality: Dict[str, float] = Field(..., description="质量指标")
     collaboration: Dict[str, float] = Field(..., description="协作指标")
@@ -205,101 +235,113 @@ class DetailedMetrics(BaseModel):
 
 class IndividualPerformanceResponse(BaseModel):
     """个人绩效评估响应"""
+
     user_id: int = Field(..., description="用户ID")
     user_name: str = Field(..., description="用户姓名")
     evaluation_period: List[str] = Field(..., description="评估周期")
-    
+
     # 工作效率指标
     task_completion_rate: float = Field(..., ge=0, le=1, description="任务完成率")
     on_time_delivery_rate: float = Field(..., ge=0, le=1, description="按时交付率")
     work_hour_efficiency: float = Field(..., ge=0, le=1, description="工时效率")
-    
+
     # 工作质量指标
     defect_rate: float = Field(..., ge=0, description="缺陷率")
     rework_rate: float = Field(..., ge=0, description="返工率")
     customer_satisfaction: float = Field(..., ge=0, le=1, description="客户满意度")
-    
+
     # 协作能力指标
     team_collaboration_score: float = Field(..., ge=0, le=1, description="团队协作评分")
     communication_effectiveness: float = Field(..., ge=0, le=1, description="沟通效果")
     knowledge_sharing_score: float = Field(..., ge=0, le=1, description="知识分享评分")
-    
+
     # 技能成长指标
     skill_improvement_score: float = Field(..., ge=0, le=1, description="技能提升评分")
     learning_activity_score: float = Field(..., ge=0, le=1, description="学习活动评分")
     certification_score: float = Field(..., ge=0, le=1, description="认证评分")
-    
+
     # 创新贡献指标
-    innovation_contribution_score: float = Field(..., ge=0, le=1, description="创新贡献评分")
-    process_improvement_score: float = Field(..., ge=0, le=1, description="流程改进评分")
+    innovation_contribution_score: float = Field(
+        ..., ge=0, le=1, description="创新贡献评分"
+    )
+    process_improvement_score: float = Field(
+        ..., ge=0, le=1, description="流程改进评分"
+    )
     best_practice_score: float = Field(..., ge=0, le=1, description="最佳实践评分")
-    
+
     # 综合评分
     overall_score: float = Field(..., ge=0, le=1, description="综合评分")
     performance_level: PerformanceLevel = Field(..., description="绩效等级")
-    
+
     # 详细指标
     detailed_metrics: DetailedMetrics = Field(..., description="详细指标")
-    
+
     # 改进建议
     strengths: List[str] = Field(..., description="优势")
     improvement_areas: List[str] = Field(..., description="改进领域")
     development_recommendations: List[str] = Field(..., description="发展建议")
-    
+
     evaluated_at: datetime = Field(..., description="评估时间")
 
 
 class TeamPerformanceRequest(BaseModel):
     """团队绩效评估请求"""
+
     project_id: int = Field(..., gt=0, description="项目ID")
     start_date: Optional[date] = Field(None, description="开始日期")
     end_date: Optional[date] = Field(None, description="结束日期")
-    include_individual_breakdown: bool = Field(default=False, description="是否包含个人分解")
+    include_individual_breakdown: bool = Field(
+        default=False, description="是否包含个人分解"
+    )
 
 
 class TeamPerformanceResponse(BaseModel):
     """团队绩效评估响应"""
+
     project_id: int = Field(..., description="项目ID")
     team_members: List[int] = Field(..., description="团队成员ID列表")
     evaluation_period: List[str] = Field(..., description="评估周期")
-    
+
     # 团队效率指标
     team_productivity: float = Field(..., ge=0, le=1, description="团队生产力")
     collaboration_effectiveness: float = Field(..., ge=0, le=1, description="协作效果")
     goal_achievement_rate: float = Field(..., ge=0, le=1, description="目标达成率")
-    
+
     # 团队质量指标
     team_quality_score: float = Field(..., ge=0, le=1, description="团队质量评分")
     customer_satisfaction: float = Field(..., ge=0, le=1, description="客户满意度")
     delivery_quality: float = Field(..., ge=0, le=1, description="交付质量")
-    
+
     # 团队协作指标
     communication_score: float = Field(..., ge=0, le=1, description="沟通评分")
-    conflict_resolution_score: float = Field(..., ge=0, le=1, description="冲突解决评分")
+    conflict_resolution_score: float = Field(
+        ..., ge=0, le=1, description="冲突解决评分"
+    )
     knowledge_sharing_score: float = Field(..., ge=0, le=1, description="知识分享评分")
-    
+
     # 团队发展指标
     skill_diversity_score: float = Field(..., ge=0, le=1, description="技能多样性评分")
     learning_culture_score: float = Field(..., ge=0, le=1, description="学习文化评分")
     innovation_score: float = Field(..., ge=0, le=1, description="创新评分")
-    
+
     # 综合评分
     overall_score: float = Field(..., ge=0, le=1, description="综合评分")
     team_maturity_level: TeamMaturityLevel = Field(..., description="团队成熟度等级")
-    
+
     # 团队分析
     team_strengths: List[str] = Field(..., description="团队优势")
     team_challenges: List[str] = Field(..., description="团队挑战")
     improvement_recommendations: List[str] = Field(..., description="改进建议")
-    
+
     # 绩效分布
     performance_distribution: Dict[str, int] = Field(..., description="绩效分布")
-    
+
     evaluated_at: datetime = Field(..., description="评估时间")
 
 
 class SkillAssessmentRequest(BaseModel):
     """技能评估请求"""
+
     user_id: int = Field(..., gt=0, description="用户ID")
     skill_categories: List[str] = Field(..., min_items=1, description="技能类别列表")
     include_development_plan: bool = Field(default=True, description="是否包含发展计划")
@@ -307,6 +349,7 @@ class SkillAssessmentRequest(BaseModel):
 
 class GapAnalysis(BaseModel):
     """差距分析"""
+
     gap_level: int = Field(..., description="差距等级")
     gap_description: str = Field(..., description="差距描述")
     estimated_time_months: int = Field(..., ge=0, description="预估时间（月）")
@@ -315,6 +358,7 @@ class GapAnalysis(BaseModel):
 
 class DevelopmentPlanItem(BaseModel):
     """发展计划项"""
+
     action: str = Field(..., description="行动")
     timeline: str = Field(..., description="时间线")
     resources: List[str] = Field(..., description="资源")
@@ -323,6 +367,7 @@ class DevelopmentPlanItem(BaseModel):
 
 class SkillAssessmentResponse(BaseModel):
     """技能评估响应"""
+
     user_id: int = Field(..., description="用户ID")
     skill_category: str = Field(..., description="技能类别")
     current_level: int = Field(..., ge=1, le=5, description="当前等级")
@@ -335,6 +380,7 @@ class SkillAssessmentResponse(BaseModel):
 # KPI指标相关模式
 class KPIMetricsRequest(BaseModel):
     """KPI指标请求"""
+
     project_id: int = Field(..., gt=0, description="项目ID")
     include_benchmark: bool = Field(default=True, description="是否包含基准对比")
     benchmark_type: str = Field(default="industry", description="基准类型")
@@ -342,6 +388,7 @@ class KPIMetricsRequest(BaseModel):
 
 class BenchmarkComparison(BaseModel):
     """基准对比"""
+
     current: float = Field(..., description="当前值")
     benchmark: float = Field(..., description="基准值")
     status: str = Field(..., description="状态")
@@ -349,6 +396,7 @@ class BenchmarkComparison(BaseModel):
 
 class PerformanceIndicators(BaseModel):
     """绩效指标"""
+
     overall_health: float = Field(..., ge=0, le=1, description="整体健康度")
     critical_areas: List[str] = Field(..., description="关键领域")
     excellent_areas: List[str] = Field(..., description="优秀领域")
@@ -356,9 +404,12 @@ class PerformanceIndicators(BaseModel):
 
 class KPIMetricsResponse(BaseModel):
     """KPI指标响应"""
+
     project_id: int = Field(..., description="项目ID")
     kpi_metrics: Dict[str, float] = Field(..., description="KPI指标")
-    benchmark_comparison: Dict[str, BenchmarkComparison] = Field(..., description="基准对比")
+    benchmark_comparison: Dict[str, BenchmarkComparison] = Field(
+        ..., description="基准对比"
+    )
     performance_indicators: PerformanceIndicators = Field(..., description="绩效指标")
     calculated_at: datetime = Field(..., description="计算时间")
 
@@ -366,13 +417,17 @@ class KPIMetricsResponse(BaseModel):
 # 项目对比分析模式
 class ProjectComparisonRequest(BaseModel):
     """项目对比分析请求"""
-    project_ids: List[int] = Field(..., min_items=2, max_items=10, description="项目ID列表")
+
+    project_ids: List[int] = Field(
+        ..., min_items=2, max_items=10, description="项目ID列表"
+    )
     metrics: List[str] = Field(..., min_items=1, description="对比指标列表")
     include_rankings: bool = Field(default=True, description="是否包含排名")
 
 
 class ProjectComparisonResponse(BaseModel):
     """项目对比分析响应"""
+
     comparison_data: Dict[str, Dict[str, float]] = Field(..., description="对比数据")
     rankings: Dict[str, List[str]] = Field(..., description="排名")
     summary: Dict[str, Any] = Field(..., description="汇总信息")
@@ -381,6 +436,7 @@ class ProjectComparisonResponse(BaseModel):
 # 仪表板汇总模式
 class DashboardSummaryRequest(BaseModel):
     """仪表板汇总请求"""
+
     project_ids: Optional[List[int]] = Field(None, description="项目ID列表（可选）")
     include_trends: bool = Field(default=False, description="是否包含趋势")
     time_range_days: int = Field(default=30, ge=7, le=365, description="时间范围（天）")
@@ -388,6 +444,7 @@ class DashboardSummaryRequest(BaseModel):
 
 class ProjectSummaryItem(BaseModel):
     """项目汇总项"""
+
     project_id: int = Field(..., description="项目ID")
     progress: float = Field(..., ge=0, le=1, description="进度")
     quality_score: float = Field(..., ge=0, le=1, description="质量评分")
@@ -398,6 +455,7 @@ class ProjectSummaryItem(BaseModel):
 
 class DashboardSummaryData(BaseModel):
     """仪表板汇总数据"""
+
     total_projects: int = Field(..., ge=0, description="项目总数")
     active_projects: int = Field(..., ge=0, description="活跃项目数")
     completed_projects: int = Field(..., ge=0, description="已完成项目数")
@@ -413,6 +471,7 @@ class DashboardSummaryData(BaseModel):
 
 class DashboardSummaryResponse(BaseModel):
     """仪表板汇总响应"""
+
     summary: DashboardSummaryData = Field(..., description="汇总数据")
     generated_at: str = Field(..., description="生成时间")
 
@@ -420,38 +479,38 @@ class DashboardSummaryResponse(BaseModel):
 # 验证器
 class ProjectStatisticsResponseValidator(BaseModel):
     """项目统计响应验证器"""
-    
-    @validator('overall_progress')
+
+    @validator("overall_progress")
     def validate_overall_progress(cls, v):
         if not 0 <= v <= 1:
-            raise ValueError('综合进度必须在0-1之间')
+            raise ValueError("综合进度必须在0-1之间")
         return v
-    
-    @validator('calculated_at')
+
+    @validator("calculated_at")
     def validate_calculated_at(cls, v):
         if v > datetime.utcnow():
-            raise ValueError('计算时间不能是未来时间')
+            raise ValueError("计算时间不能是未来时间")
         return v
 
 
 class PerformanceResponseValidator(BaseModel):
     """绩效响应验证器"""
-    
-    @validator('overall_score')
+
+    @validator("overall_score")
     def validate_overall_score(cls, v):
         if not 0 <= v <= 1:
-            raise ValueError('综合评分必须在0-1之间')
+            raise ValueError("综合评分必须在0-1之间")
         return v
-    
-    @validator('evaluation_period')
+
+    @validator("evaluation_period")
     def validate_evaluation_period(cls, v):
         if len(v) != 2:
-            raise ValueError('评估周期必须包含开始和结束日期')
+            raise ValueError("评估周期必须包含开始和结束日期")
         try:
             start_date = datetime.fromisoformat(v[0]).date()
             end_date = datetime.fromisoformat(v[1]).date()
             if start_date >= end_date:
-                raise ValueError('开始日期必须早于结束日期')
+                raise ValueError("开始日期必须早于结束日期")
         except ValueError as e:
-            raise ValueError(f'日期格式错误: {e}')
+            raise ValueError(f"日期格式错误: {e}")
         return v

@@ -1,6 +1,7 @@
 """
 In-app notification API.
 """
+
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -69,7 +70,9 @@ async def list_notifications(
     )
     unread_count = await service.unread_count(current_user.id)
     return NotificationListResponse(
-        notifications=[NotificationResponse(**item.to_dict()) for item in notifications],
+        notifications=[
+            NotificationResponse(**item.to_dict()) for item in notifications
+        ],
         unread_count=unread_count,
     )
 

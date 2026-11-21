@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import offlineStorage, { SyncStatus, OfflineOperation } from '@/lib/offline-storage'
+import offlineStorage, { SyncStatus } from '@/lib/offline-storage'
 
 /**
  * 离线功能 Hook
