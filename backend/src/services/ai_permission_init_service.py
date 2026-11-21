@@ -7,7 +7,7 @@ from typing import Any, Dict
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..core.database import get_async_session
+from ..core.database import get_async_session, get_db_session
 from ..services.ai_permission_service import AIPermissionService
 
 logger = logging.getLogger(__name__)

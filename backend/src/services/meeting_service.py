@@ -2528,14 +2528,6 @@ class MeetingService:
             )
         except Exception as e:
             logger.error(f"Error sending participant removal notification: {str(e)}")
-        # 这里应该实现移除通知逻辑ions(meeting)
-
-        # 6. 提交事务
-        await self.db.commit()
-        await self.db.refresh(meeting)
-
-        logger.info(f"Started meeting {meeting.meeting_code} by user {user_id}")
-        return meeting
 
     # 私有方法实现
 
@@ -3805,12 +3797,6 @@ class MeetingService:
             )
 
         logger.info(f"Sent end notifications for meeting {meeting.meeting_code}")
-
-        # 计算该小时的偏好度
-        hour_count = hour_preferences.get(candidate_hour, 0)
-        preference_ratio = hour_count / total_meetings if total_meetings > 0 else 0
-
-        return preference_ratio * 20.0
 
     def _calculate_duration_score(
         self, candidate_time: datetime, duration_minutes: int

@@ -70,7 +70,7 @@ class DefectTrendService:
 
             # 5. AI预测分析
             predictions = await self._predict_defect_trends(
-                historical_trend, prediction_days
+                trend_data, defects, (end_date - start_date).days or 30
             )
 
             # 6. 生成改进建议
@@ -923,8 +923,26 @@ class DefectTrendService:
         return suggestions
 
     # AI预测相关方法
+    async def _predict_defect_trends(
+        self,
+        historical_trend: List[DefectTrendData],
+        defects: List[Defect],
+        prediction_days: int,
+    ) -> Dict[str, Any]:
+        """预测缺陷趋势：AI 预测与统计预测相结合。"""
+        ai_predictions = await self._ai_predict_trend_patterns(
+            historical_trend, defects, prediction_days
+        )
+        statistical_predictions = self._statistical_predict_trends(
+            historical_trend, prediction_days
+        )
+        return self._combine_predictions(ai_predictions, statistical_predictions)
+
     async def _ai_predict_trend_patterns(
-        self, historical_trend: List[DefectTrendData], prediction_days: int
+        self,
+        historical_trend: List[DefectTrendData],
+        defects: List[Defect],
+        prediction_days: int,
     ) -> Dict[str, Any]:
         """使用AI预测趋势模式"""
         try:

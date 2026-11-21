@@ -26,6 +26,7 @@ from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.interval import IntervalTrigger
 
 from ..core.config import get_settings
+from ..core.database import get_async_session_ctx
 from ..services.cache_preheating_service import (
     PreheatingPriority,
     PreheatingStrategy,
@@ -492,6 +493,7 @@ async def stop_cache_preheating_scheduler():
     global _scheduler
     if _scheduler:
         await _scheduler.stop()
+        _scheduler = None
 
 
 # 便捷预热函数

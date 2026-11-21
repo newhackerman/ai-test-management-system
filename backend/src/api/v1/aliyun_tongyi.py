@@ -425,7 +425,7 @@ async def test_connection(
             "usage": {
                 "total_tokens": response.usage.total_tokens if response.usage else 0
             },
-            "test_message": test_message,
+            "test_message": request.test_message,
             "timestamp": datetime.utcnow().isoformat(),
         }
 
@@ -434,7 +434,7 @@ async def test_connection(
         return {
             "success": False,
             "error": str(e),
-            "test_message": test_message,
+            "test_message": request.test_message,
             "timestamp": datetime.utcnow().isoformat(),
         }
 

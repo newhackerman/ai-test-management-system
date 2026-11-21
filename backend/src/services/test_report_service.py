@@ -23,11 +23,18 @@ from typing import Any, Dict, List, Optional, Tuple
 # 这些库只在报告生成方法内部使用，延迟到首次调用时再加载即可。
 from jinja2 import Template
 
+# Lazily injected into module globals by _lazy_imports() below; declared
+# here (None until first load) so static analysis sees the names. The
+# guard in _lazy_imports() checks for None, so the lazy behaviour is
+# unchanged: the heavy libraries load only on first report generation.
+plt = None
+sns = None
+
 
 def _lazy_imports():
     """惰性加载重量级绘图库，仅在首次生成报告时调用一次。"""
     g = globals()
-    if "plt" not in g:
+    if g.get("plt") is None:
         import matplotlib
         import pandas as pd
 

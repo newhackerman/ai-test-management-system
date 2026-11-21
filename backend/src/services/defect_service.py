@@ -24,6 +24,7 @@ from ..models.test_case import (
     DefectSeverity,
     DefectStatus,
     DefectType,
+    TestCase,
     TestCasePriority,
 )
 from ..models.user import User

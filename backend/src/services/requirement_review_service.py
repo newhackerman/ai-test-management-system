@@ -28,6 +28,7 @@ from ..models.requirement import (
     Requirement,
     RequirementReview,
     RequirementReviewComment,
+    RequirementStatus,
     ReviewDecision,
     ReviewStatus,
     ReviewType,
@@ -196,7 +197,7 @@ class RequirementReviewService:
             # 3. 更新需求状态为评审中
             await self.requirement_repo.update_requirement_status(
                 review.requirement_id,
-                requirement.RequirementStatus.REVIEWING,
+                RequirementStatus.REVIEWING,
                 moderator_id,
                 "开始评审",
             )
@@ -485,7 +486,7 @@ class RequirementReviewService:
             # 4. 恢复需求状态
             await self.requirement_repo.update_requirement_status(
                 review.requirement_id,
-                requirement.RequirementStatus.DRAFT,
+                RequirementStatus.DRAFT,
                 cancelled_by,
                 f"评审取消: {reason}",
             )
@@ -728,8 +729,6 @@ class RequirementReviewService:
         self, decision: ReviewDecision
     ) -> "RequirementStatus":
         """根据评审决策确定需求状态"""
-        from ..models.requirement import RequirementStatus
-
         status_mapping = {
             ReviewDecision.APPROVED: RequirementStatus.APPROVED,
             ReviewDecision.APPROVED_WITH_MINOR_CHANGES: RequirementStatus.APPROVED,

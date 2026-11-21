@@ -23,7 +23,12 @@ from sqlalchemy import and_, desc, func, or_, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from ..core.cache_config import CacheMonitoring, CacheStrategy, DashboardCacheConfig
+from ..core.cache_config import (
+    CacheMonitoring,
+    CacheNamespace,
+    CacheStrategy,
+    DashboardCacheConfig,
+)
 from ..core.database import get_async_session
 from ..core.exceptions import BusinessLogicError, ValidationError
 from ..models.dashboard_config import DashboardConfig
@@ -1244,9 +1249,10 @@ class DataCacheOptimizationService:
                 logger.error(f"定期健康检查任务异常: {str(e)}")
 
     def _cleanup_error_history(self):
-        """清理错误历史"""
+        """清理错误历史，返回清理掉的过期条目数"""
         cutoff_time = datetime.now() - timedelta(hours=24)  # 保留24小时内的错误
 
+        expired_count = 0
         for key_type in list(self.error_history.keys()):
             errors = self.error_history[key_type]
 
@@ -1256,13 +1262,14 @@ class DataCacheOptimizationService:
                 for error in errors
                 if error.get("timestamp", datetime.min) > cutoff_time
             ]
+            expired_count += len(errors) - len(recent_errors)
 
             if recent_errors:
                 self.error_history[key_type] = recent_errors
             else:
                 del self.error_history[key_type]
 
-        return len(expired_keys)
+        return expired_count
 
     async def _optimize_l2_cache(self) -> bool:
         """优化L2缓存"""

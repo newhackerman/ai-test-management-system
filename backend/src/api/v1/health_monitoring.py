@@ -2,6 +2,7 @@
 健康状态监控API
 """
 
+import logging
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
 
@@ -25,6 +26,8 @@ from ...services.simple_health_check_service import (
     EnhancedHealthCheckService,
     HealthCheckConfig,
 )
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 

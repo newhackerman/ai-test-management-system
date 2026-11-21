@@ -24,7 +24,12 @@ from .chinese_content_router import (
     ChineseRoutingDecision,
 )
 from .cost_control_service import CostControlService
-from .request_queue_service import QueuedRequest, RequestPriority, RequestQueueService
+from .request_queue_service import (
+    QueuedRequest,
+    RequestPriority,
+    RequestQueueService,
+    RequestStatus,
+)
 
 logger = logging.getLogger(__name__)
 settings = get_settings()

@@ -6,7 +6,14 @@ import json
 import logging
 from typing import Any, Dict
 
-from fastapi import APIRouter, Depends, Query, WebSocket, WebSocketDisconnect
+from fastapi import (
+    APIRouter,
+    Depends,
+    HTTPException,
+    Query,
+    WebSocket,
+    WebSocketDisconnect,
+)
 
 from ....core.security import verify_token
 from ....services.realtime_service import RealtimeService, get_realtime_service

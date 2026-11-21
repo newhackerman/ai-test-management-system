@@ -14,6 +14,7 @@ from sqlalchemy.orm import selectinload
 
 from ..core.exceptions import (
     ConflictError,
+    ExecutionError,
     NotFoundError,
     PermissionError,
     ValidationError,

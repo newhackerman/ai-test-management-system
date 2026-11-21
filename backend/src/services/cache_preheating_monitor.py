@@ -754,3 +754,4 @@ async def stop_cache_preheating_monitoring():
     global _monitor_service
     if _monitor_service:
         await _monitor_service.stop_monitoring()
+        _monitor_service = None

@@ -28,6 +28,8 @@ from sqlalchemy import (
     String,
     Text,
     and_,
+    func,
+    or_,
     select,
 )
 from sqlalchemy.ext.asyncio import AsyncSession

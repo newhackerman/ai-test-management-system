@@ -16,7 +16,15 @@ from datetime import datetime, timedelta, timezone
 from enum import Enum
 from typing import Any, Callable, Dict, List, Optional
 
-# from ..adapters.base import BaseAIAdapter, AIRequest, AIResponse, MessageRole, ChatMessage
+from ..adapters.base import (
+    AIRequest,
+    AIResponse,
+    BaseAIAdapter,
+    ChatMessage,
+    MessageRole,
+)
+from ..schemas.ai_model_config import AIModelHealthCheck, HealthStatusEnum
+
 # from ..adapters.adapter_manager import AIAdapterManager, AdapterStatus
 
 logger = logging.getLogger(__name__)
@@ -863,8 +871,6 @@ class HealthCheckService:
 
     async def check_ai_model_health(self, model_config) -> "AIModelHealthCheck":
         """检查AI模型健康状态"""
-        from ..schemas.ai_model_config import AIModelHealthCheck, HealthStatusEnum
-
         try:
             # 模拟健康检查 - 在实际实现中应该调用真实的AI服务
             import time
@@ -892,8 +898,6 @@ class HealthCheckService:
             return AIModelHealthCheck(
                 status=HealthStatusEnum.ERROR, response_time=None, error=str(e)
             )
-
-        return summary
 
     def export_health_report(
         self,

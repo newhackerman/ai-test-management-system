@@ -407,6 +407,17 @@ class ReportGenerator:
         pdf_path: Path,
     ) -> GeneratedReport:
         """使用WeasyPrint生成PDF"""
+        # WeasyPrint is an optional dependency (commented out in
+        # requirements.txt for Windows compatibility): import it lazily
+        # and fail with a clear error instead of NameError when absent.
+        try:
+            from weasyprint import CSS, HTML
+        except ImportError as e:
+            raise RuntimeError(
+                "PDF generation requires the optional 'weasyprint' package, "
+                "which is not installed"
+            ) from e
+
         # 首先生成HTML
         html_report = await self._generate_html_report(config, data, start_time)
 

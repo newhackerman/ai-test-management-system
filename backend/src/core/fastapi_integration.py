@@ -12,7 +12,7 @@ import asyncio
 import logging
 from contextlib import asynccontextmanager
 from functools import wraps
-from typing import Any, Callable, Optional, Type, TypeVar
+from typing import TYPE_CHECKING, Any, Callable, Optional, Type, TypeVar
 
 from fastapi import Depends, HTTPException, Request
 from fastapi.dependencies.utils import get_dependant
@@ -21,6 +21,12 @@ from starlette.responses import Response
 
 from .container import ServiceContainer, ServiceResolutionError, get_container
 from .service_registry import get_service_registry
+
+if TYPE_CHECKING:
+    # Runtime import is local (inside get_ai_router_service) to avoid a
+    # circular import; this only satisfies static analysis for the
+    # string annotation on that function's return type.
+    from ..services.ai_router_service import AIRouterService
 
 logger = logging.getLogger(__name__)
 

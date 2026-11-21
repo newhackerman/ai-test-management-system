@@ -1932,6 +1932,8 @@ class TestProgressService:
         defect_counts: Dict[str, int],
     ) -> List[Dict[str, Any]]:
         """识别风险指标"""
+        from ..models.test_case import DefectStatus, ExecutionStatus
+
         risks = []
 
         # 执行率风险

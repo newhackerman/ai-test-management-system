@@ -379,3 +379,43 @@ def test_screen_share_unknown_session_404(api, wr_meeting):
         json={"session_id": "no-such-session", "share_type": "screen"},
     )
     assert resp.status_code == 404, resp.text[:200]
+
+
+def test_remove_participant_roundtrip(api, wr_project, wr_meeting):
+    """Removing a participant returns 200 and the row is gone.
+
+    Regression for the stray code found 2026-11-21 while fixing the
+    flake8 gate: _send_participant_removal_notification ended with
+    copy-pasted lines from start_meeting (commit + refresh + a log line
+    referencing undefined `user_id`), so every removal raised NameError
+    -> 500 even though the row was already deleted. Uses its own user
+    so the shared wr_second participant is untouched.
+    """
+    user = _make_plain_user(api)
+    try:
+        resp = api.post(
+            f"/api/v1/projects/{wr_project['id']}/members",
+            json={"user_id": user["id"], "role_in_project": "DEVELOPER", "join_date": "2026-11-05"},
+        )
+        assert resp.status_code in (200, 201), f"setup: add member failed: {resp.text[:300]}"
+        resp = api.post(
+            f"/api/v1/meetings/{wr_meeting['id']}/participants",
+            json={"user_id": user["id"], "participant_role": "PARTICIPANT"},
+        )
+        assert resp.status_code == 201, f"setup: add participant failed: {resp.text[:300]}"
+
+        resp = api.delete(
+            f"/api/v1/meetings/{wr_meeting['id']}/participants/{user['id']}"
+        )
+        assert resp.status_code == 200, f"remove participant failed: {resp.text[:300]}"
+
+        listed = api.get(f"/api/v1/meetings/{wr_meeting['id']}/participants")
+        assert listed.status_code == 200
+        assert not any(
+            p.get("user_id") == user["id"] for p in listed.json().get("participants", [])
+        ), "removed participant still listed"
+    finally:
+        try:
+            api.delete(f"/api/v1/users/{user['id']}")
+        except Exception:
+            pass

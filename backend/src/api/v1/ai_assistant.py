@@ -1120,6 +1120,7 @@ async def send_message(
     conversation_id: int,
     request: SendMessageRequest,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
     ai_service: AIAssistantService = Inject(AIAssistantService),
 ):
     """
@@ -1543,6 +1544,7 @@ async def regenerate_ai_response(
     conversation_id: int,
     message_id: int,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
     ai_service: AIAssistantService = Inject(AIAssistantService),
 ):
     """

@@ -32,6 +32,7 @@ from ..models.project import Project
 from ..models.requirement import (
     Requirement,
     RequirementReview,
+    RequirementReviewComment,
     RequirementStatusHistory,
 )
 from ..models.requirement_permission import RequirementAuditLog
