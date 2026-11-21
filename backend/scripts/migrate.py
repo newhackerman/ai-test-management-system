@@ -2,17 +2,19 @@
 """
 数据库迁移管理脚本
 """
+
+import argparse
 import os
 import sys
-import argparse
 from pathlib import Path
 
 # 添加项目根目录到Python路径
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-from alembic.config import Config
 from alembic import command
+from alembic.config import Config
+
 from src.core.config import settings
 
 
@@ -62,34 +64,36 @@ def main():
     """主函数"""
     parser = argparse.ArgumentParser(description="数据库迁移管理工具")
     subparsers = parser.add_subparsers(dest="command", help="可用命令")
-    
+
     # 升级命令
     upgrade_parser = subparsers.add_parser("upgrade", help="升级数据库")
     upgrade_parser.add_argument("--revision", default="head", help="目标版本")
     upgrade_parser.add_argument("--sql", action="store_true", help="生成SQL脚本")
-    
+
     # 降级命令
     downgrade_parser = subparsers.add_parser("downgrade", help="降级数据库")
     downgrade_parser.add_argument("--revision", default="-1", help="目标版本")
     downgrade_parser.add_argument("--sql", action="store_true", help="生成SQL脚本")
-    
+
     # 创建迁移文件命令
     revision_parser = subparsers.add_parser("revision", help="创建新的迁移文件")
     revision_parser.add_argument("--message", "-m", required=True, help="迁移文件描述")
-    revision_parser.add_argument("--autogenerate", action="store_true", help="自动生成迁移内容")
-    
+    revision_parser.add_argument(
+        "--autogenerate", action="store_true", help="自动生成迁移内容"
+    )
+
     # 当前版本命令
     subparsers.add_parser("current", help="显示当前数据库版本")
-    
+
     # 历史记录命令
     subparsers.add_parser("history", help="显示数据库迁移历史")
-    
+
     args = parser.parse_args()
-    
+
     if not args.command:
         parser.print_help()
         return
-    
+
     if args.command == "upgrade":
         upgrade(args.revision, args.sql)
     elif args.command == "downgrade":

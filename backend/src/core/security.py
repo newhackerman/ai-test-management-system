@@ -1,17 +1,18 @@
 """
 安全相关工具函数
 """
-import bcrypt
+
 import secrets
 import string
 from datetime import datetime, timedelta
-from typing import Optional, Union, Dict, Any
+from typing import Any, Dict, Optional, Union
 
+import bcrypt
+from fastapi import Depends, HTTPException, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from pydantic import EmailStr
-from fastapi import Depends, HTTPException, status
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 from .config import settings
 
@@ -25,11 +26,11 @@ security = HTTPBearer()
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """
     验证密码
-    
+
     Args:
         plain_password: 明文密码
         hashed_password: 哈希密码
-        
+
     Returns:
         bool: 密码是否匹配
     """
@@ -39,10 +40,10 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 def get_password_hash(password: str) -> str:
     """
     获取密码哈希值
-    
+
     Args:
         password: 明文密码
-        
+
     Returns:
         str: 哈希密码
     """
@@ -50,16 +51,15 @@ def get_password_hash(password: str) -> str:
 
 
 def create_access_token(
-    data: Dict[str, Any], 
-    expires_delta: Optional[timedelta] = None
+    data: Dict[str, Any], expires_delta: Optional[timedelta] = None
 ) -> str:
     """
     创建访问令牌
-    
+
     Args:
         data: 令牌数据
         expires_delta: 过期时间
-        
+
     Returns:
         str: 访问令牌
     """
@@ -70,12 +70,10 @@ def create_access_token(
         expire = datetime.utcnow() + timedelta(
             minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES
         )
-    
+
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(
-        to_encode, 
-        settings.JWT_SECRET_KEY, 
-        algorithm=settings.JWT_ALGORITHM
+        to_encode, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM
     )
     return encoded_jwt
 
@@ -83,18 +81,16 @@ def create_access_token(
 def verify_token(token: str) -> Optional[Dict[str, Any]]:
     """
     验证令牌
-    
+
     Args:
         token: 访问令牌
-        
+
     Returns:
         Optional[Dict[str, Any]]: 令牌数据，验证失败返回None
     """
     try:
         payload = jwt.decode(
-            token, 
-            settings.JWT_SECRET_KEY, 
-            algorithms=[settings.JWT_ALGORITHM]
+            token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM]
         )
         return payload
     except JWTError:
@@ -104,10 +100,10 @@ def verify_token(token: str) -> Optional[Dict[str, Any]]:
 def generate_random_password(length: int = 12) -> str:
     """
     生成随机密码
-    
+
     Args:
         length: 密码长度
-        
+
     Returns:
         str: 随机密码
     """
@@ -116,33 +112,33 @@ def generate_random_password(length: int = 12) -> str:
     uppercase = string.ascii_uppercase
     digits = string.digits
     special = string.punctuation
-    
+
     # 从每个类别中至少选择一个字符
     password = [
         secrets.choice(lowercase),
         secrets.choice(uppercase),
         secrets.choice(digits),
-        secrets.choice(special)
+        secrets.choice(special),
     ]
-    
+
     # 填充剩余长度
     all_chars = lowercase + uppercase + digits + special
     for _ in range(length - 4):
         password.append(secrets.choice(all_chars))
-    
+
     # 打乱字符顺序
     secrets.SystemRandom().shuffle(password)
-    
+
     return "".join(password)
 
 
 def generate_secure_token(length: int = 32) -> str:
     """
     生成安全令牌
-    
+
     Args:
         length: 令牌长度
-        
+
     Returns:
         str: 安全令牌
     """
@@ -152,10 +148,10 @@ def generate_secure_token(length: int = 32) -> str:
 def is_valid_email(email: str) -> bool:
     """
     验证邮箱格式
-    
+
     Args:
         email: 邮箱地址
-        
+
     Returns:
         bool: 邮箱格式是否有效
     """
@@ -169,22 +165,22 @@ def is_valid_email(email: str) -> bool:
 def is_strong_password(password: str) -> bool:
     """
     检查密码强度
-    
+
     Args:
         password: 密码
-        
+
     Returns:
         bool: 密码是否足够强
     """
     if len(password) < settings.MIN_PASSWORD_LENGTH:
         return False
-    
+
     # 检查密码复杂度
     has_lowercase = any(c.islower() for c in password)
     has_uppercase = any(c.isupper() for c in password)
     has_digit = any(c.isdigit() for c in password)
     has_special = any(c in string.punctuation for c in password)
-    
+
     # 至少包含三种类型的字符
     complexity_score = sum([has_lowercase, has_uppercase, has_digit, has_special])
     return complexity_score >= 3
@@ -193,10 +189,10 @@ def is_strong_password(password: str) -> bool:
 def sanitize_input(input_str: str) -> str:
     """
     清理输入字符串，防止XSS攻击
-    
+
     Args:
         input_str: 输入字符串
-        
+
     Returns:
         str: 清理后的字符串
     """
@@ -228,7 +224,9 @@ class _UserAttrDict(dict):
         self[name] = value
 
 
-async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)) -> _UserAttrDict:
+async def get_current_user(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+) -> _UserAttrDict:
     """
     获取当前用户信息
 
@@ -260,27 +258,33 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
         # 目前返回基本信息。is_admin/is_superuser/role 通过 _UserAttrDict 的
         # 安全默认值返回（见 _UserAttrDict.__getattr__），避免在每次认证请求
         # 里做同步 DB 查询导致连接池耗尽与事件循环阻塞。
-        return _UserAttrDict({
-            "id": int(user_id),
-            "username": payload.get("username"),
-            "email": payload.get("email"),
-            "is_active": payload.get("is_active", True),
-            "is_superuser": payload.get("is_superuser", payload.get("is_admin", False)),
-            "is_admin": payload.get("is_admin", payload.get("is_superuser", False)),
-            "role": payload.get("role"),
-        })
+        return _UserAttrDict(
+            {
+                "id": int(user_id),
+                "username": payload.get("username"),
+                "email": payload.get("email"),
+                "is_active": payload.get("is_active", True),
+                "is_superuser": payload.get(
+                    "is_superuser", payload.get("is_admin", False)
+                ),
+                "is_admin": payload.get("is_admin", payload.get("is_superuser", False)),
+                "role": payload.get("role"),
+            }
+        )
 
     except Exception:
         raise credentials_exception
 
 
-def get_current_user_optional(credentials: HTTPAuthorizationCredentials = Depends(security)) -> Optional[Dict[str, Any]]:
+def get_current_user_optional(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+) -> Optional[Dict[str, Any]]:
     """
     获取当前用户信息（可选）
-    
+
     Args:
         credentials: HTTP认证凭据
-        
+
     Returns:
         Optional[Dict[str, Any]]: 用户信息，认证失败返回None
     """

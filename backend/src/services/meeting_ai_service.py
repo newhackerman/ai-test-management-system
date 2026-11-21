@@ -19,37 +19,41 @@
 - 与主系统AI服务无缝集成
 - 全面的操作日志记录和监控
 """
+
 import asyncio
 import json
 import logging
 import re
 import uuid
+from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta
-from pathlib import Path
-from typing import Dict, List, Optional, Any, Union, Tuple
-from enum import Enum
-from dataclasses import dataclass, asdict
 from decimal import Decimal
+from enum import Enum
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple, Union
 
+from sqlalchemy import and_, asc, desc, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_, or_, func, desc, asc
-from sqlalchemy.orm import selectinload, joinedload
+from sqlalchemy.orm import joinedload, selectinload
 
 from ..core.config import get_settings
-from ..core.exceptions import ValidationError, NotFoundError, PermissionError, ConfigurationError
-from ..models.meeting import (
-    Meeting as MeetingORM,
-    MeetingParticipant as MeetingParticipantORM,
-    MeetingChat as MeetingChatORM,
-    MeetingFile as MeetingFileORM,
-    MeetingMinutes as MeetingMinutesORM,
-    MeetingAnalytics as MeetingAnalyticsORM,
-    MeetingSummary as MeetingSummaryORM,
-    MeetingTask as MeetingTaskORM,
-    MinuteType as MinuteTypeORM,
-    GenerationMethod as GenerationMethodORM,
-    MinuteStatus as MinuteStatusORM,
+from ..core.exceptions import (
+    ConfigurationError,
+    NotFoundError,
+    PermissionError,
+    ValidationError,
 )
+from ..models.meeting import GenerationMethod as GenerationMethodORM
+from ..models.meeting import Meeting as MeetingORM
+from ..models.meeting import MeetingAnalytics as MeetingAnalyticsORM
+from ..models.meeting import MeetingChat as MeetingChatORM
+from ..models.meeting import MeetingFile as MeetingFileORM
+from ..models.meeting import MeetingMinutes as MeetingMinutesORM
+from ..models.meeting import MeetingParticipant as MeetingParticipantORM
+from ..models.meeting import MeetingSummary as MeetingSummaryORM
+from ..models.meeting import MeetingTask as MeetingTaskORM
+from ..models.meeting import MinuteStatus as MinuteStatusORM
+from ..models.meeting import MinuteType as MinuteTypeORM
 from ..models.project import Task as ProjectTask
 from ..models.user import User
 
@@ -59,6 +63,7 @@ settings = get_settings()
 
 class AnalysisType(Enum):
     """分析类型枚举"""
+
     SUMMARY = "summary"
     DECISIONS = "decisions"
     ACTION_ITEMS = "action_items"
@@ -71,6 +76,7 @@ class AnalysisType(Enum):
 
 class MinuteType(Enum):
     """纪要类型枚举"""
+
     AUTO_GENERATED = "AUTO_GENERATED"
     MANUAL_CREATED = "MANUAL_CREATED"
     AI_ENHANCED = "AI_ENHANCED"
@@ -79,6 +85,7 @@ class MinuteType(Enum):
 
 class GenerationMethod(Enum):
     """生成方式枚举"""
+
     SPEECH_TO_TEXT = "SPEECH_TO_TEXT"
     MANUAL_INPUT = "MANUAL_INPUT"
     AI_ANALYSIS = "AI_ANALYSIS"
@@ -88,6 +95,7 @@ class GenerationMethod(Enum):
 @dataclass
 class MeetingSummary:
     """会议摘要数据类"""
+
     meeting_id: int
     overview: str
     key_points: List[str]
@@ -97,7 +105,7 @@ class MeetingSummary:
     participants_analysis: Dict[str, Any]
     generated_at: datetime
     confidence_score: float = 0.0
-    
+
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
 
@@ -105,6 +113,7 @@ class MeetingSummary:
 @dataclass
 class ActionItem:
     """行动项目数据类"""
+
     meeting_id: int
     task_description: str
     assignee_name: str
@@ -115,11 +124,11 @@ class ActionItem:
     status: str = "PENDING"
     extracted_at: datetime = None
     confidence_score: float = 0.0
-    
+
     def __post_init__(self):
         if self.extracted_at is None:
             self.extracted_at = datetime.utcnow()
-    
+
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
 
@@ -127,6 +136,7 @@ class ActionItem:
 @dataclass
 class EffectivenessAnalysis:
     """会议效果分析数据类"""
+
     meeting_id: int
     overall_score: float
     participation_metrics: List[Dict[str, Any]]  # 逐人指标（真实参会行推导）
@@ -148,13 +158,14 @@ class EffectivenessAnalysis:
 @dataclass
 class TranscriptSegment:
     """转录片段数据类"""
+
     speaker_id: Optional[int]
     speaker_name: str
     content: str
     start_time: float
     end_time: float
     confidence: float = 0.0
-    
+
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
 
@@ -162,6 +173,7 @@ class TranscriptSegment:
 @dataclass
 class MeetingMinutes:
     """会议纪要数据类"""
+
     meeting_id: int
     title: str
     content: str
@@ -173,36 +185,36 @@ class MeetingMinutes:
     action_items: List[Dict[str, Any]]
     attendees: List[str]
     key_points: List[Dict[str, Any]]
-    status: str = 'DRAFT'
-    version: str = '1.0'
+    status: str = "DRAFT"
+    version: str = "1.0"
     created_by: Optional[int] = None
     created_at: datetime = None
-    
+
     def __post_init__(self):
         if self.created_at is None:
             self.created_at = datetime.utcnow()
-        
+
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
 
 
 class MeetingAIService:
     """会议AI分析核心服务"""
-    
+
     def __init__(self, db: AsyncSession):
         self.db = db
-        
+
         # AI提示词模板
         self.prompt_templates = {
-            'summary': self._get_summary_prompt_template(),
-            'decisions': self._get_decisions_prompt_template(),
-            'action_items': self._get_action_items_prompt_template(),
-            'key_points': self._get_key_points_prompt_template(),
-            'effectiveness': self._get_effectiveness_prompt_template(),
-            'sentiment': self._get_sentiment_prompt_template(),
-            'minutes': self._get_minutes_prompt_template()
+            "summary": self._get_summary_prompt_template(),
+            "decisions": self._get_decisions_prompt_template(),
+            "action_items": self._get_action_items_prompt_template(),
+            "key_points": self._get_key_points_prompt_template(),
+            "effectiveness": self._get_effectiveness_prompt_template(),
+            "sentiment": self._get_sentiment_prompt_template(),
+            "minutes": self._get_minutes_prompt_template(),
         }
-    
+
     async def _get_meeting_or_404(self, meeting_id: int) -> MeetingORM:
         """查会议行，不存在则 404。"""
         meeting = await self.db.get(MeetingORM, meeting_id)
@@ -210,7 +222,9 @@ class MeetingAIService:
             raise NotFoundError(f"会议 {meeting_id} 不存在")
         return meeting
 
-    async def get_meeting_summary(self, meeting_id: int, user_id: int = None) -> Optional[Dict[str, Any]]:
+    async def get_meeting_summary(
+        self, meeting_id: int, user_id: int = None
+    ) -> Optional[Dict[str, Any]]:
         """从 meeting_summaries 表读最新一条摘要；无则返回 None。"""
         await self._get_meeting_or_404(meeting_id)
         result = await self.db.execute(
@@ -222,8 +236,15 @@ class MeetingAIService:
         row = result.scalar_one_or_none()
         return row.to_response_dict() if row else None
 
-    async def get_meeting_minutes(self, meeting_id: int, user_id: int = None, *,
-                                  status=None, minute_type=None, version=None) -> List[MeetingMinutesORM]:
+    async def get_meeting_minutes(
+        self,
+        meeting_id: int,
+        user_id: int = None,
+        *,
+        status=None,
+        minute_type=None,
+        version=None,
+    ) -> List[MeetingMinutesORM]:
         """从 meeting_minutes 表读纪要列表（支持状态/类型/版本筛选）。"""
         await self._get_meeting_or_404(meeting_id)
         stmt = (
@@ -235,22 +256,27 @@ class MeetingAIService:
             status_value = status.value if hasattr(status, "value") else status
             stmt = stmt.where(MeetingMinutesORM.status == status_value)
         if minute_type is not None:
-            type_value = minute_type.value if hasattr(minute_type, "value") else minute_type
+            type_value = (
+                minute_type.value if hasattr(minute_type, "value") else minute_type
+            )
             stmt = stmt.where(MeetingMinutesORM.minute_type == type_value)
         if version is not None:
             stmt = stmt.where(MeetingMinutesORM.version == version)
         result = await self.db.execute(stmt)
         return list(result.scalars().all())
 
-    async def get_advanced_analytics(self, meeting_id: int, user_id: int = None) -> Optional[Dict[str, Any]]:
+    async def get_advanced_analytics(
+        self, meeting_id: int, user_id: int = None
+    ) -> Optional[Dict[str, Any]]:
         """
         获取高级分析（未实现：依赖转录 + 主题/情感模型，暂无真实数据源，
         返回 None，由路由层转为 404；不要用假数据填充）。
         """
         return None
 
-    async def generate_meeting_analytics(self, meeting_id: int, user_id: int = None,
-                                         *, force_regenerate: bool = False) -> Optional[Dict[str, Any]]:
+    async def generate_meeting_analytics(
+        self, meeting_id: int, user_id: int = None, *, force_regenerate: bool = False
+    ) -> Optional[Dict[str, Any]]:
         """生成会议分析并持久化到 meeting_analytics 表（按 meeting_id upsert）。
 
         选择持久化而不是删端点：GET /analytics 本就是即时计算，生成端点
@@ -261,7 +287,9 @@ class MeetingAIService:
         response = self.analytics_to_response_dict(analysis)
 
         result = await self.db.execute(
-            select(MeetingAnalyticsORM).where(MeetingAnalyticsORM.meeting_id == meeting_id)
+            select(MeetingAnalyticsORM).where(
+                MeetingAnalyticsORM.meeting_id == meeting_id
+            )
         )
         row = result.scalar_one_or_none()
         details = analysis.to_dict() if hasattr(analysis, "to_dict") else dict(analysis)
@@ -272,17 +300,25 @@ class MeetingAIService:
             self.db.add(row)
         per_person = details.get("participation_metrics") or []
         total_participants = len(per_person)
-        total_speak = sum(float(p.get("speaking_time_minutes") or 0) for p in per_person)
+        total_speak = sum(
+            float(p.get("speaking_time_minutes") or 0) for p in per_person
+        )
         participation = details.get("participation_summary") or {}
         row.total_participants = total_participants
         row.peak_participants = total_participants
         row.avg_participation_rate = participation.get("participation_rate")
         row.total_speaking_time = int(total_speak * 60)
-        row.avg_speaking_time_per_person = int(total_speak * 60 / total_participants) if total_participants else 0
+        row.avg_speaking_time_per_person = (
+            int(total_speak * 60 / total_participants) if total_participants else 0
+        )
         row.total_chat_messages = details.get("total_chat_messages", 0)
         row.total_file_shares = details.get("total_file_shares", 0)
-        row.agenda_completion_rate = details.get("agenda_completion", {}).get("completion_rate")
-        row.decision_count = details.get("decision_efficiency", {}).get("total_decisions", 0)
+        row.agenda_completion_rate = details.get("agenda_completion", {}).get(
+            "completion_rate"
+        )
+        row.decision_count = details.get("decision_efficiency", {}).get(
+            "total_decisions", 0
+        )
         row.action_item_count = details.get("action_item_count", 0)
         row.overall_sentiment_score = None  # 无转录，情感分数无真实来源，不写数字
         row.engagement_score = participation.get("engagement_score")
@@ -292,7 +328,9 @@ class MeetingAIService:
         await self.db.refresh(row)
         return response
 
-    async def get_meeting_transcription(self, meeting_id: int, user_id: int = None) -> Optional[Dict[str, Any]]:
+    async def get_meeting_transcription(
+        self, meeting_id: int, user_id: int = None
+    ) -> Optional[Dict[str, Any]]:
         """
         获取会议转录。
 
@@ -327,7 +365,9 @@ class MeetingAIService:
             # "OpenAI API key 未配置"。其它 RuntimeError（上游 HTTP
             # 错误、空响应等）原样抛出，仍走 500。
             message = str(exc)
-            if ("未配置" in message and "API Key" in message) or "API key 未配置" in message:
+            if (
+                "未配置" in message and "API Key" in message
+            ) or "API key 未配置" in message:
                 raise ConfigurationError(
                     "AI 服务未配置 API Key，请在后端 .env 中设置 OPENAI_API_KEY 后重启服务",
                     config_key="OPENAI_API_KEY",
@@ -339,7 +379,7 @@ class MeetingAIService:
         if start < 0 or end <= start:
             raise RuntimeError("LLM 未返回 JSON 内容，无法解析会议摘要")
         try:
-            parsed = json.loads(text[start:end + 1])
+            parsed = json.loads(text[start : end + 1])
         except json.JSONDecodeError as exc:
             raise RuntimeError(f"LLM 返回内容不是合法 JSON: {exc}") from exc
         if not isinstance(parsed, dict):
@@ -363,12 +403,30 @@ class MeetingAIService:
                 "id": meeting.id,
                 "title": meeting.title,
                 "description": meeting.description,
-                "meeting_type": meeting.meeting_type.value if meeting.meeting_type else None,
+                "meeting_type": (
+                    meeting.meeting_type.value if meeting.meeting_type else None
+                ),
                 "status": meeting.status.value if meeting.status else None,
-                "scheduled_start_time": meeting.scheduled_start_time.isoformat() if meeting.scheduled_start_time else None,
-                "scheduled_end_time": meeting.scheduled_end_time.isoformat() if meeting.scheduled_end_time else None,
-                "actual_start_time": meeting.actual_start_time.isoformat() if meeting.actual_start_time else None,
-                "actual_end_time": meeting.actual_end_time.isoformat() if meeting.actual_end_time else None,
+                "scheduled_start_time": (
+                    meeting.scheduled_start_time.isoformat()
+                    if meeting.scheduled_start_time
+                    else None
+                ),
+                "scheduled_end_time": (
+                    meeting.scheduled_end_time.isoformat()
+                    if meeting.scheduled_end_time
+                    else None
+                ),
+                "actual_start_time": (
+                    meeting.actual_start_time.isoformat()
+                    if meeting.actual_start_time
+                    else None
+                ),
+                "actual_end_time": (
+                    meeting.actual_end_time.isoformat()
+                    if meeting.actual_end_time
+                    else None
+                ),
                 "duration_minutes": meeting.duration_minutes,
                 "agenda": meeting.agenda or [],
             },
@@ -411,15 +469,21 @@ class MeetingAIService:
         if chats:
             lines.append("聊天记录（最近 50 条，发言人: 内容）：")
             for chat in chats[-50:]:
-                lines.append(f"- {chat.get('sender_name')}: {(chat.get('content') or '')[:200]}")
+                lines.append(
+                    f"- {chat.get('sender_name')}: {(chat.get('content') or '')[:200]}"
+                )
         else:
             lines.append("聊天记录：（无）")
         files = context.get("files") or []
         if files:
-            lines.append("共享文件：" + "、".join(f.get("file_name") or "" for f in files[:10]))
+            lines.append(
+                "共享文件：" + "、".join(f.get("file_name") or "" for f in files[:10])
+            )
         else:
             lines.append("共享文件：（无）")
-        lines.append("转录文本：（无——本次会议没有可用的语音转录，不得编造任何发言内容、发言人或引用；只能依据上述议程、聊天记录和文件总结；没有信息的地方明确写“未提供/未知”，不要猜测）")
+        lines.append(
+            "转录文本：（无——本次会议没有可用的语音转录，不得编造任何发言内容、发言人或引用；只能依据上述议程、聊天记录和文件总结；没有信息的地方明确写“未提供/未知”，不要猜测）"
+        )
         return "\n".join(lines)
 
     @staticmethod
@@ -451,8 +515,13 @@ class MeetingAIService:
         except ValueError:
             return None
 
-    def _map_llm_summary(self, parsed: Dict[str, Any], meeting_id: int,
-                         context: Dict[str, Any], language: str) -> Dict[str, Any]:
+    def _map_llm_summary(
+        self,
+        parsed: Dict[str, Any],
+        meeting_id: int,
+        context: Dict[str, Any],
+        language: str,
+    ) -> Dict[str, Any]:
         """把 LLM 返回的 JSON 映射成 MeetingSummaryResponse 形状的字典。"""
         meeting = context["meeting"]
         overview = str(parsed.get("overview") or "").strip()
@@ -471,13 +540,19 @@ class MeetingAIService:
             content = str(item.get("content") or title).strip()
             if not title:
                 continue
-            key_points.append({
-                "title": title[:100],
-                "content": content,
-                "importance": self._coerce_importance(item.get("importance")),
-                "timestamp": None,
-                "participants": item.get("participants") if isinstance(item.get("participants"), list) else None,
-            })
+            key_points.append(
+                {
+                    "title": title[:100],
+                    "content": content,
+                    "importance": self._coerce_importance(item.get("importance")),
+                    "timestamp": None,
+                    "participants": (
+                        item.get("participants")
+                        if isinstance(item.get("participants"), list)
+                        else None
+                    ),
+                }
+            )
         decisions = []
         for i, item in enumerate(parsed.get("decisions") or []):
             if not isinstance(item, dict):
@@ -485,16 +560,23 @@ class MeetingAIService:
             title = str(item.get("title") or item.get("decision") or "").strip()
             if not title:
                 continue
-            decisions.append({
-                "decision_id": f"dec-{i + 1}",
-                "title": title[:200],
-                "description": str(item.get("description") or title),
-                "decision_maker": item.get("decision_maker") or item.get("responsible"),
-                "impact_level": self._coerce_impact(item.get("impact_level") or item.get("priority")),
-                "implementation_date": self._parse_due_date(item.get("implementation_date") or item.get("deadline")),
-                "status": "pending",
-                "related_requirements": None,
-            })
+            decisions.append(
+                {
+                    "decision_id": f"dec-{i + 1}",
+                    "title": title[:200],
+                    "description": str(item.get("description") or title),
+                    "decision_maker": item.get("decision_maker")
+                    or item.get("responsible"),
+                    "impact_level": self._coerce_impact(
+                        item.get("impact_level") or item.get("priority")
+                    ),
+                    "implementation_date": self._parse_due_date(
+                        item.get("implementation_date") or item.get("deadline")
+                    ),
+                    "status": "pending",
+                    "related_requirements": None,
+                }
+            )
         action_items = []
         for i, item in enumerate(parsed.get("action_items") or []):
             if not isinstance(item, dict):
@@ -502,23 +584,36 @@ class MeetingAIService:
             title = str(item.get("title") or item.get("task") or "").strip()
             if not title:
                 continue
-            action_items.append({
-                "action_id": f"act-{i + 1}",
-                "title": title[:200],
-                "description": str(item.get("description") or item.get("context") or title),
-                "assignee": item.get("assignee"),
-                "due_date": self._parse_due_date(item.get("due_date") or item.get("deadline")),
-                "priority": self._coerce_priority(item.get("priority")),
-                "status": "pending",
-                "estimated_hours": item.get("estimated_hours"),
-                "dependencies": item.get("dependencies") if isinstance(item.get("dependencies"), list) else None,
-            })
+            action_items.append(
+                {
+                    "action_id": f"act-{i + 1}",
+                    "title": title[:200],
+                    "description": str(
+                        item.get("description") or item.get("context") or title
+                    ),
+                    "assignee": item.get("assignee"),
+                    "due_date": self._parse_due_date(
+                        item.get("due_date") or item.get("deadline")
+                    ),
+                    "priority": self._coerce_priority(item.get("priority")),
+                    "status": "pending",
+                    "estimated_hours": item.get("estimated_hours"),
+                    "dependencies": (
+                        item.get("dependencies")
+                        if isinstance(item.get("dependencies"), list)
+                        else None
+                    ),
+                }
+            )
         next_steps = [
-            str(s).strip() for s in (parsed.get("next_steps") or [])
+            str(s).strip()
+            for s in (parsed.get("next_steps") or [])
             if isinstance(s, str) and s.strip()
         ]
         participants = context.get("participants") or []
-        joined = [p for p in participants if p.get("attendance_status") in ("JOINED", "LEFT")]
+        joined = [
+            p for p in participants if p.get("attendance_status") in ("JOINED", "LEFT")
+        ]
         participants_summary = {
             "total_participants": len(participants),
             "joined_participants": len(joined),
@@ -526,7 +621,9 @@ class MeetingAIService:
             "transcript_available": False,
         }
         meeting_effectiveness = {
-            "participation_rate": (len(joined) / len(participants)) if participants else 0.0,
+            "participation_rate": (
+                (len(joined) / len(participants)) if participants else 0.0
+            ),
             "transcript_available": False,
             "note": "无转录文本；效果评估仅基于参会记录，未做内容/情感分析。",
         }
@@ -546,8 +643,9 @@ class MeetingAIService:
             "_llm_confidence": parsed.get("_llm_confidence", 0.0),
         }
 
-    async def _llm_analyze_meeting(self, meeting_id: int, request: Any = None,
-                                   language: str = "zh-CN") -> Dict[str, Any]:
+    async def _llm_analyze_meeting(
+        self, meeting_id: int, request: Any = None, language: str = "zh-CN"
+    ) -> Dict[str, Any]:
         """一次 LLM 调用完成摘要/要点/决策/行动项/下一步的全部生成。
 
         prompt 只含真实上下文；转录缺失时明确要求不得编造发言。
@@ -582,8 +680,9 @@ class MeetingAIService:
         return self._map_llm_summary(parsed, meeting_id, context, language)
 
     @staticmethod
-    def _split_summary_args(request_or_user: Any = None, user_id: Any = None,
-                            language: str = "zh-CN"):
+    def _split_summary_args(
+        request_or_user: Any = None, user_id: Any = None, language: str = "zh-CN"
+    ):
         """兼容两种调用形态：路由传 (request, user_id)，旧调用传 (user_id, language)。"""
         request = None
         if request_or_user is not None and hasattr(request_or_user, "model_fields_set"):
@@ -593,19 +692,28 @@ class MeetingAIService:
             user_id = request_or_user
         return request, user_id, language
 
-    async def generate_meeting_summary(self, meeting_id: int, request_or_user: Any = None,
-                                       user_id: Any = None, language: str = 'zh-CN') -> Dict[str, Any]:
+    async def generate_meeting_summary(
+        self,
+        meeting_id: int,
+        request_or_user: Any = None,
+        user_id: Any = None,
+        language: str = "zh-CN",
+    ) -> Dict[str, Any]:
         """生成会议摘要（一次 LLM 调用）并 upsert 到 meeting_summaries 表。
 
         路由调用形态：generate_meeting_summary(meeting_id, request, user_id)。
         返回 MeetingSummaryResponse 形状的字典。
         """
-        request, user_id, language = self._split_summary_args(request_or_user, user_id, language)
+        request, user_id, language = self._split_summary_args(
+            request_or_user, user_id, language
+        )
         try:
             summary = await self._llm_analyze_meeting(meeting_id, request, language)
 
             result = await self.db.execute(
-                select(MeetingSummaryORM).where(MeetingSummaryORM.meeting_id == meeting_id)
+                select(MeetingSummaryORM).where(
+                    MeetingSummaryORM.meeting_id == meeting_id
+                )
             )
             row = result.scalar_one_or_none()
             if row is None:
@@ -637,11 +745,11 @@ class MeetingAIService:
                 operation_type="SUMMARY_GENERATION",
                 operation_result="SUCCESS",
                 details={
-                    'meeting_id': meeting_id,
-                    'language': language,
-                    'content_length': len(summary["overview"]),
-                    'model': summary.get("_llm_model"),
-                }
+                    "meeting_id": meeting_id,
+                    "language": language,
+                    "content_length": len(summary["overview"]),
+                    "model": summary.get("_llm_model"),
+                },
             )
             summary.pop("_llm_model", None)
             summary.pop("_llm_confidence", None)
@@ -654,32 +762,39 @@ class MeetingAIService:
                 user_id=user_id if isinstance(user_id, int) else 0,
                 operation_type="SUMMARY_GENERATION",
                 operation_result="ERROR",
-                details={'meeting_id': meeting_id, 'error': str(e)}
+                details={"meeting_id": meeting_id, "error": str(e)},
             )
             raise
-    
-    async def extract_action_items(self, meeting_id: int, user_id: int = None,
-                                 language: str = 'zh-CN') -> List[ActionItem]:
+
+    async def extract_action_items(
+        self, meeting_id: int, user_id: int = None, language: str = "zh-CN"
+    ) -> List[ActionItem]:
         """提取行动项目：复用摘要生成的一次 LLM 调用结果映射，不再用罐头。"""
         try:
             summary = await self._llm_analyze_meeting(meeting_id, None, language)
             action_items = []
             for item_data in summary.get("action_items") or []:
-                action_items.append(ActionItem(
-                    meeting_id=meeting_id,
-                    task_description=item_data.get("title", ""),
-                    assignee_name=item_data.get("assignee") or "",
-                    deadline=item_data.get("due_date"),
-                    priority=(item_data.get("priority") or "medium").upper(),
-                    context=item_data.get("description", ""),
-                    status="PENDING",
-                    confidence_score=0.0,
-                ))
+                action_items.append(
+                    ActionItem(
+                        meeting_id=meeting_id,
+                        task_description=item_data.get("title", ""),
+                        assignee_name=item_data.get("assignee") or "",
+                        deadline=item_data.get("due_date"),
+                        priority=(item_data.get("priority") or "medium").upper(),
+                        context=item_data.get("description", ""),
+                        status="PENDING",
+                        confidence_score=0.0,
+                    )
+                )
             await self._log_operation(
                 user_id=user_id if isinstance(user_id, int) else 0,
                 operation_type="ACTION_ITEMS_EXTRACTION",
                 operation_result="SUCCESS",
-                details={'meeting_id': meeting_id, 'items_count': len(action_items), 'language': language}
+                details={
+                    "meeting_id": meeting_id,
+                    "items_count": len(action_items),
+                    "language": language,
+                },
             )
             return action_items
         except Exception as e:
@@ -688,11 +803,13 @@ class MeetingAIService:
                 user_id=user_id if isinstance(user_id, int) else 0,
                 operation_type="ACTION_ITEMS_EXTRACTION",
                 operation_result="ERROR",
-                details={'meeting_id': meeting_id, 'error': str(e)}
+                details={"meeting_id": meeting_id, "error": str(e)},
             )
             raise
-    
-    async def analyze_meeting_effectiveness(self, meeting_id: int, user_id: int = None) -> EffectivenessAnalysis:
+
+    async def analyze_meeting_effectiveness(
+        self, meeting_id: int, user_id: int = None
+    ) -> EffectivenessAnalysis:
         """
         分析会议效果（全部指标来自真实参会/聊天/文件/议程记录；无转录时
         情感分析明确标 unknown，不编分数）。
@@ -717,7 +834,9 @@ class MeetingAIService:
             )
 
             # 4. 决策效率分析（决策数取已持久化摘要的真实计数）
-            decision_efficiency = await self._analyze_decision_efficiency(meeting_id, transcripts)
+            decision_efficiency = await self._analyze_decision_efficiency(
+                meeting_id, transcripts
+            )
 
             # 5. 时间利用率分析
             time_utilization = await self._analyze_time_utilization(
@@ -733,7 +852,7 @@ class MeetingAIService:
                 agenda_completion,
                 decision_efficiency,
                 time_utilization,
-                sentiment_analysis
+                sentiment_analysis,
             )
 
             # 8. 计算总体效果评分
@@ -741,7 +860,7 @@ class MeetingAIService:
                 participation_summary,
                 agenda_completion,
                 decision_efficiency,
-                time_utilization
+                time_utilization,
             )
 
             # 9. 聊天/文件真实计数 + 已持久化行动项数
@@ -765,33 +884,35 @@ class MeetingAIService:
                 total_file_shares=total_file_shares,
                 action_item_count=action_item_count,
             )
-            
+
             # 10. 记录操作日志
             await self._log_operation(
                 user_id=user_id,
                 operation_type="EFFECTIVENESS_ANALYSIS",
                 operation_result="SUCCESS",
                 details={
-                    'meeting_id': meeting_id,
-                    'overall_score': overall_score,
-                    'suggestions_count': len(improvement_suggestions)
-                }
+                    "meeting_id": meeting_id,
+                    "overall_score": overall_score,
+                    "suggestions_count": len(improvement_suggestions),
+                },
             )
-            
+
             return analysis
-            
+
         except Exception as e:
             logger.error(f"分析会议效果失败: {str(e)}")
             await self._log_operation(
                 user_id=user_id,
                 operation_type="EFFECTIVENESS_ANALYSIS",
                 operation_result="ERROR",
-                details={'meeting_id': meeting_id, 'error': str(e)}
+                details={"meeting_id": meeting_id, "error": str(e)},
             )
             raise
-    
+
     @staticmethod
-    def analytics_to_response_dict(analysis: Union[EffectivenessAnalysis, Dict[str, Any]]) -> Dict[str, Any]:
+    def analytics_to_response_dict(
+        analysis: Union[EffectivenessAnalysis, Dict[str, Any]],
+    ) -> Dict[str, Any]:
         """把效果分析统一映射成 MeetingAnalyticsResponse 形状的字典。
 
         GET /analytics 与 POST /analytics/generate 共用。float 字段无真实
@@ -830,9 +951,14 @@ class MeetingAIService:
             },
         }
 
-    async def generate_meeting_minutes(self, meeting_id: int, request_or_user: Any = None,
-                                     user_id: Any = None, template_type: str = 'standard',
-                                     language: str = 'zh-CN') -> MeetingMinutesORM:
+    async def generate_meeting_minutes(
+        self,
+        meeting_id: int,
+        request_or_user: Any = None,
+        user_id: Any = None,
+        template_type: str = "standard",
+        language: str = "zh-CN",
+    ) -> MeetingMinutesORM:
         """生成会议纪要：复用摘要生成的一次 LLM 调用，ORM 落库后返回。
 
         路由调用形态：generate_meeting_minutes(meeting_id, request, user_id)。
@@ -840,7 +966,9 @@ class MeetingAIService:
         request = None
         if request_or_user is not None and hasattr(request_or_user, "model_fields_set"):
             request = request_or_user
-            template_type = getattr(request, "template_type", template_type) or template_type
+            template_type = (
+                getattr(request, "template_type", template_type) or template_type
+            )
             language = getattr(request, "language", language) or language
         elif isinstance(request_or_user, int):
             user_id = request_or_user
@@ -848,16 +976,21 @@ class MeetingAIService:
             meeting = await self._get_meeting_or_404(meeting_id)
 
             # 摘要生成（一次 LLM 调用 + 摘要落库）
-            summary = await self.generate_meeting_summary(meeting_id, request, user_id, language)
+            summary = await self.generate_meeting_summary(
+                meeting_id, request, user_id, language
+            )
 
             participants = await self._get_meeting_participants(meeting_id)
             template = await self._get_minutes_template(template_type, language)
             minutes_content = self._generate_structured_minutes(
                 {
-                    'title': meeting.title,
-                    'agenda': meeting.agenda or [],
+                    "title": meeting.title,
+                    "agenda": meeting.agenda or [],
                 },
-                summary, participants, template, language,
+                summary,
+                participants,
+                template,
+                language,
             )
 
             minutes = MeetingMinutesORM(
@@ -870,8 +1003,14 @@ class MeetingAIService:
                 agenda_items=self._format_agenda_items(meeting.agenda or []),
                 # JSON 列不能直接存 datetime：先转 ISO 字符串再落库
                 decisions=json.loads(json.dumps(summary["decisions"], default=str)),
-                action_items=json.loads(json.dumps(summary["action_items"], default=str)),
-                attendees=[p['name'] for p in participants if p.get('attendance_status') in ('JOINED', 'LEFT')],
+                action_items=json.loads(
+                    json.dumps(summary["action_items"], default=str)
+                ),
+                attendees=[
+                    p["name"]
+                    for p in participants
+                    if p.get("attendance_status") in ("JOINED", "LEFT")
+                ],
                 key_points=json.loads(json.dumps(summary["key_points"], default=str)),
                 status=MinuteStatusORM.DRAFT,
                 created_by=user_id if isinstance(user_id, int) else None,
@@ -885,12 +1024,12 @@ class MeetingAIService:
                 operation_type="MINUTES_GENERATION",
                 operation_result="SUCCESS",
                 details={
-                    'meeting_id': meeting_id,
-                    'template_type': template_type,
-                    'content_length': len(minutes_content),
-                    'language': language,
-                    'minutes_id': minutes.id,
-                }
+                    "meeting_id": meeting_id,
+                    "template_type": template_type,
+                    "content_length": len(minutes_content),
+                    "language": language,
+                    "minutes_id": minutes.id,
+                },
             )
             return minutes
 
@@ -901,28 +1040,34 @@ class MeetingAIService:
                 user_id=user_id if isinstance(user_id, int) else 0,
                 operation_type="MINUTES_GENERATION",
                 operation_result="ERROR",
-                details={'meeting_id': meeting_id, 'template_type': template_type, 'error': str(e)}
+                details={
+                    "meeting_id": meeting_id,
+                    "template_type": template_type,
+                    "error": str(e),
+                },
             )
             raise
 
     # 私有辅助方法
-    
+
     async def _get_meeting_info(self, meeting_id: int) -> Dict[str, Any]:
         """从 meetings 表读真实会议信息；不存在则 404。"""
         meeting = await self._get_meeting_or_404(meeting_id)
         return {
-            'id': meeting.id,
-            'title': meeting.title,
-            'description': meeting.description,
-            'meeting_type': meeting.meeting_type.value if meeting.meeting_type else None,
-            'status': meeting.status.value if meeting.status else None,
-            'scheduled_start_time': meeting.scheduled_start_time,
-            'scheduled_end_time': meeting.scheduled_end_time,
-            'actual_start_time': meeting.actual_start_time,
-            'actual_end_time': meeting.actual_end_time,
-            'agenda': meeting.agenda or [],
-            'duration_minutes': meeting.duration_minutes or 0,
-            'project_id': meeting.project_id,
+            "id": meeting.id,
+            "title": meeting.title,
+            "description": meeting.description,
+            "meeting_type": (
+                meeting.meeting_type.value if meeting.meeting_type else None
+            ),
+            "status": meeting.status.value if meeting.status else None,
+            "scheduled_start_time": meeting.scheduled_start_time,
+            "scheduled_end_time": meeting.scheduled_end_time,
+            "actual_start_time": meeting.actual_start_time,
+            "actual_end_time": meeting.actual_end_time,
+            "agenda": meeting.agenda or [],
+            "duration_minutes": meeting.duration_minutes or 0,
+            "project_id": meeting.project_id,
         }
 
     async def _get_meeting_participants(self, meeting_id: int) -> List[Dict[str, Any]]:
@@ -937,18 +1082,40 @@ class MeetingAIService:
         for row_participant, user in result.all():
             name = None
             if user is not None:
-                name = getattr(user, "nickname", None) or getattr(user, "username", None)
-            participants.append({
-                'user_id': row_participant.user_id,
-                'name': name or f"用户{row_participant.user_id}",
-                'participant_role': row_participant.participant_role.value if row_participant.participant_role else None,
-                'attendance_status': row_participant.attendance_status.value if row_participant.attendance_status else None,
-                'join_time': row_participant.join_time.isoformat() if row_participant.join_time else None,
-                'leave_time': row_participant.leave_time.isoformat() if row_participant.leave_time else None,
-                'total_duration_minutes': row_participant.total_duration_minutes or 0,
-                'speak_duration_minutes': row_participant.speak_duration_minutes or 0,
-                'interaction_count': row_participant.interaction_count or 0,
-            })
+                name = getattr(user, "nickname", None) or getattr(
+                    user, "username", None
+                )
+            participants.append(
+                {
+                    "user_id": row_participant.user_id,
+                    "name": name or f"用户{row_participant.user_id}",
+                    "participant_role": (
+                        row_participant.participant_role.value
+                        if row_participant.participant_role
+                        else None
+                    ),
+                    "attendance_status": (
+                        row_participant.attendance_status.value
+                        if row_participant.attendance_status
+                        else None
+                    ),
+                    "join_time": (
+                        row_participant.join_time.isoformat()
+                        if row_participant.join_time
+                        else None
+                    ),
+                    "leave_time": (
+                        row_participant.leave_time.isoformat()
+                        if row_participant.leave_time
+                        else None
+                    ),
+                    "total_duration_minutes": row_participant.total_duration_minutes
+                    or 0,
+                    "speak_duration_minutes": row_participant.speak_duration_minutes
+                    or 0,
+                    "interaction_count": row_participant.interaction_count or 0,
+                }
+            )
         return participants
 
     async def _get_meeting_chats(self, meeting_id: int) -> List[Dict[str, Any]]:
@@ -964,13 +1131,17 @@ class MeetingAIService:
         for chat, user in result.all():
             name = None
             if user is not None:
-                name = getattr(user, "nickname", None) or getattr(user, "username", None)
-            chats.append({
-                'sender_id': chat.sender_id,
-                'sender_name': name or f"用户{chat.sender_id}",
-                'content': chat.content,
-                'sent_at': chat.sent_at.isoformat() if chat.sent_at else None,
-            })
+                name = getattr(user, "nickname", None) or getattr(
+                    user, "username", None
+                )
+            chats.append(
+                {
+                    "sender_id": chat.sender_id,
+                    "sender_name": name or f"用户{chat.sender_id}",
+                    "content": chat.content,
+                    "sent_at": chat.sent_at.isoformat() if chat.sent_at else None,
+                }
+            )
         return chats
 
     async def _get_meeting_files(self, meeting_id: int) -> List[Dict[str, Any]]:
@@ -980,23 +1151,30 @@ class MeetingAIService:
             .where(MeetingFileORM.meeting_id == meeting_id)
             .order_by(MeetingFileORM.uploaded_at)
         )
-        return [{
-            'file_name': f.file_name,
-            'file_type': f.file_type,
-            'file_size': f.file_size,
-            'uploader_id': f.uploader_id,
-            'uploaded_at': f.uploaded_at.isoformat() if f.uploaded_at else None,
-        } for f in result.scalars().all()]
+        return [
+            {
+                "file_name": f.file_name,
+                "file_type": f.file_type,
+                "file_size": f.file_size,
+                "uploader_id": f.uploader_id,
+                "uploaded_at": f.uploaded_at.isoformat() if f.uploaded_at else None,
+            }
+            for f in result.scalars().all()
+        ]
 
     async def _count_meeting_chats(self, meeting_id: int) -> int:
         result = await self.db.execute(
-            select(func.count(MeetingChatORM.id)).where(MeetingChatORM.meeting_id == meeting_id)
+            select(func.count(MeetingChatORM.id)).where(
+                MeetingChatORM.meeting_id == meeting_id
+            )
         )
         return int(result.scalar_one() or 0)
 
     async def _count_meeting_files(self, meeting_id: int) -> int:
         result = await self.db.execute(
-            select(func.count(MeetingFileORM.id)).where(MeetingFileORM.meeting_id == meeting_id)
+            select(func.count(MeetingFileORM.id)).where(
+                MeetingFileORM.meeting_id == meeting_id
+            )
         )
         return int(result.scalar_one() or 0)
 
@@ -1008,11 +1186,15 @@ class MeetingAIService:
         row = result.scalar_one_or_none()
         summary_count = len(row.action_items or []) if row else 0
         link_result = await self.db.execute(
-            select(func.count(MeetingTaskORM.task_id)).where(MeetingTaskORM.meeting_id == meeting_id)
+            select(func.count(MeetingTaskORM.task_id)).where(
+                MeetingTaskORM.meeting_id == meeting_id
+            )
         )
         return max(summary_count, int(link_result.scalar_one() or 0))
 
-    async def _get_meeting_transcripts(self, meeting_id: int) -> List[TranscriptSegment]:
+    async def _get_meeting_transcripts(
+        self, meeting_id: int
+    ) -> List[TranscriptSegment]:
         """获取会议转录数据。
 
         转录红线：真实转录依赖录制文件 + STT，全链路缺失。返回空列表，
@@ -1026,48 +1208,79 @@ class MeetingAIService:
         for segment in transcripts:
             merged_content.append(f"{segment.speaker_name}: {segment.content}")
         return "\n".join(merged_content)
-    
-    async def _analyze_participation_metrics(self, participants: List[Dict[str, Any]],
-                                           transcripts: List[TranscriptSegment]) -> List[Dict[str, Any]]:
+
+    async def _analyze_participation_metrics(
+        self, participants: List[Dict[str, Any]], transcripts: List[TranscriptSegment]
+    ) -> List[Dict[str, Any]]:
         """逐人参与度指标（真实发言时长/互动数推导）。
 
         engagement_score 由发言与互动占比派生（1-5 分）；attention_score
         与 contribution_quality 无独立测量来源，暂以 engagement 代理，
         来源说明见 analytics_to_response_dict 的 data_sources。
         """
-        total_speak = sum(float(p.get('speak_duration_minutes') or 0) for p in participants)
-        total_interactions = sum(int(p.get('interaction_count') or 0) for p in participants)
+        total_speak = sum(
+            float(p.get("speak_duration_minutes") or 0) for p in participants
+        )
+        total_interactions = sum(
+            int(p.get("interaction_count") or 0) for p in participants
+        )
         metrics = []
         for p in participants:
-            speak = float(p.get('speak_duration_minutes') or 0)
-            interactions = int(p.get('interaction_count') or 0)
+            speak = float(p.get("speak_duration_minutes") or 0)
+            interactions = int(p.get("interaction_count") or 0)
             speak_share = (speak / total_speak) if total_speak > 0 else 0.0
-            interaction_share = (interactions / total_interactions) if total_interactions > 0 else 0.0
-            engagement = round(1.0 + 4.0 * (0.5 * speak_share + 0.5 * interaction_share), 2)
+            interaction_share = (
+                (interactions / total_interactions) if total_interactions > 0 else 0.0
+            )
+            engagement = round(
+                1.0 + 4.0 * (0.5 * speak_share + 0.5 * interaction_share), 2
+            )
             if not participants:
                 engagement = 0.0
             elif total_speak == 0 and total_interactions == 0:
                 engagement = 1.0  # 有参会记录但无发言/互动数据：最低档，非 0 分
-            metrics.append({
-                "user_id": p.get('user_id'),
-                "user_name": p.get('name') or f"用户{p.get('user_id')}",
-                "speaking_time_minutes": speak,
-                "speaking_percentage": round(speak_share * 100, 2),
-                "interaction_count": interactions,
-                "engagement_score": engagement,
-                "attention_score": engagement,
-                "contribution_quality": engagement,
-            })
+            metrics.append(
+                {
+                    "user_id": p.get("user_id"),
+                    "user_name": p.get("name") or f"用户{p.get('user_id')}",
+                    "speaking_time_minutes": speak,
+                    "speaking_percentage": round(speak_share * 100, 2),
+                    "interaction_count": interactions,
+                    "engagement_score": engagement,
+                    "attention_score": engagement,
+                    "contribution_quality": engagement,
+                }
+            )
         return metrics
 
-    async def _analyze_participation_summary(self, participants: List[Dict[str, Any]],
-                                           transcripts: List[TranscriptSegment]) -> Dict[str, Any]:
+    async def _analyze_participation_summary(
+        self, participants: List[Dict[str, Any]], transcripts: List[TranscriptSegment]
+    ) -> Dict[str, Any]:
         """聚合参与度：加入人数/总人数为真实计数；engagement 为逐人均值。"""
         total = len(participants)
-        joined = len([p for p in participants if p.get('attendance_status') in ('JOINED', 'LEFT')])
-        active = len([p for p in participants if (p.get('speak_duration_minutes') or 0) > 0 or (p.get('interaction_count') or 0) > 0])
-        per_person = await self._analyze_participation_metrics(participants, transcripts)
-        engagement = round(sum(m["engagement_score"] for m in per_person) / len(per_person), 2) if per_person else 0.0
+        joined = len(
+            [
+                p
+                for p in participants
+                if p.get("attendance_status") in ("JOINED", "LEFT")
+            ]
+        )
+        active = len(
+            [
+                p
+                for p in participants
+                if (p.get("speak_duration_minutes") or 0) > 0
+                or (p.get("interaction_count") or 0) > 0
+            ]
+        )
+        per_person = await self._analyze_participation_metrics(
+            participants, transcripts
+        )
+        engagement = (
+            round(sum(m["engagement_score"] for m in per_person) / len(per_person), 2)
+            if per_person
+            else 0.0
+        )
         return {
             "total_participants": total,
             "joined_participants": joined,
@@ -1076,13 +1289,24 @@ class MeetingAIService:
             "engagement_score": engagement,
         }
 
-    async def _analyze_participants(self, meeting_id: int,
-                                  transcripts: List[TranscriptSegment]) -> Dict[str, Any]:
+    async def _analyze_participants(
+        self, meeting_id: int, transcripts: List[TranscriptSegment]
+    ) -> Dict[str, Any]:
         """分析参与者表现（真实计数）。"""
         participants = await self._get_meeting_participants(meeting_id)
         total = len(participants)
-        active = len([p for p in participants if (p.get('speak_duration_minutes') or 0) > 0])
-        avg_speak = round(sum(float(p.get('speak_duration_minutes') or 0) for p in participants) / total, 2) if total else 0.0
+        active = len(
+            [p for p in participants if (p.get("speak_duration_minutes") or 0) > 0]
+        )
+        avg_speak = (
+            round(
+                sum(float(p.get("speak_duration_minutes") or 0) for p in participants)
+                / total,
+                2,
+            )
+            if total
+            else 0.0
+        )
         return {
             "total_participants": total,
             "active_speakers": active,
@@ -1090,16 +1314,17 @@ class MeetingAIService:
             "participation_balance": 0.0,
         }
 
-    async def _analyze_agenda_completion(self, meeting: Dict[str, Any],
-                                       transcripts: List[TranscriptSegment]) -> Dict[str, Any]:
+    async def _analyze_agenda_completion(
+        self, meeting: Dict[str, Any], transcripts: List[TranscriptSegment]
+    ) -> Dict[str, Any]:
         """议程完成度：总数取真实议程；完成数按议程项 status=completed 统计。"""
-        agenda = meeting.get('agenda') or []
+        agenda = meeting.get("agenda") or []
         total = len(agenda)
         completed = 0
         for item in agenda:
             if isinstance(item, dict):
-                status = str(item.get('status') or '').lower()
-                if status in ('completed', 'done', 'finished'):
+                status = str(item.get("status") or "").lower()
+                if status in ("completed", "done", "finished"):
                     completed += 1
         return {
             "total_agenda_items": total,
@@ -1108,8 +1333,9 @@ class MeetingAIService:
             "time_per_item": None,
         }
 
-    async def _analyze_decision_efficiency(self, meeting_id: int,
-                                         transcripts: List[TranscriptSegment]) -> Dict[str, Any]:
+    async def _analyze_decision_efficiency(
+        self, meeting_id: int, transcripts: List[TranscriptSegment]
+    ) -> Dict[str, Any]:
         """决策效率：决策数取已持久化摘要的真实计数；效率为决策数/议程数的
         粗略代理（无决策耗时记录），无决策时为 0。"""
         result = await self.db.execute(
@@ -1118,7 +1344,7 @@ class MeetingAIService:
         row = result.scalar_one_or_none()
         total_decisions = len(row.decisions or []) if row else 0
         meeting = await self._get_meeting_info(meeting_id)
-        total_agenda = len(meeting.get('agenda') or [])
+        total_agenda = len(meeting.get("agenda") or [])
         if total_decisions == 0:
             efficiency = 0.0
         elif total_agenda == 0:
@@ -1131,19 +1357,28 @@ class MeetingAIService:
             "efficiency_score": efficiency,
         }
 
-    async def _analyze_time_utilization(self, meeting: Dict[str, Any],
-                                      transcripts: List[TranscriptSegment]) -> Dict[str, Any]:
+    async def _analyze_time_utilization(
+        self, meeting: Dict[str, Any], transcripts: List[TranscriptSegment]
+    ) -> Dict[str, Any]:
         """时间利用率：实际起止与计划时长对比；无实际时间记录时为 0（未知）。"""
-        planned = meeting.get('duration_minutes') or 0
+        planned = meeting.get("duration_minutes") or 0
         if not planned:
-            start, end = meeting.get('scheduled_start_time'), meeting.get('scheduled_end_time')
+            start, end = meeting.get("scheduled_start_time"), meeting.get(
+                "scheduled_end_time"
+            )
             if start and end:
                 planned = max(0, int((end - start).total_seconds() // 60))
-        actual_start, actual_end = meeting.get('actual_start_time'), meeting.get('actual_end_time')
+        actual_start, actual_end = meeting.get("actual_start_time"), meeting.get(
+            "actual_end_time"
+        )
         actual = None
         if actual_start and actual_end:
             actual = max(0, int((actual_end - actual_start).total_seconds() // 60))
-        utilization = round(min(1.0, actual / planned), 4) if actual is not None and planned else 0.0
+        utilization = (
+            round(min(1.0, actual / planned), 4)
+            if actual is not None and planned
+            else 0.0
+        )
         return {
             "planned_duration": planned,
             "actual_duration": actual,
@@ -1151,7 +1386,9 @@ class MeetingAIService:
             "productive_time": None,
         }
 
-    async def _analyze_meeting_sentiment(self, transcripts: List[TranscriptSegment]) -> Dict[str, Any]:
+    async def _analyze_meeting_sentiment(
+        self, transcripts: List[TranscriptSegment]
+    ) -> Dict[str, Any]:
         """情感分析：无转录文本则明确标 unknown，不编分数。"""
         if not transcripts:
             return {
@@ -1173,71 +1410,100 @@ class MeetingAIService:
             "note": "转录情感分析未实现",
         }
 
-    async def _generate_improvement_suggestions(self, participation_metrics: Dict[str, Any],
-                                              agenda_completion: Dict[str, Any],
-                                              decision_efficiency: Dict[str, Any],
-                                              time_utilization: Dict[str, Any],
-                                              sentiment_analysis: Dict[str, Any]) -> List[str]:
+    async def _generate_improvement_suggestions(
+        self,
+        participation_metrics: Dict[str, Any],
+        agenda_completion: Dict[str, Any],
+        decision_efficiency: Dict[str, Any],
+        time_utilization: Dict[str, Any],
+        sentiment_analysis: Dict[str, Any],
+    ) -> List[str]:
         """生成改进建议（阈值规则作用于真实算出的比率）。"""
         suggestions = []
 
-        if participation_metrics.get('participation_rate', 0) < 0.8:
+        if participation_metrics.get("participation_rate", 0) < 0.8:
             suggestions.append("建议增加互动环节，提高参与者积极性")
 
-        if agenda_completion.get('completion_rate', 0) < 0.8:
+        if agenda_completion.get("completion_rate", 0) < 0.8:
             suggestions.append("建议优化议程安排，确保重要议题得到充分讨论")
 
-        if time_utilization.get('utilization_rate', 0) < 0.8:
+        if time_utilization.get("utilization_rate", 0) < 0.8:
             suggestions.append("建议加强时间管理，提高会议效率")
 
-        if (sentiment_analysis or {}).get('source') == 'no_transcript':
+        if (sentiment_analysis or {}).get("source") == "no_transcript":
             suggestions.append("暂无转录数据：建议开启录制转写，以便做内容与情感分析")
 
         return suggestions
 
-    async def _calculate_effectiveness_score(self, participation_metrics: Dict[str, Any],
-                                           agenda_completion: Dict[str, Any],
-                                           decision_efficiency: Dict[str, Any],
-                                           time_utilization: Dict[str, Any]) -> float:
+    async def _calculate_effectiveness_score(
+        self,
+        participation_metrics: Dict[str, Any],
+        agenda_completion: Dict[str, Any],
+        decision_efficiency: Dict[str, Any],
+        time_utilization: Dict[str, Any],
+    ) -> float:
         """计算会议效果总分：四项真实比率的均值。"""
         scores = [
-            participation_metrics.get('participation_rate', 0) or 0,
-            agenda_completion.get('completion_rate', 0) or 0,
-            decision_efficiency.get('efficiency_score', 0) or 0,
-            time_utilization.get('utilization_rate', 0) or 0,
+            participation_metrics.get("participation_rate", 0) or 0,
+            agenda_completion.get("completion_rate", 0) or 0,
+            decision_efficiency.get("efficiency_score", 0) or 0,
+            time_utilization.get("utilization_rate", 0) or 0,
         ]
 
         return round(sum(scores) / len(scores), 4)
-    
-    async def _get_minutes_template(self, template_type: str, language: str) -> Dict[str, Any]:
+
+    async def _get_minutes_template(
+        self, template_type: str, language: str
+    ) -> Dict[str, Any]:
         """获取纪要模板"""
         templates = {
-            'standard': {
-                'title': '会议纪要',
-                'sections': ['会议概述', '主要讨论', '决策事项', '行动计划', '下次会议']
+            "standard": {
+                "title": "会议纪要",
+                "sections": [
+                    "会议概述",
+                    "主要讨论",
+                    "决策事项",
+                    "行动计划",
+                    "下次会议",
+                ],
             },
-            'project': {
-                'title': '项目会议纪要',
-                'sections': ['项目状态', '进展汇报', '问题讨论', '决策记录', '后续计划']
-            }
+            "project": {
+                "title": "项目会议纪要",
+                "sections": [
+                    "项目状态",
+                    "进展汇报",
+                    "问题讨论",
+                    "决策记录",
+                    "后续计划",
+                ],
+            },
         }
-        
-        return templates.get(template_type, templates['standard'])
-    
-    def _generate_structured_minutes(self, meeting: Dict[str, Any],
-                                     summary: Dict[str, Any],
-                                     participants: List[Dict[str, Any]],
-                                     template: Dict[str, Any],
-                                     language: str) -> str:
+
+        return templates.get(template_type, templates["standard"])
+
+    def _generate_structured_minutes(
+        self,
+        meeting: Dict[str, Any],
+        summary: Dict[str, Any],
+        participants: List[Dict[str, Any]],
+        template: Dict[str, Any],
+        language: str,
+    ) -> str:
         """生成结构化纪要内容（summary 为 MeetingSummaryResponse 形状的字典）。"""
         content_parts = []
 
         # 会议基本信息
         content_parts.append(f"# {template['title']}")
         content_parts.append(f"**会议主题**: {meeting.get('title', '')}")
-        content_parts.append(f"**会议时间**: {datetime.now().strftime('%Y-%m-%d %H:%M')}")
-        content_parts.append(f"**参会人员**: {', '.join([p['name'] for p in participants])}")
-        content_parts.append("**转录来源**: 无转录文本（未录制转写）；本纪要依据议程、聊天记录与共享文件生成")
+        content_parts.append(
+            f"**会议时间**: {datetime.now().strftime('%Y-%m-%d %H:%M')}"
+        )
+        content_parts.append(
+            f"**参会人员**: {', '.join([p['name'] for p in participants])}"
+        )
+        content_parts.append(
+            "**转录来源**: 无转录文本（未录制转写）；本纪要依据议程、聊天记录与共享文件生成"
+        )
         content_parts.append("")
 
         # 会议概述
@@ -1250,28 +1516,35 @@ class MeetingAIService:
         for i, point in enumerate(summary.get("key_points") or [], 1):
             title = point.get("title", "") if isinstance(point, dict) else str(point)
             content = point.get("content", "") if isinstance(point, dict) else ""
-            content_parts.append(f"{i}. {title}" + (f"：{content}" if content and content != title else ""))
+            content_parts.append(
+                f"{i}. {title}"
+                + (f"：{content}" if content and content != title else "")
+            )
         content_parts.append("")
 
         # 决策事项
         content_parts.append("## 决策事项")
         for i, decision in enumerate(summary.get("decisions") or [], 1):
             content_parts.append(f"{i}. {decision.get('title', '')}")
-            if decision.get('description') and decision.get('description') != decision.get('title'):
+            if decision.get("description") and decision.get(
+                "description"
+            ) != decision.get("title"):
                 content_parts.append(f"   - 说明: {decision.get('description')}")
-            if decision.get('decision_maker'):
+            if decision.get("decision_maker"):
                 content_parts.append(f"   - 决策者: {decision.get('decision_maker')}")
-            if decision.get('implementation_date'):
-                content_parts.append(f"   - 实施日期: {decision.get('implementation_date')}")
+            if decision.get("implementation_date"):
+                content_parts.append(
+                    f"   - 实施日期: {decision.get('implementation_date')}"
+                )
         content_parts.append("")
 
         # 行动计划
         content_parts.append("## 行动计划")
         for i, action in enumerate(summary.get("action_items") or [], 1):
             content_parts.append(f"{i}. {action.get('title', '')}")
-            if action.get('assignee'):
+            if action.get("assignee"):
                 content_parts.append(f"   - 负责人: {action.get('assignee')}")
-            if action.get('due_date'):
+            if action.get("due_date"):
                 content_parts.append(f"   - 截止时间: {action.get('due_date')}")
         content_parts.append("")
 
@@ -1282,19 +1555,22 @@ class MeetingAIService:
 
         return "\n".join(content_parts)
 
-    
-    def _format_agenda_items(self, agenda: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    def _format_agenda_items(
+        self, agenda: List[Dict[str, Any]]
+    ) -> List[Dict[str, Any]]:
         """格式化议程项目"""
         formatted_items = []
         for item in agenda:
-            formatted_items.append({
-                'title': item.get('title', ''),
-                'duration': item.get('duration', 0),
-                'presenter': item.get('presenter', ''),
-                'status': item.get('status', 'pending')
-            })
+            formatted_items.append(
+                {
+                    "title": item.get("title", ""),
+                    "duration": item.get("duration", 0),
+                    "presenter": item.get("presenter", ""),
+                    "status": item.get("status", "pending"),
+                }
+            )
         return formatted_items
-    
+
     # ---- 行动项 CRUD（基于 meeting_tasks + project_tasks）-----------------
     # ActionItem 形状见 schemas/ai_analysis_schemas.py。POST 创建一条
     # project_tasks 行（task_type=DOCUMENTATION，tags 打上
@@ -1327,22 +1603,36 @@ class MeetingAIService:
             return None
         return getattr(user, "nickname", None) or getattr(user, "username", None)
 
-    async def _resolve_assignee(self, data: Dict[str, Any]) -> tuple[Optional[int], Optional[str]]:
+    async def _resolve_assignee(
+        self, data: Dict[str, Any]
+    ) -> tuple[Optional[int], Optional[str]]:
         """解析负责人：优先 assignee_id，其次按用户名/昵称查 assignee。"""
         assignee_id = data.get("assignee_id")
         if assignee_id is not None:
             user = await self.db.get(User, int(assignee_id))
             if user is None:
                 raise ValidationError(f"指定的负责人不存在: {assignee_id}")
-            return user.id, getattr(user, "nickname", None) or getattr(user, "username", None)
-        assignee_name = (data.get("assignee") or "").strip() if isinstance(data.get("assignee"), str) else None
+            return user.id, getattr(user, "nickname", None) or getattr(
+                user, "username", None
+            )
+        assignee_name = (
+            (data.get("assignee") or "").strip()
+            if isinstance(data.get("assignee"), str)
+            else None
+        )
         if assignee_name:
             result = await self.db.execute(
-                select(User).where(or_(User.username == assignee_name, User.nickname == assignee_name)).limit(1)
+                select(User)
+                .where(
+                    or_(User.username == assignee_name, User.nickname == assignee_name)
+                )
+                .limit(1)
             )
             user = result.scalar_one_or_none()
             if user is not None:
-                return user.id, getattr(user, "nickname", None) or getattr(user, "username", None)
+                return user.id, getattr(user, "nickname", None) or getattr(
+                    user, "username", None
+                )
             return None, assignee_name  # 未注册人名：只做展示，不落 assignee_id
         return None, None
 
@@ -1360,11 +1650,15 @@ class MeetingAIService:
                 return None
         return dt.date()
 
-    def _task_to_action_item(self, task: ProjectTask, assignee_name: Optional[str]) -> Dict[str, Any]:
+    def _task_to_action_item(
+        self, task: ProjectTask, assignee_name: Optional[str]
+    ) -> Dict[str, Any]:
         due = None
         if task.planned_end_date:
             due = datetime.combine(task.planned_end_date, datetime.min.time())
-        dependencies = task.dependency_tasks if isinstance(task.dependency_tasks, list) else None
+        dependencies = (
+            task.dependency_tasks if isinstance(task.dependency_tasks, list) else None
+        )
         return {
             "action_id": str(task.id),
             "title": task.task_name,
@@ -1372,12 +1666,20 @@ class MeetingAIService:
             "assignee": assignee_name,
             "due_date": due,
             "priority": str(task.priority or "MEDIUM").lower(),
-            "status": self._TASK_TO_ACTION_STATUS.get(str(task.status or "TODO"), "pending"),
-            "estimated_hours": float(task.estimated_hours) if task.estimated_hours is not None else None,
+            "status": self._TASK_TO_ACTION_STATUS.get(
+                str(task.status or "TODO"), "pending"
+            ),
+            "estimated_hours": (
+                float(task.estimated_hours)
+                if task.estimated_hours is not None
+                else None
+            ),
             "dependencies": [str(d) for d in dependencies] if dependencies else None,
         }
 
-    async def list_action_items(self, meeting_id: int, user_id: int = None) -> List[Dict[str, Any]]:
+    async def list_action_items(
+        self, meeting_id: int, user_id: int = None
+    ) -> List[Dict[str, Any]]:
         await self._get_meeting_or_404(meeting_id)
         result = await self.db.execute(
             select(MeetingTaskORM, ProjectTask)
@@ -1391,8 +1693,9 @@ class MeetingAIService:
             items.append(self._task_to_action_item(task, name))
         return items
 
-    async def create_action_item(self, meeting_id: int, user_id: int,
-                                 data: Dict[str, Any]) -> Dict[str, Any]:
+    async def create_action_item(
+        self, meeting_id: int, user_id: int, data: Dict[str, Any]
+    ) -> Dict[str, Any]:
         meeting = await self._get_meeting_or_404(meeting_id)
         if not meeting.project_id:
             raise ValidationError("会议未关联项目，无法创建行动项")
@@ -1403,7 +1706,9 @@ class MeetingAIService:
         priority = str(data.get("priority") or "medium").upper()
         if priority not in ("LOW", "MEDIUM", "HIGH", "URGENT"):
             priority = "MEDIUM"
-        status = self._ACTION_STATUS_TO_TASK.get(str(data.get("status") or "pending").lower(), "TODO")
+        status = self._ACTION_STATUS_TO_TASK.get(
+            str(data.get("status") or "pending").lower(), "TODO"
+        )
         estimated = data.get("estimated_hours")
         try:
             estimated = float(estimated) if estimated is not None else None
@@ -1426,24 +1731,32 @@ class MeetingAIService:
         )
         self.db.add(task)
         await self.db.flush()
-        self.db.add(MeetingTaskORM(meeting_id=meeting_id, task_id=task.id,
-                                   linked_by=user_id if isinstance(user_id, int) else None))
+        self.db.add(
+            MeetingTaskORM(
+                meeting_id=meeting_id,
+                task_id=task.id,
+                linked_by=user_id if isinstance(user_id, int) else None,
+            )
+        )
         await self.db.commit()
         await self.db.refresh(task)
         return self._task_to_action_item(task, assignee_name)
 
-    async def update_action_item(self, meeting_id: int, action_id: str, user_id: int,
-                                 data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    async def update_action_item(
+        self, meeting_id: int, action_id: str, user_id: int, data: Dict[str, Any]
+    ) -> Optional[Dict[str, Any]]:
         await self._get_meeting_or_404(meeting_id)
         try:
             task_id = int(action_id)
         except (TypeError, ValueError):
             return None
         link_result = await self.db.execute(
-            select(MeetingTaskORM).where(and_(
-                MeetingTaskORM.meeting_id == meeting_id,
-                MeetingTaskORM.task_id == task_id,
-            ))
+            select(MeetingTaskORM).where(
+                and_(
+                    MeetingTaskORM.meeting_id == meeting_id,
+                    MeetingTaskORM.task_id == task_id,
+                )
+            )
         )
         if link_result.scalar_one_or_none() is None:
             return None
@@ -1469,7 +1782,11 @@ class MeetingAIService:
             task.planned_end_date = self._parse_action_due_date(data.get("due_date"))
         if "estimated_hours" in data:
             try:
-                task.estimated_hours = float(data["estimated_hours"]) if data["estimated_hours"] is not None else None
+                task.estimated_hours = (
+                    float(data["estimated_hours"])
+                    if data["estimated_hours"] is not None
+                    else None
+                )
             except (TypeError, ValueError):
                 pass
         await self.db.commit()
@@ -1477,25 +1794,32 @@ class MeetingAIService:
         name = await self._user_display_name(task.assignee_id)
         return self._task_to_action_item(task, name)
 
-    async def delete_action_item(self, meeting_id: int, action_id: str,
-                                 user_id: int = None) -> bool:
+    async def delete_action_item(
+        self, meeting_id: int, action_id: str, user_id: int = None
+    ) -> bool:
         await self._get_meeting_or_404(meeting_id)
         try:
             task_id = int(action_id)
         except (TypeError, ValueError):
             return False
         link_result = await self.db.execute(
-            select(MeetingTaskORM).where(and_(
-                MeetingTaskORM.meeting_id == meeting_id,
-                MeetingTaskORM.task_id == task_id,
-            ))
+            select(MeetingTaskORM).where(
+                and_(
+                    MeetingTaskORM.meeting_id == meeting_id,
+                    MeetingTaskORM.task_id == task_id,
+                )
+            )
         )
         link = link_result.scalar_one_or_none()
         if link is None:
             return False
         task = await self.db.get(ProjectTask, task_id)
         await self.db.delete(link)
-        if task is not None and isinstance(task.tags, list) and "meeting_action_item" in task.tags:
+        if (
+            task is not None
+            and isinstance(task.tags, list)
+            and "meeting_action_item" in task.tags
+        ):
             await self.db.delete(task)
         await self.db.commit()
         return True
@@ -1510,13 +1834,19 @@ class MeetingAIService:
         """按 report_id 找报告文件；id 非 32 位 hex 直接返回 None（防穿越）。"""
         if not re.fullmatch(r"[0-9a-f]{32}", report_id or ""):
             return None
-        candidates = sorted(MeetingAIService.meeting_report_dir().glob(f"*-{report_id}.*"))
+        candidates = sorted(
+            MeetingAIService.meeting_report_dir().glob(f"*-{report_id}.*")
+        )
         return candidates[0] if candidates else None
 
-    def _render_report_markdown(self, meeting: Dict[str, Any], analytics: Dict[str, Any],
-                                summary: Optional[Dict[str, Any]],
-                                minutes: List[MeetingMinutesORM],
-                                action_items: List[Dict[str, Any]]) -> str:
+    def _render_report_markdown(
+        self,
+        meeting: Dict[str, Any],
+        analytics: Dict[str, Any],
+        summary: Optional[Dict[str, Any]],
+        minutes: List[MeetingMinutesORM],
+        action_items: List[Dict[str, Any]],
+    ) -> str:
         lines = [
             f"# 会议分析报告：{meeting.get('title')}",
             "",
@@ -1535,9 +1865,16 @@ class MeetingAIService:
         ]
         per_person = analytics.get("participation_metrics") or []
         if per_person:
-            lines += ["### 参与度", "", "| 参与者 | 发言时长（分钟） | 发言占比（%） | 互动数 | 参与度评分 |", "| --- | --- | --- | --- | --- |"]
+            lines += [
+                "### 参与度",
+                "",
+                "| 参与者 | 发言时长（分钟） | 发言占比（%） | 互动数 | 参与度评分 |",
+                "| --- | --- | --- | --- | --- |",
+            ]
             for p in per_person:
-                lines.append(f"| {p.get('user_name')} | {p.get('speaking_time_minutes')} | {p.get('speaking_percentage')} | {p.get('interaction_count')} | {p.get('engagement_score')} |")
+                lines.append(
+                    f"| {p.get('user_name')} | {p.get('speaking_time_minutes')} | {p.get('speaking_percentage')} | {p.get('interaction_count')} | {p.get('engagement_score')} |"
+                )
             lines.append("")
         suggestions = analytics.get("improvement_suggestions") or []
         if suggestions:
@@ -1546,7 +1883,14 @@ class MeetingAIService:
         if summary:
             lines += [summary.get("overview") or "", ""]
             for kp in summary.get("key_points") or []:
-                lines.append(f"- 关键点：{kp.get('title')}" + (f"：{kp.get('content')}" if kp.get('content') and kp.get('content') != kp.get('title') else ""))
+                lines.append(
+                    f"- 关键点：{kp.get('title')}"
+                    + (
+                        f"：{kp.get('content')}"
+                        if kp.get("content") and kp.get("content") != kp.get("title")
+                        else ""
+                    )
+                )
             for d in summary.get("decisions") or []:
                 lines.append(f"- 决策：{d.get('title')}")
             for s in summary.get("next_steps") or []:
@@ -1557,19 +1901,28 @@ class MeetingAIService:
         lines += ["## 会议纪要", ""]
         if minutes:
             for m in minutes:
-                lines += [f"### {m.title}（{m.status.value if m.status else ''}，v{m.version}）", "", (m.content or ""), ""]
+                lines += [
+                    f"### {m.title}（{m.status.value if m.status else ''}，v{m.version}）",
+                    "",
+                    (m.content or ""),
+                    "",
+                ]
         else:
             lines += ["暂无纪要（请先调用 POST /minutes/generate）。", ""]
         lines += ["## 行动项", ""]
         if action_items:
             for a in action_items:
-                lines.append(f"- {a.get('title')}（负责人：{a.get('assignee') or '未指定'}；优先级：{a.get('priority')}；状态：{a.get('status')}）")
+                lines.append(
+                    f"- {a.get('title')}（负责人：{a.get('assignee') or '未指定'}；优先级：{a.get('priority')}；状态：{a.get('status')}）"
+                )
         else:
             lines += ["暂无行动项。"]
         lines += ["", "## 数据来源说明", ""]
         for key, note in (analytics.get("data_sources") or {}).items():
             lines.append(f"- {key}：{note}")
-        lines.append("- 摘要/纪要内容由 LLM 依据议程、聊天记录与共享文件生成；无转录文本，未编造发言内容。")
+        lines.append(
+            "- 摘要/纪要内容由 LLM 依据议程、聊天记录与共享文件生成；无转录文本，未编造发言内容。"
+        )
         return "\n".join(lines)
 
     def _render_report_html(self, markdown_text: str, title: str) -> str:
@@ -1590,15 +1943,19 @@ class MeetingAIService:
             elif line.strip():
                 body.append(f"<p>{html_lib.escape(line)}</p>")
         return (
-            "<!DOCTYPE html><html lang=\"zh-CN\"><head><meta charset=\"utf-8\">"
+            '<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8">'
             f"<title>{html_lib.escape(title)}</title></head><body>"
-            + "\n".join(body) +
-            "</body></html>"
+            + "\n".join(body)
+            + "</body></html>"
         )
 
-    async def generate_meeting_report(self, meeting_id: int, user_id: int = None,
-                                      report_type: str = "full",
-                                      format: str = "markdown") -> Dict[str, Any]:
+    async def generate_meeting_report(
+        self,
+        meeting_id: int,
+        user_id: int = None,
+        report_type: str = "full",
+        format: str = "markdown",
+    ) -> Dict[str, Any]:
         """聚合 analytics + summary + minutes 的真实数据，生成报告文件。"""
         fmt = (format or "markdown").lower()
         if fmt not in ("html", "markdown"):
@@ -1609,9 +1966,13 @@ class MeetingAIService:
         summary = await self.get_meeting_summary(meeting_id, user_id)
         minutes = await self.get_meeting_minutes(meeting_id, user_id)
         action_items = await self.list_action_items(meeting_id, user_id)
-        markdown_text = self._render_report_markdown(meeting, analytics, summary, minutes, action_items)
+        markdown_text = self._render_report_markdown(
+            meeting, analytics, summary, minutes, action_items
+        )
         if fmt == "html":
-            content = self._render_report_html(markdown_text, f"会议分析报告：{meeting.get('title')}")
+            content = self._render_report_html(
+                markdown_text, f"会议分析报告：{meeting.get('title')}"
+            )
             ext, media_type = "html", "text/html"
         else:
             content, ext, media_type = markdown_text, "md", "text/markdown"
@@ -1633,17 +1994,24 @@ class MeetingAIService:
             "generated_at": datetime.utcnow().isoformat(),
         }
 
-    async def _log_operation(self, user_id: int, operation_type: str, 
-                           operation_result: str, details: Dict[str, Any]):
+    async def _log_operation(
+        self,
+        user_id: int,
+        operation_type: str,
+        operation_result: str,
+        details: Dict[str, Any],
+    ):
         """记录操作日志"""
         try:
             # 简化实现，实际应该调用日志服务
-            logger.info(f"AI操作日志: 用户{user_id} {operation_type} {operation_result} {details}")
+            logger.info(
+                f"AI操作日志: 用户{user_id} {operation_type} {operation_result} {details}"
+            )
         except Exception as e:
             logger.error(f"记录操作日志失败: {str(e)}")
-    
+
     # 提示词模板方法
-    
+
     def _get_summary_prompt_template(self) -> str:
         """获取摘要生成提示词模板"""
         return """
@@ -1663,7 +2031,7 @@ class MeetingAIService:
         4. 行动项目
         5. 下次会议安排
         """
-    
+
     def _get_decisions_prompt_template(self) -> str:
         """获取决策提取提示词模板"""
         return """
@@ -1677,7 +2045,7 @@ class MeetingAIService:
         - deadline: 截止日期
         - priority: 优先级
         """
-    
+
     def _get_action_items_prompt_template(self) -> str:
         """获取行动项目提取提示词模板"""
         return """
@@ -1692,7 +2060,7 @@ class MeetingAIService:
         - priority: 优先级
         - context: 相关上下文
         """
-    
+
     def _get_key_points_prompt_template(self) -> str:
         """获取关键要点提取提示词模板"""
         return """
@@ -1702,7 +2070,7 @@ class MeetingAIService:
         
         请提取最重要的讨论要点，每个要点用一句话概括。
         """
-    
+
     def _get_effectiveness_prompt_template(self) -> str:
         """获取效果分析提示词模板"""
         return """
@@ -1719,7 +2087,7 @@ class MeetingAIService:
         4. 时间利用率
         5. 整体效果评分
         """
-    
+
     def _get_sentiment_prompt_template(self) -> str:
         """获取情感分析提示词模板"""
         return """
@@ -1733,7 +2101,7 @@ class MeetingAIService:
         3. 参与者情感状态
         4. 会议氛围评估
         """
-    
+
     def _get_minutes_prompt_template(self) -> str:
         """获取纪要生成提示词模板"""
         return """
@@ -1755,6 +2123,7 @@ async def get_meeting_ai_service():
     因此请求结束时的回滚不影响已提交的数据。
     """
     from ..core.database import AsyncSessionLocal
+
     if AsyncSessionLocal is None:
         raise RuntimeError("Async database engine not available")
     async with AsyncSessionLocal() as session:
@@ -1763,23 +2132,27 @@ async def get_meeting_ai_service():
 
 
 # 简化版本的会议纪要生成函数，用于向后兼容
-async def generate_meeting_minutes(meeting_id: int, user_id: int, 
-                                 template_type: str = 'standard',
-                                 language: str = 'zh-CN') -> MeetingMinutes:
+async def generate_meeting_minutes(
+    meeting_id: int,
+    user_id: int,
+    template_type: str = "standard",
+    language: str = "zh-CN",
+) -> MeetingMinutes:
     """
     生成会议纪要 - 简化实现
-    
+
     Args:
         meeting_id: 会议ID
         user_id: 用户ID
         template_type: 纪要模板类型
         language: 语言代码
-        
+
     Returns:
         会议纪要对象
     """
     # 简化实现，返回基本的会议纪要对象
     from datetime import datetime
+
     return MeetingMinutes(
         meeting_id=meeting_id,
         title=f"会议纪要 - {meeting_id}",
@@ -1793,5 +2166,5 @@ async def generate_meeting_minutes(meeting_id: int, user_id: int,
         attendees=[],
         key_points=[],
         created_by=user_id,
-        created_at=datetime.utcnow()
+        created_at=datetime.utcnow(),
     )

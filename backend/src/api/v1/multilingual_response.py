@@ -18,24 +18,25 @@ API端点：
 - POST /api/v1/multilingual/feedback - 提交反馈
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status, Query
-from fastapi.security import HTTPBearer
-from sqlalchemy.ext.asyncio import AsyncSession
-from typing import Dict, List, Optional, Any
-from pydantic import BaseModel, Field
-from datetime import datetime
 import logging
+from datetime import datetime
+from typing import Any, Dict, List, Optional
 
-from ...core.database import get_async_session
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi.security import HTTPBearer
+from pydantic import BaseModel, Field
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from ...core.auth import get_current_user
-from ...services.multilingual_response_service import (
-    get_multilingual_response_service,
-    MultilingualResponseService,
-    SupportedLanguage,
-    ResponseType,
-    CulturalAdaptation
-)
+from ...core.database import get_async_session
 from ...models.user import User
+from ...services.multilingual_response_service import (
+    CulturalAdaptation,
+    MultilingualResponseService,
+    ResponseType,
+    SupportedLanguage,
+    get_multilingual_response_service,
+)
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -45,11 +46,15 @@ security = HTTPBearer()
 # Pydantic模型定义
 class LanguageDetectionRequest(BaseModel):
     """语言检测请求"""
-    content: str = Field(..., description="待检测的文本内容", min_length=1, max_length=10000)
+
+    content: str = Field(
+        ..., description="待检测的文本内容", min_length=1, max_length=10000
+    )
 
 
 class LanguageDetectionResponse(BaseModel):
     """语言检测响应"""
+
     detected_language: str = Field(..., description="检测到的语言代码")
     confidence: float = Field(..., description="检测置信度", ge=0.0, le=1.0)
     mixed_languages: List[str] = Field(default=[], description="混合语言列表")
@@ -62,7 +67,10 @@ class LanguageDetectionResponse(BaseModel):
 
 class ResponseAdaptationRequest(BaseModel):
     """响应适配请求"""
-    content: str = Field(..., description="原始响应内容", min_length=1, max_length=50000)
+
+    content: str = Field(
+        ..., description="原始响应内容", min_length=1, max_length=50000
+    )
     target_language: Optional[str] = Field(None, description="目标语言代码")
     context_info: Optional[Dict[str, Any]] = Field(None, description="上下文信息")
     force_adaptation: bool = Field(False, description="强制执行适配")
@@ -70,6 +78,7 @@ class ResponseAdaptationRequest(BaseModel):
 
 class ResponseAdaptationResponse(BaseModel):
     """响应适配响应"""
+
     original_content: str = Field(..., description="原始内容")
     adapted_content: str = Field(..., description="适配后内容")
     target_language: str = Field(..., description="目标语言")
@@ -80,13 +89,16 @@ class ResponseAdaptationResponse(BaseModel):
     language_enhancements: List[str] = Field(..., description="语言增强")
     formatting_changes: List[str] = Field(..., description="格式化变更")
     fluency_score: float = Field(..., description="流畅度评分", ge=0.0, le=1.0)
-    cultural_appropriateness: float = Field(..., description="文化适宜性", ge=0.0, le=1.0)
+    cultural_appropriateness: float = Field(
+        ..., description="文化适宜性", ge=0.0, le=1.0
+    )
     technical_accuracy: float = Field(..., description="技术准确性", ge=0.0, le=1.0)
     readability_score: float = Field(..., description="可读性评分", ge=0.0, le=1.0)
 
 
 class UserLanguagePreferencesResponse(BaseModel):
     """用户语言偏好响应"""
+
     user_id: int = Field(..., description="用户ID")
     preferred_language: str = Field(..., description="偏好语言")
     formality_level: float = Field(..., description="正式程度", ge=0.0, le=1.0)
@@ -100,16 +112,22 @@ class UserLanguagePreferencesResponse(BaseModel):
 
 class UserLanguagePreferencesUpdate(BaseModel):
     """用户语言偏好更新"""
+
     preferred_language: Optional[str] = Field(None, description="偏好语言")
-    formality_level: Optional[float] = Field(None, description="正式程度", ge=0.0, le=1.0)
+    formality_level: Optional[float] = Field(
+        None, description="正式程度", ge=0.0, le=1.0
+    )
     use_honorifics: Optional[bool] = Field(None, description="使用敬语")
     prefer_formal_tone: Optional[bool] = Field(None, description="偏好正式语调")
-    cultural_adaptation_enabled: Optional[bool] = Field(None, description="启用文化适配")
+    cultural_adaptation_enabled: Optional[bool] = Field(
+        None, description="启用文化适配"
+    )
     auto_detect_language: Optional[bool] = Field(None, description="自动检测语言")
 
 
 class SupportedLanguageInfo(BaseModel):
     """支持的语言信息"""
+
     code: str = Field(..., description="语言代码")
     name: str = Field(..., description="语言英文名称")
     native_name: str = Field(..., description="语言本地名称")
@@ -119,6 +137,7 @@ class SupportedLanguageInfo(BaseModel):
 
 class QualityMetricsResponse(BaseModel):
     """质量指标响应"""
+
     total_responses: int = Field(..., description="总响应数")
     average_quality: float = Field(..., description="平均质量分数", ge=0.0, le=1.0)
     quality_distribution: Dict[str, int] = Field(..., description="质量分布")
@@ -129,6 +148,7 @@ class QualityMetricsResponse(BaseModel):
 
 class FeedbackSubmission(BaseModel):
     """反馈提交"""
+
     response_id: str = Field(..., description="响应ID")
     rating: float = Field(..., description="评分", ge=1.0, le=5.0)
     feedback: Optional[str] = Field(None, description="文本反馈", max_length=1000)
@@ -136,31 +156,36 @@ class FeedbackSubmission(BaseModel):
 
 class UsageStatisticsResponse(BaseModel):
     """使用统计响应"""
+
     language_usage: Dict[str, int] = Field(..., description="语言使用统计")
     total_responses: int = Field(..., description="总响应数")
     cache_status: Dict[str, int] = Field(..., description="缓存状态")
     service_config: Dict[str, Any] = Field(..., description="服务配置")
 
 
-@router.post("/detect-language", 
-            response_model=LanguageDetectionResponse,
-            summary="检测文本语言",
-            description="检测输入文本的语言类型，支持多语言混合检测")
+@router.post(
+    "/detect-language",
+    response_model=LanguageDetectionResponse,
+    summary="检测文本语言",
+    description="检测输入文本的语言类型，支持多语言混合检测",
+)
 async def detect_language(
     request: LanguageDetectionRequest,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_session),
-    multilingual_service: MultilingualResponseService = Depends(get_multilingual_response_service)
+    multilingual_service: MultilingualResponseService = Depends(
+        get_multilingual_response_service
+    ),
 ):
     """检测文本语言"""
     try:
         logger.info(f"Language detection request from user {current_user.id}")
-        
+
         # 执行语言检测
         detection_result = await multilingual_service.detect_user_language(
             request.content, current_user.id
         )
-        
+
         return LanguageDetectionResponse(
             detected_language=detection_result.detected_language.value,
             confidence=detection_result.confidence,
@@ -169,31 +194,35 @@ async def detect_language(
             is_multilingual=detection_result.is_multilingual,
             has_code_switching=detection_result.has_code_switching,
             dominant_script=detection_result.dominant_script,
-            regional_variant=detection_result.regional_variant
+            regional_variant=detection_result.regional_variant,
         )
-        
+
     except Exception as e:
         logger.error(f"Error in language detection: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"语言检测失败: {str(e)}"
+            detail=f"语言检测失败: {str(e)}",
         )
 
 
-@router.post("/adapt-response",
-            response_model=ResponseAdaptationResponse,
-            summary="适配响应内容",
-            description="将AI响应内容适配到用户偏好的语言和文化背景")
+@router.post(
+    "/adapt-response",
+    response_model=ResponseAdaptationResponse,
+    summary="适配响应内容",
+    description="将AI响应内容适配到用户偏好的语言和文化背景",
+)
 async def adapt_response(
     request: ResponseAdaptationRequest,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_session),
-    multilingual_service: MultilingualResponseService = Depends(get_multilingual_response_service)
+    multilingual_service: MultilingualResponseService = Depends(
+        get_multilingual_response_service
+    ),
 ):
     """适配响应内容"""
     try:
         logger.info(f"Response adaptation request from user {current_user.id}")
-        
+
         # 解析目标语言
         force_language = None
         if request.target_language:
@@ -202,17 +231,17 @@ async def adapt_response(
             except ValueError:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"不支持的语言代码: {request.target_language}"
+                    detail=f"不支持的语言代码: {request.target_language}",
                 )
-        
+
         # 执行响应适配
         adaptation_result = await multilingual_service.process_response(
             content=request.content,
             user_id=current_user.id,
             context_info=request.context_info,
-            force_language=force_language
+            force_language=force_language,
         )
-        
+
         return ResponseAdaptationResponse(
             original_content=adaptation_result.original_content,
             adapted_content=adaptation_result.adapted_content,
@@ -226,34 +255,38 @@ async def adapt_response(
             fluency_score=adaptation_result.fluency_score,
             cultural_appropriateness=adaptation_result.cultural_appropriateness,
             technical_accuracy=adaptation_result.technical_accuracy,
-            readability_score=adaptation_result.readability_score
+            readability_score=adaptation_result.readability_score,
         )
-        
+
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Error in response adaptation: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"响应适配失败: {str(e)}"
+            detail=f"响应适配失败: {str(e)}",
         )
 
 
-@router.get("/user-preferences",
-           response_model=UserLanguagePreferencesResponse,
-           summary="获取用户语言偏好",
-           description="获取当前用户的语言偏好设置")
+@router.get(
+    "/user-preferences",
+    response_model=UserLanguagePreferencesResponse,
+    summary="获取用户语言偏好",
+    description="获取当前用户的语言偏好设置",
+)
 async def get_user_preferences(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_session),
-    multilingual_service: MultilingualResponseService = Depends(get_multilingual_response_service)
+    multilingual_service: MultilingualResponseService = Depends(
+        get_multilingual_response_service
+    ),
 ):
     """获取用户语言偏好"""
     try:
         logger.info(f"Get user preferences request from user {current_user.id}")
-        
+
         preferences = await multilingual_service.get_user_preferences(current_user.id)
-        
+
         return UserLanguagePreferencesResponse(
             user_id=preferences.user_id,
             preferred_language=preferences.preferred_language.value,
@@ -263,31 +296,35 @@ async def get_user_preferences(
             cultural_adaptation_enabled=preferences.cultural_adaptation_enabled,
             auto_detect_language=preferences.auto_detect_language,
             usage_statistics=preferences.usage_statistics,
-            last_updated=preferences.last_updated
+            last_updated=preferences.last_updated,
         )
-        
+
     except Exception as e:
         logger.error(f"Error getting user preferences: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"获取用户偏好失败: {str(e)}"
+            detail=f"获取用户偏好失败: {str(e)}",
         )
 
 
-@router.put("/user-preferences",
-           response_model=UserLanguagePreferencesResponse,
-           summary="更新用户语言偏好",
-           description="更新当前用户的语言偏好设置")
+@router.put(
+    "/user-preferences",
+    response_model=UserLanguagePreferencesResponse,
+    summary="更新用户语言偏好",
+    description="更新当前用户的语言偏好设置",
+)
 async def update_user_preferences(
     request: UserLanguagePreferencesUpdate,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_session),
-    multilingual_service: MultilingualResponseService = Depends(get_multilingual_response_service)
+    multilingual_service: MultilingualResponseService = Depends(
+        get_multilingual_response_service
+    ),
 ):
     """更新用户语言偏好"""
     try:
         logger.info(f"Update user preferences request from user {current_user.id}")
-        
+
         # 验证语言代码
         if request.preferred_language:
             try:
@@ -295,20 +332,20 @@ async def update_user_preferences(
             except ValueError:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"不支持的语言代码: {request.preferred_language}"
+                    detail=f"不支持的语言代码: {request.preferred_language}",
                 )
-        
+
         # 构建更新数据
         update_data = {}
         for field, value in request.dict(exclude_unset=True).items():
             if value is not None:
                 update_data[field] = value
-        
+
         # 执行更新
         updated_preferences = await multilingual_service.update_user_preferences(
             current_user.id, update_data
         )
-        
+
         return UserLanguagePreferencesResponse(
             user_id=updated_preferences.user_id,
             preferred_language=updated_preferences.preferred_language.value,
@@ -318,66 +355,74 @@ async def update_user_preferences(
             cultural_adaptation_enabled=updated_preferences.cultural_adaptation_enabled,
             auto_detect_language=updated_preferences.auto_detect_language,
             usage_statistics=updated_preferences.usage_statistics,
-            last_updated=updated_preferences.last_updated
+            last_updated=updated_preferences.last_updated,
         )
-        
+
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Error updating user preferences: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"更新用户偏好失败: {str(e)}"
+            detail=f"更新用户偏好失败: {str(e)}",
         )
 
 
-@router.get("/supported-languages",
-           response_model=List[SupportedLanguageInfo],
-           summary="获取支持的语言列表",
-           description="获取系统支持的所有语言及其详细信息")
+@router.get(
+    "/supported-languages",
+    response_model=List[SupportedLanguageInfo],
+    summary="获取支持的语言列表",
+    description="获取系统支持的所有语言及其详细信息",
+)
 async def get_supported_languages(
-    multilingual_service: MultilingualResponseService = Depends(get_multilingual_response_service)
+    multilingual_service: MultilingualResponseService = Depends(
+        get_multilingual_response_service
+    ),
 ):
     """获取支持的语言列表"""
     try:
         logger.info("Get supported languages request")
-        
+
         languages = await multilingual_service.get_supported_languages()
-        
+
         return [
             SupportedLanguageInfo(
                 code=lang["code"],
                 name=lang["name"],
                 native_name=lang["native_name"],
                 script_type=lang["script_type"],
-                cultural_adaptation=lang["cultural_adaptation"]
+                cultural_adaptation=lang["cultural_adaptation"],
             )
             for lang in languages
         ]
-        
+
     except Exception as e:
         logger.error(f"Error getting supported languages: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"获取支持语言列表失败: {str(e)}"
+            detail=f"获取支持语言列表失败: {str(e)}",
         )
 
 
-@router.get("/quality-metrics",
-           response_model=QualityMetricsResponse,
-           summary="获取质量指标",
-           description="获取多语言响应的质量统计指标")
+@router.get(
+    "/quality-metrics",
+    response_model=QualityMetricsResponse,
+    summary="获取质量指标",
+    description="获取多语言响应的质量统计指标",
+)
 async def get_quality_metrics(
     language: Optional[str] = Query(None, description="筛选语言"),
     days: int = Query(7, description="统计天数", ge=1, le=90),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_session),
-    multilingual_service: MultilingualResponseService = Depends(get_multilingual_response_service)
+    multilingual_service: MultilingualResponseService = Depends(
+        get_multilingual_response_service
+    ),
 ):
     """获取质量指标"""
     try:
         logger.info(f"Get quality metrics request from user {current_user.id}")
-        
+
         # 验证语言代码
         target_language = None
         if language:
@@ -386,133 +431,142 @@ async def get_quality_metrics(
             except ValueError:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"不支持的语言代码: {language}"
+                    detail=f"不支持的语言代码: {language}",
                 )
-        
+
         # 获取质量指标
         metrics = await multilingual_service.get_quality_metrics(
-            user_id=current_user.id,
-            language=target_language,
-            days=days
+            user_id=current_user.id, language=target_language, days=days
         )
-        
+
         return QualityMetricsResponse(
             total_responses=metrics.get("total_responses", 0),
             average_quality=metrics.get("average_quality", 0.0),
             quality_distribution=metrics.get("quality_distribution", {}),
             language_distribution=metrics.get("language_distribution", {}),
             adaptation_types=metrics.get("adaptation_types", {}),
-            average_processing_time=metrics.get("average_processing_time", 0.0)
+            average_processing_time=metrics.get("average_processing_time", 0.0),
         )
-        
+
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Error getting quality metrics: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"获取质量指标失败: {str(e)}"
+            detail=f"获取质量指标失败: {str(e)}",
         )
 
 
-@router.post("/feedback",
-            summary="提交用户反馈",
-            description="提交对多语言响应质量的用户反馈")
+@router.post(
+    "/feedback", summary="提交用户反馈", description="提交对多语言响应质量的用户反馈"
+)
 async def submit_feedback(
     request: FeedbackSubmission,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_session),
-    multilingual_service: MultilingualResponseService = Depends(get_multilingual_response_service)
+    multilingual_service: MultilingualResponseService = Depends(
+        get_multilingual_response_service
+    ),
 ):
     """提交用户反馈"""
     try:
         logger.info(f"Submit feedback request from user {current_user.id}")
-        
+
         await multilingual_service.submit_user_feedback(
             response_id=request.response_id,
             user_id=current_user.id,
             rating=request.rating,
-            feedback=request.feedback
+            feedback=request.feedback,
         )
-        
+
         return {"message": "反馈提交成功", "response_id": request.response_id}
-        
+
     except Exception as e:
         logger.error(f"Error submitting feedback: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"提交反馈失败: {str(e)}"
+            detail=f"提交反馈失败: {str(e)}",
         )
 
 
-@router.get("/usage-statistics",
-           response_model=UsageStatisticsResponse,
-           summary="获取使用统计",
-           description="获取多语言服务的使用统计信息（管理员功能）")
+@router.get(
+    "/usage-statistics",
+    response_model=UsageStatisticsResponse,
+    summary="获取使用统计",
+    description="获取多语言服务的使用统计信息（管理员功能）",
+)
 async def get_usage_statistics(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_session),
-    multilingual_service: MultilingualResponseService = Depends(get_multilingual_response_service)
+    multilingual_service: MultilingualResponseService = Depends(
+        get_multilingual_response_service
+    ),
 ):
     """获取使用统计"""
     try:
         # 检查管理员权限
         if not current_user.is_admin:
             raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="需要管理员权限"
+                status_code=status.HTTP_403_FORBIDDEN, detail="需要管理员权限"
             )
-        
+
         logger.info(f"Get usage statistics request from admin {current_user.id}")
-        
+
         statistics = await multilingual_service.get_usage_statistics()
-        
+
         return UsageStatisticsResponse(
             language_usage=statistics.get("language_usage", {}),
             total_responses=statistics.get("total_responses", 0),
             cache_status=statistics.get("cache_status", {}),
-            service_config=statistics.get("service_config", {})
+            service_config=statistics.get("service_config", {}),
         )
-        
+
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Error getting usage statistics: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"获取使用统计失败: {str(e)}"
+            detail=f"获取使用统计失败: {str(e)}",
         )
 
 
-@router.put("/service-config",
-           summary="更新服务配置",
-           description="更新多语言服务配置（管理员功能）")
+@router.put(
+    "/service-config",
+    summary="更新服务配置",
+    description="更新多语言服务配置（管理员功能）",
+)
 async def update_service_config(
     config_updates: Dict[str, Any],
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_session),
-    multilingual_service: MultilingualResponseService = Depends(get_multilingual_response_service)
+    multilingual_service: MultilingualResponseService = Depends(
+        get_multilingual_response_service
+    ),
 ):
     """更新服务配置"""
     try:
         # 检查管理员权限
         if not current_user.is_admin:
             raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="需要管理员权限"
+                status_code=status.HTTP_403_FORBIDDEN, detail="需要管理员权限"
             )
-        
+
         logger.info(f"Update service config request from admin {current_user.id}")
-        
+
         await multilingual_service.update_service_config(config_updates)
-        
-        return {"message": "服务配置更新成功", "updated_keys": list(config_updates.keys())}
-        
+
+        return {
+            "message": "服务配置更新成功",
+            "updated_keys": list(config_updates.keys()),
+        }
+
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Error updating service config: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"更新服务配置失败: {str(e)}"
+            detail=f"更新服务配置失败: {str(e)}",
         )

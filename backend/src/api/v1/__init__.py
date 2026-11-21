@@ -2,9 +2,11 @@
 API v1 路由注册
 """
 from fastapi import APIRouter
-from .user_role_management import router as user_role_management_router
-from .reports import router as reports_router
+
 from .auto_recovery import router as auto_recovery_router
+from .reports import router as reports_router
+from .user_role_management import router as user_role_management_router
+
 # from .performance import router as performance_router  # Temporarily disabled due to import issues
 # from .test_reports import router as test_reports_router  # Temporarily disabled due to import issues
 

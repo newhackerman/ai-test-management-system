@@ -1,30 +1,36 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Request, UploadFile, File
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
-from typing import Optional
-from urllib.parse import urlparse
 import logging
 import os
 import uuid
 from pathlib import Path
+from typing import Optional
+from urllib.parse import urlparse
+
+from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..core.database import get_async_session
-from ..services.auth import AuthService
-from ..services.user import UserService
+from ..models.permission import Permission, RolePermission, UserPermission
+from ..models.role import Role
+from ..models.user import User, UserRole
 from ..schemas.auth import LoginRequest, LoginResponse, RegisterRequest
 from ..schemas.user import UserCreate, UserResponse
-from ..models.user import User, UserRole
-from ..models.role import Role
-from ..models.permission import Permission, RolePermission, UserPermission
-from ..utils.ip import IPUtils
-from ..utils.jwt import jwt_service
+from ..services.auth import AuthService
+from ..services.user import UserService
 from ..utils.auth_rate_limit import (
     check_forgot_password_rate_limit,
     check_reset_password_rate_limit,
     increment_reset_password_failure,
 )
-from ..utils.error_responses import unauthorized_error, locked_error, internal_server_error, bad_request_error
+from ..utils.error_responses import (
+    bad_request_error,
+    internal_server_error,
+    locked_error,
+    unauthorized_error,
+)
+from ..utils.ip import IPUtils
+from ..utils.jwt import jwt_service
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -52,6 +58,7 @@ def _build_allowed_frontend_origins() -> set:
       4) 开发兜底 http://127.0.0.1:5173
     """
     from ..core.config import get_settings
+
     settings = get_settings()
     allowed = set()
 
@@ -115,144 +122,146 @@ def _get_frontend_base_url(request: Request) -> str:
         or "http://127.0.0.1:5173"
     ).rstrip("/")
 
-async def get_auth_service(session: AsyncSession = Depends(get_async_session)) -> AuthService:
+
+async def get_auth_service(
+    session: AsyncSession = Depends(get_async_session),
+) -> AuthService:
     """获取认证服务实例"""
     return AuthService(session)
 
-async def get_user_service(session: AsyncSession = Depends(get_async_session)) -> UserService:
+
+async def get_user_service(
+    session: AsyncSession = Depends(get_async_session),
+) -> UserService:
     """获取用户服务实例"""
     return UserService(session)
 
+
 async def get_current_user(
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
-    session: AsyncSession = Depends(get_async_session)
+    session: AsyncSession = Depends(get_async_session),
 ) -> Optional[User]:
     """获取当前用户"""
     if not credentials:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="需要认证"
-        )
-        
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="需要认证")
+
     token = credentials.credentials
     payload = jwt_service.verify_token(token)
-    
+
     if not payload or payload.get("type") != "access":
         raise unauthorized_error("无效的访问令牌")
-    
+
     user_id = payload.get("sub")
     if not user_id:
         raise unauthorized_error("无效的用户ID")
-    
+
     # 查找用户
     user_service = UserService(session)
     user = await user_service.get_user_by_id(int(user_id))
-    
+
     if not user:
         raise unauthorized_error("用户不存在")
-    
+
     # 直接返回用户对象
     return user
+
 
 @router.post("/login", response_model=LoginResponse)
 async def login(
     request: LoginRequest,
     http_request: Request,
-    auth_service: AuthService = Depends(get_auth_service)
+    auth_service: AuthService = Depends(get_auth_service),
 ):
     """用户登录"""
     client_ip = IPUtils.get_client_ip(http_request)
     user_agent = http_request.headers.get("user-agent", "")
-    
+
     try:
         result = await auth_service.login(
             username=request.username,
             password=request.password,
             client_ip=client_ip,
             user_agent=user_agent,
-            remember_me=request.remember_me
+            remember_me=request.remember_me,
         )
-        
+
         if not result["success"]:
             # 账户被锁定返回 423（RFC 4918），与 401 凭据错误区分开；
             # 其余失败（用户不存在/密码错误/其他非 ACTIVE 状态）仍返回 401。
             if result.get("error_code") == "ACCOUNT_LOCKED":
                 raise locked_error(result["message"], "登录验证失败")
             raise unauthorized_error(result["message"], "登录验证失败")
-        
+
         return LoginResponse(
             access_token=result["access_token"],
             refresh_token=result["refresh_token"],
             token_type="bearer",
             expires_in=3600,  # 1小时
-            user=result["user"]
+            user=result["user"],
         )
-    
+
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"登录失败: {e}")
         raise internal_server_error("登录失败", str(e))
 
+
 @router.post("/refresh")
 async def refresh_token(
-    request: dict,
-    auth_service: AuthService = Depends(get_auth_service)
+    request: dict, auth_service: AuthService = Depends(get_auth_service)
 ):
     """刷新令牌"""
     refresh_token = request.get("refresh_token")
     if not refresh_token:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="缺少刷新令牌"
+            status_code=status.HTTP_400_BAD_REQUEST, detail="缺少刷新令牌"
         )
-    
+
     try:
         result = await auth_service.refresh_token(refresh_token)
-        
+
         if not result["success"]:
             raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail=result["message"]
+                status_code=status.HTTP_401_UNAUTHORIZED, detail=result["message"]
             )
-        
+
         return {
             "access_token": result["access_token"],
             "token_type": "bearer",
-            "expires_in": 3600
+            "expires_in": 3600,
         }
-    
+
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"令牌刷新失败: {e}")
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="令牌刷新失败"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="令牌刷新失败"
         )
+
 
 @router.post("/logout")
 async def logout(
     current_user: User = Depends(get_current_user),
-    auth_service: AuthService = Depends(get_auth_service)
+    auth_service: AuthService = Depends(get_auth_service),
 ):
     """用户登出"""
     if not current_user:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="未登录用户"
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="未登录用户"
         )
-    
+
     try:
         await auth_service.logout(current_user.id)
         return {"message": "登出成功"}
-    
+
     except Exception as e:
         logger.error(f"登出失败: {e}")
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="登出失败"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="登出失败"
         )
+
 
 async def _get_user_roles_permissions(db: AsyncSession, user_id: int):
     """查用户真实的角色与权限。
@@ -277,7 +286,9 @@ async def _get_user_roles_permissions(db: AsyncSession, user_id: int):
     direct_rows = await db.execute(
         select(Permission.code, Permission.name, Permission.module, Permission.action)
         .join(UserPermission, UserPermission.permission_id == Permission.id)
-        .where(UserPermission.user_id == user_id, Permission.is_active == True)  # noqa: E712
+        .where(
+            UserPermission.user_id == user_id, Permission.is_active == True
+        )  # noqa: E712
     )
     by_code = {}
     for code, name, module, action in list(perm_rows.all()) + list(direct_rows.all()):
@@ -289,13 +300,12 @@ async def _get_user_roles_permissions(db: AsyncSession, user_id: int):
 @router.get("/me")
 async def get_current_user_info(
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_async_session)
+    db: AsyncSession = Depends(get_async_session),
 ):
     """获取当前用户信息"""
     if not current_user:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="未登录用户"
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="未登录用户"
         )
 
     roles, permissions = await _get_user_roles_permissions(db, current_user.id)
@@ -327,22 +337,22 @@ async def get_current_user_info(
             "is_active": current_user.is_active,
             "is_superuser": current_user.is_superuser,
             "created_at": current_user.created_at,
-            "updated_at": current_user.updated_at
+            "updated_at": current_user.updated_at,
         },
         "permissions": permissions,
-        "roles": roles
+        "roles": roles,
     }
+
 
 @router.get("/profile")
 async def get_user_profile(
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_async_session)
+    db: AsyncSession = Depends(get_async_session),
 ):
     """获取用户档案信息（与/me相同，为前端兼容性）"""
     if not current_user:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="未登录用户"
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="未登录用户"
         )
 
     roles, permissions = await _get_user_roles_permissions(db, current_user.id)
@@ -374,21 +384,24 @@ async def get_user_profile(
             "is_active": current_user.is_active,
             "is_superuser": current_user.is_superuser,
             "created_at": current_user.created_at,
-            "updated_at": current_user.updated_at
+            "updated_at": current_user.updated_at,
         },
         "permissions": permissions,
-        "roles": roles
+        "roles": roles,
     }
+
 
 @router.put("/profile")
 async def update_user_profile(
     request: dict,
     current_user: User = Depends(get_current_user),
-    user_service: UserService = Depends(get_user_service)
+    user_service: UserService = Depends(get_user_service),
 ):
     """Update current user's profile and preferences."""
     if not current_user:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="未登录用户")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="未登录用户"
+        )
 
     allowed_fields = {
         "email",
@@ -407,13 +420,17 @@ async def update_user_profile(
         "sms_notifications",
         "push_notifications",
     }
-    update_data = {field: request[field] for field in allowed_fields if field in request}
+    update_data = {
+        field: request[field] for field in allowed_fields if field in request
+    }
 
     if "real_name" in request and "nickname" not in update_data:
         update_data["nickname"] = request["real_name"]
 
     if not update_data:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="没有可更新的字段")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="没有可更新的字段"
+        )
 
     try:
         updated_user = await user_service.update_user(current_user.id, update_data)
@@ -424,27 +441,37 @@ async def update_user_profile(
         logger.error(f"更新个人资料失败: {e}")
         raise internal_server_error("更新个人资料失败", str(e))
 
+
 @router.post("/profile/avatar")
 async def upload_profile_avatar(
     http_request: Request,
     file: UploadFile = File(...),
     current_user: User = Depends(get_current_user),
-    user_service: UserService = Depends(get_user_service)
+    user_service: UserService = Depends(get_user_service),
 ):
     """Upload the current user's avatar and persist the resulting URL."""
     if not current_user:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="未登录用户")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="未登录用户"
+        )
 
     content_type = (file.content_type or "").lower()
     extension = ALLOWED_AVATAR_TYPES.get(content_type)
     if not extension:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="只能上传 JPG、PNG、WEBP 或 GIF 图片")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="只能上传 JPG、PNG、WEBP 或 GIF 图片",
+        )
 
     content = await file.read()
     if not content:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="头像文件不能为空")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="头像文件不能为空"
+        )
     if len(content) > MAX_AVATAR_SIZE:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="头像文件不能超过 5MB")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="头像文件不能超过 5MB"
+        )
 
     AVATAR_DIR.mkdir(parents=True, exist_ok=True)
     filename = f"user_{current_user.id}_{uuid.uuid4().hex}{extension}"
@@ -460,8 +487,12 @@ async def upload_profile_avatar(
             if old_path.exists() and old_path != file_path:
                 old_path.unlink()
 
-        avatar_url = f"{str(http_request.base_url).rstrip('/')}/static/avatars/{filename}"
-        updated_user = await user_service.update_user(current_user.id, {"avatar": avatar_url})
+        avatar_url = (
+            f"{str(http_request.base_url).rstrip('/')}/static/avatars/{filename}"
+        )
+        updated_user = await user_service.update_user(
+            current_user.id, {"avatar": avatar_url}
+        )
         response = await get_user_profile(updated_user)
         response["success"] = True
         response["avatar_url"] = avatar_url
@@ -474,15 +505,16 @@ async def upload_profile_avatar(
             file_path.unlink()
         raise internal_server_error("头像上传失败", str(e))
 
+
 @router.post("/register")
 async def register(
     request: RegisterRequest,
     http_request: Request,
-    auth_service: AuthService = Depends(get_auth_service)
+    auth_service: AuthService = Depends(get_auth_service),
 ):
     """用户注册"""
     client_ip = IPUtils.get_client_ip(http_request)
-    
+
     try:
         result = await auth_service.register(
             username=request.username,
@@ -490,35 +522,32 @@ async def register(
             password=request.password,
             full_name=request.full_name,
             client_ip=client_ip,
-            phone=request.phone
+            phone=request.phone,
         )
-        
+
         if not result["success"]:
             raise bad_request_error(result["message"], "用户注册失败")
-        
-        return {
-            "message": result["message"],
-            "user_id": result["user_id"]
-        }
-    
+
+        return {"message": result["message"], "user_id": result["user_id"]}
+
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"注册失败: {e}")
         raise internal_server_error("注册失败", str(e))
 
+
 @router.post("/forgot-password")
 async def forgot_password(
     request: dict,
     http_request: Request,
-    auth_service: AuthService = Depends(get_auth_service)
+    auth_service: AuthService = Depends(get_auth_service),
 ):
     """忘记密码"""
     email = request.get("email")
     if not email:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="缺少邮箱参数"
+            status_code=status.HTTP_400_BAD_REQUEST, detail="缺少邮箱参数"
         )
 
     # 速率限制：防邮件轰炸与用户枚举侧信道（超限抛 429）
@@ -534,38 +563,36 @@ async def forgot_password(
             ip_address=client_ip,
             user_agent=user_agent,
         )
-        
+
         if not result["success"]:
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=result["message"]
+                status_code=status.HTTP_400_BAD_REQUEST, detail=result["message"]
             )
-        
+
         return {"message": result["message"]}
-    
+
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"忘记密码失败: {e}")
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="忘记密码处理失败"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="忘记密码处理失败"
         )
+
 
 @router.post("/reset-password")
 async def reset_password(
     request: dict,
     http_request: Request,
-    auth_service: AuthService = Depends(get_auth_service)
+    auth_service: AuthService = Depends(get_auth_service),
 ):
     """重置密码"""
     token = request.get("token")
     new_password = request.get("new_password")
-    
+
     if not token or not new_password:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="缺少必需参数"
+            status_code=status.HTTP_400_BAD_REQUEST, detail="缺少必需参数"
         )
 
     # 速率限制：防对 token 接口暴力/扫描（超限抛 429）
@@ -581,117 +608,104 @@ async def reset_password(
             ip_address=client_ip,
             user_agent=user_agent,
         )
-        
+
         if not result["success"]:
             # 计入失败窗口（防枚举/试 token）
             await increment_reset_password_failure(http_request)
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=result["message"]
+                status_code=status.HTTP_400_BAD_REQUEST, detail=result["message"]
             )
-        
+
         return {"message": result["message"]}
-    
+
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"重置密码失败: {e}")
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="重置密码失败"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="重置密码失败"
         )
+
 
 @router.post("/change-password")
 async def change_password(
     request: dict,
     current_user: User = Depends(get_current_user),
-    auth_service: AuthService = Depends(get_auth_service)
+    auth_service: AuthService = Depends(get_auth_service),
 ):
     """修改密码"""
     if not current_user:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="未登录用户"
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="未登录用户"
         )
-    
+
     current_password = request.get("current_password")
     new_password = request.get("new_password")
-    
+
     if not current_password or not new_password:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="缺少必需参数"
+            status_code=status.HTTP_400_BAD_REQUEST, detail="缺少必需参数"
         )
-    
+
     try:
         result = await auth_service.change_password(
             current_user.id, current_password, new_password
         )
-        
+
         if not result["success"]:
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=result["message"]
+                status_code=status.HTTP_400_BAD_REQUEST, detail=result["message"]
             )
-        
+
         return {"message": result["message"]}
-    
+
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"修改密码失败: {e}")
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="修改密码失败"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="修改密码失败"
         )
+
 
 @router.post("/verify-email")
 async def verify_email(
-    request: dict,
-    auth_service: AuthService = Depends(get_auth_service)
+    request: dict, auth_service: AuthService = Depends(get_auth_service)
 ):
     """验证邮箱"""
     token = request.get("token")
     if not token:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="缺少验证令牌"
+            status_code=status.HTTP_400_BAD_REQUEST, detail="缺少验证令牌"
         )
-    
+
     try:
         result = await auth_service.verify_email(token)
-        
+
         if not result["success"]:
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=result["message"]
+                status_code=status.HTTP_400_BAD_REQUEST, detail=result["message"]
             )
-        
+
         return {"message": result["message"]}
-    
+
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"邮箱验证失败: {e}")
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="邮箱验证失败"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="邮箱验证失败"
         )
 
+
 @router.get("/captcha")
-async def get_captcha(
-    auth_service: AuthService = Depends(get_auth_service)
-):
+async def get_captcha(auth_service: AuthService = Depends(get_auth_service)):
     """获取验证码"""
     try:
         result = await auth_service.generate_captcha()
-        return {
-            "key": result["key"],
-            "image": result["image"]
-        }
+        return {"key": result["key"], "image": result["image"]}
     except Exception as e:
         logger.error(f"获取验证码失败: {e}")
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="获取验证码失败"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="获取验证码失败"
         )

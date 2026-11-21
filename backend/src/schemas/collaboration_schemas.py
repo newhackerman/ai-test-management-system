@@ -6,16 +6,19 @@
 - 文件共享的请求和响应模型
 - 白板协作等功能模型
 """
-from datetime import datetime
-from typing import Optional, List, Dict, Any
-from pydantic import BaseModel, Field, validator
-from enum import Enum
 
-from ..models.meeting import MessageType, FileShareStatus
+from datetime import datetime
+from enum import Enum
+from typing import Any, Dict, List, Optional
+
+from pydantic import BaseModel, Field, validator
+
+from ..models.meeting import FileShareStatus, MessageType
 
 
 class MessageTypeEnum(str, Enum):
     """消息类型枚举"""
+
     TEXT = "TEXT"
     IMAGE = "IMAGE"
     FILE = "FILE"
@@ -25,6 +28,7 @@ class MessageTypeEnum(str, Enum):
 
 class FileShareStatusEnum(str, Enum):
     """文件共享状态枚举"""
+
     UPLOADING = "UPLOADING"
     AVAILABLE = "AVAILABLE"
     PROCESSING = "PROCESSING"
@@ -34,6 +38,7 @@ class FileShareStatusEnum(str, Enum):
 
 class SendChatMessageRequest(BaseModel):
     """发送聊天消息请求模型"""
+
     content: str = Field(..., description="消息内容", min_length=1, max_length=2000)
     message_type: MessageTypeEnum = Field(MessageTypeEnum.TEXT, description="消息类型")
     is_private: bool = Field(False, description="是否私聊")
@@ -41,21 +46,22 @@ class SendChatMessageRequest(BaseModel):
     reply_to_id: Optional[int] = Field(None, description="回复消息ID")
     metadata: Optional[Dict[str, Any]] = Field(None, description="消息元数据")
 
-    @validator('content')
+    @validator("content")
     def validate_content(cls, v):
         if not v.strip():
-            raise ValueError('消息内容不能为空')
+            raise ValueError("消息内容不能为空")
         return v.strip()
 
-    @validator('recipient_id')
+    @validator("recipient_id")
     def validate_recipient(cls, v, values):
-        if values.get('is_private') and not v:
-            raise ValueError('私聊消息必须指定接收者')
+        if values.get("is_private") and not v:
+            raise ValueError("私聊消息必须指定接收者")
         return v
 
 
 class ChatMessageResponse(BaseModel):
     """聊天消息响应模型"""
+
     id: int = Field(..., description="消息ID")
     meeting_id: int = Field(..., description="会议ID")
     sender_id: int = Field(..., description="发送者ID")
@@ -67,11 +73,11 @@ class ChatMessageResponse(BaseModel):
     message_metadata: Optional[Dict[str, Any]] = Field(None, description="消息元数据")
     sent_at: datetime = Field(..., description="发送时间")
     created_at: datetime = Field(..., description="创建时间")
-    
+
     # 发送者信息
     sender_name: Optional[str] = Field(None, description="发送者姓名")
     sender_avatar: Optional[str] = Field(None, description="发送者头像")
-    
+
     # 回复消息信息
     reply_to_content: Optional[str] = Field(None, description="回复的消息内容")
     reply_to_sender: Optional[str] = Field(None, description="回复的消息发送者")
@@ -82,6 +88,7 @@ class ChatMessageResponse(BaseModel):
 
 class ChatHistoryResponse(BaseModel):
     """聊天历史响应模型"""
+
     messages: List[ChatMessageResponse] = Field(..., description="消息列表")
     total: int = Field(..., description="总消息数")
     page: int = Field(1, description="当前页码")
@@ -94,6 +101,7 @@ class ChatHistoryResponse(BaseModel):
 
 class SendChatMessageResponse(BaseModel):
     """发送聊天消息响应模型"""
+
     success: bool = Field(True, description="是否成功")
     message: str = Field("消息发送成功", description="响应消息")
     data: ChatMessageResponse = Field(..., description="消息数据")
@@ -104,6 +112,7 @@ class SendChatMessageResponse(BaseModel):
 
 class ChatQueryParams(BaseModel):
     """聊天查询参数模型"""
+
     page: int = Field(1, description="页码", ge=1)
     page_size: int = Field(50, description="每页数量", ge=1, le=200)
     message_type: Optional[MessageTypeEnum] = Field(None, description="消息类型筛选")
@@ -116,6 +125,7 @@ class ChatQueryParams(BaseModel):
 
 class UploadFileRequest(BaseModel):
     """上传文件请求模型"""
+
     file_name: str = Field(..., description="文件名", max_length=255)
     file_size: int = Field(..., description="文件大小(字节)", ge=1)
     file_type: str = Field(..., description="文件类型", max_length=100)
@@ -125,27 +135,28 @@ class UploadFileRequest(BaseModel):
     chunk_size: Optional[int] = Field(None, description="分块大小(字节)")
     total_chunks: Optional[int] = Field(None, description="总分块数")
 
-    @validator('file_name')
+    @validator("file_name")
     def validate_file_name(cls, v):
         if not v.strip():
-            raise ValueError('文件名不能为空')
+            raise ValueError("文件名不能为空")
         # 检查文件名中的非法字符
-        invalid_chars = ['<', '>', ':', '"', '|', '?', '*', '\\', '/']
+        invalid_chars = ["<", ">", ":", '"', "|", "?", "*", "\\", "/"]
         if any(char in v for char in invalid_chars):
-            raise ValueError('文件名包含非法字符')
+            raise ValueError("文件名包含非法字符")
         return v.strip()
 
-    @validator('file_size')
+    @validator("file_size")
     def validate_file_size(cls, v):
         # 限制文件大小为500MB
         max_size = 500 * 1024 * 1024
         if v > max_size:
-            raise ValueError(f'文件大小不能超过{max_size // (1024*1024)}MB')
+            raise ValueError(f"文件大小不能超过{max_size // (1024*1024)}MB")
         return v
 
 
 class FileShareResponse(BaseModel):
     """文件共享响应模型"""
+
     id: int = Field(..., description="文件ID")
     meeting_id: int = Field(..., description="会议ID")
     uploader_id: int = Field(..., description="上传者ID")
@@ -161,7 +172,7 @@ class FileShareResponse(BaseModel):
     file_metadata: Optional[Dict[str, Any]] = Field(None, description="文件元数据")
     uploaded_at: datetime = Field(..., description="上传时间")
     created_at: datetime = Field(..., description="创建时间")
-    
+
     # 扩展信息
     file_size_mb: Optional[float] = Field(None, description="文件大小(MB)")
     download_url: Optional[str] = Field(None, description="下载链接")
@@ -174,6 +185,7 @@ class FileShareResponse(BaseModel):
 
 class UploadFileResponse(BaseModel):
     """上传文件响应模型"""
+
     success: bool = Field(True, description="是否成功")
     message: str = Field("文件上传成功", description="响应消息")
     data: FileShareResponse = Field(..., description="文件数据")
@@ -186,6 +198,7 @@ class UploadFileResponse(BaseModel):
 
 class FileListResponse(BaseModel):
     """文件列表响应模型"""
+
     files: List[FileShareResponse] = Field(..., description="文件列表")
     total: int = Field(..., description="总文件数")
     total_size_mb: float = Field(0, description="总文件大小(MB)")
@@ -196,6 +209,7 @@ class FileListResponse(BaseModel):
 
 class FileQueryParams(BaseModel):
     """文件查询参数模型"""
+
     file_type: Optional[str] = Field(None, description="文件类型筛选")
     status: Optional[FileShareStatusEnum] = Field(None, description="文件状态筛选")
     uploader_id: Optional[int] = Field(None, description="上传者ID筛选")
@@ -207,7 +221,10 @@ class FileQueryParams(BaseModel):
 
 class WhiteboardAction(BaseModel):
     """白板操作模型"""
-    action_type: str = Field(..., description="操作类型")  # draw, erase, clear, undo, redo
+
+    action_type: str = Field(
+        ..., description="操作类型"
+    )  # draw, erase, clear, undo, redo
     user_id: int = Field(..., description="操作用户ID")
     data: Dict[str, Any] = Field(..., description="操作数据")
     timestamp: datetime = Field(default_factory=datetime.utcnow, description="操作时间")
@@ -215,6 +232,7 @@ class WhiteboardAction(BaseModel):
 
 class WhiteboardState(BaseModel):
     """白板状态模型"""
+
     whiteboard_id: str = Field(..., description="白板ID")
     meeting_id: int = Field(..., description="会议ID")
     content: Dict[str, Any] = Field(..., description="白板内容")
@@ -228,6 +246,7 @@ class WhiteboardState(BaseModel):
 
 class PollOption(BaseModel):
     """投票选项模型"""
+
     option_id: str = Field(..., description="选项ID")
     text: str = Field(..., description="选项文本", max_length=200)
     votes: int = Field(0, description="票数")
@@ -235,21 +254,27 @@ class PollOption(BaseModel):
 
 class CreatePollRequest(BaseModel):
     """创建投票请求模型"""
+
     question: str = Field(..., description="投票问题", min_length=1, max_length=500)
-    options: List[PollOption] = Field(..., description="投票选项", min_items=2, max_items=10)
+    options: List[PollOption] = Field(
+        ..., description="投票选项", min_items=2, max_items=10
+    )
     multiple_choice: bool = Field(False, description="是否多选")
     anonymous: bool = Field(True, description="是否匿名")
-    duration_minutes: Optional[int] = Field(None, description="投票时长(分钟)", ge=1, le=1440)
+    duration_minutes: Optional[int] = Field(
+        None, description="投票时长(分钟)", ge=1, le=1440
+    )
 
-    @validator('question')
+    @validator("question")
     def validate_question(cls, v):
         if not v.strip():
-            raise ValueError('投票问题不能为空')
+            raise ValueError("投票问题不能为空")
         return v.strip()
 
 
 class PollResponse(BaseModel):
     """投票响应模型"""
+
     poll_id: str = Field(..., description="投票ID")
     meeting_id: int = Field(..., description="会议ID")
     question: str = Field(..., description="投票问题")
@@ -268,11 +293,14 @@ class PollResponse(BaseModel):
 
 class VotePollRequest(BaseModel):
     """投票请求模型"""
-    poll_id: str = Field(..., description="投票ID")
-    selected_options: List[str] = Field(..., description="选中的选项ID列表", min_items=1)
 
-    @validator('selected_options')
+    poll_id: str = Field(..., description="投票ID")
+    selected_options: List[str] = Field(
+        ..., description="选中的选项ID列表", min_items=1
+    )
+
+    @validator("selected_options")
     def validate_options(cls, v):
         if not v:
-            raise ValueError('必须选择至少一个选项')
+            raise ValueError("必须选择至少一个选项")
         return v

@@ -6,16 +6,19 @@
 - 会议详情、列表的响应模型
 - 会议状态、类型等枚举模型
 """
-from datetime import datetime
-from typing import Optional, List, Dict, Any
-from pydantic import BaseModel, Field, validator
-from enum import Enum
 
-from ..models.meeting import MeetingType, MeetingStatus
+from datetime import datetime
+from enum import Enum
+from typing import Any, Dict, List, Optional
+
+from pydantic import BaseModel, Field, validator
+
+from ..models.meeting import MeetingStatus, MeetingType
 
 
 class MeetingTypeEnum(str, Enum):
     """会议类型枚举"""
+
     PROJECT_KICKOFF = "PROJECT_KICKOFF"
     REQUIREMENT_REVIEW = "REQUIREMENT_REVIEW"
     DESIGN_REVIEW = "DESIGN_REVIEW"
@@ -30,6 +33,7 @@ class MeetingTypeEnum(str, Enum):
 
 class MeetingStatusEnum(str, Enum):
     """会议状态枚举"""
+
     SCHEDULED = "SCHEDULED"
     IN_PROGRESS = "IN_PROGRESS"
     COMPLETED = "COMPLETED"
@@ -39,6 +43,7 @@ class MeetingStatusEnum(str, Enum):
 
 class AgendaItem(BaseModel):
     """议程项目模型"""
+
     title: str = Field(..., description="议程标题", max_length=200)
     description: Optional[str] = Field(None, description="议程描述")
     duration_minutes: int = Field(30, description="预计时长(分钟)", ge=5, le=480)
@@ -48,6 +53,7 @@ class AgendaItem(BaseModel):
 
 class MeetingSettings(BaseModel):
     """会议设置模型"""
+
     auto_record: bool = Field(False, description="自动录制")
     mute_on_join: bool = Field(True, description="加入时静音")
     video_on_join: bool = Field(False, description="加入时开启视频")
@@ -61,6 +67,7 @@ class MeetingSettings(BaseModel):
 
 class CreateMeetingRequest(BaseModel):
     """创建会议请求模型"""
+
     title: str = Field(..., description="会议标题", min_length=1, max_length=200)
     description: Optional[str] = Field(None, description="会议描述", max_length=2000)
     meeting_type: MeetingTypeEnum = Field(..., description="会议类型")
@@ -74,49 +81,61 @@ class CreateMeetingRequest(BaseModel):
     is_recording_enabled: bool = Field(False, description="是否启用录制")
     is_waiting_room_enabled: bool = Field(True, description="是否启用等候室")
     is_password_protected: bool = Field(False, description="是否需要会议密码")
-    meeting_password: Optional[str] = Field(None, description="会议密码", max_length=100)
+    meeting_password: Optional[str] = Field(
+        None, description="会议密码", max_length=100
+    )
     participant_ids: Optional[List[int]] = Field(None, description="参与者用户ID列表")
     auto_schedule: bool = Field(False, description="智能调度")
-    preferred_time_range: Optional[Dict[str, Any]] = Field(None, description="偏好时间范围")
+    preferred_time_range: Optional[Dict[str, Any]] = Field(
+        None, description="偏好时间范围"
+    )
 
-    @validator('scheduled_end_time')
+    @validator("scheduled_end_time")
     def validate_end_time(cls, v, values):
-        if 'scheduled_start_time' in values and v <= values['scheduled_start_time']:
-            raise ValueError('结束时间必须晚于开始时间')
+        if "scheduled_start_time" in values and v <= values["scheduled_start_time"]:
+            raise ValueError("结束时间必须晚于开始时间")
         return v
 
-    @validator('title')
+    @validator("title")
     def validate_title(cls, v):
         if not v.strip():
-            raise ValueError('会议标题不能为空')
+            raise ValueError("会议标题不能为空")
         return v.strip()
 
 
 class UpdateMeetingRequest(BaseModel):
     """更新会议请求模型"""
-    title: Optional[str] = Field(None, description="会议标题", min_length=1, max_length=200)
+
+    title: Optional[str] = Field(
+        None, description="会议标题", min_length=1, max_length=200
+    )
     description: Optional[str] = Field(None, description="会议描述", max_length=2000)
     meeting_type: Optional[MeetingTypeEnum] = Field(None, description="会议类型")
     scheduled_start_time: Optional[datetime] = Field(None, description="计划开始时间")
     scheduled_end_time: Optional[datetime] = Field(None, description="计划结束时间")
     timezone: Optional[str] = Field(None, description="时区")
-    max_participants: Optional[int] = Field(None, description="最大参与人数", ge=2, le=1000)
+    max_participants: Optional[int] = Field(
+        None, description="最大参与人数", ge=2, le=1000
+    )
     agenda: Optional[List[AgendaItem]] = Field(None, description="会议议程")
     meeting_settings: Optional[MeetingSettings] = Field(None, description="会议设置")
     is_recording_enabled: Optional[bool] = Field(None, description="是否启用录制")
     is_waiting_room_enabled: Optional[bool] = Field(None, description="是否启用等候室")
     is_password_protected: Optional[bool] = Field(None, description="是否需要会议密码")
-    meeting_password: Optional[str] = Field(None, description="会议密码", max_length=100)
+    meeting_password: Optional[str] = Field(
+        None, description="会议密码", max_length=100
+    )
 
-    @validator('title')
+    @validator("title")
     def validate_title(cls, v):
         if v is not None and not v.strip():
-            raise ValueError('会议标题不能为空')
+            raise ValueError("会议标题不能为空")
         return v.strip() if v else v
 
 
 class MeetingQueryParams(BaseModel):
     """会议查询参数模型"""
+
     page: int = Field(1, description="页码", ge=1)
     page_size: int = Field(20, description="每页数量", ge=1, le=100)
     meeting_type: Optional[MeetingTypeEnum] = Field(None, description="会议类型筛选")
@@ -132,6 +151,7 @@ class MeetingQueryParams(BaseModel):
 
 class MeetingResponse(BaseModel):
     """会议响应模型"""
+
     id: int = Field(..., description="会议ID")
     meeting_code: str = Field(..., description="会议编码")
     title: str = Field(..., description="会议标题")
@@ -164,6 +184,7 @@ class MeetingResponse(BaseModel):
 
 class MeetingListResponse(BaseModel):
     """会议列表响应模型"""
+
     meetings: List[MeetingResponse] = Field(..., description="会议列表")
     total: int = Field(..., description="总数量")
     page: int = Field(..., description="当前页码")
@@ -176,6 +197,7 @@ class MeetingListResponse(BaseModel):
 
 class CreateMeetingResponse(BaseModel):
     """创建会议响应模型"""
+
     success: bool = Field(True, description="是否成功")
     message: str = Field("会议创建成功", description="响应消息")
     data: MeetingResponse = Field(..., description="会议数据")
@@ -186,6 +208,7 @@ class CreateMeetingResponse(BaseModel):
 
 class UpdateMeetingResponse(BaseModel):
     """更新会议响应模型"""
+
     success: bool = Field(True, description="是否成功")
     message: str = Field("会议更新成功", description="响应消息")
     data: MeetingResponse = Field(..., description="会议数据")
@@ -196,6 +219,7 @@ class UpdateMeetingResponse(BaseModel):
 
 class DeleteMeetingResponse(BaseModel):
     """删除会议响应模型"""
+
     success: bool = Field(True, description="是否成功")
     message: str = Field("会议删除成功", description="响应消息")
 
@@ -205,6 +229,7 @@ class DeleteMeetingResponse(BaseModel):
 
 class MeetingJoinRequest(BaseModel):
     """加入会议请求模型"""
+
     meeting_code: str = Field(..., description="会议编码", min_length=1, max_length=50)
     password: Optional[str] = Field(None, description="会议密码", max_length=100)
     device_info: Optional[Dict[str, Any]] = Field(None, description="设备信息")
@@ -213,6 +238,7 @@ class MeetingJoinRequest(BaseModel):
 
 class MeetingJoinResponse(BaseModel):
     """加入会议响应模型"""
+
     success: bool = Field(..., description="是否成功")
     message: str = Field(..., description="响应消息")
     status: str = Field(..., description="加入状态")  # SUCCESS, WAITING_ROOM, FAILED
@@ -226,11 +252,18 @@ class MeetingJoinResponse(BaseModel):
 
 class MeetingControlRequest(BaseModel):
     """会议控制请求模型"""
+
     action: str = Field(..., description="控制动作")  # start, end, pause, resume
     reason: Optional[str] = Field(None, description="操作原因", max_length=500)
-    minutes_title: Optional[str] = Field(None, description="会议纪要标题", max_length=200)
-    minutes_content: Optional[str] = Field(None, description="会议纪要内容", max_length=10000)
-    minutes_summary: Optional[str] = Field(None, description="会议摘要", max_length=2000)
+    minutes_title: Optional[str] = Field(
+        None, description="会议纪要标题", max_length=200
+    )
+    minutes_content: Optional[str] = Field(
+        None, description="会议纪要内容", max_length=10000
+    )
+    minutes_summary: Optional[str] = Field(
+        None, description="会议摘要", max_length=2000
+    )
     key_points: Optional[List[str]] = Field(None, description="关键要点")
     decisions: Optional[List[Dict[str, Any]]] = Field(None, description="决策事项")
     action_items: Optional[List[Dict[str, Any]]] = Field(None, description="行动项")
@@ -238,6 +271,7 @@ class MeetingControlRequest(BaseModel):
 
 class MeetingControlResponse(BaseModel):
     """会议控制响应模型"""
+
     success: bool = Field(..., description="是否成功")
     message: str = Field(..., description="响应消息")
     meeting_status: str = Field(..., description="会议状态")
@@ -249,6 +283,7 @@ class MeetingControlResponse(BaseModel):
 
 class MeetingStatusResponse(BaseModel):
     """会议状态响应模型"""
+
     meeting_id: int = Field(..., description="会议ID")
     status: str = Field(..., description="会议状态")
     participant_count: int = Field(..., description="当前参与人数")

@@ -6,19 +6,24 @@
 - 状态转换管理
 - 审批流程控制
 """
-from datetime import datetime, timedelta
-from typing import Optional, List, Dict, Any, Callable
-from enum import Enum
+
 from dataclasses import dataclass
+from datetime import datetime, timedelta
+from enum import Enum
+from typing import Any, Callable, Dict, List, Optional
 
 from models.requirement import (
-    RequirementChangeRequest, ChangeStatus, ChangeType, ChangePriority
+    ChangePriority,
+    ChangeStatus,
+    ChangeType,
+    RequirementChangeRequest,
 )
 from repositories.requirement_change_repository import RequirementChangeRepository
 
 
 class WorkflowAction(Enum):
     """工作流动作"""
+
     SUBMIT = "SUBMIT"
     REVIEW = "REVIEW"
     APPROVE = "APPROVE"
@@ -30,6 +35,7 @@ class WorkflowAction(Enum):
 
 class WorkflowStepType(Enum):
     """工作流步骤类型"""
+
     START = "START"
     REVIEW = "REVIEW"
     APPROVAL = "APPROVAL"
@@ -40,6 +46,7 @@ class WorkflowStepType(Enum):
 @dataclass
 class WorkflowStep:
     """工作流步骤"""
+
     id: str
     name: str
     step_type: WorkflowStepType
@@ -53,6 +60,7 @@ class WorkflowStep:
 @dataclass
 class WorkflowDefinition:
     """工作流定义"""
+
     id: str
     name: str
     description: str
@@ -65,6 +73,7 @@ class WorkflowDefinition:
 @dataclass
 class WorkflowInstance:
     """工作流实例"""
+
     id: str
     workflow_id: str
     change_request_id: int
@@ -78,30 +87,30 @@ class WorkflowInstance:
 
 class ChangeWorkflowEngine:
     """变更工作流引擎"""
-    
+
     def __init__(self, change_repo: RequirementChangeRepository):
         self.change_repo = change_repo
         self.workflows = self._initialize_workflows()
         self.active_instances: Dict[int, WorkflowInstance] = {}
-    
+
     async def start_workflow(
-        self,
-        change_request_id: int,
-        workflow_id: Optional[str] = None
+        self, change_request_id: int, workflow_id: Optional[str] = None
     ) -> WorkflowInstance:
         """启动工作流"""
-        change_request = await self.change_repo.get_change_request_by_id(change_request_id)
+        change_request = await self.change_repo.get_change_request_by_id(
+            change_request_id
+        )
         if not change_request:
             raise ValueError(f"变更请求 {change_request_id} 不存在")
-        
+
         # 选择合适的工作流
         if not workflow_id:
             workflow_id = self._select_workflow(change_request)
-        
+
         workflow = self.workflows.get(workflow_id)
         if not workflow:
             raise ValueError(f"工作流 {workflow_id} 不存在")
-        
+
         # 创建工作流实例
         instance = WorkflowInstance(
             id=f"wf_{change_request_id}_{datetime.now().strftime('%Y%m%d%H%M%S')}",
@@ -111,51 +120,51 @@ class ChangeWorkflowEngine:
             status="RUNNING",
             started_at=datetime.utcnow(),
             step_history=[],
-            context_data={}
+            context_data={},
         )
-        
+
         self.active_instances[change_request_id] = instance
-        
+
         # 执行初始步骤
         await self._execute_step(instance, workflow.initial_step)
-        
+
         return instance
-    
+
     async def execute_action(
         self,
         change_request_id: int,
         action: WorkflowAction,
         user_id: int,
-        data: Optional[Dict[str, Any]] = None
+        data: Optional[Dict[str, Any]] = None,
     ) -> WorkflowInstance:
         """执行工作流动作"""
         instance = self.active_instances.get(change_request_id)
         if not instance:
             raise ValueError(f"变更请求 {change_request_id} 没有活动的工作流实例")
-        
+
         workflow = self.workflows[instance.workflow_id]
         current_step = self._get_step(workflow, instance.current_step)
-        
+
         if not current_step:
             raise ValueError(f"当前步骤 {instance.current_step} 不存在")
-        
+
         # 验证动作是否允许
         if not self._is_action_allowed(current_step, action, user_id):
             raise ValueError(f"当前步骤不允许执行动作 {action.value}")
-        
+
         # 记录步骤历史
         step_record = {
             "step_id": current_step.id,
             "action": action.value,
             "user_id": user_id,
             "timestamp": datetime.utcnow().isoformat(),
-            "data": data or {}
+            "data": data or {},
         }
         instance.step_history.append(step_record)
-        
+
         # 确定下一步骤
         next_step_id = self._get_next_step(current_step, action)
-        
+
         if next_step_id:
             instance.current_step = next_step_id
             await self._execute_step(instance, next_step_id)
@@ -163,51 +172,59 @@ class ChangeWorkflowEngine:
             # 工作流结束
             instance.status = "COMPLETED"
             instance.completed_at = datetime.utcnow()
-        
+
         # 更新变更请求状态
         await self._update_change_request_status(instance, action, data)
-        
+
         return instance
-    
-    async def get_workflow_instance(self, change_request_id: int) -> Optional[WorkflowInstance]:
+
+    async def get_workflow_instance(
+        self, change_request_id: int
+    ) -> Optional[WorkflowInstance]:
         """获取工作流实例"""
         return self.active_instances.get(change_request_id)
-    
+
     async def get_pending_tasks(self, user_id: int, role: str) -> List[Dict[str, Any]]:
         """获取用户待处理任务"""
         pending_tasks = []
-        
+
         for instance in self.active_instances.values():
             if instance.status != "RUNNING":
                 continue
-            
+
             workflow = self.workflows[instance.workflow_id]
             current_step = self._get_step(workflow, instance.current_step)
-            
-            if (current_step and 
-                current_step.required_role and 
-                current_step.required_role == role):
-                
+
+            if (
+                current_step
+                and current_step.required_role
+                and current_step.required_role == role
+            ):
+
                 change_request = await self.change_repo.get_change_request_by_id(
                     instance.change_request_id
                 )
-                
-                pending_tasks.append({
-                    "workflow_instance_id": instance.id,
-                    "change_request_id": instance.change_request_id,
-                    "change_request_title": change_request.title if change_request else "",
-                    "current_step": current_step.name,
-                    "step_type": current_step.step_type.value,
-                    "started_at": instance.started_at.isoformat(),
-                    "timeout_at": self._calculate_timeout(instance, current_step)
-                })
-        
+
+                pending_tasks.append(
+                    {
+                        "workflow_instance_id": instance.id,
+                        "change_request_id": instance.change_request_id,
+                        "change_request_title": (
+                            change_request.title if change_request else ""
+                        ),
+                        "current_step": current_step.name,
+                        "step_type": current_step.step_type.value,
+                        "started_at": instance.started_at.isoformat(),
+                        "timeout_at": self._calculate_timeout(instance, current_step),
+                    }
+                )
+
         return pending_tasks
-    
+
     def _initialize_workflows(self) -> Dict[str, WorkflowDefinition]:
         """初始化工作流定义"""
         workflows = {}
-        
+
         # 标准变更工作流
         standard_workflow = WorkflowDefinition(
             id="standard_change",
@@ -219,7 +236,7 @@ class ChangeWorkflowEngine:
                     name="开始",
                     step_type=WorkflowStepType.START,
                     auto_execute=True,
-                    next_steps={"SUBMIT": "review"}
+                    next_steps={"SUBMIT": "review"},
                 ),
                 WorkflowStep(
                     id="review",
@@ -227,10 +244,7 @@ class ChangeWorkflowEngine:
                     step_type=WorkflowStepType.REVIEW,
                     required_role="reviewer",
                     timeout_hours=48,
-                    next_steps={
-                        "APPROVE": "approval",
-                        "REJECT": "end"
-                    }
+                    next_steps={"APPROVE": "approval", "REJECT": "end"},
                 ),
                 WorkflowStep(
                     id="approval",
@@ -238,10 +252,7 @@ class ChangeWorkflowEngine:
                     step_type=WorkflowStepType.APPROVAL,
                     required_role="approver",
                     timeout_hours=72,
-                    next_steps={
-                        "APPROVE": "implementation",
-                        "REJECT": "end"
-                    }
+                    next_steps={"APPROVE": "implementation", "REJECT": "end"},
                 ),
                 WorkflowStep(
                     id="implementation",
@@ -249,28 +260,25 @@ class ChangeWorkflowEngine:
                     step_type=WorkflowStepType.IMPLEMENTATION,
                     required_role="implementer",
                     timeout_hours=168,  # 7天
-                    next_steps={"IMPLEMENT": "end"}
+                    next_steps={"IMPLEMENT": "end"},
                 ),
                 WorkflowStep(
                     id="end",
                     name="结束",
                     step_type=WorkflowStepType.END,
-                    auto_execute=True
-                )
+                    auto_execute=True,
+                ),
             ],
             initial_step="start",
             applicable_change_types=[
                 ChangeType.MODIFICATION,
                 ChangeType.ADDITION,
-                ChangeType.CLARIFICATION
+                ChangeType.CLARIFICATION,
             ],
-            applicable_priorities=[
-                ChangePriority.MEDIUM,
-                ChangePriority.LOW
-            ]
+            applicable_priorities=[ChangePriority.MEDIUM, ChangePriority.LOW],
         )
         workflows["standard_change"] = standard_workflow
-        
+
         # 紧急变更工作流
         emergency_workflow = WorkflowDefinition(
             id="emergency_change",
@@ -282,7 +290,7 @@ class ChangeWorkflowEngine:
                     name="开始",
                     step_type=WorkflowStepType.START,
                     auto_execute=True,
-                    next_steps={"SUBMIT": "emergency_approval"}
+                    next_steps={"SUBMIT": "emergency_approval"},
                 ),
                 WorkflowStep(
                     id="emergency_approval",
@@ -290,10 +298,7 @@ class ChangeWorkflowEngine:
                     step_type=WorkflowStepType.APPROVAL,
                     required_role="emergency_approver",
                     timeout_hours=4,
-                    next_steps={
-                        "APPROVE": "implementation",
-                        "REJECT": "end"
-                    }
+                    next_steps={"APPROVE": "implementation", "REJECT": "end"},
                 ),
                 WorkflowStep(
                     id="implementation",
@@ -301,28 +306,25 @@ class ChangeWorkflowEngine:
                     step_type=WorkflowStepType.IMPLEMENTATION,
                     required_role="implementer",
                     timeout_hours=24,
-                    next_steps={"IMPLEMENT": "end"}
+                    next_steps={"IMPLEMENT": "end"},
                 ),
                 WorkflowStep(
                     id="end",
                     name="结束",
                     step_type=WorkflowStepType.END,
-                    auto_execute=True
-                )
+                    auto_execute=True,
+                ),
             ],
             initial_step="start",
             applicable_change_types=[
                 ChangeType.MODIFICATION,
                 ChangeType.ADDITION,
-                ChangeType.DELETION
+                ChangeType.DELETION,
             ],
-            applicable_priorities=[
-                ChangePriority.EMERGENCY,
-                ChangePriority.HIGH
-            ]
+            applicable_priorities=[ChangePriority.EMERGENCY, ChangePriority.HIGH],
         )
         workflows["emergency_change"] = emergency_workflow
-        
+
         # 删除变更工作流
         deletion_workflow = WorkflowDefinition(
             id="deletion_change",
@@ -334,7 +336,7 @@ class ChangeWorkflowEngine:
                     name="开始",
                     step_type=WorkflowStepType.START,
                     auto_execute=True,
-                    next_steps={"SUBMIT": "impact_review"}
+                    next_steps={"SUBMIT": "impact_review"},
                 ),
                 WorkflowStep(
                     id="impact_review",
@@ -342,7 +344,7 @@ class ChangeWorkflowEngine:
                     step_type=WorkflowStepType.REVIEW,
                     required_role="impact_analyst",
                     timeout_hours=24,
-                    next_steps={"REVIEW": "senior_approval"}
+                    next_steps={"REVIEW": "senior_approval"},
                 ),
                 WorkflowStep(
                     id="senior_approval",
@@ -350,10 +352,7 @@ class ChangeWorkflowEngine:
                     step_type=WorkflowStepType.APPROVAL,
                     required_role="senior_approver",
                     timeout_hours=48,
-                    next_steps={
-                        "APPROVE": "implementation",
-                        "REJECT": "end"
-                    }
+                    next_steps={"APPROVE": "implementation", "REJECT": "end"},
                 ),
                 WorkflowStep(
                     id="implementation",
@@ -361,77 +360,78 @@ class ChangeWorkflowEngine:
                     step_type=WorkflowStepType.IMPLEMENTATION,
                     required_role="senior_implementer",
                     timeout_hours=72,
-                    next_steps={"IMPLEMENT": "end"}
+                    next_steps={"IMPLEMENT": "end"},
                 ),
                 WorkflowStep(
                     id="end",
                     name="结束",
                     step_type=WorkflowStepType.END,
-                    auto_execute=True
-                )
+                    auto_execute=True,
+                ),
             ],
             initial_step="start",
             applicable_change_types=[ChangeType.DELETION],
             applicable_priorities=[
                 ChangePriority.HIGH,
                 ChangePriority.MEDIUM,
-                ChangePriority.LOW
-            ]
+                ChangePriority.LOW,
+            ],
         )
         workflows["deletion_change"] = deletion_workflow
-        
+
         return workflows
-    
+
     def _select_workflow(self, change_request: RequirementChangeRequest) -> str:
         """选择合适的工作流"""
         # 删除变更使用特殊流程
         if change_request.change_type == ChangeType.DELETION:
             return "deletion_change"
-        
+
         # 紧急变更使用快速流程
         if change_request.priority in [ChangePriority.EMERGENCY, ChangePriority.HIGH]:
             return "emergency_change"
-        
+
         # 其他使用标准流程
         return "standard_change"
-    
-    def _get_step(self, workflow: WorkflowDefinition, step_id: str) -> Optional[WorkflowStep]:
+
+    def _get_step(
+        self, workflow: WorkflowDefinition, step_id: str
+    ) -> Optional[WorkflowStep]:
         """获取工作流步骤"""
         for step in workflow.steps:
             if step.id == step_id:
                 return step
         return None
-    
+
     def _is_action_allowed(
-        self, 
-        step: WorkflowStep, 
-        action: WorkflowAction, 
-        user_id: int
+        self, step: WorkflowStep, action: WorkflowAction, user_id: int
     ) -> bool:
         """检查动作是否允许"""
         # 检查步骤是否支持该动作
         if step.next_steps and action.value not in step.next_steps:
             return False
-        
+
         # 这里可以添加更多的权限检查逻辑
         # 例如检查用户是否具有required_role
-        
+
         return True
-    
-    def _get_next_step(self, step: WorkflowStep, action: WorkflowAction) -> Optional[str]:
+
+    def _get_next_step(
+        self, step: WorkflowStep, action: WorkflowAction
+    ) -> Optional[str]:
         """获取下一步骤"""
         if step.next_steps:
             return step.next_steps.get(action.value)
         return None
-    
+
     async def _execute_step(self, instance: WorkflowInstance, step_id: str) -> None:
         """执行工作流步骤"""
         workflow = self.workflows[instance.workflow_id]
         step = self._get_step(workflow, step_id)
-        
+
         if not step:
             return
-        
+
         # 如果是自动执行步骤
         if step.auto_execute:
             if step.step_type == WorkflowStepType.START:
@@ -444,18 +444,18 @@ class ChangeWorkflowEngine:
                 # 工作流结束
                 instance.status = "COMPLETED"
                 instance.completed_at = datetime.utcnow()
-        
+
         # 设置超时
         if step.timeout_hours:
             timeout_at = datetime.utcnow() + timedelta(hours=step.timeout_hours)
             instance.context_data = instance.context_data or {}
             instance.context_data["timeout_at"] = timeout_at.isoformat()
-    
+
     async def _update_change_request_status(
         self,
         instance: WorkflowInstance,
         action: WorkflowAction,
-        data: Optional[Dict[str, Any]]
+        data: Optional[Dict[str, Any]],
     ) -> None:
         """更新变更请求状态"""
         status_mapping = {
@@ -464,59 +464,64 @@ class ChangeWorkflowEngine:
             WorkflowAction.REJECT: ChangeStatus.REJECTED,
             WorkflowAction.IMPLEMENT: ChangeStatus.IMPLEMENTED,
             WorkflowAction.CLOSE: ChangeStatus.CLOSED,
-            WorkflowAction.CANCEL: ChangeStatus.REJECTED
+            WorkflowAction.CANCEL: ChangeStatus.REJECTED,
         }
-        
+
         new_status = status_mapping.get(action)
         if new_status:
             await self.change_repo.update_change_request_status(
                 change_request_id=instance.change_request_id,
                 new_status=new_status,
                 approver_id=data.get("user_id") if data else None,
-                implementer_id=data.get("implementer_id") if data else None
+                implementer_id=data.get("implementer_id") if data else None,
             )
-    
+
     def _calculate_timeout(
-        self, 
-        instance: WorkflowInstance, 
-        step: WorkflowStep
+        self, instance: WorkflowInstance, step: WorkflowStep
     ) -> Optional[str]:
         """计算超时时间"""
         if not step.timeout_hours:
             return None
-        
+
         # 从步骤历史中找到进入当前步骤的时间
         current_step_start = None
         for record in reversed(instance.step_history):
             if record.get("next_step") == step.id:
                 current_step_start = datetime.fromisoformat(record["timestamp"])
                 break
-        
+
         if not current_step_start:
             current_step_start = instance.started_at
-        
+
         timeout_at = current_step_start + timedelta(hours=step.timeout_hours)
         return timeout_at.isoformat()
-    
+
     async def check_timeouts(self) -> List[Dict[str, Any]]:
         """检查超时的工作流实例"""
         timeout_instances = []
         current_time = datetime.utcnow()
-        
+
         for instance in self.active_instances.values():
             if instance.status != "RUNNING":
                 continue
-            
-            timeout_str = instance.context_data.get("timeout_at") if instance.context_data else None
+
+            timeout_str = (
+                instance.context_data.get("timeout_at")
+                if instance.context_data
+                else None
+            )
             if timeout_str:
                 timeout_at = datetime.fromisoformat(timeout_str)
                 if current_time > timeout_at:
-                    timeout_instances.append({
-                        "instance_id": instance.id,
-                        "change_request_id": instance.change_request_id,
-                        "current_step": instance.current_step,
-                        "timeout_at": timeout_str,
-                        "overdue_hours": (current_time - timeout_at).total_seconds() / 3600
-                    })
-        
+                    timeout_instances.append(
+                        {
+                            "instance_id": instance.id,
+                            "change_request_id": instance.change_request_id,
+                            "current_step": instance.current_step,
+                            "timeout_at": timeout_str,
+                            "overdue_hours": (current_time - timeout_at).total_seconds()
+                            / 3600,
+                        }
+                    )
+
         return timeout_instances

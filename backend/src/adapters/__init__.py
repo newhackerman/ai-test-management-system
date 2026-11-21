@@ -26,16 +26,16 @@ AI服务提供商适配器模块
 - 详细的性能监控和日志记录
 """
 
-from .base import BaseAIAdapter, AIRequest, AIResponse, AIProvider
-from .openai_adapter import OpenAIAdapter
+from .adapter_manager import AdapterManager
+from .aliyun_adapter import AliyunAdapter
 from .anthropic_adapter import AnthropicAdapter
 from .baidu_adapter import BaiduAdapter
-from .aliyun_adapter import AliyunAdapter
-from .google_adapter import GoogleAdapter
-from .zhipu_adapter import ZhipuAdapter
-from .xunfei_adapter import XunfeiAdapter
+from .base import AIProvider, AIRequest, AIResponse, BaseAIAdapter
 from .custom_adapter import CustomAdapter
-from .adapter_manager import AdapterManager
+from .google_adapter import GoogleAdapter
+from .openai_adapter import OpenAIAdapter
+from .xunfei_adapter import XunfeiAdapter
+from .zhipu_adapter import ZhipuAdapter
 
 __all__ = [
     # 基础类

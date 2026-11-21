@@ -6,14 +6,17 @@
 - 参与者详情、列表的响应模型
 - 参与者角色、状态等枚举模型
 """
+
 from datetime import datetime
-from typing import Optional, List, Dict, Any
-from pydantic import BaseModel, Field, validator
 from enum import Enum
+from typing import Any, Dict, List, Optional
+
+from pydantic import BaseModel, Field, validator
 
 
 class ParticipantRoleEnum(str, Enum):
     """参与者角色枚举"""
+
     ORGANIZER = "ORGANIZER"
     MODERATOR = "MODERATOR"
     PRESENTER = "PRESENTER"
@@ -23,6 +26,7 @@ class ParticipantRoleEnum(str, Enum):
 
 class InvitationStatusEnum(str, Enum):
     """邀请状态枚举"""
+
     PENDING = "PENDING"
     ACCEPTED = "ACCEPTED"
     DECLINED = "DECLINED"
@@ -31,6 +35,7 @@ class InvitationStatusEnum(str, Enum):
 
 class AttendanceStatusEnum(str, Enum):
     """出席状态枚举"""
+
     NOT_JOINED = "NOT_JOINED"
     JOINED = "JOINED"
     LEFT = "LEFT"
@@ -39,8 +44,11 @@ class AttendanceStatusEnum(str, Enum):
 
 class AddParticipantRequest(BaseModel):
     """添加参与者请求模型"""
+
     user_id: int = Field(..., description="用户ID", gt=0)
-    participant_role: ParticipantRoleEnum = Field(ParticipantRoleEnum.PARTICIPANT, description="参与者角色")
+    participant_role: ParticipantRoleEnum = Field(
+        ParticipantRoleEnum.PARTICIPANT, description="参与者角色"
+    )
     can_share_screen: bool = Field(True, description="是否可以共享屏幕")
     can_use_chat: bool = Field(True, description="是否可以使用聊天")
     can_use_whiteboard: bool = Field(True, description="是否可以使用白板")
@@ -49,13 +57,19 @@ class AddParticipantRequest(BaseModel):
 
 class AddParticipantsRequest(BaseModel):
     """批量添加参与者请求模型"""
-    participants: List[AddParticipantRequest] = Field(..., description="参与者列表", min_items=1)
+
+    participants: List[AddParticipantRequest] = Field(
+        ..., description="参与者列表", min_items=1
+    )
     send_notification: bool = Field(True, description="是否发送通知")
 
 
 class UpdateParticipantRequest(BaseModel):
     """更新参与者请求模型"""
-    participant_role: Optional[ParticipantRoleEnum] = Field(None, description="参与者角色")
+
+    participant_role: Optional[ParticipantRoleEnum] = Field(
+        None, description="参与者角色"
+    )
     can_share_screen: Optional[bool] = Field(None, description="是否可以共享屏幕")
     can_use_chat: Optional[bool] = Field(None, description="是否可以使用聊天")
     can_use_whiteboard: Optional[bool] = Field(None, description="是否可以使用白板")
@@ -64,15 +78,21 @@ class UpdateParticipantRequest(BaseModel):
 
 class InviteParticipantRequest(BaseModel):
     """邀请参与者请求模型"""
+
     user_ids: List[int] = Field(..., description="用户ID列表", min_items=1)
-    participant_role: ParticipantRoleEnum = Field(ParticipantRoleEnum.PARTICIPANT, description="参与者角色")
-    custom_message: Optional[str] = Field(None, description="自定义邀请消息", max_length=500)
+    participant_role: ParticipantRoleEnum = Field(
+        ParticipantRoleEnum.PARTICIPANT, description="参与者角色"
+    )
+    custom_message: Optional[str] = Field(
+        None, description="自定义邀请消息", max_length=500
+    )
     send_email: bool = Field(True, description="是否发送邮件邀请")
     send_notification: bool = Field(True, description="是否发送系统通知")
 
 
 class ParticipantResponse(BaseModel):
     """参与者响应模型"""
+
     id: int = Field(..., description="参与记录ID")
     meeting_id: int = Field(..., description="会议ID")
     user_id: int = Field(..., description="用户ID")
@@ -101,6 +121,7 @@ class ParticipantResponse(BaseModel):
 
 class ParticipantListResponse(BaseModel):
     """参与者列表响应模型"""
+
     participants: List[ParticipantResponse] = Field(..., description="参与者列表")
     total: int = Field(..., description="总数量")
     meeting_id: int = Field(..., description="会议ID")
@@ -108,34 +129,51 @@ class ParticipantListResponse(BaseModel):
     class Config:
         from_attributes = True
 
+
 class ParticipantInviteRequest(BaseModel):
     """参与者邀请请求模型 - 别名"""
+
     user_ids: List[int] = Field(..., description="用户ID列表", min_items=1)
-    participant_role: ParticipantRoleEnum = Field(ParticipantRoleEnum.PARTICIPANT, description="参与者角色")
-    custom_message: Optional[str] = Field(None, description="自定义邀请消息", max_length=500)
+    participant_role: ParticipantRoleEnum = Field(
+        ParticipantRoleEnum.PARTICIPANT, description="参与者角色"
+    )
+    custom_message: Optional[str] = Field(
+        None, description="自定义邀请消息", max_length=500
+    )
     send_email: bool = Field(True, description="是否发送邮件邀请")
     send_notification: bool = Field(True, description="是否发送系统通知")
 
 
 class ParticipantQueryParams(BaseModel):
     """参与者查询参数模型"""
+
     meeting_id: Optional[int] = Field(None, description="会议ID")
     user_id: Optional[int] = Field(None, description="用户ID")
-    participant_role: Optional[ParticipantRoleEnum] = Field(None, description="参与者角色")
-    invitation_status: Optional[InvitationStatusEnum] = Field(None, description="邀请状态")
-    attendance_status: Optional[AttendanceStatusEnum] = Field(None, description="出席状态")
+    participant_role: Optional[ParticipantRoleEnum] = Field(
+        None, description="参与者角色"
+    )
+    invitation_status: Optional[InvitationStatusEnum] = Field(
+        None, description="邀请状态"
+    )
+    attendance_status: Optional[AttendanceStatusEnum] = Field(
+        None, description="出席状态"
+    )
     page: int = Field(1, description="页码", ge=1)
     page_size: int = Field(20, description="每页大小", ge=1, le=100)
 
 
 class KickParticipantRequest(BaseModel):
     """踢出参与者请求模型"""
+
     reason: Optional[str] = Field(None, description="踢出原因", max_length=200)
-    ban_duration_minutes: Optional[int] = Field(None, description="禁止重新加入时长(分钟)", ge=0)
+    ban_duration_minutes: Optional[int] = Field(
+        None, description="禁止重新加入时长(分钟)", ge=0
+    )
 
 
 class AddParticipantResponse(BaseModel):
     """添加参与者响应模型"""
+
     success: bool = Field(..., description="是否成功")
     participant: Optional[ParticipantResponse] = Field(None, description="参与者信息")
     message: str = Field(..., description="响应消息")
@@ -143,6 +181,7 @@ class AddParticipantResponse(BaseModel):
 
 class AddParticipantsResponse(BaseModel):
     """批量添加参与者响应模型"""
+
     success: bool = Field(..., description="是否成功")
     added_count: int = Field(..., description="成功添加数量")
     failed_count: int = Field(..., description="失败数量")
@@ -152,19 +191,24 @@ class AddParticipantsResponse(BaseModel):
 
 class UpdateParticipantResponse(BaseModel):
     """更新参与者响应模型"""
+
     success: bool = Field(..., description="是否成功")
-    participant: Optional[ParticipantResponse] = Field(None, description="更新后的参与者信息")
+    participant: Optional[ParticipantResponse] = Field(
+        None, description="更新后的参与者信息"
+    )
     message: str = Field(..., description="响应消息")
 
 
 class RemoveParticipantResponse(BaseModel):
     """移除参与者响应模型"""
+
     success: bool = Field(..., description="是否成功")
     message: str = Field(..., description="响应消息")
 
 
 class InviteParticipantResponse(BaseModel):
     """邀请参与者响应模型"""
+
     success: bool = Field(..., description="是否成功")
     invited_count: int = Field(..., description="邀请数量")
     message: str = Field(..., description="响应消息")
@@ -172,12 +216,14 @@ class InviteParticipantResponse(BaseModel):
 
 class KickParticipantResponse(BaseModel):
     """踢出参与者响应模型"""
+
     success: bool = Field(..., description="是否成功")
     message: str = Field(..., description="响应消息")
 
 
 class ParticipantStatistics(BaseModel):
     """参与者统计模型"""
+
     total_participants: int = Field(..., description="总参与者数")
     active_participants: int = Field(..., description="活跃参与者数")
     by_role: Dict[str, int] = Field(..., description="按角色统计")

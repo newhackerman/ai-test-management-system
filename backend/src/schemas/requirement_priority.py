@@ -3,21 +3,26 @@
 
 定义API请求和响应的数据结构
 """
-from typing import List, Optional, Dict, Any
+
 from datetime import datetime
 from decimal import Decimal
+from typing import Any, Dict, List, Optional
+
 from pydantic import BaseModel, Field, validator
 
-from ..models.requirement_priority import (
-    PriorityCalculationMethod, PriorityFactorType, ConflictResolutionStrategy,
-    PriorityConflictStatus
-)
 from ..models.requirement import Priority
+from ..models.requirement_priority import (
+    ConflictResolutionStrategy,
+    PriorityCalculationMethod,
+    PriorityConflictStatus,
+    PriorityFactorType,
+)
 
 
 # 优先级配置相关模型
 class CreatePriorityConfigRequest(BaseModel):
     """创建优先级配置请求"""
+
     project_id: int = Field(..., description="项目ID")
     config_name: str = Field(..., min_length=1, max_length=100, description="配置名称")
     description: Optional[str] = Field(None, description="配置描述")
@@ -27,7 +32,9 @@ class CreatePriorityConfigRequest(BaseModel):
     business_value_weight: Decimal = Field(0.30, ge=0, le=1, description="商业价值权重")
     user_impact_weight: Decimal = Field(0.25, ge=0, le=1, description="用户影响权重")
     technical_risk_weight: Decimal = Field(0.20, ge=0, le=1, description="技术风险权重")
-    implementation_cost_weight: Decimal = Field(0.15, ge=0, le=1, description="实现成本权重")
+    implementation_cost_weight: Decimal = Field(
+        0.15, ge=0, le=1, description="实现成本权重"
+    )
     time_urgency_weight: Decimal = Field(0.10, ge=0, le=1, description="时间紧迫性权重")
     critical_threshold: Decimal = Field(0.90, ge=0, le=1, description="紧急优先级阈值")
     high_threshold: Decimal = Field(0.70, ge=0, le=1, description="高优先级阈值")
@@ -37,39 +44,71 @@ class CreatePriorityConfigRequest(BaseModel):
         ConflictResolutionStrategy.MANUAL_REVIEW, description="冲突解决策略"
     )
     is_default: bool = Field(False, description="是否默认配置")
-    additional_config: Optional[Dict[str, Any]] = Field(None, description="额外配置数据")
+    additional_config: Optional[Dict[str, Any]] = Field(
+        None, description="额外配置数据"
+    )
 
-    @validator('critical_threshold', 'high_threshold', 'medium_threshold', 'low_threshold')
+    @validator(
+        "critical_threshold", "high_threshold", "medium_threshold", "low_threshold"
+    )
     def validate_thresholds(cls, v, values):
         """验证阈值的合理性"""
-        if 'critical_threshold' in values and v >= values['critical_threshold']:
-            if v != values['critical_threshold']:
-                raise ValueError('阈值必须按递减顺序设置')
+        if "critical_threshold" in values and v >= values["critical_threshold"]:
+            if v != values["critical_threshold"]:
+                raise ValueError("阈值必须按递减顺序设置")
         return v
 
 
 class UpdatePriorityConfigRequest(BaseModel):
     """更新优先级配置请求"""
-    config_name: Optional[str] = Field(None, min_length=1, max_length=100, description="配置名称")
+
+    config_name: Optional[str] = Field(
+        None, min_length=1, max_length=100, description="配置名称"
+    )
     description: Optional[str] = Field(None, description="配置描述")
-    calculation_method: Optional[PriorityCalculationMethod] = Field(None, description="计算方法")
-    business_value_weight: Optional[Decimal] = Field(None, ge=0, le=1, description="商业价值权重")
-    user_impact_weight: Optional[Decimal] = Field(None, ge=0, le=1, description="用户影响权重")
-    technical_risk_weight: Optional[Decimal] = Field(None, ge=0, le=1, description="技术风险权重")
-    implementation_cost_weight: Optional[Decimal] = Field(None, ge=0, le=1, description="实现成本权重")
-    time_urgency_weight: Optional[Decimal] = Field(None, ge=0, le=1, description="时间紧迫性权重")
-    critical_threshold: Optional[Decimal] = Field(None, ge=0, le=1, description="紧急优先级阈值")
-    high_threshold: Optional[Decimal] = Field(None, ge=0, le=1, description="高优先级阈值")
-    medium_threshold: Optional[Decimal] = Field(None, ge=0, le=1, description="中优先级阈值")
-    low_threshold: Optional[Decimal] = Field(None, ge=0, le=1, description="低优先级阈值")
-    conflict_resolution_strategy: Optional[ConflictResolutionStrategy] = Field(None, description="冲突解决策略")
+    calculation_method: Optional[PriorityCalculationMethod] = Field(
+        None, description="计算方法"
+    )
+    business_value_weight: Optional[Decimal] = Field(
+        None, ge=0, le=1, description="商业价值权重"
+    )
+    user_impact_weight: Optional[Decimal] = Field(
+        None, ge=0, le=1, description="用户影响权重"
+    )
+    technical_risk_weight: Optional[Decimal] = Field(
+        None, ge=0, le=1, description="技术风险权重"
+    )
+    implementation_cost_weight: Optional[Decimal] = Field(
+        None, ge=0, le=1, description="实现成本权重"
+    )
+    time_urgency_weight: Optional[Decimal] = Field(
+        None, ge=0, le=1, description="时间紧迫性权重"
+    )
+    critical_threshold: Optional[Decimal] = Field(
+        None, ge=0, le=1, description="紧急优先级阈值"
+    )
+    high_threshold: Optional[Decimal] = Field(
+        None, ge=0, le=1, description="高优先级阈值"
+    )
+    medium_threshold: Optional[Decimal] = Field(
+        None, ge=0, le=1, description="中优先级阈值"
+    )
+    low_threshold: Optional[Decimal] = Field(
+        None, ge=0, le=1, description="低优先级阈值"
+    )
+    conflict_resolution_strategy: Optional[ConflictResolutionStrategy] = Field(
+        None, description="冲突解决策略"
+    )
     is_active: Optional[bool] = Field(None, description="是否激活")
     is_default: Optional[bool] = Field(None, description="是否默认配置")
-    additional_config: Optional[Dict[str, Any]] = Field(None, description="额外配置数据")
+    additional_config: Optional[Dict[str, Any]] = Field(
+        None, description="额外配置数据"
+    )
 
 
 class PriorityConfigResponse(BaseModel):
     """优先级配置响应"""
+
     id: int
     project_id: int
     config_name: str
@@ -100,11 +139,14 @@ class PriorityConfigResponse(BaseModel):
 # 优先级评估相关模型
 class EvaluatePriorityRequest(BaseModel):
     """优先级评估请求"""
+
     config_id: int = Field(..., description="配置ID")
     business_value_score: Decimal = Field(..., ge=0, le=10, description="商业价值得分")
     user_impact_score: Decimal = Field(..., ge=0, le=10, description="用户影响得分")
     technical_risk_score: Decimal = Field(..., ge=0, le=10, description="技术风险得分")
-    implementation_cost_score: Decimal = Field(..., ge=0, le=10, description="实现成本得分")
+    implementation_cost_score: Decimal = Field(
+        ..., ge=0, le=10, description="实现成本得分"
+    )
     time_urgency_score: Decimal = Field(..., ge=0, le=10, description="时间紧迫性得分")
     manual_priority: Optional[Priority] = Field(None, description="手动设置的优先级")
     evaluation_reason: Optional[str] = Field(None, description="评估理由")
@@ -114,6 +156,7 @@ class EvaluatePriorityRequest(BaseModel):
 
 class PriorityEvaluationResponse(BaseModel):
     """优先级评估响应"""
+
     id: int
     requirement_id: int
     config_id: int
@@ -145,6 +188,7 @@ class PriorityEvaluationResponse(BaseModel):
 # AI分析相关模型
 class AIPriorityAnalysisResponse(BaseModel):
     """AI优先级分析响应"""
+
     business_value_score: float = Field(..., description="商业价值得分")
     user_impact_score: float = Field(..., description="用户影响得分")
     technical_risk_score: float = Field(..., description="技术风险得分")
@@ -160,6 +204,7 @@ class AIPriorityAnalysisResponse(BaseModel):
 # 优先级冲突相关模型
 class PriorityConflictResponse(BaseModel):
     """优先级冲突响应"""
+
     id: int
     requirement_ids: List[int]
     conflict_type: str
@@ -186,14 +231,18 @@ class PriorityConflictResponse(BaseModel):
 
 class ConflictResolutionRequest(BaseModel):
     """冲突解决请求"""
+
     resolution_strategy: ConflictResolutionStrategy = Field(..., description="解决策略")
     resolution_notes: str = Field(..., description="解决备注")
-    recommended_priorities: Optional[Dict[int, Priority]] = Field(None, description="推荐优先级")
+    recommended_priorities: Optional[Dict[int, Priority]] = Field(
+        None, description="推荐优先级"
+    )
 
 
 # 优先级历史相关模型
 class PriorityHistoryResponse(BaseModel):
     """优先级历史响应"""
+
     id: int
     requirement_id: int
     old_priority: Optional[Priority]
@@ -215,6 +264,7 @@ class PriorityHistoryResponse(BaseModel):
 # 统计分析相关模型
 class PriorityDistributionResponse(BaseModel):
     """优先级分布响应"""
+
     distribution: Dict[str, int] = Field(..., description="优先级分布统计")
     total_requirements: int = Field(..., description="总需求数")
     project_id: int = Field(..., description="项目ID")
@@ -222,12 +272,14 @@ class PriorityDistributionResponse(BaseModel):
 
 class PriorityTrendResponse(BaseModel):
     """优先级趋势响应"""
+
     date: str
     priority_counts: Dict[str, int]
 
 
 class PriorityAnalyticsResponse(BaseModel):
     """优先级分析响应"""
+
     distribution: PriorityDistributionResponse
     recent_changes: List[PriorityHistoryResponse]
     active_conflicts: List[PriorityConflictResponse]
@@ -237,6 +289,7 @@ class PriorityAnalyticsResponse(BaseModel):
 # 批量操作相关模型
 class BatchPriorityEvaluationRequest(BaseModel):
     """批量优先级评估请求"""
+
     requirement_ids: List[int] = Field(..., description="需求ID列表")
     config_id: int = Field(..., description="配置ID")
     use_ai_analysis: bool = Field(False, description="是否使用AI分析")
@@ -244,6 +297,7 @@ class BatchPriorityEvaluationRequest(BaseModel):
 
 class BatchPriorityEvaluationResponse(BaseModel):
     """批量优先级评估响应"""
+
     success_count: int
     failed_count: int
     success_evaluations: List[PriorityEvaluationResponse]

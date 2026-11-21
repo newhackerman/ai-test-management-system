@@ -2,36 +2,42 @@
 仪表板数据集成服务
 集成各个模块的数据，为仪表板提供统一的数据接口
 """
+
 import logging
-from typing import Dict, Any, List, Optional
 from datetime import datetime, timedelta
-from sqlalchemy.ext.asyncio import AsyncSession
+from typing import Any, Dict, List, Optional
+
 from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..core.database import get_async_session
 from ..utils.redis_client import get_redis_client
 
 logger = logging.getLogger(__name__)
 
+
 class DashboardDataIntegrationService:
     """仪表板数据集成服务"""
-    
+
     def __init__(self):
         self.cache_prefix = "dashboard:integration:"
         self.cache_ttl = 300  # 5分钟缓存
-    
-    async def get_user_management_data(self, user_id: int, role_type: str) -> Dict[str, Any]:
+
+    async def get_user_management_data(
+        self, user_id: int, role_type: str
+    ) -> Dict[str, Any]:
         """集成用户管理模块数据"""
         try:
             cache_key = f"{self.cache_prefix}user_mgmt:{user_id}:{role_type}"
             redis_client = await get_redis_client()
-            
+
             # 尝试从缓存获取
             cached_data = await redis_client.get(cache_key)
             if cached_data:
                 import json
+
                 return json.loads(cached_data)
-            
+
             async for session in get_async_session():
                 # 获取用户基本信息
                 user_query = text("""
@@ -42,10 +48,10 @@ class DashboardDataIntegrationService:
                 """)
                 user_result = await session.execute(user_query, {"user_id": user_id})
                 user_data = user_result.fetchone()
-                
+
                 if not user_data:
                     return {}
-                
+
                 # 获取用户角色信息
                 role_query = text("""
                     SELECT r.id, r.name, r.description, r.permissions
@@ -55,7 +61,7 @@ class DashboardDataIntegrationService:
                 """)
                 role_result = await session.execute(role_query, {"user_id": user_id})
                 roles = [dict(row._mapping) for row in role_result.fetchall()]
-                
+
                 # 获取用户权限信息
                 permission_query = text("""
                     SELECT DISTINCT p.id, p.name, p.resource, p.action
@@ -64,9 +70,13 @@ class DashboardDataIntegrationService:
                     JOIN user_roles ur ON rp.role_id = ur.role_id
                     WHERE ur.user_id = :user_id
                 """)
-                permission_result = await session.execute(permission_query, {"user_id": user_id})
-                permissions = [dict(row._mapping) for row in permission_result.fetchall()]
-                
+                permission_result = await session.execute(
+                    permission_query, {"user_id": user_id}
+                )
+                permissions = [
+                    dict(row._mapping) for row in permission_result.fetchall()
+                ]
+
                 # 获取用户会话信息
                 session_query = text("""
                     SELECT COUNT(*) as active_sessions,
@@ -74,48 +84,58 @@ class DashboardDataIntegrationService:
                     FROM user_sessions
                     WHERE user_id = :user_id AND is_active = 1
                 """)
-                session_result = await session.execute(session_query, {"user_id": user_id})
+                session_result = await session.execute(
+                    session_query, {"user_id": user_id}
+                )
                 session_data = session_result.fetchone()
-                
+
                 data = {
                     "user_info": dict(user_data._mapping) if user_data else {},
                     "roles": roles,
                     "permissions": permissions,
                     "session_info": dict(session_data._mapping) if session_data else {},
-                    "timestamp": datetime.utcnow().isoformat()
+                    "timestamp": datetime.utcnow().isoformat(),
                 }
-                
+
                 # 缓存数据
                 import json
-                await redis_client.setex(cache_key, self.cache_ttl, json.dumps(data, default=str))
-                
+
+                await redis_client.setex(
+                    cache_key, self.cache_ttl, json.dumps(data, default=str)
+                )
+
                 return data
-                
+
         except Exception as e:
             logger.error(f"获取用户管理数据失败: {e}")
             return {}
-    
-    async def get_project_management_data(self, user_id: int, project_ids: Optional[List[int]] = None) -> Dict[str, Any]:
+
+    async def get_project_management_data(
+        self, user_id: int, project_ids: Optional[List[int]] = None
+    ) -> Dict[str, Any]:
         """集成项目管理模块数据"""
         try:
-            cache_key = f"{self.cache_prefix}project_mgmt:{user_id}:{hash(str(project_ids))}"
+            cache_key = (
+                f"{self.cache_prefix}project_mgmt:{user_id}:{hash(str(project_ids))}"
+            )
             redis_client = await get_redis_client()
-            
+
             # 尝试从缓存获取
             cached_data = await redis_client.get(cache_key)
             if cached_data:
                 import json
+
                 return json.loads(cached_data)
-            
+
             async for session in get_async_session():
                 # 构建项目查询条件
                 project_filter = ""
                 params = {"user_id": user_id}
-                
+
                 if project_ids:
                     project_filter = "AND p.id IN :project_ids"
                     params["project_ids"] = tuple(project_ids)
-                
+
                 # 获取项目基本信息
                 project_query = text(f"""
                     SELECT p.id, p.name, p.description, p.status, p.priority,
@@ -129,7 +149,7 @@ class DashboardDataIntegrationService:
                 """)
                 project_result = await session.execute(project_query, params)
                 projects = [dict(row._mapping) for row in project_result.fetchall()]
-                
+
                 # 获取项目统计信息
                 stats_query = text(f"""
                     SELECT 
@@ -146,7 +166,7 @@ class DashboardDataIntegrationService:
                 """)
                 stats_result = await session.execute(stats_query, params)
                 stats = dict(stats_result.fetchone()._mapping)
-                
+
                 # 获取团队成员信息
                 team_query = text(f"""
                     SELECT p.id as project_id, p.name as project_name,
@@ -163,7 +183,7 @@ class DashboardDataIntegrationService:
                 """)
                 team_result = await session.execute(team_query, params)
                 team_info = [dict(row._mapping) for row in team_result.fetchall()]
-                
+
                 # 获取里程碑信息
                 milestone_query = text(f"""
                     SELECT m.id, m.name, m.description, m.due_date, m.status,
@@ -178,46 +198,54 @@ class DashboardDataIntegrationService:
                 """)
                 milestone_result = await session.execute(milestone_query, params)
                 milestones = [dict(row._mapping) for row in milestone_result.fetchall()]
-                
+
                 data = {
                     "projects": projects,
                     "statistics": stats,
                     "team_info": team_info,
                     "upcoming_milestones": milestones,
-                    "timestamp": datetime.utcnow().isoformat()
+                    "timestamp": datetime.utcnow().isoformat(),
                 }
-                
+
                 # 缓存数据
                 import json
-                await redis_client.setex(cache_key, self.cache_ttl, json.dumps(data, default=str))
-                
+
+                await redis_client.setex(
+                    cache_key, self.cache_ttl, json.dumps(data, default=str)
+                )
+
                 return data
-                
+
         except Exception as e:
             logger.error(f"获取项目管理数据失败: {e}")
             return {}
-    
-    async def get_requirement_management_data(self, user_id: int, project_ids: Optional[List[int]] = None) -> Dict[str, Any]:
+
+    async def get_requirement_management_data(
+        self, user_id: int, project_ids: Optional[List[int]] = None
+    ) -> Dict[str, Any]:
         """集成需求管理模块数据"""
         try:
-            cache_key = f"{self.cache_prefix}req_mgmt:{user_id}:{hash(str(project_ids))}"
+            cache_key = (
+                f"{self.cache_prefix}req_mgmt:{user_id}:{hash(str(project_ids))}"
+            )
             redis_client = await get_redis_client()
-            
+
             # 尝试从缓存获取
             cached_data = await redis_client.get(cache_key)
             if cached_data:
                 import json
+
                 return json.loads(cached_data)
-            
+
             async for session in get_async_session():
                 # 构建项目过滤条件
                 project_filter = ""
                 params = {"user_id": user_id}
-                
+
                 if project_ids:
                     project_filter = "AND r.project_id IN :project_ids"
                     params["project_ids"] = tuple(project_ids)
-                
+
                 # 获取需求统计信息
                 req_stats_query = text(f"""
                     SELECT 
@@ -238,7 +266,7 @@ class DashboardDataIntegrationService:
                 """)
                 req_stats_result = await session.execute(req_stats_query, params)
                 req_stats = dict(req_stats_result.fetchone()._mapping)
-                
+
                 # 获取需求变更统计
                 change_stats_query = text(f"""
                     SELECT 
@@ -256,7 +284,7 @@ class DashboardDataIntegrationService:
                 """)
                 change_stats_result = await session.execute(change_stats_query, params)
                 change_stats = dict(change_stats_result.fetchone()._mapping)
-                
+
                 # 获取需求追溯覆盖率
                 traceability_query = text(f"""
                     SELECT 
@@ -271,7 +299,7 @@ class DashboardDataIntegrationService:
                 """)
                 traceability_result = await session.execute(traceability_query, params)
                 traceability_stats = dict(traceability_result.fetchone()._mapping)
-                
+
                 # 获取最近的需求活动
                 recent_activity_query = text(f"""
                     SELECT r.id, r.title, r.status, r.priority, r.updated_at,
@@ -285,47 +313,57 @@ class DashboardDataIntegrationService:
                     LIMIT 10
                 """)
                 activity_result = await session.execute(recent_activity_query, params)
-                recent_activities = [dict(row._mapping) for row in activity_result.fetchall()]
-                
+                recent_activities = [
+                    dict(row._mapping) for row in activity_result.fetchall()
+                ]
+
                 data = {
                     "requirement_statistics": req_stats,
                     "change_statistics": change_stats,
                     "traceability_statistics": traceability_stats,
                     "recent_activities": recent_activities,
-                    "timestamp": datetime.utcnow().isoformat()
+                    "timestamp": datetime.utcnow().isoformat(),
                 }
-                
+
                 # 缓存数据
                 import json
-                await redis_client.setex(cache_key, self.cache_ttl, json.dumps(data, default=str))
-                
+
+                await redis_client.setex(
+                    cache_key, self.cache_ttl, json.dumps(data, default=str)
+                )
+
                 return data
-                
+
         except Exception as e:
             logger.error(f"获取需求管理数据失败: {e}")
             return {}
-    
-    async def get_test_management_data(self, user_id: int, project_ids: Optional[List[int]] = None) -> Dict[str, Any]:
+
+    async def get_test_management_data(
+        self, user_id: int, project_ids: Optional[List[int]] = None
+    ) -> Dict[str, Any]:
         """集成测试管理模块数据"""
         try:
-            cache_key = f"{self.cache_prefix}test_mgmt:{user_id}:{hash(str(project_ids))}"
+            cache_key = (
+                f"{self.cache_prefix}test_mgmt:{user_id}:{hash(str(project_ids))}"
+            )
             redis_client = await get_redis_client()
-            
+
             # 尝试从缓存获取
             cached_data = await redis_client.get(cache_key)
             if cached_data:
                 import json
+
                 return json.loads(cached_data)
-            
+
             async for session in get_async_session():
                 # 构建项目过滤条件
                 project_filter = ""
                 params = {"user_id": user_id}
-                
+
                 if project_ids:
                     project_filter = "AND tp.project_id IN :project_ids"
                     params["project_ids"] = tuple(project_ids)
-                
+
                 # 获取测试用例统计
                 test_case_stats_query = text(f"""
                     SELECT 
@@ -345,7 +383,7 @@ class DashboardDataIntegrationService:
                 """)
                 test_case_result = await session.execute(test_case_stats_query, params)
                 test_case_stats = dict(test_case_result.fetchone()._mapping)
-                
+
                 # 获取测试执行统计
                 execution_stats_query = text(f"""
                     SELECT 
@@ -366,7 +404,7 @@ class DashboardDataIntegrationService:
                 """)
                 execution_result = await session.execute(execution_stats_query, params)
                 execution_stats = dict(execution_result.fetchone()._mapping)
-                
+
                 # 获取缺陷统计
                 defect_stats_query = text(f"""
                     SELECT 
@@ -387,7 +425,7 @@ class DashboardDataIntegrationService:
                 """)
                 defect_result = await session.execute(defect_stats_query, params)
                 defect_stats = dict(defect_result.fetchone()._mapping)
-                
+
                 # 获取测试覆盖率信息
                 coverage_query = text(f"""
                     SELECT 
@@ -402,57 +440,59 @@ class DashboardDataIntegrationService:
                 """)
                 coverage_result = await session.execute(coverage_query, params)
                 coverage_stats = dict(coverage_result.fetchone()._mapping)
-                
+
                 data = {
                     "test_case_statistics": test_case_stats,
                     "execution_statistics": execution_stats,
                     "defect_statistics": defect_stats,
                     "coverage_statistics": coverage_stats,
-                    "timestamp": datetime.utcnow().isoformat()
+                    "timestamp": datetime.utcnow().isoformat(),
                 }
-                
+
                 # 缓存数据
                 import json
-                await redis_client.setex(cache_key, self.cache_ttl, json.dumps(data, default=str))
-                
+
+                await redis_client.setex(
+                    cache_key, self.cache_ttl, json.dumps(data, default=str)
+                )
+
                 return data
-                
+
         except Exception as e:
             logger.error(f"获取测试管理数据失败: {e}")
             return {}
-    
+
     async def get_integrated_dashboard_data(
-        self, 
-        user_id: int, 
-        role_type: str, 
-        project_ids: Optional[List[int]] = None
+        self, user_id: int, role_type: str, project_ids: Optional[List[int]] = None
     ) -> Dict[str, Any]:
         """获取集成的仪表板数据"""
         try:
             # 并行获取各模块数据
             import asyncio
-            
+
             tasks = [
                 self.get_user_management_data(user_id, role_type),
                 self.get_project_management_data(user_id, project_ids),
                 self.get_requirement_management_data(user_id, project_ids),
-                self.get_test_management_data(user_id, project_ids)
+                self.get_test_management_data(user_id, project_ids),
             ]
-            
+
             results = await asyncio.gather(*tasks, return_exceptions=True)
-            
+
             # 处理结果
             user_data = results[0] if not isinstance(results[0], Exception) else {}
             project_data = results[1] if not isinstance(results[1], Exception) else {}
-            requirement_data = results[2] if not isinstance(results[2], Exception) else {}
+            requirement_data = (
+                results[2] if not isinstance(results[2], Exception) else {}
+            )
             test_data = results[3] if not isinstance(results[3], Exception) else {}
-            
+
             # 记录异常
             for i, result in enumerate(results):
                 if isinstance(result, Exception):
                     module_names = ["用户管理", "项目管理", "需求管理", "测试管理"]
                     logger.error(f"{module_names[i]}模块数据获取失败: {result}")
-            
+
             integrated_data = {
                 "user_management": user_data,
                 "project_management": project_data,
@@ -461,36 +501,36 @@ class DashboardDataIntegrationService:
                 "integration_timestamp": datetime.utcnow().isoformat(),
                 "user_id": user_id,
                 "role_type": role_type,
-                "project_ids": project_ids
+                "project_ids": project_ids,
             }
-            
+
             return integrated_data
-            
+
         except Exception as e:
             logger.error(f"获取集成仪表板数据失败: {e}")
             return {}
-    
+
     async def refresh_integration_cache(self, user_id: int, role_type: str) -> bool:
         """刷新集成缓存"""
         try:
             redis_client = await get_redis_client()
-            
+
             # 删除相关缓存
             cache_patterns = [
                 f"{self.cache_prefix}user_mgmt:{user_id}:*",
                 f"{self.cache_prefix}project_mgmt:{user_id}:*",
                 f"{self.cache_prefix}req_mgmt:{user_id}:*",
-                f"{self.cache_prefix}test_mgmt:{user_id}:*"
+                f"{self.cache_prefix}test_mgmt:{user_id}:*",
             ]
-            
+
             for pattern in cache_patterns:
                 keys = await redis_client.keys(pattern)
                 if keys:
                     await redis_client.delete(*keys)
-            
+
             logger.info(f"用户 {user_id} 的集成缓存已刷新")
             return True
-            
+
         except Exception as e:
             logger.error(f"刷新集成缓存失败: {e}")
             return False
@@ -498,6 +538,7 @@ class DashboardDataIntegrationService:
 
 # 依赖注入
 _dashboard_data_integration_service = None
+
 
 async def get_dashboard_data_integration_service() -> DashboardDataIntegrationService:
     """获取仪表板数据集成服务实例"""

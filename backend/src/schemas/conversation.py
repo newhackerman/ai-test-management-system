@@ -1,17 +1,20 @@
 """
 对话管理相关的Pydantic模式
 """
-from datetime import datetime
-from typing import Dict, List, Optional, Any
-from pydantic import BaseModel, Field
-from enum import Enum
 
+from datetime import datetime
+from enum import Enum
+from typing import Any, Dict, List, Optional
+
+from pydantic import BaseModel, Field
+
+from ..models.ai_chat_message import ContentType, MessageRole
 from ..models.ai_chat_session import SessionStatus
-from ..models.ai_chat_message import MessageRole, ContentType
 
 
 class ConversationGroupEnum(str, Enum):
     """会话分组枚举"""
+
     WORK = "work"
     STUDY = "study"
     PROJECT = "project"
@@ -24,6 +27,7 @@ class ConversationGroupEnum(str, Enum):
 
 class CreateConversationRequest(BaseModel):
     """创建对话请求"""
+
     title: Optional[str] = Field(None, description="对话标题", max_length=200)
     ai_provider: Optional[str] = Field(None, description="AI服务提供商", max_length=50)
     ai_model: Optional[str] = Field(None, description="AI模型名称", max_length=100)
@@ -36,6 +40,7 @@ class CreateConversationRequest(BaseModel):
 
 class ConversationResponse(BaseModel):
     """对话响应"""
+
     id: int = Field(..., description="对话ID")
     title: str = Field(..., description="对话标题")
     user_id: int = Field(..., description="用户ID")
@@ -57,6 +62,7 @@ class ConversationResponse(BaseModel):
 
 class ConversationListResponse(BaseModel):
     """对话列表响应"""
+
     success: bool = Field(..., description="是否成功")
     conversations: List[ConversationResponse] = Field(..., description="对话列表")
     total_count: int = Field(..., description="总数量")
@@ -67,6 +73,7 @@ class ConversationListResponse(BaseModel):
 
 class UpdateConversationRequest(BaseModel):
     """更新对话请求"""
+
     title: Optional[str] = Field(None, description="对话标题", max_length=200)
     ai_provider: Optional[str] = Field(None, description="AI服务提供商", max_length=50)
     ai_model: Optional[str] = Field(None, description="AI模型名称", max_length=100)
@@ -77,6 +84,7 @@ class UpdateConversationRequest(BaseModel):
 
 class SendMessageRequest(BaseModel):
     """发送消息请求"""
+
     content: str = Field(..., description="消息内容", min_length=1, max_length=50000)
     content_type: ContentType = Field(ContentType.TEXT, description="内容类型")
     metadata: Optional[Dict[str, Any]] = Field(None, description="消息元数据")
@@ -84,6 +92,7 @@ class SendMessageRequest(BaseModel):
 
 class MessageResponse(BaseModel):
     """消息响应"""
+
     id: int = Field(..., description="消息ID")
     session_id: int = Field(..., description="会话ID")
     role: MessageRole = Field(..., description="消息角色")
@@ -110,6 +119,7 @@ class MessageResponse(BaseModel):
 
 class MessageListResponse(BaseModel):
     """消息列表响应"""
+
     success: bool = Field(..., description="是否成功")
     messages: List[MessageResponse] = Field(..., description="消息列表")
     total_count: int = Field(..., description="总数量")
@@ -118,6 +128,7 @@ class MessageListResponse(BaseModel):
 
 class ConversationStatsResponse(BaseModel):
     """对话统计响应"""
+
     total_conversations: int = Field(..., description="总对话数")
     active_conversations: int = Field(..., description="活跃对话数")
     archived_conversations: int = Field(..., description="已归档对话数")
@@ -130,6 +141,7 @@ class ConversationStatsResponse(BaseModel):
 
 class SearchConversationsRequest(BaseModel):
     """搜索对话请求"""
+
     query: str = Field(..., description="搜索关键词", min_length=1, max_length=200)
     status: Optional[SessionStatus] = Field(None, description="状态过滤")
     group: Optional[ConversationGroupEnum] = Field(None, description="分组过滤")
@@ -140,6 +152,7 @@ class SearchConversationsRequest(BaseModel):
 
 class ConversationContextResponse(BaseModel):
     """对话上下文响应"""
+
     conversation_id: int = Field(..., description="对话ID")
     messages: List[MessageResponse] = Field(..., description="上下文消息")
     summary: Optional[str] = Field(None, description="对话摘要")

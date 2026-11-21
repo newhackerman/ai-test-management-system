@@ -2,33 +2,36 @@
 配置文件导入导出服务
 支持 .env、JSON、YAML、XML、Properties 格式
 """
-import json
-import yaml
-import xml.etree.ElementTree as ET
-import xml.dom.minidom as minidom
-from typing import Dict, List, Any, Tuple, Optional, Union
-from enum import Enum
-import logging
-import configparser
-from io import StringIO
-import re
 
-from ..models.config import SystemConfig, ConfigType, Environment
+import configparser
+import json
+import logging
+import re
+import xml.dom.minidom as minidom
+import xml.etree.ElementTree as ET
+from enum import Enum
+from io import StringIO
+from typing import Any, Dict, List, Optional, Tuple, Union
+
+import yaml
+from sqlalchemy.orm import Session
+
+from ..core.database import get_db
+from ..models.config import ConfigType, Environment, SystemConfig
 from ..schemas.config import (
     ConfigCreateRequest,
-    ConfigUpdateRequest,
-    ConfigType as SchemaConfigType,
-    Environment as SchemaEnvironment,
 )
+from ..schemas.config import ConfigType as SchemaConfigType
+from ..schemas.config import ConfigUpdateRequest
+from ..schemas.config import Environment as SchemaEnvironment
 from ..services.config import config_service
-from ..core.database import get_db
-from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
 
 
 class FileFormat(str, Enum):
     """文件格式枚举"""
+
     ENV = "env"
     JSON = "json"
     YAML = "yaml"
@@ -38,34 +41,34 @@ class FileFormat(str, Enum):
 
 class ConfigImportExportService:
     """配置导入导出服务"""
-    
+
     def __init__(self):
         self.supported_formats = {
             FileFormat.ENV: {
-                'extensions': ['.env'],
-                'mime_types': ['text/plain'],
-                'description': '环境变量文件'
+                "extensions": [".env"],
+                "mime_types": ["text/plain"],
+                "description": "环境变量文件",
             },
             FileFormat.JSON: {
-                'extensions': ['.json'],
-                'mime_types': ['application/json'],
-                'description': 'JSON配置文件'
+                "extensions": [".json"],
+                "mime_types": ["application/json"],
+                "description": "JSON配置文件",
             },
             FileFormat.YAML: {
-                'extensions': ['.yml', '.yaml'],
-                'mime_types': ['application/x-yaml', 'text/yaml'],
-                'description': 'YAML配置文件'
+                "extensions": [".yml", ".yaml"],
+                "mime_types": ["application/x-yaml", "text/yaml"],
+                "description": "YAML配置文件",
             },
             FileFormat.XML: {
-                'extensions': ['.xml'],
-                'mime_types': ['application/xml', 'text/xml'],
-                'description': 'XML配置文件'
+                "extensions": [".xml"],
+                "mime_types": ["application/xml", "text/xml"],
+                "description": "XML配置文件",
             },
             FileFormat.PROPERTIES: {
-                'extensions': ['.properties'],
-                'mime_types': ['text/plain'],
-                'description': 'Properties配置文件'
-            }
+                "extensions": [".properties"],
+                "mime_types": ["text/plain"],
+                "description": "Properties配置文件",
+            },
         }
 
     async def export_configs(
@@ -74,18 +77,18 @@ class ConfigImportExportService:
         environment: str,
         group_id: Optional[int] = None,
         config_keys: Optional[List[str]] = None,
-        include_sensitive: bool = False
+        include_sensitive: bool = False,
     ) -> Tuple[bool, Optional[str], Optional[str]]:
         """
         导出配置文件
-        
+
         Args:
             format_type: 导出格式
             environment: 环境名
             group_id: 分组ID（可选）
             config_keys: 指定配置键列表（可选）
             include_sensitive: 是否包含敏感配置
-            
+
         Returns:
             (成功状态, 错误信息, 文件内容)
         """
@@ -94,23 +97,23 @@ class ConfigImportExportService:
             db = next(get_db())
             query = db.query(SystemConfig).filter(
                 SystemConfig.environment == environment,
-                SystemConfig.is_enabled.is_(True)
+                SystemConfig.is_enabled.is_(True),
             )
-            
+
             if group_id:
                 query = query.filter(SystemConfig.group_id == group_id)
-            
+
             if config_keys:
                 query = query.filter(SystemConfig.config_key.in_(config_keys))
-            
+
             if not include_sensitive:
                 query = query.filter(SystemConfig.is_encrypted.is_(False))
-            
+
             configs = query.all()
-            
+
             if not configs:
                 return False, "没有找到要导出的配置", None
-            
+
             # 转换为字典格式
             config_dict = {}
             for config in configs:
@@ -118,15 +121,15 @@ class ConfigImportExportService:
                 value = config.config_value
                 if not include_sensitive and config.is_encrypted:
                     value = "****"  # 脱敏显示
-                
+
                 config_dict[config.config_key] = {
-                    'value': value,
-                    'type': config.config_type.value,
-                    'description': config.description,
-                    'group_id': config.group_id,
-                    'is_sensitive': config.is_encrypted
+                    "value": value,
+                    "type": config.config_type.value,
+                    "description": config.description,
+                    "group_id": config.group_id,
+                    "is_sensitive": config.is_encrypted,
                 }
-            
+
             # 根据格式生成文件内容
             if format_type == FileFormat.ENV:
                 content = self._export_to_env(config_dict)
@@ -140,9 +143,9 @@ class ConfigImportExportService:
                 content = self._export_to_properties(config_dict)
             else:
                 return False, f"不支持的导出格式: {format_type}", None
-            
+
             return True, None, content
-            
+
         except Exception as e:
             logger.error(f"导出配置失败: {e}")
             return False, f"导出配置失败: {str(e)}", None
@@ -155,11 +158,11 @@ class ConfigImportExportService:
         user_id: int,
         group_id: Optional[int] = None,
         overwrite_existing: bool = False,
-        dry_run: bool = False
+        dry_run: bool = False,
     ) -> Tuple[bool, Optional[str], Optional[Dict]]:
         """
         导入配置文件
-        
+
         Args:
             file_content: 文件内容
             format_type: 文件格式
@@ -168,7 +171,7 @@ class ConfigImportExportService:
             group_id: 目标分组ID（可选）
             overwrite_existing: 是否覆盖已存在的配置
             dry_run: 是否为试运行（不实际导入）
-            
+
         Returns:
             (成功状态, 错误信息, 导入结果)
         """
@@ -186,56 +189,68 @@ class ConfigImportExportService:
                 parsed_configs = self._parse_properties_file(file_content)
             else:
                 return False, f"不支持的导入格式: {format_type}", None
-            
+
             if not parsed_configs:
                 return False, "文件中没有找到有效的配置项", None
-            
+
             # 验证配置格式
             validation_result = await self._validate_import_configs(parsed_configs)
-            if not validation_result['valid']:
+            if not validation_result["valid"]:
                 return False, f"配置验证失败: {validation_result['errors']}", None
-            
+
             # 检查冲突
             db = next(get_db())
-            existing_configs = db.query(SystemConfig).filter(
-                SystemConfig.environment == environment,
-                SystemConfig.config_key.in_(list(parsed_configs.keys()))
-            ).all()
-            
+            existing_configs = (
+                db.query(SystemConfig)
+                .filter(
+                    SystemConfig.environment == environment,
+                    SystemConfig.config_key.in_(list(parsed_configs.keys())),
+                )
+                .all()
+            )
+
             conflicts = []
             for existing in existing_configs:
                 if existing.config_key in parsed_configs:
-                    conflicts.append({
-                        'key': existing.config_key,
-                        'existing_value': existing.config_value,
-                        'new_value': parsed_configs[existing.config_key]['value']
-                    })
-            
+                    conflicts.append(
+                        {
+                            "key": existing.config_key,
+                            "existing_value": existing.config_value,
+                            "new_value": parsed_configs[existing.config_key]["value"],
+                        }
+                    )
+
             if dry_run:
-                return True, None, {
-                    'preview': True,
-                    'total_configs': len(parsed_configs),
-                    'conflicts': conflicts,
-                    'new_configs': [
-                        key for key in parsed_configs.keys()
-                        if key not in [conflict['key'] for conflict in conflicts]
-                    ],
-                    'configs': parsed_configs
-                }
+                return (
+                    True,
+                    None,
+                    {
+                        "preview": True,
+                        "total_configs": len(parsed_configs),
+                        "conflicts": conflicts,
+                        "new_configs": [
+                            key
+                            for key in parsed_configs.keys()
+                            if key not in [conflict["key"] for conflict in conflicts]
+                        ],
+                        "configs": parsed_configs,
+                    },
+                )
 
             if conflicts and not overwrite_existing:
-                return False, "存在配置冲突，请选择是否覆盖", {
-                    'conflicts': conflicts,
-                    'total_configs': len(parsed_configs)
-                }
-            
+                return (
+                    False,
+                    "存在配置冲突，请选择是否覆盖",
+                    {"conflicts": conflicts, "total_configs": len(parsed_configs)},
+                )
+
             # 执行导入
             import_result = await self._execute_import(
                 parsed_configs, environment, user_id, group_id, overwrite_existing
             )
-            
+
             return True, None, import_result
-            
+
         except Exception as e:
             logger.error(f"导入配置失败: {e}")
             return False, f"导入配置失败: {str(e)}", None
@@ -243,19 +258,21 @@ class ConfigImportExportService:
     def _export_to_env(self, config_dict: Dict) -> str:
         """导出为 .env 格式"""
         lines = ["# 配置文件导出", f"# 导出时间: {self._get_current_time()}", ""]
-        
+
         for key, config in config_dict.items():
-            if config.get('description'):
+            if config.get("description"):
                 lines.append(f"# {config['description']}")
-            
-            value = config['value']
+
+            value = config["value"]
             # 如果值包含特殊字符，需要加引号
-            if isinstance(value, str) and (' ' in value or '"' in value or "'" in value):
+            if isinstance(value, str) and (
+                " " in value or '"' in value or "'" in value
+            ):
                 value = f'"{value}"'
-            
+
             lines.append(f"{key}={value}")
             lines.append("")
-        
+
         return "\n".join(lines)
 
     def _export_to_json(self, config_dict: Dict) -> str:
@@ -264,19 +281,19 @@ class ConfigImportExportService:
             "metadata": {
                 "export_time": self._get_current_time(),
                 "format": "json",
-                "total_configs": len(config_dict)
+                "total_configs": len(config_dict),
             },
-            "configs": {}
+            "configs": {},
         }
-        
+
         for key, config in config_dict.items():
             export_data["configs"][key] = {
-                "value": self._convert_config_value(config['value'], config['type']),
-                "type": config['type'],
-                "description": config.get('description', ''),
-                "is_sensitive": config.get('is_sensitive', False)
+                "value": self._convert_config_value(config["value"], config["type"]),
+                "type": config["type"],
+                "description": config.get("description", ""),
+                "is_sensitive": config.get("is_sensitive", False),
             }
-        
+
         return json.dumps(export_data, indent=2, ensure_ascii=False)
 
     def _export_to_yaml(self, config_dict: Dict) -> str:
@@ -285,44 +302,48 @@ class ConfigImportExportService:
             "metadata": {
                 "export_time": self._get_current_time(),
                 "format": "yaml",
-                "total_configs": len(config_dict)
+                "total_configs": len(config_dict),
             },
-            "configs": {}
+            "configs": {},
         }
-        
+
         for key, config in config_dict.items():
             export_data["configs"][key] = {
-                "value": self._convert_config_value(config['value'], config['type']),
-                "type": config['type'],
-                "description": config.get('description', ''),
-                "is_sensitive": config.get('is_sensitive', False)
+                "value": self._convert_config_value(config["value"], config["type"]),
+                "type": config["type"],
+                "description": config.get("description", ""),
+                "is_sensitive": config.get("is_sensitive", False),
             }
-        
+
         return yaml.dump(export_data, default_flow_style=False, allow_unicode=True)
 
     def _export_to_xml(self, config_dict: Dict) -> str:
         """导出为 XML 格式"""
         root = ET.Element("configuration")
-        
+
         # 添加元数据
         metadata = ET.SubElement(root, "metadata")
         ET.SubElement(metadata, "export_time").text = self._get_current_time()
         ET.SubElement(metadata, "format").text = "xml"
         ET.SubElement(metadata, "total_configs").text = str(len(config_dict))
-        
+
         # 添加配置项
         configs = ET.SubElement(root, "configs")
         for key, config in config_dict.items():
             config_elem = ET.SubElement(configs, "config")
             config_elem.set("key", key)
-            
-            ET.SubElement(config_elem, "value").text = str(config['value'])
-            ET.SubElement(config_elem, "type").text = config['type']
-            ET.SubElement(config_elem, "description").text = config.get('description', '')
-            ET.SubElement(config_elem, "is_sensitive").text = str(config.get('is_sensitive', False))
-        
+
+            ET.SubElement(config_elem, "value").text = str(config["value"])
+            ET.SubElement(config_elem, "type").text = config["type"]
+            ET.SubElement(config_elem, "description").text = config.get(
+                "description", ""
+            )
+            ET.SubElement(config_elem, "is_sensitive").text = str(
+                config.get("is_sensitive", False)
+            )
+
         # 格式化输出
-        rough_string = ET.tostring(root, encoding='unicode')
+        rough_string = ET.tostring(root, encoding="unicode")
         reparsed = minidom.parseString(rough_string)
         return reparsed.toprettyxml(indent="  ")
 
@@ -332,47 +353,52 @@ class ConfigImportExportService:
             "# 配置文件导出",
             f"# 导出时间: {self._get_current_time()}",
             f"# 配置项数量: {len(config_dict)}",
-            ""
+            "",
         ]
-        
+
         for key, config in config_dict.items():
-            if config.get('description'):
+            if config.get("description"):
                 lines.append(f"# {config['description']}")
-            
+
             # Properties 格式需要转义特殊字符
-            value = str(config['value']).replace('\\', '\\\\').replace('=', '\\=').replace(':', '\\:')
+            value = (
+                str(config["value"])
+                .replace("\\", "\\\\")
+                .replace("=", "\\=")
+                .replace(":", "\\:")
+            )
             lines.append(f"{key}={value}")
             lines.append("")
-        
+
         return "\n".join(lines)
 
     def _parse_env_file(self, content: str) -> Dict:
         """解析 .env 文件"""
         configs = {}
-        
-        for line in content.split('\n'):
-            line = line.strip().lstrip('\ufeff')
-            if not line or line.startswith('#'):
+
+        for line in content.split("\n"):
+            line = line.strip().lstrip("\ufeff")
+            if not line or line.startswith("#"):
                 continue
-            
-            if '=' in line:
-                key, value = line.split('=', 1)
+
+            if "=" in line:
+                key, value = line.split("=", 1)
                 key = key.strip()
                 value = value.strip()
-                
+
                 # 移除引号
                 if value.startswith('"') and value.endswith('"'):
                     value = value[1:-1]
                 elif value.startswith("'") and value.endswith("'"):
                     value = value[1:-1]
-                
+
                 configs[key] = {
-                    'value': value,
-                    'type': self._infer_config_type(value),
-                    'description': '',
-                    'is_sensitive': False
+                    "value": value,
+                    "type": self._infer_config_type(value),
+                    "description": "",
+                    "is_sensitive": False,
                 }
-        
+
         return configs
 
     def _parse_json_file(self, content: str) -> Dict:
@@ -381,18 +407,18 @@ class ConfigImportExportService:
             data = json.loads(content)
             if not isinstance(data, dict):
                 raise ValueError("JSON content must be an object")
-            
+
             # 如果是标准格式
-            if 'configs' in data:
-                return self._normalize_import_configs(data['configs'])
-            
+            if "configs" in data:
+                return self._normalize_import_configs(data["configs"])
+
             # 如果是简单的键值对格式
             configs = {}
             for key, value in data.items():
                 configs[str(key).strip()] = self._normalize_import_config(value)
-            
+
             return configs
-            
+
         except json.JSONDecodeError as e:
             raise ValueError(f"JSON格式错误: {e}")
 
@@ -404,18 +430,18 @@ class ConfigImportExportService:
                 return {}
             if not isinstance(data, dict):
                 raise ValueError("YAML content must be an object")
-            
+
             # 如果是标准格式
-            if isinstance(data, dict) and 'configs' in data:
-                return self._normalize_import_configs(data['configs'])
-            
+            if isinstance(data, dict) and "configs" in data:
+                return self._normalize_import_configs(data["configs"])
+
             # 如果是简单的键值对格式
             configs = {}
             for key, value in data.items():
                 configs[str(key).strip()] = self._normalize_import_config(value)
-            
+
             return configs
-            
+
         except yaml.YAMLError as e:
             raise ValueError(f"YAML格式错误: {e}")
 
@@ -424,76 +450,86 @@ class ConfigImportExportService:
         try:
             root = ET.fromstring(content)
             configs = {}
-            
+
             # 查找配置节点
-            config_nodes = root.findall(".//config") or root.findall(".//configs/config")
-            
+            config_nodes = root.findall(".//config") or root.findall(
+                ".//configs/config"
+            )
+
             for config_node in config_nodes:
-                key = config_node.get('key') or config_node.find('key')
+                key = config_node.get("key") or config_node.find("key")
                 if key is None:
                     continue
-                
+
                 if isinstance(key, ET.Element):
                     key = key.text
-                
-                value_node = config_node.find('value')
-                value = value_node.text if value_node is not None else ''
-                
-                type_node = config_node.find('type')
-                config_type = type_node.text if type_node is not None else self._infer_config_type(value)
-                
-                desc_node = config_node.find('description')
-                description = desc_node.text if desc_node is not None else ''
-                
-                sensitive_node = config_node.find('is_sensitive')
-                is_sensitive = (sensitive_node is not None and 
-                              sensitive_node.text and
-                              sensitive_node.text.lower() == 'true')
-                
+
+                value_node = config_node.find("value")
+                value = value_node.text if value_node is not None else ""
+
+                type_node = config_node.find("type")
+                config_type = (
+                    type_node.text
+                    if type_node is not None
+                    else self._infer_config_type(value)
+                )
+
+                desc_node = config_node.find("description")
+                description = desc_node.text if desc_node is not None else ""
+
+                sensitive_node = config_node.find("is_sensitive")
+                is_sensitive = (
+                    sensitive_node is not None
+                    and sensitive_node.text
+                    and sensitive_node.text.lower() == "true"
+                )
+
                 configs[key] = {
-                    'value': value,
-                    'type': config_type,
-                    'description': description,
-                    'is_sensitive': is_sensitive
+                    "value": value,
+                    "type": config_type,
+                    "description": description,
+                    "is_sensitive": is_sensitive,
                 }
-            
+
             return configs
-            
+
         except ET.ParseError as e:
             raise ValueError(f"XML格式错误: {e}")
 
     def _parse_properties_file(self, content: str) -> Dict:
         """解析 Properties 文件"""
         configs = {}
-        
+
         # 使用 configparser 解析
         config_parser = configparser.ConfigParser()
         config_parser.read_string(f"[DEFAULT]\n{content}")
-        
-        for key, value in config_parser['DEFAULT'].items():
+
+        for key, value in config_parser["DEFAULT"].items():
             configs[key] = {
-                'value': value,
-                'type': self._infer_config_type(value),
-                'description': '',
-                'is_sensitive': False
+                "value": value,
+                "type": self._infer_config_type(value),
+                "description": "",
+                "is_sensitive": False,
             }
-        
+
         return configs
 
     def _normalize_import_config(self, value: Any) -> Dict:
-        if isinstance(value, dict) and 'value' in value:
+        if isinstance(value, dict) and "value" in value:
             normalized = dict(value)
-            normalized.setdefault('type', self._infer_config_type(normalized.get('value')))
-            normalized.setdefault('description', '')
-            if 'is_sensitive' not in normalized:
-                normalized['is_sensitive'] = bool(normalized.pop('is_encrypted', False))
+            normalized.setdefault(
+                "type", self._infer_config_type(normalized.get("value"))
+            )
+            normalized.setdefault("description", "")
+            if "is_sensitive" not in normalized:
+                normalized["is_sensitive"] = bool(normalized.pop("is_encrypted", False))
             return normalized
 
         return {
-            'value': value,
-            'type': self._infer_config_type(value),
-            'description': '',
-            'is_sensitive': False
+            "value": value,
+            "type": self._infer_config_type(value),
+            "description": "",
+            "is_sensitive": False,
         }
 
     def _normalize_import_configs(self, configs: Any) -> Dict:
@@ -504,7 +540,9 @@ class ConfigImportExportService:
         for key, value in configs.items():
             normalized_key = str(key).strip()
             if normalized_key:
-                normalized_configs[normalized_key] = self._normalize_import_config(value)
+                normalized_configs[normalized_key] = self._normalize_import_config(
+                    value
+                )
         return normalized_configs
 
     def _infer_config_type(self, value: Any) -> str:
@@ -519,15 +557,15 @@ class ConfigImportExportService:
             return ConfigType.JSON.value
         elif isinstance(value, str):
             # 尝试推断特殊类型
-            if value.lower() in ['true', 'false']:
+            if value.lower() in ["true", "false"]:
                 return ConfigType.BOOLEAN.value
             elif value.isdigit():
                 return ConfigType.INTEGER.value
             elif self._is_float(value):
                 return ConfigType.STRING.value  # 暂时使用STRING代替FLOAT
-            elif value.startswith('http://') or value.startswith('https://'):
+            elif value.startswith("http://") or value.startswith("https://"):
                 return ConfigType.URL.value
-            elif '@' in value and '.' in value:
+            elif "@" in value and "." in value:
                 return ConfigType.STRING.value  # 暂时使用STRING代替EMAIL
             else:
                 return ConfigType.STRING.value
@@ -538,7 +576,7 @@ class ConfigImportExportService:
         """检查字符串是否为浮点数"""
         try:
             float(value)
-            return '.' in value
+            return "." in value
         except ValueError:
             return False
 
@@ -547,7 +585,7 @@ class ConfigImportExportService:
         try:
             if config_type == ConfigType.BOOLEAN.value:
                 if isinstance(value, str):
-                    return value.lower() in ['true', '1', 'yes', 'on']
+                    return value.lower() in ["true", "1", "yes", "on"]
                 return bool(value)
             elif config_type == ConfigType.INTEGER.value:
                 return int(value)
@@ -570,36 +608,30 @@ class ConfigImportExportService:
         errors = []
 
         if not isinstance(configs, dict):
-            return {
-                'valid': False,
-                'errors': ['configs must be an object']
-            }
-        
+            return {"valid": False, "errors": ["configs must be an object"]}
+
         for key, config in configs.items():
             if not isinstance(config, dict):
                 config = self._normalize_import_config(config)
                 configs[key] = config
 
             # 验证配置键名
-            if not re.match(r'^[a-zA-Z0-9._-]+$', key):
+            if not re.match(r"^[a-zA-Z0-9._-]+$", key):
                 errors.append(f"配置键 '{key}' 格式不正确")
-            
+
             # 验证配置类型
-            config_type = str(config.get('type', 'STRING')).upper()
-            config['type'] = config_type
+            config_type = str(config.get("type", "STRING")).upper()
+            config["type"] = config_type
             if config_type not in [t.value for t in ConfigType]:
                 errors.append(f"配置 '{key}' 的类型 '{config_type}' 不支持")
-            
+
             # 验证配置值
             try:
-                self._convert_config_value(config['value'], config_type)
+                self._convert_config_value(config["value"], config_type)
             except Exception as e:
                 errors.append(f"配置 '{key}' 的值格式错误: {e}")
-        
-        return {
-            'valid': len(errors) == 0,
-            'errors': errors
-        }
+
+        return {"valid": len(errors) == 0, "errors": errors}
 
     async def _execute_import(
         self,
@@ -607,7 +639,7 @@ class ConfigImportExportService:
         environment: str,
         user_id: int,
         group_id: Optional[int],
-        overwrite_existing: bool
+        overwrite_existing: bool,
     ) -> Dict:
         """执行配置导入"""
         success_count = 0
@@ -615,27 +647,27 @@ class ConfigImportExportService:
         errors = []
         model_environment = Environment(environment)
         schema_environment = SchemaEnvironment(environment)
-        
+
         for key, config in configs.items():
             try:
                 # 检查配置是否已存在
                 existing = await config_service.get_config(key, model_environment)
-                
+
                 if existing and not overwrite_existing:
                     error_count += 1
                     errors.append(f"配置 '{key}' 已存在，跳过导入")
                     continue
-                
+
                 # 创建或更新配置
-                config_type = SchemaConfigType(config.get('type', 'STRING'))
-                config_value = str(config.get('value', ''))
+                config_type = SchemaConfigType(config.get("type", "STRING"))
+                config_value = str(config.get("value", ""))
 
                 if existing:
                     update_data = ConfigUpdateRequest(
                         config_value=config_value,
                         config_type=config_type,
-                        description=config.get('description', ''),
-                        is_encrypted=bool(config.get('is_sensitive', False)),
+                        description=config.get("description", ""),
+                        is_encrypted=bool(config.get("is_sensitive", False)),
                         change_reason="配置导入更新",
                     )
                     success, error_msg, _ = await config_service.update_config(
@@ -650,32 +682,35 @@ class ConfigImportExportService:
                         config_value=config_value,
                         config_type=config_type,
                         environment=schema_environment,
-                        description=config.get('description', ''),
+                        description=config.get("description", ""),
                         group_id=group_id,
-                        is_encrypted=bool(config.get('is_sensitive', False)),
+                        is_encrypted=bool(config.get("is_sensitive", False)),
                     )
-                    success, error_msg, _ = await config_service.create_config(create_data, user_id)
+                    success, error_msg, _ = await config_service.create_config(
+                        create_data, user_id
+                    )
 
                 if not success:
                     raise RuntimeError(error_msg or "配置保存失败")
-                
+
                 success_count += 1
-                
+
             except Exception as e:
                 error_count += 1
                 errors.append(f"导入配置 '{key}' 失败: {e}")
                 logger.error(f"导入配置失败: {key} - {e}")
-        
+
         return {
-            'success_count': success_count,
-            'error_count': error_count,
-            'total_count': len(configs),
-            'errors': errors
+            "success_count": success_count,
+            "error_count": error_count,
+            "total_count": len(configs),
+            "errors": errors,
         }
 
     def _get_current_time(self) -> str:
         """获取当前时间字符串"""
         from datetime import datetime
+
         return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     def get_supported_formats(self) -> Dict:

@@ -6,17 +6,19 @@
 - 团队成员相关的响应模式
 - 工作负载分析和技能匹配模式
 """
+
 from datetime import date, datetime
-from typing import Optional, List, Dict, Any
 from decimal import Decimal
 from enum import Enum
+from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel, Field, validator, root_validator
-from pydantic.types import constr, condecimal
+from pydantic import BaseModel, Field, root_validator, validator
+from pydantic.types import condecimal, constr
 
 
 class ProjectMemberRole(str, Enum):
     """项目成员角色枚举"""
+
     ADMIN = "ADMIN"
     PROJECT_MANAGER = "PROJECT_MANAGER"
     REQUIREMENT_MANAGER = "REQUIREMENT_MANAGER"
@@ -30,6 +32,7 @@ class ProjectMemberRole(str, Enum):
 
 class MemberStatus(str, Enum):
     """成员状态枚举"""
+
     ACTIVE = "ACTIVE"
     INACTIVE = "INACTIVE"
     ON_LEAVE = "ON_LEAVE"
@@ -38,10 +41,11 @@ class MemberStatus(str, Enum):
 # 请求模式
 class AddMemberRequest(BaseModel):
     """添加团队成员请求模式"""
+
     user_id: int = Field(..., description="用户ID")
     role_in_project: ProjectMemberRole = Field(..., description="项目内角色")
-    allocation_percentage: condecimal(max_digits=5, decimal_places=2, ge=0, le=100) = Field(
-        100.00, description="参与度百分比(0-100)"
+    allocation_percentage: condecimal(max_digits=5, decimal_places=2, ge=0, le=100) = (
+        Field(100.00, description="参与度百分比(0-100)")
     )
     hourly_rate: Optional[condecimal(max_digits=8, decimal_places=2, ge=0)] = Field(
         None, description="小时费率"
@@ -49,21 +53,22 @@ class AddMemberRequest(BaseModel):
     join_date: date = Field(..., description="加入日期")
     skills: Optional[List[str]] = Field(None, description="技能标签")
     responsibilities: Optional[str] = Field(None, description="职责描述")
-    
-    @validator('join_date')
+
+    @validator("join_date")
     def validate_join_date(cls, v):
         """验证加入日期不能是未来日期"""
         if v > date.today():
-            raise ValueError('加入日期不能是未来日期')
+            raise ValueError("加入日期不能是未来日期")
         return v
 
 
 class UpdateMemberRequest(BaseModel):
     """更新团队成员请求模式"""
+
     role_in_project: Optional[ProjectMemberRole] = Field(None, description="项目内角色")
-    allocation_percentage: Optional[condecimal(max_digits=5, decimal_places=2, ge=0, le=100)] = Field(
-        None, description="参与度百分比(0-100)"
-    )
+    allocation_percentage: Optional[
+        condecimal(max_digits=5, decimal_places=2, ge=0, le=100)
+    ] = Field(None, description="参与度百分比(0-100)")
     hourly_rate: Optional[condecimal(max_digits=8, decimal_places=2, ge=0)] = Field(
         None, description="小时费率"
     )
@@ -71,21 +76,22 @@ class UpdateMemberRequest(BaseModel):
     status: Optional[MemberStatus] = Field(None, description="成员状态")
     skills: Optional[List[str]] = Field(None, description="技能标签")
     responsibilities: Optional[str] = Field(None, description="职责描述")
-    
-    @validator('leave_date')
+
+    @validator("leave_date")
     def validate_leave_date(cls, v):
         """验证离开日期不能早于今天"""
         if v and v < date.today():
-            raise ValueError('离开日期不能早于今天')
+            raise ValueError("离开日期不能早于今天")
         return v
 
 
 class InviteMemberRequest(BaseModel):
     """邀请成员请求模式"""
+
     email: str = Field(..., description="邮箱地址")
     role_in_project: ProjectMemberRole = Field(..., description="项目内角色")
-    allocation_percentage: condecimal(max_digits=5, decimal_places=2, ge=0, le=100) = Field(
-        100.00, description="参与度百分比(0-100)"
+    allocation_percentage: condecimal(max_digits=5, decimal_places=2, ge=0, le=100) = (
+        Field(100.00, description="参与度百分比(0-100)")
     )
     hourly_rate: Optional[condecimal(max_digits=8, decimal_places=2, ge=0)] = Field(
         None, description="小时费率"
@@ -93,19 +99,21 @@ class InviteMemberRequest(BaseModel):
     skills: Optional[List[str]] = Field(None, description="技能标签")
     responsibilities: Optional[str] = Field(None, description="职责描述")
     invitation_message: Optional[str] = Field(None, description="邀请消息")
-    
-    @validator('email')
+
+    @validator("email")
     def validate_email(cls, v):
         """验证邮箱格式"""
         import re
-        pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+
+        pattern = r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
         if not re.match(pattern, v):
-            raise ValueError('邮箱格式不正确')
+            raise ValueError("邮箱格式不正确")
         return v.lower()
 
 
 class MemberQueryParams(BaseModel):
     """成员查询参数"""
+
     page: int = Field(1, ge=1, description="页码")
     size: int = Field(20, ge=1, le=100, description="每页大小")
     role: Optional[List[ProjectMemberRole]] = Field(None, description="角色过滤")
@@ -113,25 +121,29 @@ class MemberQueryParams(BaseModel):
     skills: Optional[List[str]] = Field(None, description="技能过滤")
     search: Optional[str] = Field(None, description="搜索关键词")
     sort_by: Optional[str] = Field("join_date", description="排序字段")
-    sort_order: Optional[str] = Field("desc", pattern="^(asc|desc)$", description="排序方向")
+    sort_order: Optional[str] = Field(
+        "desc", pattern="^(asc|desc)$", description="排序方向"
+    )
 
 
 # 响应模式
 class UserInfo(BaseModel):
     """用户信息"""
+
     id: int
     username: str
     email: str
     nickname: Optional[str]
     avatar: Optional[str]
     phone: Optional[str]
-    
+
     class Config:
         from_attributes = True
 
 
 class ProjectMemberResponse(BaseModel):
     """项目成员响应模式"""
+
     id: int
     project_id: int
     user_id: int
@@ -146,13 +158,14 @@ class ProjectMemberResponse(BaseModel):
     responsibilities: Optional[str]
     created_at: datetime
     updated_at: datetime
-    
+
     class Config:
         from_attributes = True
 
 
 class MemberListResponse(BaseModel):
     """成员列表响应模式"""
+
     members: List[ProjectMemberResponse]
     total: int
     page: int
@@ -162,6 +175,7 @@ class MemberListResponse(BaseModel):
 
 class AddMemberResponse(BaseModel):
     """添加成员响应模式"""
+
     success: bool
     message: str
     member: ProjectMemberResponse
@@ -169,6 +183,7 @@ class AddMemberResponse(BaseModel):
 
 class UpdateMemberResponse(BaseModel):
     """更新成员响应模式"""
+
     success: bool
     message: str
     member: ProjectMemberResponse
@@ -176,6 +191,7 @@ class UpdateMemberResponse(BaseModel):
 
 class RemoveMemberResponse(BaseModel):
     """移除成员响应模式"""
+
     success: bool
     message: str
     member_id: int
@@ -184,6 +200,7 @@ class RemoveMemberResponse(BaseModel):
 
 class InviteMemberResponse(BaseModel):
     """邀请成员响应模式"""
+
     success: bool
     message: str
     invitation_id: str
@@ -194,6 +211,7 @@ class InviteMemberResponse(BaseModel):
 # 工作负载分析相关模式
 class MemberWorkload(BaseModel):
     """成员工作负载"""
+
     user_id: int
     user_info: UserInfo
     current_projects: int
@@ -203,13 +221,14 @@ class MemberWorkload(BaseModel):
     utilization_rate: Decimal
     overloaded: bool
     available_capacity: Decimal
-    
+
     class Config:
         from_attributes = True
 
 
 class TeamWorkloadAnalysis(BaseModel):
     """团队工作负载分析"""
+
     project_id: int
     total_members: int
     total_capacity: Decimal
@@ -225,6 +244,7 @@ class TeamWorkloadAnalysis(BaseModel):
 # 技能匹配相关模式
 class SkillRequirement(BaseModel):
     """技能需求"""
+
     skill_name: str
     required_level: int = Field(ge=1, le=5, description="技能等级要求(1-5)")
     is_mandatory: bool = Field(True, description="是否必需")
@@ -233,6 +253,7 @@ class SkillRequirement(BaseModel):
 
 class MemberRecommendation(BaseModel):
     """成员推荐"""
+
     user_id: int
     user_info: UserInfo
     skill_match_score: float
@@ -243,13 +264,14 @@ class MemberRecommendation(BaseModel):
     matching_skills: List[str]
     missing_skills: List[str]
     availability: Dict[str, Any]
-    
+
     class Config:
         from_attributes = True
 
 
 class SkillMatchRequest(BaseModel):
     """技能匹配请求"""
+
     skill_requirements: List[SkillRequirement] = Field(..., description="技能需求列表")
     max_recommendations: int = Field(10, ge=1, le=50, description="最大推荐数量")
     include_current_members: bool = Field(False, description="是否包含当前成员")
@@ -258,6 +280,7 @@ class SkillMatchRequest(BaseModel):
 
 class SkillMatchResponse(BaseModel):
     """技能匹配响应"""
+
     success: bool
     message: str
     recommendations: List[MemberRecommendation]
@@ -268,6 +291,7 @@ class SkillMatchResponse(BaseModel):
 # 团队统计相关模式
 class TeamStatistics(BaseModel):
     """团队统计信息"""
+
     project_id: int
     total_members: int
     active_members: int
@@ -282,6 +306,7 @@ class TeamStatistics(BaseModel):
 
 class TeamPerformanceMetrics(BaseModel):
     """团队绩效指标"""
+
     project_id: int
     productivity_score: float
     collaboration_score: float

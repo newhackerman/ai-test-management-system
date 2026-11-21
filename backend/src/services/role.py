@@ -1,9 +1,11 @@
 """
 角色管理服务
 """
-from typing import List, Optional, Dict, Any
+
+from typing import Any, Dict, List, Optional
+
+from sqlalchemy import and_, func, or_
 from sqlalchemy.orm import Session
-from sqlalchemy import and_, or_, func
 
 from ..models.role import Role
 from ..models.user import User, UserRole
@@ -31,7 +33,7 @@ class RoleService(BaseService):
         type_filter: Optional[str] = None,
         status_filter: Optional[str] = None,
         sort_by: str = "created_at",
-        sort_order: str = "desc"
+        sort_order: str = "desc",
     ) -> Dict[str, Any]:
         """获取角色列表"""
         query = self.db.query(Role)
@@ -43,7 +45,7 @@ class RoleService(BaseService):
                 or_(
                     Role.name.ilike(search_pattern),
                     Role.code.ilike(search_pattern),
-                    Role.description.ilike(search_pattern)
+                    Role.description.ilike(search_pattern),
                 )
             )
 
@@ -87,7 +89,7 @@ class RoleService(BaseService):
             "total": total,
             "page": (skip // limit) + 1,
             "page_size": limit,
-            "total_pages": (total + limit - 1) // limit
+            "total_pages": (total + limit - 1) // limit,
         }
 
     def get_role_by_id(self, role_id: int) -> Optional[Role]:
@@ -113,7 +115,7 @@ class RoleService(BaseService):
             is_system_role=False,  # 通过API创建的都是自定义角色
             is_active=True,
             priority=role_data.priority or 0,
-            sort_order=role_data.sort_order or 0
+            sort_order=role_data.sort_order or 0,
         )
 
         self.db.add(role)
@@ -177,14 +179,18 @@ class RoleService(BaseService):
         )
 
         if user_count > 0:
-            raise ValueError(f"角色 '{role.name}' 正在被 {user_count} 个用户使用，无法删除")
+            raise ValueError(
+                f"角色 '{role.name}' 正在被 {user_count} 个用户使用，无法删除"
+            )
 
         self.db.delete(role)
         self.db.commit()
 
         return True
 
-    def assign_permissions_to_role(self, role_id: int, permission_ids: List[int]) -> bool:
+    def assign_permissions_to_role(
+        self, role_id: int, permission_ids: List[int]
+    ) -> bool:
         """为角色分配权限"""
         role = self.get_role_by_id(role_id)
         if not role:
@@ -192,15 +198,13 @@ class RoleService(BaseService):
 
         # 清除现有权限
         from ..models.permission import RolePermission
-        self.db.query(RolePermission).filter(
-            RolePermission.role_id == role_id
-        ).delete()
+
+        self.db.query(RolePermission).filter(RolePermission.role_id == role_id).delete()
 
         # 分配新权限
         for permission_id in permission_ids:
             role_permission = RolePermission(
-                role_id=role_id,
-                permission_id=permission_id
+                role_id=role_id, permission_id=permission_id
             )
             self.db.add(role_permission)
 
@@ -210,7 +214,7 @@ class RoleService(BaseService):
     def get_role_permissions(self, role_id: int) -> List[int]:
         """获取角色的权限ID列表"""
         from ..models.permission import RolePermission
-        
+
         permission_ids = (
             self.db.query(RolePermission.permission_id)
             .filter(RolePermission.role_id == role_id)
@@ -237,64 +241,64 @@ class RoleService(BaseService):
                 "code": "admin",
                 "description": "拥有系统所有权限，包括用户管理、系统配置、数据备份等",
                 "priority": 100,
-                "sort_order": 1
+                "sort_order": 1,
             },
             {
-                "name": "项目管理员", 
+                "name": "项目管理员",
                 "code": "project_manager",
                 "description": "项目全生命周期管理、团队管理、进度控制、资源分配",
                 "priority": 90,
-                "sort_order": 2
+                "sort_order": 2,
             },
             {
                 "name": "需求管理人员",
-                "code": "requirement_manager", 
+                "code": "requirement_manager",
                 "description": "需求收集、分析、设计、变更管理、需求追溯",
                 "priority": 80,
-                "sort_order": 3
+                "sort_order": 3,
             },
             {
                 "name": "设计人员",
                 "code": "designer",
-                "description": "系统设计、界面设计、原型设计、设计文档管理", 
+                "description": "系统设计、界面设计、原型设计、设计文档管理",
                 "priority": 70,
-                "sort_order": 4
+                "sort_order": 4,
             },
             {
                 "name": "架构师",
                 "code": "architect",
                 "description": "技术架构设计、系统架构、技术选型、架构评审",
                 "priority": 85,
-                "sort_order": 5
+                "sort_order": 5,
             },
             {
                 "name": "开发人员",
-                "code": "developer", 
+                "code": "developer",
                 "description": "代码开发、单元测试、代码审查、技术文档",
                 "priority": 60,
-                "sort_order": 6
+                "sort_order": 6,
             },
             {
                 "name": "测试人员",
                 "code": "tester",
                 "description": "测试用例设计、测试执行、缺陷管理、测试报告",
                 "priority": 65,
-                "sort_order": 7
+                "sort_order": 7,
             },
             {
-                "name": "运维人员", 
+                "name": "运维人员",
                 "code": "ops",
                 "description": "系统部署、监控告警、性能优化、安全维护",
                 "priority": 75,
-                "sort_order": 8
+                "sort_order": 8,
             },
             {
                 "name": "第三方人员",
                 "code": "third_party",
                 "description": "受限的查看权限、协作功能、文档访问",
                 "priority": 10,
-                "sort_order": 9
-            }
+                "sort_order": 9,
+            },
         ]
 
         for role_data in system_roles:
@@ -302,12 +306,12 @@ class RoleService(BaseService):
             if not existing_role:
                 role = Role(
                     name=role_data["name"],
-                    code=role_data["code"], 
+                    code=role_data["code"],
                     description=role_data["description"],
                     is_system_role=True,
                     is_active=True,
                     priority=role_data["priority"],
-                    sort_order=role_data["sort_order"]
+                    sort_order=role_data["sort_order"],
                 )
                 self.db.add(role)
 

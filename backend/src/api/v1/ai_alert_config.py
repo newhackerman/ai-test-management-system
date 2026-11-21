@@ -1,30 +1,32 @@
 """
 AI告警配置管理API
 """
-from typing import List, Optional
+
 from datetime import datetime
-from fastapi import APIRouter, Depends, HTTPException, Query, BackgroundTasks
+from typing import List, Optional
+
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...core.database import get_async_session
+from ...core.exceptions import NotFoundError, ValidationError
 from ...decorators.permission import get_current_user, require_permission
-from ...services.ai_alert_config_service import AIAlertConfigService
+from ...models.ai_alert_config import AlertLevel, AlertStatus, AlertType
 from ...schemas.ai_alert_config import (
     AlertConfigCreate,
-    AlertConfigUpdate,
-    AlertConfigResponse,
     AlertConfigList,
-    AlertHistoryResponse,
+    AlertConfigResponse,
+    AlertConfigUpdate,
     AlertHistoryList,
+    AlertHistoryResponse,
+    AlertStatsResponse,
     AlertSuppressionCreate,
     AlertSuppressionResponse,
+    AlertTemplateResponse,
     AlertTestRequest,
     AlertTestResponse,
-    AlertStatsResponse,
-    AlertTemplateResponse
 )
-from ...models.ai_alert_config import AlertType, AlertLevel, AlertStatus
-from ...core.exceptions import ValidationError, NotFoundError
+from ...services.ai_alert_config_service import AIAlertConfigService
 
 router = APIRouter()
 
@@ -39,11 +41,11 @@ async def create_alert_config(
     config_data: AlertConfigCreate,
     db: AsyncSession = Depends(get_async_session),
     current_user: dict = Depends(require_permission("ai_config_manage")),
-    service: AIAlertConfigService = Depends(get_alert_config_service)
+    service: AIAlertConfigService = Depends(get_alert_config_service),
 ):
     """
     创建告警配置
-    
+
     需要权限: ai_config_manage
     """
     try:
@@ -64,11 +66,11 @@ async def get_alert_configs(
     limit: int = Query(100, ge=1, le=1000, description="限制数量"),
     db: AsyncSession = Depends(get_async_session),
     current_user: dict = Depends(require_permission("ai_config_view")),
-    service: AIAlertConfigService = Depends(get_alert_config_service)
+    service: AIAlertConfigService = Depends(get_alert_config_service),
 ):
     """
     获取告警配置列表
-    
+
     需要权限: ai_config_view
     """
     try:
@@ -79,7 +81,7 @@ async def get_alert_configs(
             status=status,
             created_by=created_by,
             skip=skip,
-            limit=limit
+            limit=limit,
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"获取告警配置列表失败: {str(e)}")
@@ -89,11 +91,11 @@ async def get_alert_configs(
 async def get_alert_stats(
     db: AsyncSession = Depends(get_async_session),
     current_user: dict = Depends(require_permission("ai_config_view")),
-    service: AIAlertConfigService = Depends(get_alert_config_service)
+    service: AIAlertConfigService = Depends(get_alert_config_service),
 ):
     """
     获取告警统计信息
-    
+
     需要权限: ai_config_view
     """
     try:
@@ -106,11 +108,11 @@ async def get_alert_stats(
 async def get_alert_template(
     alert_type: AlertType,
     current_user: dict = Depends(require_permission("ai_config_view")),
-    service: AIAlertConfigService = Depends(get_alert_config_service)
+    service: AIAlertConfigService = Depends(get_alert_config_service),
 ):
     """
     获取告警模板
-    
+
     需要权限: ai_config_view
     """
     try:
@@ -126,11 +128,11 @@ async def get_alert_config(
     config_id: int,
     db: AsyncSession = Depends(get_async_session),
     current_user: dict = Depends(require_permission("ai_config_view")),
-    service: AIAlertConfigService = Depends(get_alert_config_service)
+    service: AIAlertConfigService = Depends(get_alert_config_service),
 ):
     """
     获取单个告警配置
-    
+
     需要权限: ai_config_view
     """
     try:
@@ -147,11 +149,11 @@ async def update_alert_config(
     update_data: AlertConfigUpdate,
     db: AsyncSession = Depends(get_async_session),
     current_user: dict = Depends(require_permission("ai_config_manage")),
-    service: AIAlertConfigService = Depends(get_alert_config_service)
+    service: AIAlertConfigService = Depends(get_alert_config_service),
 ):
     """
     更新告警配置
-    
+
     需要权限: ai_config_manage
     """
     try:
@@ -169,11 +171,11 @@ async def delete_alert_config(
     config_id: int,
     db: AsyncSession = Depends(get_async_session),
     current_user: dict = Depends(require_permission("ai_config_manage")),
-    service: AIAlertConfigService = Depends(get_alert_config_service)
+    service: AIAlertConfigService = Depends(get_alert_config_service),
 ):
     """
     删除告警配置
-    
+
     需要权限: ai_config_manage
     """
     try:
@@ -191,11 +193,11 @@ async def test_alert_config(
     test_request: AlertTestRequest,
     db: AsyncSession = Depends(get_async_session),
     current_user: dict = Depends(require_permission("ai_config_manage")),
-    service: AIAlertConfigService = Depends(get_alert_config_service)
+    service: AIAlertConfigService = Depends(get_alert_config_service),
 ):
     """
     测试告警配置
-    
+
     需要权限: ai_config_manage
     """
     try:
@@ -211,11 +213,11 @@ async def toggle_alert_config(
     config_id: int,
     db: AsyncSession = Depends(get_async_session),
     current_user: dict = Depends(require_permission("ai_config_manage")),
-    service: AIAlertConfigService = Depends(get_alert_config_service)
+    service: AIAlertConfigService = Depends(get_alert_config_service),
 ):
     """
     切换告警配置状态
-    
+
     需要权限: ai_config_manage
     """
     try:
@@ -239,11 +241,11 @@ async def get_alert_history(
     limit: int = Query(100, ge=1, le=1000, description="限制数量"),
     db: AsyncSession = Depends(get_async_session),
     current_user: dict = Depends(require_permission("ai_config_view")),
-    service: AIAlertConfigService = Depends(get_alert_config_service)
+    service: AIAlertConfigService = Depends(get_alert_config_service),
 ):
     """
     获取告警历史记录
-    
+
     需要权限: ai_config_view
     """
     try:
@@ -255,7 +257,7 @@ async def get_alert_history(
             start_date=start_date,
             end_date=end_date,
             skip=skip,
-            limit=limit
+            limit=limit,
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"获取告警历史失败: {str(e)}")
@@ -271,11 +273,11 @@ async def get_all_alert_history(
     limit: int = Query(100, ge=1, le=1000, description="限制数量"),
     db: AsyncSession = Depends(get_async_session),
     current_user: dict = Depends(require_permission("ai_config_view")),
-    service: AIAlertConfigService = Depends(get_alert_config_service)
+    service: AIAlertConfigService = Depends(get_alert_config_service),
 ):
     """
     获取所有告警历史记录
-    
+
     需要权限: ai_config_view
     """
     try:
@@ -287,7 +289,7 @@ async def get_all_alert_history(
             start_date=start_date,
             end_date=end_date,
             skip=skip,
-            limit=limit
+            limit=limit,
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"获取告警历史失败: {str(e)}")
@@ -299,19 +301,16 @@ async def resolve_alert(
     resolution_note: Optional[str] = None,
     db: AsyncSession = Depends(get_async_session),
     current_user: dict = Depends(require_permission("ai_config_manage")),
-    service: AIAlertConfigService = Depends(get_alert_config_service)
+    service: AIAlertConfigService = Depends(get_alert_config_service),
 ):
     """
     解决告警
-    
+
     需要权限: ai_config_manage
     """
     try:
         return await service.resolve_alert(
-            db, 
-            history_id, 
-            current_user.id, 
-            resolution_note
+            db, history_id, current_user.id, resolution_note
         )
     except NotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
@@ -326,11 +325,11 @@ async def suppress_alert(
     suppression_data: AlertSuppressionCreate,
     db: AsyncSession = Depends(get_async_session),
     current_user: dict = Depends(require_permission("ai_config_manage")),
-    service: AIAlertConfigService = Depends(get_alert_config_service)
+    service: AIAlertConfigService = Depends(get_alert_config_service),
 ):
     """
     抑制告警
-    
+
     需要权限: ai_config_manage
     """
     try:
@@ -349,11 +348,11 @@ async def batch_toggle_alert_configs(
     target_status: AlertStatus,
     db: AsyncSession = Depends(get_async_session),
     current_user: dict = Depends(require_permission("ai_config_manage")),
-    service: AIAlertConfigService = Depends(get_alert_config_service)
+    service: AIAlertConfigService = Depends(get_alert_config_service),
 ):
     """
     批量切换告警配置状态
-    
+
     需要权限: ai_config_manage
     """
     try:
@@ -362,33 +361,37 @@ async def batch_toggle_alert_configs(
             try:
                 # 获取当前配置
                 config = await service.get_alert_config(db, config_id)
-                
+
                 # 如果状态不同，则更新
                 if config.status != target_status:
                     update_data = AlertConfigUpdate(status=target_status)
-                    updated_config = await service.update_alert_config(db, config_id, update_data)
-                    results.append({
-                        "config_id": config_id,
-                        "success": True,
-                        "old_status": config.status,
-                        "new_status": updated_config.status
-                    })
+                    updated_config = await service.update_alert_config(
+                        db, config_id, update_data
+                    )
+                    results.append(
+                        {
+                            "config_id": config_id,
+                            "success": True,
+                            "old_status": config.status,
+                            "new_status": updated_config.status,
+                        }
+                    )
                 else:
-                    results.append({
-                        "config_id": config_id,
-                        "success": True,
-                        "message": "状态未变更"
-                    })
+                    results.append(
+                        {
+                            "config_id": config_id,
+                            "success": True,
+                            "message": "状态未变更",
+                        }
+                    )
             except Exception as e:
-                results.append({
-                    "config_id": config_id,
-                    "success": False,
-                    "error": str(e)
-                })
-        
+                results.append(
+                    {"config_id": config_id, "success": False, "error": str(e)}
+                )
+
         return {
             "message": f"批量操作完成，处理了 {len(config_ids)} 个配置",
-            "results": results
+            "results": results,
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"批量操作失败: {str(e)}")
@@ -399,11 +402,11 @@ async def batch_delete_alert_configs(
     config_ids: List[int],
     db: AsyncSession = Depends(get_async_session),
     current_user: dict = Depends(require_permission("ai_config_manage")),
-    service: AIAlertConfigService = Depends(get_alert_config_service)
+    service: AIAlertConfigService = Depends(get_alert_config_service),
 ):
     """
     批量删除告警配置
-    
+
     需要权限: ai_config_manage
     """
     try:
@@ -411,20 +414,15 @@ async def batch_delete_alert_configs(
         for config_id in config_ids:
             try:
                 await service.delete_alert_config(db, config_id)
-                results.append({
-                    "config_id": config_id,
-                    "success": True
-                })
+                results.append({"config_id": config_id, "success": True})
             except Exception as e:
-                results.append({
-                    "config_id": config_id,
-                    "success": False,
-                    "error": str(e)
-                })
-        
+                results.append(
+                    {"config_id": config_id, "success": False, "error": str(e)}
+                )
+
         return {
             "message": f"批量删除完成，处理了 {len(config_ids)} 个配置",
-            "results": results
+            "results": results,
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"批量删除失败: {str(e)}")
@@ -436,11 +434,11 @@ async def export_alert_configs(
     status: Optional[AlertStatus] = Query(None, description="状态筛选"),
     db: AsyncSession = Depends(get_async_session),
     current_user: dict = Depends(require_permission("ai_config_manage")),
-    service: AIAlertConfigService = Depends(get_alert_config_service)
+    service: AIAlertConfigService = Depends(get_alert_config_service),
 ):
     """
     导出告警配置
-    
+
     需要权限: ai_config_manage
     """
     try:
@@ -449,9 +447,9 @@ async def export_alert_configs(
             alert_type=alert_type,
             status=status,
             skip=0,
-            limit=10000  # 导出所有匹配的配置
+            limit=10000,  # 导出所有匹配的配置
         )
-        
+
         # 转换为导出格式
         export_data = {
             "export_time": datetime.utcnow().isoformat(),
@@ -476,12 +474,12 @@ async def export_alert_configs(
                     "auto_resolve": config.auto_resolve,
                     "auto_resolve_threshold": config.auto_resolve_threshold,
                     "created_at": config.created_at.isoformat(),
-                    "trigger_count": config.trigger_count
+                    "trigger_count": config.trigger_count,
                 }
                 for config in configs.items
-            ]
+            ],
         }
-        
+
         return export_data
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"导出告警配置失败: {str(e)}")

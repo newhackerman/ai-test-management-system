@@ -8,8 +8,8 @@
 - 测试环境管理
 """
 
-from datetime import datetime, date
 import json
+import logging
 import os
 import shlex
 import shutil
@@ -18,36 +18,63 @@ import sys
 import tempfile
 import time
 import uuid
+from datetime import date, datetime
+from pathlib import Path as FilePath
+from typing import Any, Dict, List, Optional
 from urllib import request as url_request
 from urllib.error import HTTPError, URLError
-from pathlib import Path as FilePath
-from typing import Optional, List, Dict, Any
-from fastapi import APIRouter, Depends, HTTPException, Query, Path, Body, BackgroundTasks, UploadFile, File
+
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Body,
+    Depends,
+    File,
+    HTTPException,
+    Path,
+    Query,
+    UploadFile,
+)
 from fastapi.security import HTTPBearer
+from pydantic import BaseModel, Field
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
-from pydantic import BaseModel, Field
-import logging
 
-from ...core.database import get_db, SessionLocal
-from ...core.exceptions import ValidationError, PermissionError, NotFoundError, BusinessLogicError
-from ...services.test_execution_service import TestExecutionService
-from ...services.test_environment_service import TestEnvironmentService
-from ...services.execution_monitoring_service import ExecutionMonitoringService
-from ...services.auth_dependencies import get_current_user
-from ...models.user import User
-from ...models.test_case import AutomationScript, TestCase, TestExecution, ExecutionStatus as ModelExecutionStatus
+from ...core.database import SessionLocal, get_db
+from ...core.exceptions import (
+    BusinessLogicError,
+    NotFoundError,
+    PermissionError,
+    ValidationError,
+)
+from ...models.test_case import (
+    AutomationScript,
+)
+from ...models.test_case import ExecutionStatus as ModelExecutionStatus
+from ...models.test_case import TestCase, TestExecution
 from ...models.test_environment import TestEnvironment
 from ...models.test_plan import TestPlan
-from ...schemas.test_execution import (
-    ExecutionType, ExecutionStatus, TestEnvironmentStatus,
-    StartManualExecutionRequest, CompleteManualExecutionRequest,
-    BatchExecutionRequest, AutomationExecutionRequest,
-    TestExecutionResponse, ExecutionProgressResponse,
-    BatchExecutionResponse, AutomationExecutionResponse,
-    ExecutionStatisticsResponse, TestEnvironmentResponse
-)
+from ...models.user import User
 from ...schemas.base import BaseResponse, PaginatedResponse
+from ...schemas.test_execution import (
+    AutomationExecutionRequest,
+    AutomationExecutionResponse,
+    BatchExecutionRequest,
+    BatchExecutionResponse,
+    CompleteManualExecutionRequest,
+    ExecutionProgressResponse,
+    ExecutionStatisticsResponse,
+    ExecutionStatus,
+    ExecutionType,
+    StartManualExecutionRequest,
+    TestEnvironmentResponse,
+    TestEnvironmentStatus,
+    TestExecutionResponse,
+)
+from ...services.auth_dependencies import get_current_user
+from ...services.execution_monitoring_service import ExecutionMonitoringService
+from ...services.test_environment_service import TestEnvironmentService
+from ...services.test_execution_service import TestExecutionService
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/test-executions", tags=["测试执行管理"])
@@ -56,7 +83,9 @@ MAX_VIDEO_UPLOAD_SIZE = 100 * 1024 * 1024
 UPLOAD_CHUNK_SIZE = 1024 * 1024
 
 
-def _delete_uploaded_execution_file(file_path_value: Optional[str], base_dir: str) -> None:
+def _delete_uploaded_execution_file(
+    file_path_value: Optional[str], base_dir: str
+) -> None:
     if not file_path_value:
         return
 
@@ -118,19 +147,27 @@ def _build_execution_response(execution):
         executor_id=execution.executor_id,
         test_case_code=test_case.case_code if test_case else None,
         test_case_title=test_case.case_title if test_case else None,
-        test_case_priority=_normalize_enum_value(test_case.priority) if test_case and test_case.priority else None,
+        test_case_priority=(
+            _normalize_enum_value(test_case.priority)
+            if test_case and test_case.priority
+            else None
+        ),
         screenshots=execution.screenshots,
         logs=execution.logs,
         videos=execution.videos,
         created_at=execution.created_at,
-        updated_at=execution.updated_at
+        updated_at=execution.updated_at,
     )
 
 
 def _generate_execution_code(db: Session, test_case_id: int) -> str:
     today = datetime.now().strftime("%Y%m%d%H%M")
     prefix = f"EX-{test_case_id}-{today}"
-    count = db.query(TestExecution).filter(TestExecution.execution_code.like(f"{prefix}-%")).count()
+    count = (
+        db.query(TestExecution)
+        .filter(TestExecution.execution_code.like(f"{prefix}-%"))
+        .count()
+    )
     return f"{prefix}-{count + 1:03d}"
 
 
@@ -144,15 +181,19 @@ def _json_list(value: Any) -> List[Dict[str, Any]]:
 
 def _append_execution_log(execution: TestExecution, level: str, message: str) -> None:
     logs = _json_list(execution.logs)
-    logs.append({
-        "time": datetime.utcnow().isoformat(),
-        "level": level,
-        "message": message,
-    })
+    logs.append(
+        {
+            "time": datetime.utcnow().isoformat(),
+            "level": level,
+            "message": message,
+        }
+    )
     execution.logs = logs
 
 
-def _find_automation_script(db: Session, test_case_id: int, framework: str) -> Optional[AutomationScript]:
+def _find_automation_script(
+    db: Session, test_case_id: int, framework: str
+) -> Optional[AutomationScript]:
     normalized_framework = (framework or "").strip().upper()
     query = db.query(AutomationScript).filter(
         AutomationScript.test_case_id == test_case_id,
@@ -160,10 +201,14 @@ def _find_automation_script(db: Session, test_case_id: int, framework: str) -> O
     )
     if normalized_framework and normalized_framework != "AUTO":
         query = query.filter(AutomationScript.framework == normalized_framework)
-    return query.order_by(AutomationScript.updated_at.desc(), AutomationScript.id.desc()).first()
+    return query.order_by(
+        AutomationScript.updated_at.desc(), AutomationScript.id.desc()
+    ).first()
 
 
-def _run_command(command: List[str], timeout: int, cwd: Optional[str] = None) -> Dict[str, Any]:
+def _run_command(
+    command: List[str], timeout: int, cwd: Optional[str] = None
+) -> Dict[str, Any]:
     started = time.perf_counter()
     completed = subprocess.run(
         command,
@@ -192,7 +237,9 @@ def _run_automation_script(script: AutomationScript, timeout: int) -> Dict[str, 
     if language in {"JAVASCRIPT"} or framework in {"JEST", "CYPRESS"}:
         return _run_script_content(content, "js", timeout, framework=framework)
     if language not in {"PYTHON", ""}:
-        raise RuntimeError(f"暂不支持执行 {language} 自动化脚本，请使用 Python 或 JavaScript 脚本")
+        raise RuntimeError(
+            f"暂不支持执行 {language} 自动化脚本，请使用 Python 或 JavaScript 脚本"
+        )
 
     return _run_script_content(content, "python", timeout, framework=framework)
 
@@ -245,20 +292,27 @@ def _infer_imported_script_format(script_info: Dict[str, Any]) -> str:
         return "playwright"
     if "selenium" in lower or "webdriver" in lower:
         return "selenium"
-    if lower.startswith(("const ", "let ", "var ", "function ", "import ")) or "require(" in lower:
+    if (
+        lower.startswith(("const ", "let ", "var ", "function ", "import "))
+        or "require(" in lower
+    ):
         return "js"
     if lower.startswith(("def ", "import ", "from ")) or "\ndef " in lower:
         return "python"
     return "python"
 
 
-def _run_script_content(content: str, script_format: str, timeout: int, framework: Optional[str] = None) -> Dict[str, Any]:
+def _run_script_content(
+    content: str, script_format: str, timeout: int, framework: Optional[str] = None
+) -> Dict[str, Any]:
     normalized = _normalize_script_format(script_format)
     if normalized in {"playwright", "selenium", "python", "py", "pytest"}:
         if normalized in {"playwright", "selenium"} and _looks_like_javascript(content):
             return _run_javascript_content(content, timeout)
         suffix = ".py"
-        with tempfile.NamedTemporaryFile("w", suffix=suffix, encoding="utf-8", delete=False) as script_file:
+        with tempfile.NamedTemporaryFile(
+            "w", suffix=suffix, encoding="utf-8", delete=False
+        ) as script_file:
             script_file.write(content or "")
             script_path = script_file.name
         try:
@@ -280,13 +334,23 @@ def _looks_like_javascript(content: str) -> bool:
     lower = (content or "").lower()
     return any(
         marker in lower
-        for marker in ["require(", "module.exports", "const ", "let ", "var ", "@playwright/test", "import {"]
+        for marker in [
+            "require(",
+            "module.exports",
+            "const ",
+            "let ",
+            "var ",
+            "@playwright/test",
+            "import {",
+        ]
     )
 
 
 def _run_javascript_content(content: str, timeout: int) -> Dict[str, Any]:
     suffix = ".js"
-    with tempfile.NamedTemporaryFile("w", suffix=suffix, encoding="utf-8", delete=False) as script_file:
+    with tempfile.NamedTemporaryFile(
+        "w", suffix=suffix, encoding="utf-8", delete=False
+    ) as script_file:
         script_file.write(content or "")
         script_path = script_file.name
     try:
@@ -300,13 +364,15 @@ def _legacy_resolve_jmeter_executable() -> str:
     configured = os.environ.get("JMETER_BIN") or os.environ.get("JMETER_EXECUTABLE")
     path_candidates = [configured]
     if os.name == "nt":
-        path_candidates.extend([
-            shutil.which("jmeter.bat"),
-            shutil.which("jmeter.cmd"),
-            r"C:\apache-jmeter\bin\jmeter.bat",
-            r"E:\test\apache-jmeter-5.6.3\bin\jmeter.bat",
-            shutil.which("jmeter"),
-        ])
+        path_candidates.extend(
+            [
+                shutil.which("jmeter.bat"),
+                shutil.which("jmeter.cmd"),
+                r"C:\apache-jmeter\bin\jmeter.bat",
+                r"E:\test\apache-jmeter-5.6.3\bin\jmeter.bat",
+                shutil.which("jmeter"),
+            ]
+        )
     else:
         path_candidates.append(shutil.which("jmeter"))
 
@@ -317,7 +383,9 @@ def _legacy_resolve_jmeter_executable() -> str:
     for candidate in candidates:
         if candidate and FilePath(candidate).exists():
             return candidate
-    raise RuntimeError("未找到 JMeter 可执行文件，请安装 JMeter 或配置 JMETER_BIN/JMETER_EXECUTABLE")
+    raise RuntimeError(
+        "未找到 JMeter 可执行文件，请安装 JMeter 或配置 JMETER_BIN/JMETER_EXECUTABLE"
+    )
 
 
 def _wrap_windows_batch_command(command: List[str]) -> List[str]:
@@ -372,17 +440,21 @@ def _resolve_jmeter_executable(runtime_config: Optional[Dict[str, Any]] = None) 
     if tool_home:
         home = FilePath(str(tool_home)).expanduser()
         if os.name == "nt":
-            path_candidates.extend([str(home / "bin" / "jmeter.bat"), str(home / "bin" / "jmeter.cmd")])
+            path_candidates.extend(
+                [str(home / "bin" / "jmeter.bat"), str(home / "bin" / "jmeter.cmd")]
+            )
         else:
             path_candidates.append(str(home / "bin" / "jmeter"))
     if os.name == "nt":
-        path_candidates.extend([
-            shutil.which("jmeter.bat"),
-            shutil.which("jmeter.cmd"),
-            r"C:\apache-jmeter\bin\jmeter.bat",
-            r"E:\test\apache-jmeter-5.6.3\bin\jmeter.bat",
-            shutil.which("jmeter"),
-        ])
+        path_candidates.extend(
+            [
+                shutil.which("jmeter.bat"),
+                shutil.which("jmeter.cmd"),
+                r"C:\apache-jmeter\bin\jmeter.bat",
+                r"E:\test\apache-jmeter-5.6.3\bin\jmeter.bat",
+                shutil.which("jmeter"),
+            ]
+        )
     else:
         path_candidates.append(shutil.which("jmeter"))
 
@@ -393,7 +465,9 @@ def _resolve_jmeter_executable(runtime_config: Optional[Dict[str, Any]] = None) 
     for candidate in candidates:
         if candidate and FilePath(candidate).exists():
             return candidate
-    raise RuntimeError("未找到 JMeter 可执行文件，请安装 JMeter 或配置 JMETER_BIN/JMETER_EXECUTABLE")
+    raise RuntimeError(
+        "未找到 JMeter 可执行文件，请安装 JMeter 或配置 JMETER_BIN/JMETER_EXECUTABLE"
+    )
 
 
 def _build_jmeter_args(
@@ -407,7 +481,9 @@ def _build_jmeter_args(
     args = [jmeter_executable, "-n", "-t", jmx_path, "-l", jtl_path, "-j", log_path]
     if report_dir:
         args.extend(["-e", "-o", report_dir])
-    for key, value in _parse_key_value_lines(runtime_config.get("jmeter_properties")).items():
+    for key, value in _parse_key_value_lines(
+        runtime_config.get("jmeter_properties")
+    ).items():
         args.append(f"-J{key}={value}")
     distributed_hosts = str(runtime_config.get("distributed_hosts") or "").strip()
     if distributed_hosts:
@@ -446,40 +522,69 @@ def _scp_base_command(runtime_config: Dict[str, Any]) -> List[str]:
     return command
 
 
-def _run_jmeter_script_via_ssh(content: str, timeout: int, execution_code: str, runtime_config: Dict[str, Any]) -> Dict[str, Any]:
-    remote_dir = str(runtime_config.get("runner_workdir") or f"/tmp/test-runs/{execution_code}").strip()
+def _run_jmeter_script_via_ssh(
+    content: str, timeout: int, execution_code: str, runtime_config: Dict[str, Any]
+) -> Dict[str, Any]:
+    remote_dir = str(
+        runtime_config.get("runner_workdir") or f"/tmp/test-runs/{execution_code}"
+    ).strip()
     remote_script = f"{remote_dir}/{execution_code}.jmx"
     remote_jtl = f"{remote_dir}/{execution_code}.jtl"
     remote_log = f"{remote_dir}/jmeter.log"
-    remote_report = str(runtime_config.get("report_directory") or f"{remote_dir}/report").strip()
+    remote_report = str(
+        runtime_config.get("report_directory") or f"{remote_dir}/report"
+    ).strip()
     if not remote_report.startswith("/"):
         remote_report = f"{remote_dir}/{remote_report}"
 
-    with tempfile.TemporaryDirectory(prefix=f"jmeter-ssh-{execution_code}-") as temp_dir:
+    with tempfile.TemporaryDirectory(
+        prefix=f"jmeter-ssh-{execution_code}-"
+    ) as temp_dir:
         local_dir = FilePath(temp_dir)
         local_script = local_dir / f"{execution_code}.jmx"
         local_jtl = local_dir / f"{execution_code}.jtl"
         local_report = local_dir / "report"
         local_script.write_text(content or "", encoding="utf-8")
 
-        mkdir_result = _run_command([*_ssh_base_command(runtime_config), f"mkdir -p {shlex.quote(remote_dir)} {shlex.quote(remote_report)}"], timeout)
+        mkdir_result = _run_command(
+            [
+                *_ssh_base_command(runtime_config),
+                f"mkdir -p {shlex.quote(remote_dir)} {shlex.quote(remote_report)}",
+            ],
+            timeout,
+        )
         if mkdir_result["status"] != "PASSED":
             return mkdir_result
-        upload_result = _run_command([*_scp_base_command(runtime_config), str(local_script), f"{_ssh_target(runtime_config)}:{remote_script}"], timeout)
+        upload_result = _run_command(
+            [
+                *_scp_base_command(runtime_config),
+                str(local_script),
+                f"{_ssh_target(runtime_config)}:{remote_script}",
+            ],
+            timeout,
+        )
         if upload_result["status"] != "PASSED":
             return upload_result
 
         executable = str(runtime_config.get("executable_path") or "jmeter").strip()
-        template = str(runtime_config.get("command_template") or "jmeter -n -t {script} -l {result_jtl} -j {log_file} -e -o {report_dir}").strip()
-        command_text = _render_command_template(template, {
-            "jmeter": executable,
-            "script": remote_script,
-            "result_file": remote_jtl,
-            "result_jtl": remote_jtl,
-            "report_dir": remote_report,
-            "log_file": remote_log,
-        })
-        if runtime_config.get("executable_path") and command_text.strip().lower().startswith("jmeter "):
+        template = str(
+            runtime_config.get("command_template")
+            or "jmeter -n -t {script} -l {result_jtl} -j {log_file} -e -o {report_dir}"
+        ).strip()
+        command_text = _render_command_template(
+            template,
+            {
+                "jmeter": executable,
+                "script": remote_script,
+                "result_file": remote_jtl,
+                "result_jtl": remote_jtl,
+                "report_dir": remote_report,
+                "log_file": remote_log,
+            },
+        )
+        if runtime_config.get(
+            "executable_path"
+        ) and command_text.strip().lower().startswith("jmeter "):
             command_text = f"{shlex.quote(executable)} {command_text.strip()[7:]}"
 
         remote_parts = [f"cd {shlex.quote(remote_dir)}"]
@@ -501,18 +606,55 @@ def _run_jmeter_script_via_ssh(content: str, timeout: int, execution_code: str, 
             errors="replace",
         )
         duration = int(time.perf_counter() - started)
-        download_result = _run_command([*_scp_base_command(runtime_config), f"{_ssh_target(runtime_config)}:{remote_jtl}", str(local_jtl)], max(10, min(timeout, 300)))
-        report_result = _run_command([*_scp_base_command(runtime_config), "-r", f"{_ssh_target(runtime_config)}:{remote_report}", str(local_report)], max(10, min(timeout, 300)))
-        artifact_summary = "\n".join([
-            f"远端 JMeter 结果文件: {remote_jtl}",
-            f"远端 JMeter HTML 报告目录: {remote_report}",
-            f"本地采集目录: {local_dir}",
-            "结果文件已下载" if download_result["status"] == "PASSED" else f"结果文件下载失败: {download_result.get('stderr') or download_result.get('stdout')}",
-            "HTML 报告已下载" if report_result["status"] == "PASSED" else f"HTML 报告下载失败: {report_result.get('stderr') or report_result.get('stdout')}",
-        ])
+        download_result = _run_command(
+            [
+                *_scp_base_command(runtime_config),
+                f"{_ssh_target(runtime_config)}:{remote_jtl}",
+                str(local_jtl),
+            ],
+            max(10, min(timeout, 300)),
+        )
+        report_result = _run_command(
+            [
+                *_scp_base_command(runtime_config),
+                "-r",
+                f"{_ssh_target(runtime_config)}:{remote_report}",
+                str(local_report),
+            ],
+            max(10, min(timeout, 300)),
+        )
+        artifact_summary = "\n".join(
+            [
+                f"远端 JMeter 结果文件: {remote_jtl}",
+                f"远端 JMeter HTML 报告目录: {remote_report}",
+                f"本地采集目录: {local_dir}",
+                (
+                    "结果文件已下载"
+                    if download_result["status"] == "PASSED"
+                    else f"结果文件下载失败: {download_result.get('stderr') or download_result.get('stdout')}"
+                ),
+                (
+                    "HTML 报告已下载"
+                    if report_result["status"] == "PASSED"
+                    else f"HTML 报告下载失败: {report_result.get('stderr') or report_result.get('stdout')}"
+                ),
+            ]
+        )
         return {
-            "status": "PASSED" if completed.returncode == 0 and download_result["status"] == "PASSED" else "FAILED",
-            "stdout": "\n".join(part for part in [completed.stdout or "", artifact_summary, _read_text_sample(local_jtl)] if part),
+            "status": (
+                "PASSED"
+                if completed.returncode == 0 and download_result["status"] == "PASSED"
+                else "FAILED"
+            ),
+            "stdout": "\n".join(
+                part
+                for part in [
+                    completed.stdout or "",
+                    artifact_summary,
+                    _read_text_sample(local_jtl),
+                ]
+                if part
+            ),
             "stderr": completed.stderr or "",
             "return_code": completed.returncode,
             "duration": duration,
@@ -520,17 +662,30 @@ def _run_jmeter_script_via_ssh(content: str, timeout: int, execution_code: str, 
         }
 
 
-def _run_jmeter_script(content: str, timeout: int, execution_code: str, runtime_config: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+def _run_jmeter_script(
+    content: str,
+    timeout: int,
+    execution_code: str,
+    runtime_config: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
     runtime_config = runtime_config or {}
     if str(runtime_config.get("runner_type") or "local").lower() == "ssh":
-        return _run_jmeter_script_via_ssh(content, timeout, execution_code, runtime_config)
+        return _run_jmeter_script_via_ssh(
+            content, timeout, execution_code, runtime_config
+        )
 
     jmeter_executable = _resolve_jmeter_executable(runtime_config)
     configured_result_dir = str(runtime_config.get("result_directory") or "").strip()
     with tempfile.TemporaryDirectory(prefix=f"jmeter-{execution_code}-") as temp_dir:
-        base_path = FilePath(runtime_config.get("working_directory") or temp_dir).expanduser()
+        base_path = FilePath(
+            runtime_config.get("working_directory") or temp_dir
+        ).expanduser()
         base_path.mkdir(parents=True, exist_ok=True)
-        result_path = FilePath(configured_result_dir).expanduser() if configured_result_dir else base_path
+        result_path = (
+            FilePath(configured_result_dir).expanduser()
+            if configured_result_dir
+            else base_path
+        )
         if not result_path.is_absolute():
             result_path = base_path / result_path
         result_path.mkdir(parents=True, exist_ok=True)
@@ -538,7 +693,9 @@ def _run_jmeter_script(content: str, timeout: int, execution_code: str, runtime_
         jmx_path = base_path / "test-plan.jmx"
         jtl_path = result_path / f"{execution_code}.jtl"
         log_path = result_path / "jmeter.log"
-        report_path = FilePath(str(runtime_config.get("report_directory") or "report")).expanduser()
+        report_path = FilePath(
+            str(runtime_config.get("report_directory") or "report")
+        ).expanduser()
         if not report_path.is_absolute():
             report_path = result_path / report_path
         if report_path.exists():
@@ -547,36 +704,66 @@ def _run_jmeter_script(content: str, timeout: int, execution_code: str, runtime_
 
         template = str(runtime_config.get("command_template") or "").strip()
         if template:
-            command_text = _render_command_template(template, {
-                "jmeter": jmeter_executable,
-                "script": str(jmx_path),
-                "result_file": str(jtl_path),
-                "result_jtl": str(jtl_path),
-                "report_dir": str(report_path),
-                "log_file": str(log_path),
-            })
-            if runtime_config.get("executable_path") and command_text.strip().lower().startswith("jmeter "):
-                command_text = f"{_shell_quote(jmeter_executable)} {command_text.strip()[7:]}"
-            result = _run_configured_command(command_text, timeout, type("_ExecutionShim", (), {
-                "id": "",
-                "execution_code": execution_code,
-                "test_case_id": "",
-                "test_environment": runtime_config.get("environment") or "",
-            })(), {**runtime_config, "working_directory": str(base_path)})
+            command_text = _render_command_template(
+                template,
+                {
+                    "jmeter": jmeter_executable,
+                    "script": str(jmx_path),
+                    "result_file": str(jtl_path),
+                    "result_jtl": str(jtl_path),
+                    "report_dir": str(report_path),
+                    "log_file": str(log_path),
+                },
+            )
+            if runtime_config.get(
+                "executable_path"
+            ) and command_text.strip().lower().startswith("jmeter "):
+                command_text = (
+                    f"{_shell_quote(jmeter_executable)} {command_text.strip()[7:]}"
+                )
+            result = _run_configured_command(
+                command_text,
+                timeout,
+                type(
+                    "_ExecutionShim",
+                    (),
+                    {
+                        "id": "",
+                        "execution_code": execution_code,
+                        "test_case_id": "",
+                        "test_environment": runtime_config.get("environment") or "",
+                    },
+                )(),
+                {**runtime_config, "working_directory": str(base_path)},
+            )
         else:
-            command = _wrap_windows_batch_command(_build_jmeter_args(
-                jmeter_executable,
-                str(jmx_path),
-                str(jtl_path),
-                str(log_path),
-                str(report_path),
-                runtime_config,
-            ))
+            command = _wrap_windows_batch_command(
+                _build_jmeter_args(
+                    jmeter_executable,
+                    str(jmx_path),
+                    str(jtl_path),
+                    str(log_path),
+                    str(report_path),
+                    runtime_config,
+                )
+            )
             result = _run_command(command, timeout, cwd=str(base_path))
 
-        artifact_summary = f"JMeter 结果文件: {jtl_path}\nJMeter HTML 报告目录: {report_path}"
-        result["stdout"] = "\n".join(part for part in [result.get("stdout"), artifact_summary, _read_text_sample(jtl_path)] if part)
-        result["stderr"] = "\n".join(part for part in [result.get("stderr"), _read_text_sample(log_path)] if part)
+        artifact_summary = (
+            f"JMeter 结果文件: {jtl_path}\nJMeter HTML 报告目录: {report_path}"
+        )
+        result["stdout"] = "\n".join(
+            part
+            for part in [
+                result.get("stdout"),
+                artifact_summary,
+                _read_text_sample(jtl_path),
+            ]
+            if part
+        )
+        result["stderr"] = "\n".join(
+            part for part in [result.get("stderr"), _read_text_sample(log_path)] if part
+        )
         return result
 
 
@@ -593,7 +780,9 @@ def _script_suffix_for_format(script_format: str) -> str:
     return ".py"
 
 
-def _default_command_template_for_format(script_format: str, requested_framework: str) -> str:
+def _default_command_template_for_format(
+    script_format: str, requested_framework: str
+) -> str:
     normalized = _normalize_script_format(script_format)
     framework = str(requested_framework or "").lower()
     if normalized in {"playwright"} or framework == "playwright":
@@ -601,15 +790,24 @@ def _default_command_template_for_format(script_format: str, requested_framework
     if normalized in {"selenium"} or framework == "selenium":
         return "python {script}"
     if normalized in {"pytest", "python", "py"} or framework == "pytest":
-        return "pytest {script} --junitxml={result_file}" if framework == "pytest" else "python {script}"
-    if normalized in {"js", "javascript", "jest", "cypress"} or framework in {"javascript", "jest"}:
+        return (
+            "pytest {script} --junitxml={result_file}"
+            if framework == "pytest"
+            else "python {script}"
+        )
+    if normalized in {"js", "javascript", "jest", "cypress"} or framework in {
+        "javascript",
+        "jest",
+    }:
         return "node {script}"
     if normalized == "har" or framework == "har":
         return "har-replay {script} --output {result_file}"
     return "python {script}"
 
 
-def _build_runtime_values(script_path: str, result_file: str, report_dir: str, log_file: str) -> Dict[str, str]:
+def _build_runtime_values(
+    script_path: str, result_file: str, report_dir: str, log_file: str
+) -> Dict[str, str]:
     return {
         "script": script_path,
         "result_file": result_file,
@@ -619,13 +817,30 @@ def _build_runtime_values(script_path: str, result_file: str, report_dir: str, l
     }
 
 
-def _append_runtime_artifact_summary(result: Dict[str, Any], result_file: FilePath, report_dir: FilePath, log_file: FilePath) -> Dict[str, Any]:
-    artifact_summary = "\n".join([
-        f"结果文件: {result_file}",
-        f"报告目录: {report_dir}",
-    ])
-    result["stdout"] = "\n".join(part for part in [result.get("stdout"), artifact_summary, _read_text_sample(result_file)] if part)
-    result["stderr"] = "\n".join(part for part in [result.get("stderr"), _read_text_sample(log_file)] if part)
+def _append_runtime_artifact_summary(
+    result: Dict[str, Any],
+    result_file: FilePath,
+    report_dir: FilePath,
+    log_file: FilePath,
+) -> Dict[str, Any]:
+    artifact_summary = "\n".join(
+        [
+            f"结果文件: {result_file}",
+            f"报告目录: {report_dir}",
+        ]
+    )
+    result["stdout"] = "\n".join(
+        part
+        for part in [
+            result.get("stdout"),
+            artifact_summary,
+            _read_text_sample(result_file),
+        ]
+        if part
+    )
+    result["stderr"] = "\n".join(
+        part for part in [result.get("stderr"), _read_text_sample(log_file)] if part
+    )
     return result
 
 
@@ -638,44 +853,113 @@ def _run_runtime_script_via_ssh(
     runtime_config: Dict[str, Any],
 ) -> Dict[str, Any]:
     suffix = _script_suffix_for_format(script_format)
-    remote_dir = str(runtime_config.get("runner_workdir") or f"/tmp/test-runs/{execution_code}").strip()
+    remote_dir = str(
+        runtime_config.get("runner_workdir") or f"/tmp/test-runs/{execution_code}"
+    ).strip()
     remote_script = f"{remote_dir}/{execution_code}{suffix}"
     remote_result = f"{remote_dir}/{execution_code}-result.xml"
-    remote_report = str(runtime_config.get("report_directory") or f"{remote_dir}/report").strip()
+    remote_report = str(
+        runtime_config.get("report_directory") or f"{remote_dir}/report"
+    ).strip()
     if not remote_report.startswith("/"):
         remote_report = f"{remote_dir}/{remote_report}"
     remote_log = f"{remote_dir}/execution.log"
 
-    with tempfile.TemporaryDirectory(prefix=f"runtime-ssh-{execution_code}-") as temp_dir:
+    with tempfile.TemporaryDirectory(
+        prefix=f"runtime-ssh-{execution_code}-"
+    ) as temp_dir:
         local_dir = FilePath(temp_dir)
         local_script = local_dir / f"{execution_code}{suffix}"
         local_result = local_dir / f"{execution_code}-result.xml"
         local_report = local_dir / "report"
         local_script.write_text(content or "", encoding="utf-8")
 
-        mkdir_result = _run_command([*_ssh_base_command(runtime_config), f"mkdir -p {shlex.quote(remote_dir)} {shlex.quote(remote_report)}"], timeout)
+        mkdir_result = _run_command(
+            [
+                *_ssh_base_command(runtime_config),
+                f"mkdir -p {shlex.quote(remote_dir)} {shlex.quote(remote_report)}",
+            ],
+            timeout,
+        )
         if mkdir_result["status"] != "PASSED":
             return mkdir_result
-        upload_result = _run_command([*_scp_base_command(runtime_config), str(local_script), f"{_ssh_target(runtime_config)}:{remote_script}"], timeout)
+        upload_result = _run_command(
+            [
+                *_scp_base_command(runtime_config),
+                str(local_script),
+                f"{_ssh_target(runtime_config)}:{remote_script}",
+            ],
+            timeout,
+        )
         if upload_result["status"] != "PASSED":
             return upload_result
 
-        template = str(runtime_config.get("command_template") or _default_command_template_for_format(script_format, requested_framework)).strip()
-        command_text = _render_command_template(template, _build_runtime_values(remote_script, remote_result, remote_report, remote_log))
-        result = _run_configured_command(command_text, timeout, type("_ExecutionShim", (), {
-            "id": "",
-            "execution_code": execution_code,
-            "test_case_id": "",
-            "test_environment": runtime_config.get("environment") or "",
-        })(), {**runtime_config, "runner_workdir": remote_dir})
+        template = str(
+            runtime_config.get("command_template")
+            or _default_command_template_for_format(script_format, requested_framework)
+        ).strip()
+        command_text = _render_command_template(
+            template,
+            _build_runtime_values(
+                remote_script, remote_result, remote_report, remote_log
+            ),
+        )
+        result = _run_configured_command(
+            command_text,
+            timeout,
+            type(
+                "_ExecutionShim",
+                (),
+                {
+                    "id": "",
+                    "execution_code": execution_code,
+                    "test_case_id": "",
+                    "test_environment": runtime_config.get("environment") or "",
+                },
+            )(),
+            {**runtime_config, "runner_workdir": remote_dir},
+        )
 
-        download_result = _run_command([*_scp_base_command(runtime_config), f"{_ssh_target(runtime_config)}:{remote_result}", str(local_result)], max(10, min(timeout, 300)))
-        report_result = _run_command([*_scp_base_command(runtime_config), "-r", f"{_ssh_target(runtime_config)}:{remote_report}", str(local_report)], max(10, min(timeout, 300)))
-        collection_summary = "\n".join([
-            "结果文件已下载" if download_result["status"] == "PASSED" else f"结果文件下载失败: {download_result.get('stderr') or download_result.get('stdout')}",
-            "报告目录已下载" if report_result["status"] == "PASSED" else f"报告目录下载失败: {report_result.get('stderr') or report_result.get('stdout')}",
-        ])
-        result["stdout"] = "\n".join(part for part in [result.get("stdout"), collection_summary, _read_text_sample(local_result)] if part)
+        download_result = _run_command(
+            [
+                *_scp_base_command(runtime_config),
+                f"{_ssh_target(runtime_config)}:{remote_result}",
+                str(local_result),
+            ],
+            max(10, min(timeout, 300)),
+        )
+        report_result = _run_command(
+            [
+                *_scp_base_command(runtime_config),
+                "-r",
+                f"{_ssh_target(runtime_config)}:{remote_report}",
+                str(local_report),
+            ],
+            max(10, min(timeout, 300)),
+        )
+        collection_summary = "\n".join(
+            [
+                (
+                    "结果文件已下载"
+                    if download_result["status"] == "PASSED"
+                    else f"结果文件下载失败: {download_result.get('stderr') or download_result.get('stdout')}"
+                ),
+                (
+                    "报告目录已下载"
+                    if report_result["status"] == "PASSED"
+                    else f"报告目录下载失败: {report_result.get('stderr') or report_result.get('stdout')}"
+                ),
+            ]
+        )
+        result["stdout"] = "\n".join(
+            part
+            for part in [
+                result.get("stdout"),
+                collection_summary,
+                _read_text_sample(local_result),
+            ]
+            if part
+        )
         if download_result["status"] != "PASSED" and result["status"] == "PASSED":
             result["status"] = "FAILED"
         return result
@@ -691,11 +975,20 @@ def _run_runtime_script_content(
 ) -> Dict[str, Any]:
     runner_type = str(runtime_config.get("runner_type") or "local").lower()
     if runner_type == "ssh":
-        return _run_runtime_script_via_ssh(content, script_format, timeout, requested_framework, execution_code, runtime_config)
+        return _run_runtime_script_via_ssh(
+            content,
+            script_format,
+            timeout,
+            requested_framework,
+            execution_code,
+            runtime_config,
+        )
 
     suffix = _script_suffix_for_format(script_format)
     with tempfile.TemporaryDirectory(prefix=f"runtime-{execution_code}-") as temp_dir:
-        base_path = FilePath(runtime_config.get("working_directory") or temp_dir).expanduser()
+        base_path = FilePath(
+            runtime_config.get("working_directory") or temp_dir
+        ).expanduser()
         base_path.mkdir(parents=True, exist_ok=True)
         script_path = base_path / f"{execution_code}{suffix}"
         result_file = base_path / f"{execution_code}-result.xml"
@@ -706,7 +999,10 @@ def _run_runtime_script_content(
             shutil.rmtree(report_dir)
         report_dir.mkdir(parents=True, exist_ok=True)
 
-        template = str(runtime_config.get("command_template") or _default_command_template_for_format(script_format, requested_framework)).strip()
+        template = str(
+            runtime_config.get("command_template")
+            or _default_command_template_for_format(script_format, requested_framework)
+        ).strip()
         if runner_type == "docker":
             values = _build_runtime_values(
                 f"/workspace/{script_path.name}",
@@ -715,15 +1011,28 @@ def _run_runtime_script_content(
                 f"/workspace/{log_file.name}",
             )
         else:
-            values = _build_runtime_values(str(script_path), str(result_file), str(report_dir), str(log_file))
+            values = _build_runtime_values(
+                str(script_path), str(result_file), str(report_dir), str(log_file)
+            )
         command_text = _render_command_template(template, values)
-        result = _run_configured_command(command_text, timeout, type("_ExecutionShim", (), {
-            "id": "",
-            "execution_code": execution_code,
-            "test_case_id": "",
-            "test_environment": runtime_config.get("environment") or "",
-        })(), {**runtime_config, "working_directory": str(base_path)})
-        return _append_runtime_artifact_summary(result, result_file, report_dir, log_file)
+        result = _run_configured_command(
+            command_text,
+            timeout,
+            type(
+                "_ExecutionShim",
+                (),
+                {
+                    "id": "",
+                    "execution_code": execution_code,
+                    "test_case_id": "",
+                    "test_environment": runtime_config.get("environment") or "",
+                },
+            )(),
+            {**runtime_config, "working_directory": str(base_path)},
+        )
+        return _append_runtime_artifact_summary(
+            result, result_file, report_dir, log_file
+        )
 
 
 def _run_har_script(content: str, timeout: int) -> Dict[str, Any]:
@@ -749,16 +1058,23 @@ def _run_har_script(content: str, timeout: int) -> Dict[str, Any]:
         headers = {
             item.get("name"): item.get("value", "")
             for item in request_data.get("headers", [])
-            if item.get("name") and item.get("name").lower() not in {"host", "content-length"}
+            if item.get("name")
+            and item.get("name").lower() not in {"host", "content-length"}
         }
         post_data = request_data.get("postData") or {}
         body = post_data.get("text")
-        data = body.encode("utf-8") if isinstance(body, str) and method not in {"GET", "HEAD"} else None
+        data = (
+            body.encode("utf-8")
+            if isinstance(body, str) and method not in {"GET", "HEAD"}
+            else None
+        )
         req = url_request.Request(url=url, data=data, headers=headers, method=method)
         try:
             with url_request.urlopen(req, timeout=max(1, min(timeout, 60))) as response:
                 response_body = response.read(1024)
-                outputs.append(f"{index}. {method} {url} -> {response.status}, {len(response_body)} bytes sampled")
+                outputs.append(
+                    f"{index}. {method} {url} -> {response.status}, {len(response_body)} bytes sampled"
+                )
         except HTTPError as exc:
             outputs.append(f"{index}. {method} {url} -> HTTP {exc.code}")
             if exc.code >= 400:
@@ -779,7 +1095,13 @@ def _run_har_script(content: str, timeout: int) -> Dict[str, Any]:
     }
 
 
-def _run_imported_script(test_case: TestCase, timeout: int, requested_framework: str, execution_code: str, runtime_config: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+def _run_imported_script(
+    test_case: TestCase,
+    timeout: int,
+    requested_framework: str,
+    execution_code: str,
+    runtime_config: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
     script_info = _get_imported_script(test_case)
     if not script_info:
         raise RuntimeError("该测试用例没有导入脚本内容，也没有维护自动化脚本")
@@ -794,13 +1116,31 @@ def _run_imported_script(test_case: TestCase, timeout: int, requested_framework:
         if script_format == "curl":
             content = _curl_to_python(content)
             script_format = "python"
-        return _run_runtime_script_content(content, script_format, timeout, requested_framework, execution_code, runtime_config)
+        return _run_runtime_script_content(
+            content,
+            script_format,
+            timeout,
+            requested_framework,
+            execution_code,
+            runtime_config,
+        )
     if script_format == "har":
         return _run_har_script(content, timeout)
     if script_format == "curl":
         return _run_script_content(_curl_to_python(content), "python", timeout)
-    if script_format in {"python", "py", "pytest", "playwright", "selenium", "js", "jest", "cypress"}:
-        return _run_script_content(content, script_format, timeout, framework=requested_framework)
+    if script_format in {
+        "python",
+        "py",
+        "pytest",
+        "playwright",
+        "selenium",
+        "js",
+        "jest",
+        "cypress",
+    }:
+        return _run_script_content(
+            content, script_format, timeout, framework=requested_framework
+        )
     raise RuntimeError(f"暂不支持执行导入脚本格式: {script_format}")
 
 
@@ -839,7 +1179,15 @@ def _run_configured_command(
         if not cwd_path.exists() or not cwd_path.is_dir():
             raise RuntimeError(f"Docker 挂载目录不存在: {cwd_path}")
 
-        docker_command = ["docker", "run", "--rm", "-v", f"{str(cwd_path.resolve())}:/workspace", "-w", "/workspace"]
+        docker_command = [
+            "docker",
+            "run",
+            "--rm",
+            "-v",
+            f"{str(cwd_path.resolve())}:/workspace",
+            "-w",
+            "/workspace",
+        ]
         docker_network = str(runtime_config.get("docker_network") or "").strip()
         if docker_network:
             docker_command.extend(["--network", docker_network])
@@ -859,7 +1207,11 @@ def _run_configured_command(
         return _run_command(docker_command, timeout, cwd=str(cwd_path))
 
     if str(runtime_config.get("runner_type") or "local").lower() == "ssh":
-        remote_workdir = str(runtime_config.get("runner_workdir") or runtime_config.get("working_directory") or "").strip()
+        remote_workdir = str(
+            runtime_config.get("runner_workdir")
+            or runtime_config.get("working_directory")
+            or ""
+        ).strip()
         remote_parts = []
         if remote_workdir:
             remote_parts.append(f"cd {shlex.quote(remote_workdir)}")
@@ -903,12 +1255,14 @@ def _run_configured_command(
     configured_env = runtime_config.get("environment_variables")
     if isinstance(configured_env, dict):
         env.update({str(key): str(value) for key, value in configured_env.items()})
-    env.update({
-        "TEST_EXECUTION_ID": str(execution.id or ""),
-        "TEST_EXECUTION_CODE": execution.execution_code or "",
-        "TEST_CASE_ID": str(execution.test_case_id or ""),
-        "TEST_ENVIRONMENT": execution.test_environment or "",
-    })
+    env.update(
+        {
+            "TEST_EXECUTION_ID": str(execution.id or ""),
+            "TEST_EXECUTION_CODE": execution.execution_code or "",
+            "TEST_CASE_ID": str(execution.test_case_id or ""),
+            "TEST_ENVIRONMENT": execution.test_environment or "",
+        }
+    )
 
     started = time.perf_counter()
     completed = subprocess.run(
@@ -936,9 +1290,12 @@ def _run_configured_command(
 def _execute_automation_batch(batch_id: str) -> None:
     db = SessionLocal()
     try:
-        executions = db.query(TestExecution).filter(
-            TestExecution.execution_code.like(f"AUTO-{batch_id}-%")
-        ).order_by(TestExecution.created_at.asc()).all()
+        executions = (
+            db.query(TestExecution)
+            .filter(TestExecution.execution_code.like(f"AUTO-{batch_id}-%"))
+            .order_by(TestExecution.created_at.asc())
+            .all()
+        )
         if not executions:
             return
 
@@ -952,33 +1309,67 @@ def _execute_automation_batch(batch_id: str) -> None:
                 config = json.loads(execution.execution_notes or "{}")
             except Exception:
                 config = {}
-            runtime_config = config.get("execution_config") if isinstance(config.get("execution_config"), dict) else {}
+            runtime_config = (
+                config.get("execution_config")
+                if isinstance(config.get("execution_config"), dict)
+                else {}
+            )
             timeout = int(runtime_config.get("timeout") or config.get("timeout") or 300)
-            framework = runtime_config.get("framework") or config.get("framework") or execution.os_info or "playwright"
+            framework = (
+                runtime_config.get("framework")
+                or config.get("framework")
+                or execution.os_info
+                or "playwright"
+            )
             configured_command = runtime_config.get("command")
 
             try:
                 if configured_command:
-                    _append_execution_log(execution, "INFO", f"使用测试执行配置命令: {runtime_config.get('config_name') or framework}")
-                    result = _run_configured_command(str(configured_command), timeout, execution, runtime_config)
+                    _append_execution_log(
+                        execution,
+                        "INFO",
+                        f"使用测试执行配置命令: {runtime_config.get('config_name') or framework}",
+                    )
+                    result = _run_configured_command(
+                        str(configured_command), timeout, execution, runtime_config
+                    )
                     completed_at = datetime.utcnow()
                     execution.execution_status = (
                         ModelExecutionStatus.PASSED
                         if result["status"] == "PASSED"
                         else ModelExecutionStatus.FAILED
                     )
-                    execution.actual_result = (result.get("stdout") or "")[:60000] or "测试执行配置命令已执行完成"
+                    execution.actual_result = (result.get("stdout") or "")[
+                        :60000
+                    ] or "测试执行配置命令已执行完成"
                     failure_text = "\n".join(
-                        part for part in [result.get("stderr"), f"退出码: {result.get('return_code')}"] if part
+                        part
+                        for part in [
+                            result.get("stderr"),
+                            f"退出码: {result.get('return_code')}",
+                        ]
+                        if part
                     )
-                    execution.failure_reason = failure_text[:60000] if result["status"] == "FAILED" else None
-                    execution.duration = max(0, result.get("duration") or int((completed_at - started_at).total_seconds()))
+                    execution.failure_reason = (
+                        failure_text[:60000] if result["status"] == "FAILED" else None
+                    )
+                    execution.duration = max(
+                        0,
+                        result.get("duration")
+                        or int((completed_at - started_at).total_seconds()),
+                    )
                     _append_execution_log(
                         execution,
                         "INFO" if result["status"] == "PASSED" else "ERROR",
-                        "测试执行配置命令执行通过" if result["status"] == "PASSED" else "测试执行配置命令执行失败",
+                        (
+                            "测试执行配置命令执行通过"
+                            if result["status"] == "PASSED"
+                            else "测试执行配置命令执行失败"
+                        ),
                     )
-                    output_summary = (result.get("stdout") or result.get("stderr") or "").strip()
+                    output_summary = (
+                        result.get("stdout") or result.get("stderr") or ""
+                    ).strip()
                     if output_summary:
                         _append_execution_log(execution, "INFO", output_summary[:1000])
                     execution.completed_at = completed_at
@@ -996,7 +1387,9 @@ def _execute_automation_batch(batch_id: str) -> None:
                 _append_execution_log(execution, "INFO", "开始执行自动化脚本")
                 script = _find_automation_script(db, execution.test_case_id, framework)
                 if script:
-                    _append_execution_log(execution, "INFO", f"使用平台自动化脚本: {script.script_name}")
+                    _append_execution_log(
+                        execution, "INFO", f"使用平台自动化脚本: {script.script_name}"
+                    )
                     result = _run_automation_script(script, timeout)
                     script.last_execution_date = datetime.utcnow()
                     script.last_execution_status = (
@@ -1010,28 +1403,53 @@ def _execute_automation_batch(batch_id: str) -> None:
                 else:
                     imported_script = _get_imported_script(execution.test_case)
                     if not imported_script:
-                        raise RuntimeError("该测试用例未配置可执行的自动化脚本，也没有导入可执行脚本文件")
+                        raise RuntimeError(
+                            "该测试用例未配置可执行的自动化脚本，也没有导入可执行脚本文件"
+                        )
                     script_format = _infer_imported_script_format(imported_script)
-                    _append_execution_log(execution, "INFO", f"使用导入脚本执行，格式: {script_format}")
-                    result = _run_imported_script(execution.test_case, timeout, framework, execution.execution_code, runtime_config)
+                    _append_execution_log(
+                        execution, "INFO", f"使用导入脚本执行，格式: {script_format}"
+                    )
+                    result = _run_imported_script(
+                        execution.test_case,
+                        timeout,
+                        framework,
+                        execution.execution_code,
+                        runtime_config,
+                    )
                 completed_at = datetime.utcnow()
                 execution.execution_status = (
                     ModelExecutionStatus.PASSED
                     if result["status"] == "PASSED"
                     else ModelExecutionStatus.FAILED
                 )
-                execution.actual_result = (result.get("stdout") or "")[:60000] or "脚本执行完成"
+                execution.actual_result = (result.get("stdout") or "")[
+                    :60000
+                ] or "脚本执行完成"
                 failure_text = "\n".join(
-                    part for part in [result.get("stderr"), f"退出码: {result.get('return_code')}"] if part
+                    part
+                    for part in [
+                        result.get("stderr"),
+                        f"退出码: {result.get('return_code')}",
+                    ]
+                    if part
                 )
-                execution.failure_reason = failure_text[:60000] if result["status"] == "FAILED" else None
-                execution.duration = max(0, result.get("duration") or int((completed_at - started_at).total_seconds()))
+                execution.failure_reason = (
+                    failure_text[:60000] if result["status"] == "FAILED" else None
+                )
+                execution.duration = max(
+                    0,
+                    result.get("duration")
+                    or int((completed_at - started_at).total_seconds()),
+                )
                 _append_execution_log(
                     execution,
                     "INFO" if result["status"] == "PASSED" else "ERROR",
                     f"自动化脚本执行{ '通过' if result['status'] == 'PASSED' else '失败' }",
                 )
-                output_summary = (result.get("stdout") or result.get("stderr") or "").strip()
+                output_summary = (
+                    result.get("stdout") or result.get("stderr") or ""
+                ).strip()
                 if output_summary:
                     _append_execution_log(execution, "INFO", output_summary[:1000])
             except Exception as error:
@@ -1039,7 +1457,9 @@ def _execute_automation_batch(batch_id: str) -> None:
                 execution.execution_status = ModelExecutionStatus.FAILED
                 execution.actual_result = None
                 execution.failure_reason = str(error)[:60000]
-                execution.duration = max(0, int((completed_at - started_at).total_seconds()))
+                execution.duration = max(
+                    0, int((completed_at - started_at).total_seconds())
+                )
                 _append_execution_log(execution, "ERROR", str(error))
 
             execution.completed_at = completed_at
@@ -1116,20 +1536,26 @@ def _normalize_environment(value: Optional[str]) -> str:
     # sometimes to a wrong environment. Preserve unknown values verbatim
     # (truncated to the column width) instead; only known names map to
     # canonical codes.
-    return (environment[:100] or "test")
+    return environment[:100] or "test"
 
 
 def _automation_status_from_executions(executions: List[TestExecution]) -> str:
     if not executions:
         return "UNKNOWN"
-    statuses = {_normalize_enum_value(execution.execution_status) for execution in executions}
+    statuses = {
+        _normalize_enum_value(execution.execution_status) for execution in executions
+    }
     if ModelExecutionStatus.IN_PROGRESS.value in statuses:
         return "RUNNING"
     if statuses == {ModelExecutionStatus.SKIPPED.value}:
         return "CANCELLED"
     if ModelExecutionStatus.FAILED.value in statuses:
         return "FAILED"
-    if all(status in {ModelExecutionStatus.PASSED.value, ModelExecutionStatus.SKIPPED.value} for status in statuses):
+    if all(
+        status
+        in {ModelExecutionStatus.PASSED.value, ModelExecutionStatus.SKIPPED.value}
+        for status in statuses
+    ):
         return "COMPLETED"
     return "PENDING"
 
@@ -1164,31 +1590,49 @@ def _build_automation_response(
             failed_cases += 1
 
         case = execution.test_case
-        results.append({
-            "execution_id": execution.id,
-            "execution_code": execution.execution_code,
-            "test_case_id": execution.test_case_id,
-            "case_code": case.case_code if case else "",
-            "case_title": case.case_title if case else f"Case {execution.test_case_id}",
-            "status": status,
-            "duration": execution.duration,
-            "started_at": execution.started_at.isoformat() if execution.started_at else None,
-            "completed_at": execution.completed_at.isoformat() if execution.completed_at else None,
-            "actual_result": execution.actual_result,
-            "failure_reason": execution.failure_reason,
-        })
+        results.append(
+            {
+                "execution_id": execution.id,
+                "execution_code": execution.execution_code,
+                "test_case_id": execution.test_case_id,
+                "case_code": case.case_code if case else "",
+                "case_title": (
+                    case.case_title if case else f"Case {execution.test_case_id}"
+                ),
+                "status": status,
+                "duration": execution.duration,
+                "started_at": (
+                    execution.started_at.isoformat() if execution.started_at else None
+                ),
+                "completed_at": (
+                    execution.completed_at.isoformat()
+                    if execution.completed_at
+                    else None
+                ),
+                "actual_result": execution.actual_result,
+                "failure_reason": execution.failure_reason,
+            }
+        )
         persisted_logs = _json_list(execution.logs)
         if persisted_logs:
             logs.extend(persisted_logs)
         else:
-            logs.append({
-                "time": execution.updated_at.isoformat() if execution.updated_at else datetime.utcnow().isoformat(),
-                "level": "INFO",
-                "message": f"{execution.execution_code} {status}",
-            })
+            logs.append(
+                {
+                    "time": (
+                        execution.updated_at.isoformat()
+                        if execution.updated_at
+                        else datetime.utcnow().isoformat()
+                    ),
+                    "level": "INFO",
+                    "message": f"{execution.execution_code} {status}",
+                }
+            )
 
     progress = round((completed_cases / total_cases * 100), 1) if total_cases else 0.0
-    started_values = [execution.started_at for execution in executions if execution.started_at]
+    started_values = [
+        execution.started_at for execution in executions if execution.started_at
+    ]
     return AutomationExecutionResponse(
         execution_id=batch_id,
         framework=framework,
@@ -1209,6 +1653,7 @@ def _build_automation_response(
 # 额外的请求模式
 class UpdateExecutionStepRequest(BaseModel):
     """更新执行步骤请求"""
+
     execution_id: int = Field(..., description="执行记录ID")
     step_index: int = Field(..., description="步骤索引")
     step_status: ExecutionStatus = Field(..., description="步骤状态")
@@ -1219,18 +1664,21 @@ class UpdateExecutionStepRequest(BaseModel):
 
 class PauseExecutionRequest(BaseModel):
     """暂停执行请求"""
+
     execution_id: int = Field(..., description="执行记录ID")
     pause_reason: Optional[str] = Field(None, description="暂停原因")
 
 
 class ResumeExecutionRequest(BaseModel):
     """恢复执行请求"""
+
     execution_id: int = Field(..., description="执行记录ID")
     resume_notes: Optional[str] = Field(None, description="恢复备注")
 
 
 class ExecutionQueryParams(BaseModel):
     """执行查询参数"""
+
     test_case_id: Optional[int] = Field(None, description="测试用例ID")
     test_plan_id: Optional[int] = Field(None, description="测试计划ID")
     execution_type: Optional[ExecutionType] = Field(None, description="执行类型")
@@ -1246,28 +1694,34 @@ class ExecutionQueryParams(BaseModel):
 async def start_manual_execution(
     request: StartManualExecutionRequest,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """
     开始手动测试执行
-    
+
     启动手动测试执行，创建执行记录并初始化执行状态。
     """
     try:
         test_environment = _normalize_environment(request.test_environment)
-        test_case = db.query(TestCase).filter(TestCase.id == request.test_case_id).first()
+        test_case = (
+            db.query(TestCase).filter(TestCase.id == request.test_case_id).first()
+        )
         if not test_case:
             raise HTTPException(status_code=404, detail="测试用例不存在")
 
-        active_execution = db.query(TestExecution).filter(
-            TestExecution.test_case_id == request.test_case_id,
-            TestExecution.execution_status == ModelExecutionStatus.IN_PROGRESS
-        ).first()
+        active_execution = (
+            db.query(TestExecution)
+            .filter(
+                TestExecution.test_case_id == request.test_case_id,
+                TestExecution.execution_status == ModelExecutionStatus.IN_PROGRESS,
+            )
+            .first()
+        )
         if active_execution:
             return BaseResponse(
                 success=True,
                 message="已恢复该测试用例进行中的执行",
-                data=_build_execution_response(active_execution)
+                data=_build_execution_response(active_execution),
             )
 
         execution = TestExecution(
@@ -1281,19 +1735,23 @@ async def start_manual_execution(
             os_info=(request.os_info or "")[:100] or None,
             execution_notes=request.execution_notes,
             executor_id=current_user.id,
-            started_at=datetime.utcnow()
+            started_at=datetime.utcnow(),
         )
         db.add(execution)
-        _sync_test_case_execution_state(test_case, ModelExecutionStatus.IN_PROGRESS, occurred_at=execution.started_at)
+        _sync_test_case_execution_state(
+            test_case,
+            ModelExecutionStatus.IN_PROGRESS,
+            occurred_at=execution.started_at,
+        )
         db.commit()
         db.refresh(execution)
-        
+
         return BaseResponse(
             success=True,
             message="手动测试执行启动成功",
-            data=_build_execution_response(execution)
+            data=_build_execution_response(execution),
         )
-        
+
     except ValidationError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except PermissionError as e:
@@ -1312,21 +1770,27 @@ async def start_manual_execution(
 async def complete_manual_execution(
     request: CompleteManualExecutionRequest,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """
     完成手动测试执行
-    
+
     完成手动测试执行，记录执行结果和相关信息。
     """
     try:
-        execution = db.query(TestExecution).filter(TestExecution.id == request.execution_id).first()
+        execution = (
+            db.query(TestExecution)
+            .filter(TestExecution.id == request.execution_id)
+            .first()
+        )
         if not execution:
             raise HTTPException(status_code=404, detail="测试执行记录不存在")
 
         completed_at = datetime.utcnow()
         was_unfinished = execution.completed_at is None
-        execution.execution_status = ModelExecutionStatus(request.execution_status.value)
+        execution.execution_status = ModelExecutionStatus(
+            request.execution_status.value
+        )
         execution.actual_result = request.actual_result
         execution.failure_reason = request.failure_reason
         execution.execution_notes = request.execution_notes
@@ -1338,7 +1802,9 @@ async def complete_manual_execution(
             execution.videos = request.videos
         execution.completed_at = completed_at
         if execution.started_at:
-            execution.duration = int((completed_at - execution.started_at).total_seconds())
+            execution.duration = int(
+                (completed_at - execution.started_at).total_seconds()
+            )
         execution.updated_at = completed_at
         _sync_test_case_execution_state(
             execution.test_case,
@@ -1349,13 +1815,13 @@ async def complete_manual_execution(
         )
         db.commit()
         db.refresh(execution)
-        
+
         return BaseResponse(
             success=True,
             message="手动测试执行完成成功",
-            data=_build_execution_response(execution)
+            data=_build_execution_response(execution),
         )
-        
+
     except ValidationError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except NotFoundError as e:
@@ -1374,15 +1840,19 @@ async def complete_manual_execution(
 async def pause_execution(
     request: PauseExecutionRequest,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """
     暂停测试执行
-    
+
     暂停正在进行的测试执行。
     """
     try:
-        execution = db.query(TestExecution).filter(TestExecution.id == request.execution_id).first()
+        execution = (
+            db.query(TestExecution)
+            .filter(TestExecution.id == request.execution_id)
+            .first()
+        )
         if not execution:
             raise HTTPException(status_code=404, detail="测试执行记录不存在")
         if execution.execution_status != ModelExecutionStatus.IN_PROGRESS:
@@ -1391,16 +1861,20 @@ async def pause_execution(
         execution.execution_status = ModelExecutionStatus.BLOCKED
         execution.execution_notes = request.pause_reason or execution.execution_notes
         execution.updated_at = datetime.utcnow()
-        _sync_test_case_execution_state(execution.test_case, ModelExecutionStatus.BLOCKED, occurred_at=execution.updated_at)
+        _sync_test_case_execution_state(
+            execution.test_case,
+            ModelExecutionStatus.BLOCKED,
+            occurred_at=execution.updated_at,
+        )
         db.commit()
         db.refresh(execution)
-        
+
         return BaseResponse(
             success=True,
             message="测试执行暂停成功",
-            data=_build_execution_response(execution)
+            data=_build_execution_response(execution),
         )
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -1413,15 +1887,19 @@ async def pause_execution(
 async def resume_execution(
     request: ResumeExecutionRequest,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """
     恢复测试执行
-    
+
     恢复已暂停的测试执行。
     """
     try:
-        execution = db.query(TestExecution).filter(TestExecution.id == request.execution_id).first()
+        execution = (
+            db.query(TestExecution)
+            .filter(TestExecution.id == request.execution_id)
+            .first()
+        )
         if not execution:
             raise HTTPException(status_code=404, detail="测试执行记录不存在")
         if execution.execution_status != ModelExecutionStatus.BLOCKED:
@@ -1430,16 +1908,20 @@ async def resume_execution(
         execution.execution_status = ModelExecutionStatus.IN_PROGRESS
         execution.execution_notes = request.resume_notes or execution.execution_notes
         execution.updated_at = datetime.utcnow()
-        _sync_test_case_execution_state(execution.test_case, ModelExecutionStatus.IN_PROGRESS, occurred_at=execution.updated_at)
+        _sync_test_case_execution_state(
+            execution.test_case,
+            ModelExecutionStatus.IN_PROGRESS,
+            occurred_at=execution.updated_at,
+        )
         db.commit()
         db.refresh(execution)
-        
+
         return BaseResponse(
             success=True,
             message="测试执行恢复成功",
-            data=_build_execution_response(execution)
+            data=_build_execution_response(execution),
         )
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -1448,12 +1930,14 @@ async def resume_execution(
         raise HTTPException(status_code=500, detail="内部服务器错误")
 
 
-@router.post("/automation/start", response_model=BaseResponse[AutomationExecutionResponse])
+@router.post(
+    "/automation/start", response_model=BaseResponse[AutomationExecutionResponse]
+)
 async def start_automation_execution_real(
     request: AutomationExecutionRequest,
     background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """Create real automated execution records for the selected test cases."""
     try:
@@ -1461,11 +1945,17 @@ async def start_automation_execution_real(
         if not request.test_case_ids:
             raise HTTPException(status_code=422, detail="请选择要执行的自动化测试用例")
 
-        test_cases = db.query(TestCase).filter(TestCase.id.in_(request.test_case_ids)).all()
+        test_cases = (
+            db.query(TestCase).filter(TestCase.id.in_(request.test_case_ids)).all()
+        )
         found_ids = {case.id for case in test_cases}
-        missing_ids = [case_id for case_id in request.test_case_ids if case_id not in found_ids]
+        missing_ids = [
+            case_id for case_id in request.test_case_ids if case_id not in found_ids
+        ]
         if missing_ids:
-            raise HTTPException(status_code=404, detail=f"测试用例不存在: {missing_ids}")
+            raise HTTPException(
+                status_code=404, detail=f"测试用例不存在: {missing_ids}"
+            )
 
         invalid_cases = [
             case.case_code
@@ -1473,7 +1963,10 @@ async def start_automation_execution_real(
             if case.automation_level not in ("SEMI_AUTO", "FULL_AUTO")
         ]
         if invalid_cases:
-            raise HTTPException(status_code=422, detail=f"以下用例未配置自动化: {', '.join(invalid_cases)}")
+            raise HTTPException(
+                status_code=422,
+                detail=f"以下用例未配置自动化: {', '.join(invalid_cases)}",
+            )
 
         batch_id = uuid.uuid4().hex[:12].upper()
         now = datetime.utcnow()
@@ -1506,7 +1999,9 @@ async def start_automation_execution_real(
             _append_execution_log(execution, "INFO", "自动化执行已提交后台任务")
             db.add(execution)
             executions.append(execution)
-            _sync_test_case_execution_state(case, ModelExecutionStatus.IN_PROGRESS, occurred_at=now)
+            _sync_test_case_execution_state(
+                case, ModelExecutionStatus.IN_PROGRESS, occurred_at=now
+            )
 
         db.commit()
         for execution in executions:
@@ -1521,7 +2016,9 @@ async def start_automation_execution_real(
             test_environment=test_environment,
             browser=request.browser,
         )
-        return BaseResponse(success=True, message="自动化测试执行已创建", data=response_data)
+        return BaseResponse(
+            success=True, message="自动化测试执行已创建", data=response_data
+        )
     except HTTPException:
         raise
     except Exception as e:
@@ -1530,17 +2027,23 @@ async def start_automation_execution_real(
         raise HTTPException(status_code=500, detail="内部服务器错误")
 
 
-@router.get("/automation/{execution_id}/status", response_model=BaseResponse[AutomationExecutionResponse])
+@router.get(
+    "/automation/{execution_id}/status",
+    response_model=BaseResponse[AutomationExecutionResponse],
+)
 async def get_automation_execution_status_real(
     execution_id: str = Path(..., description="自动化执行批次ID"),
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """Read automated execution status from persisted execution records."""
     try:
-        executions = db.query(TestExecution).filter(
-            TestExecution.execution_code.like(f"AUTO-{execution_id}-%")
-        ).order_by(TestExecution.created_at.asc()).all()
+        executions = (
+            db.query(TestExecution)
+            .filter(TestExecution.execution_code.like(f"AUTO-{execution_id}-%"))
+            .order_by(TestExecution.created_at.asc())
+            .all()
+        )
         if not executions:
             raise HTTPException(status_code=404, detail="自动化执行批次不存在")
 
@@ -1558,7 +2061,9 @@ async def get_automation_execution_status_real(
             test_environment=executions[0].test_environment or "",
             browser=config.get("browser") or executions[0].browser_info,
         )
-        return BaseResponse(success=True, message="获取自动化执行状态成功", data=response_data)
+        return BaseResponse(
+            success=True, message="获取自动化执行状态成功", data=response_data
+        )
     except HTTPException:
         raise
     except Exception as e:
@@ -1566,17 +2071,23 @@ async def get_automation_execution_status_real(
         raise HTTPException(status_code=500, detail="内部服务器错误")
 
 
-@router.post("/automation/{execution_id}/cancel", response_model=BaseResponse[AutomationExecutionResponse])
+@router.post(
+    "/automation/{execution_id}/cancel",
+    response_model=BaseResponse[AutomationExecutionResponse],
+)
 async def cancel_automation_execution_real(
     execution_id: str = Path(..., description="自动化执行批次ID"),
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """Cancel a running automated execution batch."""
     try:
-        executions = db.query(TestExecution).filter(
-            TestExecution.execution_code.like(f"AUTO-{execution_id}-%")
-        ).order_by(TestExecution.created_at.asc()).all()
+        executions = (
+            db.query(TestExecution)
+            .filter(TestExecution.execution_code.like(f"AUTO-{execution_id}-%"))
+            .order_by(TestExecution.created_at.asc())
+            .all()
+        )
         if not executions:
             raise HTTPException(status_code=404, detail="自动化执行批次不存在")
 
@@ -1588,7 +2099,9 @@ async def cancel_automation_execution_real(
                 execution.completed_at = now
                 execution.updated_at = now
                 if execution.started_at:
-                    execution.duration = int((now - execution.started_at).total_seconds())
+                    execution.duration = int(
+                        (now - execution.started_at).total_seconds()
+                    )
                 _sync_test_case_execution_state(
                     execution.test_case,
                     ModelExecutionStatus.SKIPPED,
@@ -1608,7 +2121,9 @@ async def cancel_automation_execution_real(
             test_environment=executions[0].test_environment or "",
             browser=executions[0].browser_info,
         )
-        return BaseResponse(success=True, message="自动化执行已取消", data=response_data)
+        return BaseResponse(
+            success=True, message="自动化执行已取消", data=response_data
+        )
     except HTTPException:
         raise
     except Exception as e:
@@ -1622,11 +2137,13 @@ async def upload_execution_screenshot(
     execution_id: int = Path(..., description="执行记录ID"),
     screenshot: UploadFile = File(...),
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """Upload a screenshot for a manual execution record."""
     try:
-        execution = db.query(TestExecution).filter(TestExecution.id == execution_id).first()
+        execution = (
+            db.query(TestExecution).filter(TestExecution.id == execution_id).first()
+        )
         if not execution:
             raise HTTPException(status_code=404, detail="测试执行记录不存在")
 
@@ -1637,7 +2154,9 @@ async def upload_execution_screenshot(
         upload_dir = FilePath("uploads/test_executions/screenshots")
         upload_dir.mkdir(parents=True, exist_ok=True)
         safe_name = FilePath(screenshot.filename or "screenshot.png").name
-        file_name = f"{execution_id}_{datetime.utcnow().strftime('%Y%m%d%H%M%S')}_{safe_name}"
+        file_name = (
+            f"{execution_id}_{datetime.utcnow().strftime('%Y%m%d%H%M%S')}_{safe_name}"
+        )
         file_path = upload_dir / file_name
         content = await screenshot.read()
         file_path.write_bytes(content)
@@ -1670,11 +2189,13 @@ async def upload_execution_video(
     execution_id: int = Path(..., description="执行记录ID"),
     video: UploadFile = File(...),
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """Upload a video attachment for a manual execution record."""
     try:
-        execution = db.query(TestExecution).filter(TestExecution.id == execution_id).first()
+        execution = (
+            db.query(TestExecution).filter(TestExecution.id == execution_id).first()
+        )
         if not execution:
             raise HTTPException(status_code=404, detail="测试执行记录不存在")
 
@@ -1685,7 +2206,9 @@ async def upload_execution_video(
         upload_dir = FilePath("uploads/test_executions/videos")
         upload_dir.mkdir(parents=True, exist_ok=True)
         safe_name = FilePath(video.filename or "execution-video.webm").name
-        file_name = f"{execution_id}_{datetime.utcnow().strftime('%Y%m%d%H%M%S')}_{safe_name}"
+        file_name = (
+            f"{execution_id}_{datetime.utcnow().strftime('%Y%m%d%H%M%S')}_{safe_name}"
+        )
         file_path = upload_dir / file_name
         file_size = 0
 
@@ -1728,16 +2251,21 @@ async def upload_execution_video(
         raise HTTPException(status_code=500, detail="内部服务器错误")
 
 
-@router.delete("/{execution_id}/screenshots/{attachment_index}", response_model=BaseResponse[Dict[str, Any]])
+@router.delete(
+    "/{execution_id}/screenshots/{attachment_index}",
+    response_model=BaseResponse[Dict[str, Any]],
+)
 async def delete_execution_screenshot(
     execution_id: int = Path(..., description="执行记录ID"),
     attachment_index: int = Path(..., ge=0, description="截图序号"),
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """Delete a screenshot attachment from a manual execution record."""
     try:
-        execution = db.query(TestExecution).filter(TestExecution.id == execution_id).first()
+        execution = (
+            db.query(TestExecution).filter(TestExecution.id == execution_id).first()
+        )
         if not execution:
             raise HTTPException(status_code=404, detail="测试执行记录不存在")
 
@@ -1757,16 +2285,21 @@ async def delete_execution_screenshot(
         raise HTTPException(status_code=500, detail="内部服务器错误")
 
 
-@router.delete("/{execution_id}/videos/{attachment_index}", response_model=BaseResponse[Dict[str, Any]])
+@router.delete(
+    "/{execution_id}/videos/{attachment_index}",
+    response_model=BaseResponse[Dict[str, Any]],
+)
 async def delete_execution_video(
     execution_id: int = Path(..., description="执行记录ID"),
     attachment_index: int = Path(..., ge=0, description="录像序号"),
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """Delete a video attachment from a manual execution record."""
     try:
-        execution = db.query(TestExecution).filter(TestExecution.id == execution_id).first()
+        execution = (
+            db.query(TestExecution).filter(TestExecution.id == execution_id).first()
+        )
         if not execution:
             raise HTTPException(status_code=404, detail="测试执行记录不存在")
 
@@ -1791,16 +2324,16 @@ async def start_batch_execution(
     request: BatchExecutionRequest,
     background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """
     开始批量测试执行
-    
+
     批量执行多个测试用例，支持手动和自动化混合执行。
     """
     try:
         service = TestExecutionService(db)
-        
+
         # 开始批量执行
         batch_execution = await service.start_batch_execution(
             request.test_case_ids,
@@ -1808,12 +2341,12 @@ async def start_batch_execution(
             request.test_environment,
             current_user.id,
             {
-                'parallel_count': request.parallel_count,
-                'retry_count': request.retry_count,
-                'execution_config': request.execution_config
-            }
+                "parallel_count": request.parallel_count,
+                "retry_count": request.retry_count,
+                "execution_config": request.execution_config,
+            },
         )
-        
+
         # 构建响应
         response_data = BatchExecutionResponse(
             batch_id=batch_execution.batch_id,
@@ -1826,15 +2359,13 @@ async def start_batch_execution(
             execution_status="RUNNING",
             started_at=batch_execution.started_at,
             estimated_completion=batch_execution.estimated_completion,
-            executions=[]
+            executions=[],
         )
-        
+
         return BaseResponse(
-            success=True,
-            message="批量测试执行启动成功",
-            data=response_data
+            success=True, message="批量测试执行启动成功", data=response_data
         )
-        
+
     except Exception as e:
         logger.error(f"启动批量测试执行失败: {str(e)}")
         raise HTTPException(status_code=500, detail="内部服务器错误")
@@ -1842,32 +2373,61 @@ async def start_batch_execution(
 
 @router.get("/statistics", response_model=BaseResponse[Dict[str, Any]])
 async def get_execution_statistics_alias(
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
 ):
     """获取测试执行统计信息（兼容前端旧路径，使用真实数据库统计）。"""
     try:
         total = db.query(TestExecution).count()
-        in_progress = db.query(TestExecution).filter(TestExecution.execution_status == ModelExecutionStatus.IN_PROGRESS).count()
+        in_progress = (
+            db.query(TestExecution)
+            .filter(TestExecution.execution_status == ModelExecutionStatus.IN_PROGRESS)
+            .count()
+        )
         today = date.today()
-        completed_today = db.query(TestExecution).filter(
-            TestExecution.completed_at.isnot(None),
-            TestExecution.completed_at >= datetime.combine(today, datetime.min.time()),
-            TestExecution.completed_at <= datetime.combine(today, datetime.max.time())
-        ).count()
-        passed = db.query(TestExecution).filter(TestExecution.execution_status == ModelExecutionStatus.PASSED).count()
-        failed = db.query(TestExecution).filter(TestExecution.execution_status == ModelExecutionStatus.FAILED).count()
+        completed_today = (
+            db.query(TestExecution)
+            .filter(
+                TestExecution.completed_at.isnot(None),
+                TestExecution.completed_at
+                >= datetime.combine(today, datetime.min.time()),
+                TestExecution.completed_at
+                <= datetime.combine(today, datetime.max.time()),
+            )
+            .count()
+        )
+        passed = (
+            db.query(TestExecution)
+            .filter(TestExecution.execution_status == ModelExecutionStatus.PASSED)
+            .count()
+        )
+        failed = (
+            db.query(TestExecution)
+            .filter(TestExecution.execution_status == ModelExecutionStatus.FAILED)
+            .count()
+        )
         completed = passed + failed
         pass_rate = round(passed / completed * 100, 1) if completed else 0
-        durations = [row[0] for row in db.query(TestExecution.duration).filter(TestExecution.duration.isnot(None)).all()]
-        avg_duration = round((sum(durations) / len(durations)) / 60, 1) if durations else 0
-        active_executors = db.query(TestExecution.executor_id).filter(
-            TestExecution.execution_status == ModelExecutionStatus.IN_PROGRESS
-        ).distinct().count()
+        durations = [
+            row[0]
+            for row in db.query(TestExecution.duration)
+            .filter(TestExecution.duration.isnot(None))
+            .all()
+        ]
+        avg_duration = (
+            round((sum(durations) / len(durations)) / 60, 1) if durations else 0
+        )
+        active_executors = (
+            db.query(TestExecution.executor_id)
+            .filter(TestExecution.execution_status == ModelExecutionStatus.IN_PROGRESS)
+            .distinct()
+            .count()
+        )
     except Exception as e:
         if not _is_missing_table_error(e):
             raise
-        total = in_progress = completed_today = pass_rate = avg_duration = active_executors = 0
+        total = in_progress = completed_today = pass_rate = avg_duration = (
+            active_executors
+        ) = 0
     return BaseResponse(
         success=True,
         message="获取执行统计成功",
@@ -1877,19 +2437,21 @@ async def get_execution_statistics_alias(
             "completed_today": completed_today,
             "pass_rate": pass_rate,
             "avg_duration": avg_duration,
-            "active_executors": active_executors
-        }
+            "active_executors": active_executors,
+        },
     )
 
 
-@router.get("/statistics/summary", response_model=BaseResponse[ExecutionStatisticsResponse])
+@router.get(
+    "/statistics/summary", response_model=BaseResponse[ExecutionStatisticsResponse]
+)
 async def get_execution_statistics(
     project_id: Optional[int] = Query(None, description="项目ID"),
     test_plan_id: Optional[int] = Query(None, description="测试计划ID"),
     start_date: Optional[datetime] = Query(None, description="开始日期"),
     end_date: Optional[datetime] = Query(None, description="结束日期"),
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """
     获取执行统计信息
@@ -1907,23 +2469,46 @@ async def get_execution_statistics(
             base_query = base_query.filter(TestExecution.started_at <= end_date)
         # project_id 通过关联的 test_plan / test_case 间接过滤
         if project_id:
-            base_query = (
-                base_query.outerjoin(TestPlan, TestExecution.test_plan_id == TestPlan.id)
-                .filter(TestPlan.project_id == project_id)
-            )
+            base_query = base_query.outerjoin(
+                TestPlan, TestExecution.test_plan_id == TestPlan.id
+            ).filter(TestPlan.project_id == project_id)
 
         total = base_query.count()
-        passed = base_query.filter(TestExecution.execution_status == ModelExecutionStatus.PASSED).count()
-        failed = base_query.filter(TestExecution.execution_status == ModelExecutionStatus.FAILED).count()
-        blocked = base_query.filter(TestExecution.execution_status == ModelExecutionStatus.BLOCKED).count() if hasattr(ModelExecutionStatus, "BLOCKED") else 0
-        skipped = base_query.filter(TestExecution.execution_status == ModelExecutionStatus.SKIPPED).count() if hasattr(ModelExecutionStatus, "SKIPPED") else 0
-        automated = base_query.filter(TestExecution.execution_type == "AUTOMATED").count()
+        passed = base_query.filter(
+            TestExecution.execution_status == ModelExecutionStatus.PASSED
+        ).count()
+        failed = base_query.filter(
+            TestExecution.execution_status == ModelExecutionStatus.FAILED
+        ).count()
+        blocked = (
+            base_query.filter(
+                TestExecution.execution_status == ModelExecutionStatus.BLOCKED
+            ).count()
+            if hasattr(ModelExecutionStatus, "BLOCKED")
+            else 0
+        )
+        skipped = (
+            base_query.filter(
+                TestExecution.execution_status == ModelExecutionStatus.SKIPPED
+            ).count()
+            if hasattr(ModelExecutionStatus, "SKIPPED")
+            else 0
+        )
+        automated = base_query.filter(
+            TestExecution.execution_type == "AUTOMATED"
+        ).count()
         manual = total - automated
         completed = passed + failed
         pass_rate = round(passed / completed * 100, 1) if completed else 0.0
-        durations = [row[0] for row in db.query(TestExecution.duration).filter(
-            TestExecution.duration.isnot(None)).all()]
-        avg_duration = round((sum(durations) / len(durations)) / 60, 1) if durations else None
+        durations = [
+            row[0]
+            for row in db.query(TestExecution.duration)
+            .filter(TestExecution.duration.isnot(None))
+            .all()
+        ]
+        avg_duration = (
+            round((sum(durations) / len(durations)) / 60, 1) if durations else None
+        )
 
         response_data = ExecutionStatisticsResponse(
             total_executions=total,
@@ -1935,24 +2520,30 @@ async def get_execution_statistics(
             skipped_executions=skipped,
             pass_rate=pass_rate,
             average_duration=avg_duration,
-            execution_trend=[]
+            execution_trend=[],
         )
 
         return BaseResponse(
-            success=True,
-            message="获取执行统计成功",
-            data=response_data
+            success=True, message="获取执行统计成功", data=response_data
         )
 
     except Exception as e:
         if _is_missing_table_error(e):
             response_data = ExecutionStatisticsResponse(
-                total_executions=0, manual_executions=0, automated_executions=0,
-                passed_executions=0, failed_executions=0, blocked_executions=0,
-                skipped_executions=0, pass_rate=0.0, average_duration=None,
-                execution_trend=[]
+                total_executions=0,
+                manual_executions=0,
+                automated_executions=0,
+                passed_executions=0,
+                failed_executions=0,
+                blocked_executions=0,
+                skipped_executions=0,
+                pass_rate=0.0,
+                average_duration=None,
+                execution_trend=[],
             )
-            return BaseResponse(success=True, message="获取执行统计成功", data=response_data)
+            return BaseResponse(
+                success=True, message="获取执行统计成功", data=response_data
+            )
         logger.error(f"获取执行统计失败: {str(e)}")
         raise HTTPException(status_code=500, detail="内部服务器错误")
 
@@ -1968,7 +2559,7 @@ async def list_test_environments(
     page: int = Query(1, ge=1, description="页码"),
     page_size: int = Query(20, ge=1, le=100, description="每页大小"),
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """
     获取测试环境列表
@@ -1991,19 +2582,23 @@ async def list_test_environments(
         # 构建响应数据
         response_data = []
         for env in environments:
-            response_data.append(TestEnvironmentResponse(
-                id=env.id,
-                environment_name=env.environment_name,
-                environment_type=env.environment_type.value if env.environment_type else None,
-                description=env.description,
-                status=env.status,
-                configuration=env.configuration or {},
-                is_active=env.is_active,
-                current_user=None,
-                reserved_until=None,
-                created_at=env.created_at,
-                updated_at=env.updated_at
-            ))
+            response_data.append(
+                TestEnvironmentResponse(
+                    id=env.id,
+                    environment_name=env.environment_name,
+                    environment_type=(
+                        env.environment_type.value if env.environment_type else None
+                    ),
+                    description=env.description,
+                    status=env.status,
+                    configuration=env.configuration or {},
+                    is_active=env.is_active,
+                    current_user=None,
+                    reserved_until=None,
+                    created_at=env.created_at,
+                    updated_at=env.updated_at,
+                )
+            )
 
         return PaginatedResponse(
             success=True,
@@ -2011,7 +2606,7 @@ async def list_test_environments(
             data=response_data,
             total=total,
             page=page,
-            page_size=page_size
+            page_size=page_size,
         )
 
     except Exception as e:
@@ -2022,7 +2617,7 @@ async def list_test_environments(
                 data=[],
                 total=0,
                 page=page,
-                page_size=page_size
+                page_size=page_size,
             )
         logger.error(f"获取测试环境列表失败: {str(e)}")
         raise HTTPException(status_code=500, detail="内部服务器错误")
@@ -2032,24 +2627,26 @@ async def list_test_environments(
 async def get_test_execution(
     execution_id: int = Path(..., description="执行记录ID"),
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """
     获取测试执行详情
-    
+
     根据执行记录ID获取详细的执行信息。
     """
     try:
-        execution = db.query(TestExecution).filter(TestExecution.id == execution_id).first()
+        execution = (
+            db.query(TestExecution).filter(TestExecution.id == execution_id).first()
+        )
         if not execution:
             raise HTTPException(status_code=404, detail="测试执行记录不存在")
-        
+
         return BaseResponse(
             success=True,
             message="获取测试执行详情成功",
-            data=_build_execution_response(execution)
+            data=_build_execution_response(execution),
         )
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -2061,13 +2658,17 @@ async def get_test_execution(
 async def get_execution_logs(
     execution_id: int = Path(..., description="执行记录ID"),
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     try:
-        execution = db.query(TestExecution).filter(TestExecution.id == execution_id).first()
+        execution = (
+            db.query(TestExecution).filter(TestExecution.id == execution_id).first()
+        )
         if not execution:
             raise HTTPException(status_code=404, detail="测试执行记录不存在")
-        return BaseResponse(success=True, message="获取执行日志成功", data=execution.logs or [])
+        return BaseResponse(
+            success=True, message="获取执行日志成功", data=execution.logs or []
+        )
     except HTTPException:
         raise
     except Exception as e:
@@ -2089,11 +2690,11 @@ async def list_test_executions(
     page: int = Query(1, ge=1, description="页码"),
     page_size: int = Query(20, ge=1, le=100, description="每页大小"),
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """
     获取测试执行列表
-    
+
     支持多条件过滤和分页查询。
     """
     try:
@@ -2105,14 +2706,19 @@ async def list_test_executions(
         if execution_type:
             query = query.filter(TestExecution.execution_type == execution_type.value)
         if execution_status:
-            query = query.filter(TestExecution.execution_status == ModelExecutionStatus(execution_status.value))
+            query = query.filter(
+                TestExecution.execution_status
+                == ModelExecutionStatus(execution_status.value)
+            )
         if executor_id:
             query = query.filter(TestExecution.executor_id == executor_id)
         if test_environment:
             query = query.filter(TestExecution.test_environment == test_environment)
         if search:
             like_pattern = f"%{search.strip()}%"
-            query = query.join(TestCase, TestExecution.test_case_id == TestCase.id).filter(
+            query = query.join(
+                TestCase, TestExecution.test_case_id == TestCase.id
+            ).filter(
                 or_(
                     TestExecution.execution_code.like(like_pattern),
                     TestCase.case_code.like(like_pattern),
@@ -2125,25 +2731,27 @@ async def list_test_executions(
             query = query.filter(TestExecution.started_at <= end_date)
 
         total = query.count()
-        executions = query.order_by(TestExecution.created_at.desc()) \
-            .offset((page - 1) * page_size) \
-            .limit(page_size) \
+        executions = (
+            query.order_by(TestExecution.created_at.desc())
+            .offset((page - 1) * page_size)
+            .limit(page_size)
             .all()
-        
+        )
+
         # 构建响应数据
         response_data = []
         for execution in executions:
             response_data.append(_build_execution_response(execution))
-        
+
         return PaginatedResponse(
             success=True,
             message="获取测试执行列表成功",
             data=response_data,
             total=total,
             page=page,
-            page_size=page_size
+            page_size=page_size,
         )
-        
+
     except Exception as e:
         if _is_missing_table_error(e):
             return PaginatedResponse(
@@ -2152,7 +2760,7 @@ async def list_test_executions(
                 data=[],
                 total=0,
                 page=page,
-                page_size=page_size
+                page_size=page_size,
             )
         logger.error(f"获取测试执行列表失败: {str(e)}")
         raise HTTPException(status_code=500, detail="内部服务器错误")
@@ -2162,7 +2770,7 @@ async def list_test_executions(
 async def get_execution_progress(
     execution_id: int = Path(..., description="执行记录ID"),
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """
     获取执行进度
@@ -2170,18 +2778,32 @@ async def get_execution_progress(
     获取测试执行的实时进度信息（直接基于数据库执行记录计算，避免依赖未初始化的监控服务）。
     """
     try:
-        execution = db.query(TestExecution).filter(TestExecution.id == execution_id).first()
+        execution = (
+            db.query(TestExecution).filter(TestExecution.id == execution_id).first()
+        )
         if not execution:
             raise HTTPException(status_code=404, detail="执行记录不存在")
 
         # 基于执行状态与时间推算进度
-        status_val = execution.execution_status.value if hasattr(execution.execution_status, "value") else str(execution.execution_status)
+        status_val = (
+            execution.execution_status.value
+            if hasattr(execution.execution_status, "value")
+            else str(execution.execution_status)
+        )
         total_steps = 1
-        completed_steps = 1 if status_val in ("PASSED", "FAILED", "COMPLETED", "BLOCKED", "SKIPPED") else 0
+        completed_steps = (
+            1
+            if status_val in ("PASSED", "FAILED", "COMPLETED", "BLOCKED", "SKIPPED")
+            else 0
+        )
         passed_steps = 1 if status_val == "PASSED" else 0
         failed_steps = 1 if status_val == "FAILED" else 0
-        progress_percentage = 100.0 if completed_steps else (50.0 if status_val == "IN_PROGRESS" else 0.0)
-        estimated_completion = execution.completed_at.isoformat() if execution.completed_at else None
+        progress_percentage = (
+            100.0 if completed_steps else (50.0 if status_val == "IN_PROGRESS" else 0.0)
+        )
+        estimated_completion = (
+            execution.completed_at.isoformat() if execution.completed_at else None
+        )
 
         return BaseResponse(
             success=True,
@@ -2194,8 +2816,8 @@ async def get_execution_progress(
                 "failed_steps": failed_steps,
                 "current_step": None,
                 "progress_percentage": progress_percentage,
-                "estimated_completion": estimated_completion
-            }
+                "estimated_completion": estimated_completion,
+            },
         )
 
     except HTTPException:
@@ -2205,23 +2827,27 @@ async def get_execution_progress(
         raise HTTPException(status_code=500, detail="内部服务器错误")
 
 
-@router.post("/environments/{env_id}/reserve", response_model=BaseResponse[Dict[str, Any]])
+@router.post(
+    "/environments/{env_id}/reserve", response_model=BaseResponse[Dict[str, Any]]
+)
 async def reserve_test_environment(
     env_id: int = Path(..., description="环境ID"),
     reserved_until: datetime = Body(..., description="预约到期时间"),
     purpose: str = Body(..., description="使用目的"),
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """
     预约测试环境
-    
+
     预约指定的测试环境。
     """
     try:
         # 校验测试环境是否存在，避免对不存在的资源操作返回 500
         try:
-            environment = db.query(TestEnvironment).filter(TestEnvironment.id == env_id).first()
+            environment = (
+                db.query(TestEnvironment).filter(TestEnvironment.id == env_id).first()
+            )
         except Exception as table_error:
             # 测试环境表尚未初始化，视为环境不存在
             if _is_missing_table_error(table_error):
@@ -2233,23 +2859,20 @@ async def reserve_test_environment(
         env_service = TestEnvironmentService(db)
         # 预约环境
         reservation = await env_service.reserve_environment(
-            env_id,
-            current_user.id,
-            reserved_until,
-            purpose
+            env_id, current_user.id, reserved_until, purpose
         )
-        
+
         return BaseResponse(
             success=True,
             message="测试环境预约成功",
             data={
-                'reservation_id': reservation.id,
-                'environment_id': env_id,
-                'reserved_until': reserved_until.isoformat(),
-                'purpose': purpose
-            }
+                "reservation_id": reservation.id,
+                "environment_id": env_id,
+                "reserved_until": reserved_until.isoformat(),
+                "purpose": purpose,
+            },
         )
-        
+
     except (AttributeError, NotFoundError) as e:
         raise HTTPException(status_code=404, detail=str(e) or "测试环境不存在")
     except HTTPException:
@@ -2263,7 +2886,7 @@ async def reserve_test_environment(
 async def release_test_environment(
     env_id: int = Path(..., description="环境ID"),
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """
     释放测试环境
@@ -2273,7 +2896,9 @@ async def release_test_environment(
     try:
         # 校验测试环境是否存在，避免对不存在的资源操作返回 500
         try:
-            environment = db.query(TestEnvironment).filter(TestEnvironment.id == env_id).first()
+            environment = (
+                db.query(TestEnvironment).filter(TestEnvironment.id == env_id).first()
+            )
         except Exception as table_error:
             # 测试环境表尚未初始化，视为环境不存在
             if _is_missing_table_error(table_error):
@@ -2286,11 +2911,7 @@ async def release_test_environment(
         # 释放环境
         result = await env_service.release_environment(env_id, current_user.id)
 
-        return BaseResponse(
-            success=True,
-            message="测试环境释放成功",
-            data=result
-        )
+        return BaseResponse(success=True, message="测试环境释放成功", data=result)
 
     except (AttributeError, NotFoundError) as e:
         raise HTTPException(status_code=404, detail=str(e) or "测试环境不存在")

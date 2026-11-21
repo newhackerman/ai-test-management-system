@@ -11,14 +11,18 @@
 - requirement_traceability_links: 需求追溯链接表
 """
 
-import sys
 import os
-sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+import sys
 
-from sqlalchemy import create_engine, text
+sys.path.append(
+    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+)
+
 import logging
 import os
+
 from dotenv import load_dotenv
+from sqlalchemy import create_engine, text
 
 # 加载环境变量
 load_dotenv()
@@ -27,18 +31,21 @@ load_dotenv()
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+
 def create_requirement_tables():
     """创建需求管理模块的数据库表"""
-    
+
     # 从环境变量获取数据库URL
-    database_url = os.getenv("DATABASE_URL", "mysql+pymysql://root:123456@localhost:3306/ai_test_management")
-    
+    database_url = os.getenv(
+        "DATABASE_URL", "mysql+pymysql://root:123456@localhost:3306/ai_test_management"
+    )
+
     # 确保使用同步驱动
     if "mysql+asyncmy://" in database_url:
         database_url = database_url.replace("mysql+asyncmy://", "mysql+pymysql://")
-    
+
     engine = create_engine(database_url)
-    
+
     # SQL语句列表
     sql_statements = [
         # 1. 需求表
@@ -102,7 +109,6 @@ def create_requirement_tables():
             INDEX idx_planned_dates (planned_start_date, planned_end_date)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='需求表';
         """,
-        
         # 2. 需求状态历史表
         """
         CREATE TABLE IF NOT EXISTS requirement_status_history (
@@ -123,7 +129,6 @@ def create_requirement_tables():
             INDEX idx_changed_by (changed_by)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='需求状态历史表';
         """,
-        
         # 3. 需求依赖关系表
         """
         CREATE TABLE IF NOT EXISTS requirement_dependencies (
@@ -144,7 +149,6 @@ def create_requirement_tables():
             INDEX idx_dependency_type (dependency_type)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='需求依赖关系表';
         """,
-        
         # 4. 需求评审表
         """
         CREATE TABLE IF NOT EXISTS requirement_reviews (
@@ -183,7 +187,6 @@ def create_requirement_tables():
             INDEX idx_scheduled_date (scheduled_date)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='需求评审表';
         """,
-        
         # 5. 需求评审意见表
         """
         CREATE TABLE IF NOT EXISTS requirement_review_comments (
@@ -221,7 +224,6 @@ def create_requirement_tables():
             INDEX idx_severity (severity)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='需求评审意见表';
         """,
-        
         # 6. 需求变更请求表
         """
         CREATE TABLE IF NOT EXISTS requirement_change_requests (
@@ -268,7 +270,6 @@ def create_requirement_tables():
             INDEX idx_requestor_id (requestor_id)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='需求变更请求表';
         """,
-        
         # 7. 需求追溯链接表
         """
         CREATE TABLE IF NOT EXISTS requirement_traceability_links (
@@ -288,26 +289,27 @@ def create_requirement_tables():
             INDEX idx_target (target_type, target_id),
             INDEX idx_link_type (link_type)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='需求追溯链接表';
-        """
+        """,
     ]
-    
+
     try:
         with engine.connect() as connection:
             logger.info("开始创建需求管理模块数据库表...")
-            
+
             for i, sql in enumerate(sql_statements, 1):
                 logger.info(f"执行第 {i} 个SQL语句...")
                 connection.execute(text(sql))
                 connection.commit()
                 logger.info(f"第 {i} 个SQL语句执行成功")
-            
+
             logger.info("所有需求管理模块数据库表创建完成！")
-            
+
     except Exception as e:
         logger.error(f"创建数据库表时发生错误: {str(e)}")
         raise e
     finally:
         engine.dispose()
+
 
 if __name__ == "__main__":
     create_requirement_tables()

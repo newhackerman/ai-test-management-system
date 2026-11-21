@@ -65,13 +65,17 @@ class CreateRiskRequest(RiskBase):
 
 
 class UpdateRiskRequest(BaseModel):
-    risk_name: Optional[str] = Field(None, min_length=1, max_length=200, description="风险名称")
+    risk_name: Optional[str] = Field(
+        None, min_length=1, max_length=200, description="风险名称"
+    )
     description: Optional[str] = Field(None, min_length=1, description="风险描述")
     risk_category: Optional[RiskCategory] = Field(None, description="风险类别")
     risk_level: Optional[RiskLevel] = Field(None, description="风险等级")
     probability: Optional[Decimal] = Field(None, ge=0.0, le=1.0, description="发生概率")
     impact_score: Optional[int] = Field(None, ge=1, le=10, description="影响评分")
-    mitigation_strategy: Optional[MitigationStrategy] = Field(None, description="应对策略")
+    mitigation_strategy: Optional[MitigationStrategy] = Field(
+        None, description="应对策略"
+    )
     mitigation_plan: Optional[str] = Field(None, description="应对计划")
     contingency_plan: Optional[str] = Field(None, description="应急预案")
     status: Optional[RiskStatus] = Field(None, description="风险状态")
@@ -106,7 +110,9 @@ class RiskListQuery(BaseModel):
     page: int = Field(1, ge=1, description="页码")
     page_size: int = Field(20, ge=1, le=100, description="每页数量")
     sort_by: Optional[str] = Field("created_at", description="排序字段")
-    sort_order: Optional[str] = Field("desc", pattern="^(asc|desc)$", description="排序方向")
+    sort_order: Optional[str] = Field(
+        "desc", pattern="^(asc|desc)$", description="排序方向"
+    )
 
 
 class RiskListResponse(BaseModel):
@@ -119,7 +125,9 @@ class RiskListResponse(BaseModel):
 
 class RiskAnalysisRequest(BaseModel):
     project_id: int = Field(..., description="项目ID")
-    analysis_type: str = Field(..., pattern="^(current|trend|prediction)$", description="分析类型")
+    analysis_type: str = Field(
+        ..., pattern="^(current|trend|prediction)$", description="分析类型"
+    )
     time_range: Optional[int] = Field(30, ge=1, le=365, description="时间范围（天）")
 
 
@@ -194,7 +202,9 @@ class RiskTrendResponse(BaseModel):
 
 class RiskReportRequest(BaseModel):
     project_id: int = Field(..., description="项目ID")
-    report_type: str = Field(..., pattern="^(summary|detailed|trend)$", description="报告类型")
+    report_type: str = Field(
+        ..., pattern="^(summary|detailed|trend)$", description="报告类型"
+    )
     start_date: Optional[date] = Field(None, description="开始日期")
     end_date: Optional[date] = Field(None, description="结束日期")
     include_charts: bool = Field(True, description="包含图表")

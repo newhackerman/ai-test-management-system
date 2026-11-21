@@ -54,7 +54,9 @@ async def list_risks(
     page: int = Query(1, ge=1, description="页码"),
     page_size: int = Query(20, ge=1, le=100, description="每页数量"),
     sort_by: Optional[str] = Query("created_at", description="排序字段"),
-    sort_order: Optional[str] = Query("desc", pattern="^(asc|desc)$", description="排序方向"),
+    sort_order: Optional[str] = Query(
+        "desc", pattern="^(asc|desc)$", description="排序方向"
+    ),
     current_user: dict = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -99,7 +101,9 @@ async def create_risk(
         raise HTTPException(status_code=500, detail="创建风险失败")
 
 
-@router.post("/auto-detect", response_model=AutoRiskDetectionResult, summary="自动识别项目风险")
+@router.post(
+    "/auto-detect", response_model=AutoRiskDetectionResult, summary="自动识别项目风险"
+)
 async def auto_detect_risks(
     project_id: int = Query(..., description="项目ID"),
     background_tasks: BackgroundTasks = BackgroundTasks(),
@@ -108,7 +112,9 @@ async def auto_detect_risks(
 ):
     try:
         result = await RiskService(db).auto_detect_risks(project_id)
-        logger.info("用户%s执行项目%s风险自动识别", _current_user_id(current_user), project_id)
+        logger.info(
+            "用户%s执行项目%s风险自动识别", _current_user_id(current_user), project_id
+        )
         return result
     except Exception as exc:
         message = str(exc)
@@ -118,7 +124,11 @@ async def auto_detect_risks(
         raise HTTPException(status_code=500, detail="自动风险识别失败")
 
 
-@router.get("/analysis/{project_id}", response_model=RiskAnalysisResponse, summary="获取风险分析报告")
+@router.get(
+    "/analysis/{project_id}",
+    response_model=RiskAnalysisResponse,
+    summary="获取风险分析报告",
+)
 async def get_risk_analysis(
     project_id: int,
     current_user: dict = Depends(get_current_user),
@@ -134,7 +144,9 @@ async def get_risk_analysis(
         raise HTTPException(status_code=500, detail="获取风险分析失败")
 
 
-@router.get("/trend/{project_id}", response_model=RiskTrendResponse, summary="获取风险趋势")
+@router.get(
+    "/trend/{project_id}", response_model=RiskTrendResponse, summary="获取风险趋势"
+)
 async def get_risk_trend(
     project_id: int,
     days: int = Query(30, ge=1, le=365, description="分析天数"),
@@ -163,8 +175,14 @@ async def start_risk_monitoring(
         monitoring_service = RiskMonitoringService(db)
         config = {"alert_thresholds": {"check_interval": interval_hours * 3600}}
         await monitoring_service.start_monitoring(project_id, config)
-        logger.info("用户%s启动项目%s风险监控", _current_user_id(current_user), project_id)
-        return {"message": "风险监控已启动", "project_id": project_id, "interval_hours": interval_hours}
+        logger.info(
+            "用户%s启动项目%s风险监控", _current_user_id(current_user), project_id
+        )
+        return {
+            "message": "风险监控已启动",
+            "project_id": project_id,
+            "interval_hours": interval_hours,
+        }
     except Exception as exc:
         logger.error("启动风险监控失败: %s", exc)
         raise HTTPException(status_code=500, detail="启动风险监控失败")
@@ -178,7 +196,9 @@ async def stop_risk_monitoring(
 ):
     try:
         await RiskMonitoringService(db).stop_monitoring(project_id)
-        logger.info("用户%s停止项目%s风险监控", _current_user_id(current_user), project_id)
+        logger.info(
+            "用户%s停止项目%s风险监控", _current_user_id(current_user), project_id
+        )
         return {"message": "风险监控已停止", "project_id": project_id}
     except Exception as exc:
         logger.error("停止风险监控失败: %s", exc)
@@ -191,7 +211,11 @@ async def get_monitoring_status(
     current_user: dict = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    return {"project_id": project_id, "enabled": False, "message": "当前项目未启用定时风险监控"}
+    return {
+        "project_id": project_id,
+        "enabled": False,
+        "message": "当前项目未启用定时风险监控",
+    }
 
 
 @router.get("/alerts/{project_id}", summary="获取风险预警")
@@ -205,7 +229,9 @@ async def get_risk_alerts(
         monitoring_service = RiskMonitoringService(db)
         alerts = await monitoring_service.check_project_risks(project_id)
         alert_history = await monitoring_service.get_alert_history(project_id, days)
-        critical_alerts = len([alert for alert in alerts if alert.severity == "CRITICAL"])
+        critical_alerts = len(
+            [alert for alert in alerts if alert.severity == "CRITICAL"]
+        )
         high_alerts = len([alert for alert in alerts if alert.severity == "HIGH"])
         return {
             "project_id": project_id,

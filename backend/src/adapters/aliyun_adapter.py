@@ -8,18 +8,26 @@
 """
 
 import logging
-from typing import List, AsyncGenerator
+from typing import AsyncGenerator, List
 
-from .tongyi_adapter import TongyiAdapter
-from .base import BaseAIAdapter, AIRequest, AIResponse, StreamChunk, AdapterConfig, AIProvider, TokenUsage
 from ..config.aliyun_tongyi_config import TongyiConfig, create_tongyi_config_from_env
+from .base import (
+    AdapterConfig,
+    AIProvider,
+    AIRequest,
+    AIResponse,
+    BaseAIAdapter,
+    StreamChunk,
+    TokenUsage,
+)
+from .tongyi_adapter import TongyiAdapter
 
 logger = logging.getLogger(__name__)
 
 
 class AliyunAdapter(TongyiAdapter):
     """阿里通义千问API适配器 (向后兼容别名)"""
-    
+
     def __init__(self, config: AdapterConfig):
         # 创建默认的通义千问配置
         try:
@@ -30,15 +38,19 @@ class AliyunAdapter(TongyiAdapter):
                 tongyi_config.api_config.api_endpoint = config.api_endpoint
         except Exception:
             # 如果无法从环境变量创建配置，使用默认配置
-            from ..config.aliyun_tongyi_config import TongyiAPIConfig, ChineseOptimizationConfig
-            
+            from ..config.aliyun_tongyi_config import (
+                ChineseOptimizationConfig,
+                TongyiAPIConfig,
+            )
+
             tongyi_config = TongyiConfig(
                 api_config=TongyiAPIConfig(
                     api_key=config.api_key,
-                    api_endpoint=config.api_endpoint or "https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation"
+                    api_endpoint=config.api_endpoint
+                    or "https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation",
                 ),
-                chinese_optimization=ChineseOptimizationConfig()
+                chinese_optimization=ChineseOptimizationConfig(),
             )
-        
+
         super().__init__(config, tongyi_config)
         self.logger.info("Aliyun Tongyi adapter initialized (compatibility wrapper)")

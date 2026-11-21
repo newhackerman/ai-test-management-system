@@ -1,15 +1,18 @@
 """
 AI助手文件存储相关的Pydantic模型
 """
+
 from datetime import datetime
-from typing import List, Optional, Dict, Any
+from typing import Any, Dict, List, Optional
+
 from pydantic import BaseModel, Field
 
-from ..models.ai_file_storage import FileType, FileCategory, FileStatus, StorageProvider
+from ..models.ai_file_storage import FileCategory, FileStatus, FileType, StorageProvider
 
 
 class FileUploadResponse(BaseModel):
     """文件上传响应"""
+
     id: int = Field(..., description="文件ID")
     original_filename: str = Field(..., description="原始文件名")
     file_url: str = Field(..., description="文件访问URL")
@@ -21,6 +24,7 @@ class FileUploadResponse(BaseModel):
 
 class FileInfoResponse(BaseModel):
     """文件信息响应"""
+
     id: int = Field(..., description="文件ID")
     original_filename: str = Field(..., description="原始文件名")
     stored_filename: str = Field(..., description="存储文件名")
@@ -44,6 +48,7 @@ class FileInfoResponse(BaseModel):
 
 class FileListResponse(BaseModel):
     """文件列表响应"""
+
     files: List[FileInfoResponse] = Field(..., description="文件列表")
     total: int = Field(..., description="总数")
     page: int = Field(..., description="当前页码")
@@ -53,6 +58,7 @@ class FileListResponse(BaseModel):
 
 class FileShareRequest(BaseModel):
     """文件分享请求"""
+
     expires_hours: Optional[int] = Field(None, description="过期小时数")
     password: Optional[str] = Field(None, description="分享密码")
     can_download: bool = Field(True, description="允许下载")
@@ -63,6 +69,7 @@ class FileShareRequest(BaseModel):
 
 class FileShareResponse(BaseModel):
     """文件分享响应"""
+
     id: int = Field(..., description="分享ID")
     share_token: str = Field(..., description="分享令牌")
     share_url: str = Field(..., description="分享链接")
@@ -78,6 +85,7 @@ class FileShareResponse(BaseModel):
 
 class StorageStatsResponse(BaseModel):
     """存储统计响应"""
+
     total_files: int = Field(..., description="总文件数")
     total_size: int = Field(..., description="总大小(字节)")
     category_stats: Dict[str, Dict[str, int]] = Field(..., description="按分类统计")
@@ -86,6 +94,7 @@ class StorageStatsResponse(BaseModel):
 
 class FileAccessLogResponse(BaseModel):
     """文件访问日志响应"""
+
     id: int = Field(..., description="日志ID")
     file_id: int = Field(..., description="文件ID")
     user_id: Optional[int] = Field(None, description="用户ID")
@@ -101,6 +110,7 @@ class FileAccessLogResponse(BaseModel):
 
 class FileMetadata(BaseModel):
     """文件元数据"""
+
     width: Optional[int] = Field(None, description="图片宽度")
     height: Optional[int] = Field(None, description="图片高度")
     duration: Optional[float] = Field(None, description="音视频时长(秒)")
@@ -115,6 +125,7 @@ class FileMetadata(BaseModel):
 
 class FileUploadRequest(BaseModel):
     """文件上传请求"""
+
     category: FileCategory = Field(..., description="文件分类")
     session_id: Optional[int] = Field(None, description="关联会话ID")
     message_id: Optional[int] = Field(None, description="关联消息ID")
@@ -127,6 +138,7 @@ class FileUploadRequest(BaseModel):
 
 class FileUpdateRequest(BaseModel):
     """文件更新请求"""
+
     description: Optional[str] = Field(None, description="文件描述")
     tags: Optional[str] = Field(None, description="文件标签")
     is_public: Optional[bool] = Field(None, description="是否公开")
@@ -134,6 +146,7 @@ class FileUpdateRequest(BaseModel):
 
 class FileBatchUploadResponse(BaseModel):
     """批量上传响应"""
+
     results: List[Dict[str, Any]] = Field(..., description="上传结果列表")
     success_count: int = Field(..., description="成功数量")
     failed_count: int = Field(..., description="失败数量")
@@ -141,6 +154,7 @@ class FileBatchUploadResponse(BaseModel):
 
 class FileBatchDeleteResponse(BaseModel):
     """批量删除响应"""
+
     results: List[Dict[str, Any]] = Field(..., description="删除结果列表")
     success_count: int = Field(..., description="成功数量")
     failed_count: int = Field(..., description="失败数量")
@@ -148,6 +162,7 @@ class FileBatchDeleteResponse(BaseModel):
 
 class FileSearchRequest(BaseModel):
     """文件搜索请求"""
+
     keyword: Optional[str] = Field(None, description="关键词")
     category: Optional[FileCategory] = Field(None, description="文件分类")
     file_type: Optional[FileType] = Field(None, description="文件类型")
@@ -164,6 +179,7 @@ class FileSearchRequest(BaseModel):
 
 class FileStorageConfig(BaseModel):
     """文件存储配置"""
+
     provider: StorageProvider = Field(..., description="存储提供商")
     bucket: Optional[str] = Field(None, description="存储桶名称")
     region: Optional[str] = Field(None, description="存储区域")
@@ -177,6 +193,7 @@ class FileStorageConfig(BaseModel):
 
 class FileCleanupConfig(BaseModel):
     """文件清理配置"""
+
     auto_cleanup: bool = Field(True, description="是否自动清理")
     cleanup_interval_hours: int = Field(24, description="清理间隔(小时)")
     temp_file_retention_hours: int = Field(24, description="临时文件保留时间(小时)")
@@ -186,12 +203,13 @@ class FileCleanupConfig(BaseModel):
 
 class FileSecurityConfig(BaseModel):
     """文件安全配置"""
+
     enable_virus_scan: bool = Field(False, description="启用病毒扫描")
     enable_content_filter: bool = Field(True, description="启用内容过滤")
     max_share_duration_hours: int = Field(168, description="最大分享时长(小时)")
     require_auth_for_download: bool = Field(True, description="下载需要认证")
     enable_watermark: bool = Field(False, description="启用水印")
     blocked_extensions: List[str] = Field(
-        default_factory=lambda: ['.exe', '.bat', '.cmd', '.scr', '.com'],
-        description="禁止的文件扩展名"
+        default_factory=lambda: [".exe", ".bat", ".cmd", ".scr", ".com"],
+        description="禁止的文件扩展名",
     )

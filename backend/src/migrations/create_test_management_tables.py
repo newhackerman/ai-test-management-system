@@ -3,13 +3,14 @@
 
 创建测试管理相关的数据库表结构
 """
+
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 
 async def create_test_management_tables(session: AsyncSession):
     """创建测试管理模块的数据库表"""
-    
+
     # 创建测试计划表
     await session.execute(text("""
         CREATE TABLE IF NOT EXISTS test_plans (
@@ -54,7 +55,7 @@ async def create_test_management_tables(session: AsyncSession):
             INDEX idx_test_plans_created_at (created_at)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='测试计划表';
     """))
-    
+
     # 创建测试阶段表
     await session.execute(text("""
         CREATE TABLE IF NOT EXISTS test_phases (
@@ -93,7 +94,7 @@ async def create_test_management_tables(session: AsyncSession):
             INDEX idx_test_phases_manager (phase_manager_id)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='测试阶段表';
     """))
-    
+
     # 创建测试资源表
     await session.execute(text("""
         CREATE TABLE IF NOT EXISTS test_resources (
@@ -123,7 +124,7 @@ async def create_test_management_tables(session: AsyncSession):
             INDEX idx_test_resources_role (role_in_test)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='测试资源表';
     """))
-    
+
     # 更新测试用例表结构
     await session.execute(text("""
         ALTER TABLE test_cases 
@@ -140,7 +141,7 @@ async def create_test_management_tables(session: AsyncSession):
         ADD INDEX IF NOT EXISTS idx_test_cases_module (module),
         ADD CONSTRAINT fk_test_cases_plan FOREIGN KEY (test_plan_id) REFERENCES test_plans(id) ON DELETE SET NULL;
     """))
-    
+
     # 创建自动化脚本表
     await session.execute(text("""
         CREATE TABLE IF NOT EXISTS automation_scripts (
@@ -178,7 +179,7 @@ async def create_test_management_tables(session: AsyncSession):
             INDEX idx_automation_scripts_active (is_active)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='自动化脚本表';
     """))
-    
+
     # 更新测试执行表结构
     await session.execute(text("""
         ALTER TABLE test_executions
@@ -198,7 +199,7 @@ async def create_test_management_tables(session: AsyncSession):
         ADD INDEX IF NOT EXISTS idx_test_executions_started (started_at),
         ADD CONSTRAINT fk_test_executions_plan FOREIGN KEY (test_plan_id) REFERENCES test_plans(id) ON DELETE SET NULL;
     """))
-    
+
     # 更新缺陷表结构
     await session.execute(text("""
         ALTER TABLE defects
@@ -216,7 +217,7 @@ async def create_test_management_tables(session: AsyncSession):
         ADD INDEX IF NOT EXISTS idx_defects_reported (reported_at),
         ADD CONSTRAINT fk_defects_execution FOREIGN KEY (test_execution_id) REFERENCES test_executions(id) ON DELETE SET NULL;
     """))
-    
+
     # 创建测试报告表
     await session.execute(text("""
         CREATE TABLE IF NOT EXISTS test_reports (
@@ -266,7 +267,7 @@ async def create_test_management_tables(session: AsyncSession):
             INDEX idx_test_reports_created (created_at)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='测试报告表';
     """))
-    
+
     # 创建报告模板表
     await session.execute(text("""
         CREATE TABLE IF NOT EXISTS report_templates (
@@ -290,7 +291,7 @@ async def create_test_management_tables(session: AsyncSession):
             INDEX idx_report_templates_default (is_default)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='报告模板表';
     """))
-    
+
     # 创建报告订阅表
     await session.execute(text("""
         CREATE TABLE IF NOT EXISTS report_subscriptions (
@@ -317,27 +318,27 @@ async def create_test_management_tables(session: AsyncSession):
             INDEX idx_report_subscriptions_active (is_active)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='报告订阅表';
     """))
-    
+
     await session.commit()
     print("测试管理模块数据库表创建完成")
 
 
 async def drop_test_management_tables(session: AsyncSession):
     """删除测试管理模块的数据库表"""
-    
+
     # 按依赖关系逆序删除表
     tables = [
-        'report_subscriptions',
-        'report_templates', 
-        'test_reports',
-        'automation_scripts',
-        'test_resources',
-        'test_phases',
-        'test_plans'
+        "report_subscriptions",
+        "report_templates",
+        "test_reports",
+        "automation_scripts",
+        "test_resources",
+        "test_phases",
+        "test_plans",
     ]
-    
+
     for table in tables:
         await session.execute(text(f"DROP TABLE IF EXISTS {table}"))
-    
+
     await session.commit()
     print("测试管理模块数据库表删除完成")

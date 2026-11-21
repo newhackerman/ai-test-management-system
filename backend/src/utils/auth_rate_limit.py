@@ -14,6 +14,7 @@
 保持一致：使用 get/setex 计数（而非 incr），以便同时兼容真实 Redis
 和 MockRedisClient（后者未实现 incr）。
 """
+
 import logging
 from typing import Optional
 
@@ -37,7 +38,6 @@ RATE_LIMIT_RULES = {
     "forgot_ip": (10, 3600, "请求过于频繁，请稍后再试"),
     # 全系统总量：1 小时 60 次 —— 最后防线，防止分布式大规模滥用
     "forgot_global": (60, 3600, "系统繁忙，请稍后再试"),
-
     # ── 重置密码 ──
     # 单 IP：1 小时 10 次
     "reset_ip": (10, 3600, "重置密码请求过于频繁，请稍后再试"),

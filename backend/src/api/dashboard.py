@@ -1,5 +1,5 @@
-from datetime import datetime
 import logging
+from datetime import datetime
 from typing import Any, Dict, List, Optional, Set
 
 from fastapi import APIRouter, Depends
@@ -29,31 +29,102 @@ MODULE_RULES: Dict[str, Dict[str, Set[str]]] = {
     },
     "projects": {
         "permissions": {"project:view", "project:read", "project:*", "project_manage"},
-        "roles": {"SUPER_ADMIN", "SYSTEM_ADMIN", "PROJECT_MANAGER", "DEVELOPER", "TESTER", "DEVOPS", "READONLY_USER", "admin"},
+        "roles": {
+            "SUPER_ADMIN",
+            "SYSTEM_ADMIN",
+            "PROJECT_MANAGER",
+            "DEVELOPER",
+            "TESTER",
+            "DEVOPS",
+            "READONLY_USER",
+            "admin",
+        },
     },
     "requirements": {
         "permissions": {"requirement:view", "requirement:read", "requirement:*"},
-        "roles": {"SUPER_ADMIN", "SYSTEM_ADMIN", "PROJECT_MANAGER", "DEVELOPER", "TESTER", "READONLY_USER", "admin"},
+        "roles": {
+            "SUPER_ADMIN",
+            "SYSTEM_ADMIN",
+            "PROJECT_MANAGER",
+            "DEVELOPER",
+            "TESTER",
+            "READONLY_USER",
+            "admin",
+        },
     },
     "tasks": {
         "permissions": {"task:view", "task:read", "task:*"},
-        "roles": {"SUPER_ADMIN", "SYSTEM_ADMIN", "PROJECT_MANAGER", "DEVELOPER", "TESTER", "DEVOPS", "READONLY_USER", "admin"},
+        "roles": {
+            "SUPER_ADMIN",
+            "SYSTEM_ADMIN",
+            "PROJECT_MANAGER",
+            "DEVELOPER",
+            "TESTER",
+            "DEVOPS",
+            "READONLY_USER",
+            "admin",
+        },
     },
     "testing": {
-        "permissions": {"test:view", "test:*", "test_plan:view", "test_case:view", "test_execution:view", "test_case_create"},
-        "roles": {"SUPER_ADMIN", "SYSTEM_ADMIN", "PROJECT_MANAGER", "TESTER", "DEVELOPER", "READONLY_USER", "admin"},
+        "permissions": {
+            "test:view",
+            "test:*",
+            "test_plan:view",
+            "test_case:view",
+            "test_execution:view",
+            "test_case_create",
+        },
+        "roles": {
+            "SUPER_ADMIN",
+            "SYSTEM_ADMIN",
+            "PROJECT_MANAGER",
+            "TESTER",
+            "DEVELOPER",
+            "READONLY_USER",
+            "admin",
+        },
     },
     "defects": {
         "permissions": {"defect:view", "defect:read", "defect:*"},
-        "roles": {"SUPER_ADMIN", "SYSTEM_ADMIN", "PROJECT_MANAGER", "TESTER", "DEVELOPER", "READONLY_USER", "admin"},
+        "roles": {
+            "SUPER_ADMIN",
+            "SYSTEM_ADMIN",
+            "PROJECT_MANAGER",
+            "TESTER",
+            "DEVELOPER",
+            "READONLY_USER",
+            "admin",
+        },
     },
     "meetings": {
         "permissions": {"meeting:view", "meeting:read", "meeting:*"},
-        "roles": {"SUPER_ADMIN", "SYSTEM_ADMIN", "PROJECT_MANAGER", "DEVELOPER", "TESTER", "DEVOPS", "READONLY_USER", "admin"},
+        "roles": {
+            "SUPER_ADMIN",
+            "SYSTEM_ADMIN",
+            "PROJECT_MANAGER",
+            "DEVELOPER",
+            "TESTER",
+            "DEVOPS",
+            "READONLY_USER",
+            "admin",
+        },
     },
     "reports": {
-        "permissions": {"report:view", "report:read", "report:*", "test_report:view", "test_report:*"},
-        "roles": {"SUPER_ADMIN", "SYSTEM_ADMIN", "PROJECT_MANAGER", "TESTER", "READONLY_USER", "admin"},
+        "permissions": {
+            "report:view",
+            "report:read",
+            "report:*",
+            "test_report:view",
+            "test_report:*",
+        },
+        "roles": {
+            "SUPER_ADMIN",
+            "SYSTEM_ADMIN",
+            "PROJECT_MANAGER",
+            "TESTER",
+            "READONLY_USER",
+            "admin",
+        },
     },
 }
 
@@ -75,19 +146,19 @@ class DashboardQuery:
     async def table_exists(self, table_name: str) -> bool:
         if table_name not in self._table_cache:
             result = await self.session.execute(
-                text(
-                    """
+                text("""
                     SELECT COUNT(*) AS count
                     FROM information_schema.tables
                     WHERE table_schema = DATABASE() AND table_name = :table_name
-                    """
-                ),
+                    """),
                 {"table_name": table_name},
             )
             self._table_cache[table_name] = bool(result.scalar() or 0)
         return self._table_cache[table_name]
 
-    async def count(self, table_name: str, where: str = "", params: Optional[Dict[str, Any]] = None) -> int:
+    async def count(
+        self, table_name: str, where: str = "", params: Optional[Dict[str, Any]] = None
+    ) -> int:
         if not await self.table_exists(table_name):
             self._record_source(table_name, False, "表不存在")
             return 0
@@ -102,7 +173,13 @@ class DashboardQuery:
             self._record_source(table_name, True, str(exc))
             return 0
 
-    async def scalar(self, table_name: str, expression: str, where: str = "", params: Optional[Dict[str, Any]] = None) -> float:
+    async def scalar(
+        self,
+        table_name: str,
+        expression: str,
+        where: str = "",
+        params: Optional[Dict[str, Any]] = None,
+    ) -> float:
         if not await self.table_exists(table_name):
             self._record_source(table_name, False, "表不存在")
             return 0
@@ -138,9 +215,17 @@ class DashboardQuery:
         try:
             result = await self.session.execute(text(sql), params or {})
             self._record_source(table_name, True)
-            return [{"name": row.name or "UNKNOWN", "count": int(row.count or 0)} for row in result]
+            return [
+                {"name": row.name or "UNKNOWN", "count": int(row.count or 0)}
+                for row in result
+            ]
         except Exception as exc:
-            logger.warning("Dashboard group count failed for %s.%s: %s", table_name, column_name, exc)
+            logger.warning(
+                "Dashboard group count failed for %s.%s: %s",
+                table_name,
+                column_name,
+                exc,
+            )
             self._record_source(table_name, True, str(exc))
             return []
 
@@ -169,8 +254,12 @@ class DashboardQuery:
             self._record_source(table_name, True, str(exc))
             return []
 
-    def _record_source(self, table_name: str, available: bool, note: Optional[str] = None) -> None:
-        existing = next((item for item in self.sources if item["table"] == table_name), None)
+    def _record_source(
+        self, table_name: str, available: bool, note: Optional[str] = None
+    ) -> None:
+        existing = next(
+            (item for item in self.sources if item["table"] == table_name), None
+        )
         if existing:
             if note and not existing.get("note"):
                 existing["note"] = note
@@ -210,16 +299,14 @@ async def _get_user_access(session: AsyncSession, user: User) -> Dict[str, Any]:
         }
 
     rows = await session.execute(
-        text(
-            """
+        text("""
             SELECT DISTINCT r.code AS role_code, p.code AS permission_code
             FROM user_roles ur
             JOIN roles r ON r.id = ur.role_id
             LEFT JOIN role_permissions rp ON rp.role_id = r.id
             LEFT JOIN permissions p ON p.id = rp.permission_id AND p.is_active = 1
             WHERE ur.user_id = :user_id AND r.is_active = 1
-            """
-        ),
+            """),
         {"user_id": user.id},
     )
 
@@ -267,7 +354,9 @@ def _empty_counts(**values: Any) -> Dict[str, Any]:
     return values
 
 
-async def _recent_activity(query: DashboardQuery, modules: Dict[str, bool]) -> List[Dict[str, Any]]:
+async def _recent_activity(
+    query: DashboardQuery, modules: Dict[str, bool]
+) -> List[Dict[str, Any]]:
     recent_items: List[Dict[str, Any]] = []
 
     if modules.get("projects"):
@@ -378,120 +467,260 @@ async def get_dashboard_summary(
     modules = access["modules"]
 
     users_total = await query.count("users") if modules.get("users") else 0
-    users_active = await query.count("users", "WHERE is_active = 1 AND status = 'ACTIVE'") if modules.get("users") else 0
-    users_locked = await query.count("users", "WHERE locked_until IS NOT NULL AND locked_until > NOW()") if modules.get("users") else 0
-    users_today_login = await query.count("users", "WHERE DATE(last_login_at) = CURRENT_DATE()") if modules.get("users") else 0
+    users_active = (
+        await query.count("users", "WHERE is_active = 1 AND status = 'ACTIVE'")
+        if modules.get("users")
+        else 0
+    )
+    users_locked = (
+        await query.count(
+            "users", "WHERE locked_until IS NOT NULL AND locked_until > NOW()"
+        )
+        if modules.get("users")
+        else 0
+    )
+    users_today_login = (
+        await query.count("users", "WHERE DATE(last_login_at) = CURRENT_DATE()")
+        if modules.get("users")
+        else 0
+    )
     roles_total = await query.count("roles") if modules.get("roles") else 0
 
-    projects_total = await query.count("projects", "WHERE deleted_at IS NULL") if modules.get("projects") else 0
-    projects_active = await query.count(
-        "projects",
-        "WHERE deleted_at IS NULL AND status IN ('PLANNING', 'IN_PROGRESS', 'ON_HOLD')",
-    ) if modules.get("projects") else 0
-    projects_completed = await query.count("projects", "WHERE deleted_at IS NULL AND status = 'COMPLETED'") if modules.get("projects") else 0
-    projects_overdue = await query.count(
-        "projects",
-        """
+    projects_total = (
+        await query.count("projects", "WHERE deleted_at IS NULL")
+        if modules.get("projects")
+        else 0
+    )
+    projects_active = (
+        await query.count(
+            "projects",
+            "WHERE deleted_at IS NULL AND status IN ('PLANNING', 'IN_PROGRESS', 'ON_HOLD')",
+        )
+        if modules.get("projects")
+        else 0
+    )
+    projects_completed = (
+        await query.count(
+            "projects", "WHERE deleted_at IS NULL AND status = 'COMPLETED'"
+        )
+        if modules.get("projects")
+        else 0
+    )
+    projects_overdue = (
+        await query.count(
+            "projects",
+            """
         WHERE deleted_at IS NULL
         AND planned_end_date IS NOT NULL
         AND planned_end_date < CURRENT_DATE()
         AND status NOT IN ('COMPLETED', 'CANCELLED', 'ARCHIVED')
         """,
-    ) if modules.get("projects") else 0
-    projects_high_risk = await query.count(
-        "projects",
-        "WHERE deleted_at IS NULL AND risk_level IN ('HIGH', 'CRITICAL')",
-    ) if modules.get("projects") else 0
-    project_progress = await query.scalar(
-        "projects",
-        "AVG(progress_percentage)",
-        "WHERE deleted_at IS NULL",
-    ) if modules.get("projects") else 0
+        )
+        if modules.get("projects")
+        else 0
+    )
+    projects_high_risk = (
+        await query.count(
+            "projects",
+            "WHERE deleted_at IS NULL AND risk_level IN ('HIGH', 'CRITICAL')",
+        )
+        if modules.get("projects")
+        else 0
+    )
+    project_progress = (
+        await query.scalar(
+            "projects",
+            "AVG(progress_percentage)",
+            "WHERE deleted_at IS NULL",
+        )
+        if modules.get("projects")
+        else 0
+    )
 
-    requirements_total = await query.count("requirements") if modules.get("requirements") else 0
-    requirements_active = await query.count(
-        "requirements",
-        "WHERE status IN ('PENDING_REVIEW', 'REVIEWING', 'NEEDS_REVISION', 'APPROVED', 'IN_DEVELOPMENT', 'TESTING', 'TEST_FAILED')",
-    ) if modules.get("requirements") else 0
-    requirements_completed = await query.count(
-        "requirements",
-        "WHERE status IN ('COMPLETED', 'DEPLOYED', 'CLOSED')",
-    ) if modules.get("requirements") else 0
-    requirements_overdue = await query.count(
-        "requirements",
-        """
+    requirements_total = (
+        await query.count("requirements") if modules.get("requirements") else 0
+    )
+    requirements_active = (
+        await query.count(
+            "requirements",
+            "WHERE status IN ('PENDING_REVIEW', 'REVIEWING', 'NEEDS_REVISION', 'APPROVED', 'IN_DEVELOPMENT', 'TESTING', 'TEST_FAILED')",
+        )
+        if modules.get("requirements")
+        else 0
+    )
+    requirements_completed = (
+        await query.count(
+            "requirements",
+            "WHERE status IN ('COMPLETED', 'DEPLOYED', 'CLOSED')",
+        )
+        if modules.get("requirements")
+        else 0
+    )
+    requirements_overdue = (
+        await query.count(
+            "requirements",
+            """
         WHERE planned_end_date IS NOT NULL
         AND planned_end_date < CURRENT_DATE()
         AND status NOT IN ('COMPLETED', 'DEPLOYED', 'CLOSED', 'CANCELLED')
         """,
-    ) if modules.get("requirements") else 0
+        )
+        if modules.get("requirements")
+        else 0
+    )
 
     tasks_total = await query.count("project_tasks") if modules.get("tasks") else 0
-    tasks_open = await query.count(
-        "project_tasks",
-        "WHERE status IN ('TODO', 'ASSIGNED', 'IN_PROGRESS', 'ON_HOLD', 'BLOCKED', 'PENDING_REVIEW')",
-    ) if modules.get("tasks") else 0
-    tasks_completed = await query.count("project_tasks", "WHERE status = 'COMPLETED'") if modules.get("tasks") else 0
-    tasks_overdue = await query.count(
-        "project_tasks",
-        """
+    tasks_open = (
+        await query.count(
+            "project_tasks",
+            "WHERE status IN ('TODO', 'ASSIGNED', 'IN_PROGRESS', 'ON_HOLD', 'BLOCKED', 'PENDING_REVIEW')",
+        )
+        if modules.get("tasks")
+        else 0
+    )
+    tasks_completed = (
+        await query.count("project_tasks", "WHERE status = 'COMPLETED'")
+        if modules.get("tasks")
+        else 0
+    )
+    tasks_overdue = (
+        await query.count(
+            "project_tasks",
+            """
         WHERE planned_end_date IS NOT NULL
         AND planned_end_date < CURRENT_DATE()
         AND status NOT IN ('COMPLETED', 'CANCELLED')
         """,
-    ) if modules.get("tasks") else 0
+        )
+        if modules.get("tasks")
+        else 0
+    )
 
     test_plans_total = await query.count("test_plans") if modules.get("testing") else 0
-    test_plans_active = await query.count("test_plans", "WHERE status IN ('APPROVED', 'IN_PROGRESS', 'PAUSED')") if modules.get("testing") else 0
+    test_plans_active = (
+        await query.count(
+            "test_plans", "WHERE status IN ('APPROVED', 'IN_PROGRESS', 'PAUSED')"
+        )
+        if modules.get("testing")
+        else 0
+    )
     test_cases_total = await query.count("test_cases") if modules.get("testing") else 0
-    test_cases_active = await query.count("test_cases", "WHERE status IN ('APPROVED', 'ACTIVE')") if modules.get("testing") else 0
-    executions_total = await query.count("test_executions") if modules.get("testing") else 0
-    executions_today = await query.count("test_executions", "WHERE DATE(created_at) = CURRENT_DATE()") if modules.get("testing") else 0
-    executions_passed = await query.count("test_executions", "WHERE execution_status = 'PASSED'") if modules.get("testing") else 0
-    executions_terminal = await query.count(
-        "test_executions",
-        "WHERE execution_status IN ('PASSED', 'FAILED', 'BLOCKED', 'SKIPPED')",
-    ) if modules.get("testing") else 0
+    test_cases_active = (
+        await query.count("test_cases", "WHERE status IN ('APPROVED', 'ACTIVE')")
+        if modules.get("testing")
+        else 0
+    )
+    executions_total = (
+        await query.count("test_executions") if modules.get("testing") else 0
+    )
+    executions_today = (
+        await query.count("test_executions", "WHERE DATE(created_at) = CURRENT_DATE()")
+        if modules.get("testing")
+        else 0
+    )
+    executions_passed = (
+        await query.count("test_executions", "WHERE execution_status = 'PASSED'")
+        if modules.get("testing")
+        else 0
+    )
+    executions_terminal = (
+        await query.count(
+            "test_executions",
+            "WHERE execution_status IN ('PASSED', 'FAILED', 'BLOCKED', 'SKIPPED')",
+        )
+        if modules.get("testing")
+        else 0
+    )
 
     defects_total = await query.count("defects") if modules.get("defects") else 0
-    defects_open = await query.count(
-        "defects",
-        "WHERE status IN ('NEW', 'ASSIGNED', 'IN_PROGRESS', 'REOPENED')",
-    ) if modules.get("defects") else 0
-    defects_high_priority = await query.count(
-        "defects",
-        """
+    defects_open = (
+        await query.count(
+            "defects",
+            "WHERE status IN ('NEW', 'ASSIGNED', 'IN_PROGRESS', 'REOPENED')",
+        )
+        if modules.get("defects")
+        else 0
+    )
+    defects_high_priority = (
+        await query.count(
+            "defects",
+            """
         WHERE severity IN ('CRITICAL', 'HIGH')
         AND status IN ('NEW', 'ASSIGNED', 'IN_PROGRESS', 'REOPENED')
         """,
-    ) if modules.get("defects") else 0
-    defects_resolved = await query.count("defects", "WHERE status IN ('RESOLVED', 'VERIFIED', 'CLOSED')") if modules.get("defects") else 0
+        )
+        if modules.get("defects")
+        else 0
+    )
+    defects_resolved = (
+        await query.count(
+            "defects", "WHERE status IN ('RESOLVED', 'VERIFIED', 'CLOSED')"
+        )
+        if modules.get("defects")
+        else 0
+    )
 
-    meetings_total = await query.count("meetings", "WHERE deleted_at IS NULL") if modules.get("meetings") else 0
-    meetings_today = await query.count(
-        "meetings",
-        "WHERE deleted_at IS NULL AND DATE(scheduled_start_time) = CURRENT_DATE()",
-    ) if modules.get("meetings") else 0
-    meetings_upcoming = await query.count(
-        "meetings",
-        """
+    meetings_total = (
+        await query.count("meetings", "WHERE deleted_at IS NULL")
+        if modules.get("meetings")
+        else 0
+    )
+    meetings_today = (
+        await query.count(
+            "meetings",
+            "WHERE deleted_at IS NULL AND DATE(scheduled_start_time) = CURRENT_DATE()",
+        )
+        if modules.get("meetings")
+        else 0
+    )
+    meetings_upcoming = (
+        await query.count(
+            "meetings",
+            """
         WHERE deleted_at IS NULL
         AND scheduled_start_time >= NOW()
         AND status IN ('SCHEDULED', 'POSTPONED')
         """,
-    ) if modules.get("meetings") else 0
-    meetings_running = await query.count("meetings", "WHERE deleted_at IS NULL AND status = 'IN_PROGRESS'") if modules.get("meetings") else 0
+        )
+        if modules.get("meetings")
+        else 0
+    )
+    meetings_running = (
+        await query.count(
+            "meetings", "WHERE deleted_at IS NULL AND status = 'IN_PROGRESS'"
+        )
+        if modules.get("meetings")
+        else 0
+    )
 
-    reports_total = await query.count("test_report_records") if modules.get("reports") else 0
-    reports_completed = await query.count("test_report_records", "WHERE status IN ('completed', 'COMPLETED', 'success', 'SUCCESS')") if modules.get("reports") else 0
-    reports_failed = await query.count("test_report_records", "WHERE status IN ('failed', 'FAILED', 'error', 'ERROR')") if modules.get("reports") else 0
+    reports_total = (
+        await query.count("test_report_records") if modules.get("reports") else 0
+    )
+    reports_completed = (
+        await query.count(
+            "test_report_records",
+            "WHERE status IN ('completed', 'COMPLETED', 'success', 'SUCCESS')",
+        )
+        if modules.get("reports")
+        else 0
+    )
+    reports_failed = (
+        await query.count(
+            "test_report_records",
+            "WHERE status IN ('failed', 'FAILED', 'error', 'ERROR')",
+        )
+        if modules.get("reports")
+        else 0
+    )
 
     summary = {
         "generated_at": datetime.now().isoformat(),
         "user": {
             "id": current_user.id,
             "username": current_user.username,
-            "display_name": getattr(current_user, "real_name", None) or current_user.nickname or current_user.username,
+            "display_name": getattr(current_user, "real_name", None)
+            or current_user.nickname
+            or current_user.username,
         },
         "access": access,
         "users": {
@@ -508,7 +737,13 @@ async def get_dashboard_summary(
             "overdue": projects_overdue,
             "high_risk": projects_high_risk,
             "avg_progress": round(project_progress, 2),
-            "status_distribution": await query.group_count("projects", "status", "WHERE deleted_at IS NULL") if modules.get("projects") else _empty_distribution(),
+            "status_distribution": (
+                await query.group_count(
+                    "projects", "status", "WHERE deleted_at IS NULL"
+                )
+                if modules.get("projects")
+                else _empty_distribution()
+            ),
         },
         "requirements": {
             "total": requirements_total,
@@ -516,7 +751,11 @@ async def get_dashboard_summary(
             "completed": requirements_completed,
             "overdue": requirements_overdue,
             "completion_rate": _rate(requirements_completed, requirements_total),
-            "status_distribution": await query.group_count("requirements", "status") if modules.get("requirements") else _empty_distribution(),
+            "status_distribution": (
+                await query.group_count("requirements", "status")
+                if modules.get("requirements")
+                else _empty_distribution()
+            ),
         },
         "tasks": {
             "total": tasks_total,
@@ -524,7 +763,11 @@ async def get_dashboard_summary(
             "completed": tasks_completed,
             "overdue": tasks_overdue,
             "completion_rate": _rate(tasks_completed, tasks_total),
-            "status_distribution": await query.group_count("project_tasks", "status") if modules.get("tasks") else _empty_distribution(),
+            "status_distribution": (
+                await query.group_count("project_tasks", "status")
+                if modules.get("tasks")
+                else _empty_distribution()
+            ),
         },
         "testing": {
             "plans_total": test_plans_total,
@@ -535,8 +778,16 @@ async def get_dashboard_summary(
             "executions_today": executions_today,
             "passed_executions": executions_passed,
             "pass_rate": _rate(executions_passed, executions_terminal),
-            "case_status_distribution": await query.group_count("test_cases", "status") if modules.get("testing") else _empty_distribution(),
-            "execution_status_distribution": await query.group_count("test_executions", "execution_status") if modules.get("testing") else _empty_distribution(),
+            "case_status_distribution": (
+                await query.group_count("test_cases", "status")
+                if modules.get("testing")
+                else _empty_distribution()
+            ),
+            "execution_status_distribution": (
+                await query.group_count("test_executions", "execution_status")
+                if modules.get("testing")
+                else _empty_distribution()
+            ),
         },
         "defects": {
             "total": defects_total,
@@ -544,14 +795,24 @@ async def get_dashboard_summary(
             "high_priority_open": defects_high_priority,
             "resolved": defects_resolved,
             "resolution_rate": _rate(defects_resolved, defects_total),
-            "status_distribution": await query.group_count("defects", "status") if modules.get("defects") else _empty_distribution(),
+            "status_distribution": (
+                await query.group_count("defects", "status")
+                if modules.get("defects")
+                else _empty_distribution()
+            ),
         },
         "meetings": {
             "total": meetings_total,
             "today": meetings_today,
             "upcoming": meetings_upcoming,
             "running": meetings_running,
-            "status_distribution": await query.group_count("meetings", "status", "WHERE deleted_at IS NULL") if modules.get("meetings") else _empty_distribution(),
+            "status_distribution": (
+                await query.group_count(
+                    "meetings", "status", "WHERE deleted_at IS NULL"
+                )
+                if modules.get("meetings")
+                else _empty_distribution()
+            ),
         },
         "reports": {
             "total": reports_total,

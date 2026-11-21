@@ -8,22 +8,28 @@ AI助手操作日志API接口
 4. 实时监控和告警
 5. 日志管理和维护
 """
-from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
-from fastapi.responses import StreamingResponse
-from typing import List, Optional, Dict, Any
-from datetime import datetime, timedelta
+
 import io
 import json
+from datetime import datetime, timedelta
+from typing import Any, Dict, List, Optional
 
-from ...core.security import get_current_user
-from ...core.database import get_async_session
-from ...models.user import User
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
-from ...models.ai_operation_log import AIOperationType, AIOperationResult, AIOperationPriority
+
+from ...core.database import get_async_session
+from ...core.security import get_current_user
+from ...decorators.ai_operation_logger import ai_operation_log
+from ...models.ai_operation_log import (
+    AIOperationPriority,
+    AIOperationResult,
+    AIOperationType,
+)
+from ...models.user import User
+from ...schemas.base import ApiResponse, PaginatedResponse
 from ...services.ai_operation_log_service import get_ai_operation_log_service
 from ...services.ai_permission_service import AIPermissionService
-from ...schemas.base import ApiResponse, PaginatedResponse
-from ...decorators.ai_operation_logger import ai_operation_log
 
 router = APIRouter(prefix="/ai/operation-logs", tags=["AI操作日志"])
 
@@ -34,7 +40,7 @@ router = APIRouter(prefix="/ai/operation-logs", tags=["AI操作日志"])
     operation_name="query_operation_logs",
     category="log_management",
     subcategory="query",
-    extract_user_id="current_user.id"
+    extract_user_id="current_user.id",
 )
 async def get_operation_logs(
     user_id: Optional[int] = Query(None, description="用户ID"),
@@ -52,11 +58,11 @@ async def get_operation_logs(
     order_by: str = Query("created_at", description="排序字段"),
     order_desc: bool = Query(True, description="是否降序"),
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_async_session)
+    db: AsyncSession = Depends(get_async_session),
 ):
     """
     查询AI操作日志
-    
+
     支持多维度过滤和搜索：
     - 按用户、操作类型、结果等过滤
     - 按时间范围查询
@@ -66,43 +72,47 @@ async def get_operation_logs(
     try:
         # 权限检查
         permission_service = AIPermissionService(db)
-        
+
         # 检查是否有查看日志的权限
-        has_permission, message = await permission_service.check_ai_operation_permission(
-            current_user.id, "log_view"
+        has_permission, message = (
+            await permission_service.check_ai_operation_permission(
+                current_user.id, "log_view"
+            )
         )
-        
+
         if not has_permission:
             # 如果没有查看所有日志的权限，只能查看自己的日志
             if user_id and user_id != current_user.id:
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
-                    detail="无权限查看其他用户的操作日志"
+                    detail="无权限查看其他用户的操作日志",
                 )
             user_id = current_user.id
-        
+
         # 解析日期参数
         start_datetime = None
         end_datetime = None
-        
+
         if start_date:
             try:
                 start_datetime = datetime.strptime(start_date, "%Y-%m-%d")
             except ValueError:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="开始日期格式错误，请使用 YYYY-MM-DD 格式"
+                    detail="开始日期格式错误，请使用 YYYY-MM-DD 格式",
                 )
-        
+
         if end_date:
             try:
-                end_datetime = datetime.strptime(end_date, "%Y-%m-%d") + timedelta(days=1)
+                end_datetime = datetime.strptime(end_date, "%Y-%m-%d") + timedelta(
+                    days=1
+                )
             except ValueError:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="结束日期格式错误，请使用 YYYY-MM-DD 格式"
+                    detail="结束日期格式错误，请使用 YYYY-MM-DD 格式",
                 )
-        
+
         # 解析枚举参数
         operation_type_enum = None
         if operation_type:
@@ -111,9 +121,9 @@ async def get_operation_logs(
             except ValueError:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"无效的操作类型: {operation_type}"
+                    detail=f"无效的操作类型: {operation_type}",
                 )
-        
+
         result_enum = None
         if result:
             try:
@@ -121,12 +131,12 @@ async def get_operation_logs(
             except ValueError:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"无效的操作结果: {result}"
+                    detail=f"无效的操作结果: {result}",
                 )
-        
+
         # 获取日志服务
         log_service = await get_ai_operation_log_service()
-        
+
         # 查询日志
         logs, total = await log_service.get_operation_logs(
             user_id=user_id,
@@ -137,22 +147,24 @@ async def get_operation_logs(
             page=page,
             page_size=page_size,
             order_by=order_by,
-            order_desc=order_desc
+            order_desc=order_desc,
         )
-        
+
         # 如果有搜索关键词，进行客户端过滤
         if search_keyword:
             filtered_logs = []
             keyword_lower = search_keyword.lower()
             for log in logs:
-                if (keyword_lower in log.get('operation_name', '').lower() or
-                    keyword_lower in log.get('operation_description', '').lower() or
-                    keyword_lower in log.get('result_message', '').lower() or
-                    keyword_lower in log.get('error_details', '').lower()):
+                if (
+                    keyword_lower in log.get("operation_name", "").lower()
+                    or keyword_lower in log.get("operation_description", "").lower()
+                    or keyword_lower in log.get("result_message", "").lower()
+                    or keyword_lower in log.get("error_details", "").lower()
+                ):
                     filtered_logs.append(log)
             logs = filtered_logs
             total = len(logs)
-        
+
         # 构建分页响应
         paginated_response = PaginatedResponse(
             success=True,
@@ -160,21 +172,19 @@ async def get_operation_logs(
             data=logs,
             total=total,
             page=page,
-            page_size=page_size
+            page_size=page_size,
         )
 
         return ApiResponse(
-            success=True,
-            data=paginated_response,
-            message="查询操作日志成功"
+            success=True, data=paginated_response, message="查询操作日志成功"
         )
-        
+
     except HTTPException:
         raise
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"查询操作日志失败: {str(e)}"
+            detail=f"查询操作日志失败: {str(e)}",
         )
 
 
@@ -184,7 +194,7 @@ async def get_operation_logs(
     operation_name="get_operation_statistics",
     category="log_management",
     subcategory="statistics",
-    extract_user_id="current_user.id"
+    extract_user_id="current_user.id",
 )
 async def get_operation_statistics(
     user_id: Optional[int] = Query(None, description="用户ID"),
@@ -192,11 +202,11 @@ async def get_operation_statistics(
     end_date: Optional[str] = Query(None, description="结束日期 (YYYY-MM-DD)"),
     group_by: str = Query("operation_type", description="分组字段"),
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_async_session)
+    db: AsyncSession = Depends(get_async_session),
 ):
     """
     获取AI操作统计信息
-    
+
     支持多维度统计分析：
     - 按操作类型、结果、AI提供商等分组
     - 按时间范围统计
@@ -206,70 +216,66 @@ async def get_operation_statistics(
     try:
         # 权限检查
         permission_service = AIPermissionService(db)
-        
+
         has_permission, _ = await permission_service.check_ai_operation_permission(
             current_user.id, "log_view"
         )
-        
+
         if not has_permission:
             if user_id and user_id != current_user.id:
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
-                    detail="无权限查看其他用户的统计信息"
+                    detail="无权限查看其他用户的统计信息",
                 )
             user_id = current_user.id
-        
+
         # 解析日期参数
         start_datetime = None
         end_datetime = None
-        
+
         if start_date:
             try:
                 start_datetime = datetime.strptime(start_date, "%Y-%m-%d")
             except ValueError:
                 raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="开始日期格式错误"
+                    status_code=status.HTTP_400_BAD_REQUEST, detail="开始日期格式错误"
                 )
-        
+
         if end_date:
             try:
-                end_datetime = datetime.strptime(end_date, "%Y-%m-%d") + timedelta(days=1)
+                end_datetime = datetime.strptime(end_date, "%Y-%m-%d") + timedelta(
+                    days=1
+                )
             except ValueError:
                 raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="结束日期格式错误"
+                    status_code=status.HTTP_400_BAD_REQUEST, detail="结束日期格式错误"
                 )
-        
+
         # 验证分组字段
         valid_group_by = ["operation_type", "result", "ai_provider", "date", "overall"]
         if group_by not in valid_group_by:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"无效的分组字段，支持的字段: {', '.join(valid_group_by)}"
+                detail=f"无效的分组字段，支持的字段: {', '.join(valid_group_by)}",
             )
-        
+
         # 获取统计信息
         log_service = await get_ai_operation_log_service()
         statistics = await log_service.get_operation_statistics(
             user_id=user_id,
             start_date=start_datetime,
             end_date=end_datetime,
-            group_by=group_by
+            group_by=group_by,
         )
-        
-        return ApiResponse(
-            success=True,
-            data=statistics,
-            message="获取统计信息成功"
-        )
-        
+
+        return ApiResponse(success=True, data=statistics, message="获取统计信息成功")
+
     except HTTPException:
         raise
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"获取统计信息失败: {str(e)}"
+            detail=f"获取统计信息失败: {str(e)}",
         )
 
 
@@ -279,7 +285,7 @@ async def get_operation_statistics(
     operation_name="export_operation_logs",
     category="log_management",
     subcategory="export",
-    extract_user_id="current_user.id"
+    extract_user_id="current_user.id",
 )
 async def export_operation_logs(
     format_type: str = Query("json", description="导出格式 (json, csv)"),
@@ -288,11 +294,11 @@ async def export_operation_logs(
     end_date: Optional[str] = Query(None, description="结束日期 (YYYY-MM-DD)"),
     operation_type: Optional[str] = Query(None, description="操作类型"),
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_async_session)
+    db: AsyncSession = Depends(get_async_session),
 ):
     """
     导出AI操作日志
-    
+
     支持多种导出格式：
     - JSON格式：完整的结构化数据
     - CSV格式：表格数据，便于Excel处理
@@ -300,90 +306,89 @@ async def export_operation_logs(
     try:
         # 权限检查
         permission_service = AIPermissionService(db)
-        
+
         has_permission, _ = await permission_service.check_ai_operation_permission(
             current_user.id, "log_export"
         )
-        
+
         if not has_permission:
             raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="无权限导出操作日志"
+                status_code=status.HTTP_403_FORBIDDEN, detail="无权限导出操作日志"
             )
-        
+
         # 验证导出格式
         if format_type not in ["json", "csv"]:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="不支持的导出格式，支持: json, csv"
+                detail="不支持的导出格式，支持: json, csv",
             )
-        
+
         # 解析日期参数
         start_datetime = None
         end_datetime = None
-        
+
         if start_date:
             try:
                 start_datetime = datetime.strptime(start_date, "%Y-%m-%d")
             except ValueError:
                 raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="开始日期格式错误"
+                    status_code=status.HTTP_400_BAD_REQUEST, detail="开始日期格式错误"
                 )
-        
+
         if end_date:
             try:
-                end_datetime = datetime.strptime(end_date, "%Y-%m-%d") + timedelta(days=1)
+                end_datetime = datetime.strptime(end_date, "%Y-%m-%d") + timedelta(
+                    days=1
+                )
             except ValueError:
                 raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="结束日期格式错误"
+                    status_code=status.HTTP_400_BAD_REQUEST, detail="结束日期格式错误"
                 )
-        
+
         # 导出日志
         log_service = await get_ai_operation_log_service()
         export_data = await log_service.export_logs(
             user_id=user_id,
             start_date=start_datetime,
             end_date=end_datetime,
-            format_type=format_type
+            format_type=format_type,
         )
-        
+
         if not export_data:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="没有找到符合条件的日志数据"
+                detail="没有找到符合条件的日志数据",
             )
-        
+
         # 设置响应头
         filename = f"ai_operation_logs_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-        
+
         if format_type == "json":
             media_type = "application/json"
             filename += ".json"
         else:  # csv
             media_type = "text/csv"
             filename += ".csv"
-        
+
         # 创建流式响应
         def generate():
-            yield export_data.encode('utf-8')
-        
+            yield export_data.encode("utf-8")
+
         return StreamingResponse(
             generate(),
             media_type=media_type,
             headers={
                 "Content-Disposition": f"attachment; filename={filename}",
-                "Content-Type": f"{media_type}; charset=utf-8"
-            }
+                "Content-Type": f"{media_type}; charset=utf-8",
+            },
         )
-        
+
     except HTTPException:
         raise
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"导出日志失败: {str(e)}"
+            detail=f"导出日志失败: {str(e)}",
         )
 
 
@@ -391,29 +396,29 @@ async def export_operation_logs(
 async def get_operation_types():
     """
     获取所有操作类型
-    
+
     返回系统支持的所有AI操作类型，用于前端下拉选择等场景
     """
     try:
         operation_types = []
-        
+
         for op_type in AIOperationType:
-            operation_types.append({
-                "value": op_type.value,
-                "label": _get_operation_type_label(op_type),
-                "category": _get_operation_type_category(op_type)
-            })
-        
+            operation_types.append(
+                {
+                    "value": op_type.value,
+                    "label": _get_operation_type_label(op_type),
+                    "category": _get_operation_type_category(op_type),
+                }
+            )
+
         return ApiResponse(
-            success=True,
-            data=operation_types,
-            message="获取操作类型成功"
+            success=True, data=operation_types, message="获取操作类型成功"
         )
-        
+
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"获取操作类型失败: {str(e)}"
+            detail=f"获取操作类型失败: {str(e)}",
         )
 
 
@@ -424,48 +429,47 @@ async def get_operation_types():
     category="log_management",
     subcategory="cleanup",
     priority=AIOperationPriority.HIGH,
-    extract_user_id="current_user.id"
+    extract_user_id="current_user.id",
 )
 async def cleanup_old_logs(
     days_to_keep: int = Query(90, ge=7, le=365, description="保留天数"),
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_async_session)
+    db: AsyncSession = Depends(get_async_session),
 ):
     """
     清理旧的操作日志
-    
+
     删除指定天数之前的非敏感日志记录，释放存储空间
     """
     try:
         # 权限检查 - 只有管理员可以清理日志
         permission_service = AIPermissionService(db)
-        
+
         has_permission, _ = await permission_service.check_ai_operation_permission(
             current_user.id, "log_admin"
         )
-        
+
         if not has_permission:
             raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="无权限执行日志清理操作"
+                status_code=status.HTTP_403_FORBIDDEN, detail="无权限执行日志清理操作"
             )
-        
+
         # 执行清理
         log_service = await get_ai_operation_log_service()
         cleaned_count = await log_service.cleanup_old_logs(days_to_keep)
-        
+
         return ApiResponse(
             success=True,
             data={"cleaned_count": cleaned_count, "days_to_keep": days_to_keep},
-            message=f"成功清理了 {cleaned_count} 条旧日志记录"
+            message=f"成功清理了 {cleaned_count} 条旧日志记录",
         )
-        
+
     except HTTPException:
         raise
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"清理日志失败: {str(e)}"
+            detail=f"清理日志失败: {str(e)}",
         )
 
 
@@ -476,32 +480,33 @@ async def cleanup_old_logs(
     category="log_management",
     subcategory="summary",
     priority=AIOperationPriority.MEDIUM,
-    extract_user_id="current_user.id"
+    extract_user_id="current_user.id",
 )
 async def generate_log_summary(
-    target_date: Optional[str] = Query(None, description="目标日期 (YYYY-MM-DD)，默认为昨天"),
+    target_date: Optional[str] = Query(
+        None, description="目标日期 (YYYY-MM-DD)，默认为昨天"
+    ),
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_async_session)
+    db: AsyncSession = Depends(get_async_session),
 ):
     """
     生成日志汇总
-    
+
     为指定日期生成操作日志的汇总统计，用于报告和分析
     """
     try:
         # 权限检查
         permission_service = AIPermissionService(db)
-        
+
         has_permission, _ = await permission_service.check_ai_operation_permission(
             current_user.id, "log_admin"
         )
-        
+
         if not has_permission:
             raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="无权限执行日志汇总操作"
+                status_code=status.HTTP_403_FORBIDDEN, detail="无权限执行日志汇总操作"
             )
-        
+
         # 解析目标日期
         target_datetime = None
         if target_date:
@@ -510,31 +515,31 @@ async def generate_log_summary(
             except ValueError:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="目标日期格式错误，请使用 YYYY-MM-DD 格式"
+                    detail="目标日期格式错误，请使用 YYYY-MM-DD 格式",
                 )
-        
+
         # 生成汇总
         log_service = await get_ai_operation_log_service()
         success = await log_service.generate_daily_summary(target_datetime)
-        
+
         if success:
             return ApiResponse(
                 success=True,
                 data={"target_date": target_date or "昨天"},
-                message="日志汇总生成成功"
+                message="日志汇总生成成功",
             )
         else:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="日志汇总生成失败"
+                detail="日志汇总生成失败",
             )
-        
+
     except HTTPException:
         raise
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"生成日志汇总失败: {str(e)}"
+            detail=f"生成日志汇总失败: {str(e)}",
         )
 
 
@@ -571,7 +576,7 @@ def _get_operation_type_label(op_type: AIOperationType) -> str:
         AIOperationType.DATA_RESTORE: "数据恢复",
         AIOperationType.UNAUTHORIZED_ACCESS: "未授权访问",
         AIOperationType.RATE_LIMIT_EXCEEDED: "超出速率限制",
-        AIOperationType.SUSPICIOUS_ACTIVITY: "可疑活动"
+        AIOperationType.SUSPICIOUS_ACTIVITY: "可疑活动",
     }
     return labels.get(op_type, op_type.value)
 
@@ -609,6 +614,6 @@ def _get_operation_type_category(op_type: AIOperationType) -> str:
         AIOperationType.DATA_RESTORE: "数据管理",
         AIOperationType.UNAUTHORIZED_ACCESS: "安全管理",
         AIOperationType.RATE_LIMIT_EXCEEDED: "安全管理",
-        AIOperationType.SUSPICIOUS_ACTIVITY: "安全管理"
+        AIOperationType.SUSPICIOUS_ACTIVITY: "安全管理",
     }
     return categories.get(op_type, "其他")
