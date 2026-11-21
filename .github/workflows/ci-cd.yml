@@ -249,10 +249,14 @@ jobs:
     if: always()
     # The PR-comment step calls issues.createComment, which the repo's
     # read-only default token cannot do (PR #14 run failed exactly
-    # here: "Resource not accessible by integration").
+    # here: "Resource not accessible by integration"). Note: issues:write
+    # alone was NOT enough on run 44865441329 — the token had it and the
+    # call still 403d, so pull-requests:write is granted as well (the
+    # endpoint accepts either; for PR-issues GitHub enforces the latter).
     permissions:
       contents: read
       issues: write
+      pull-requests: write
     
     steps:
     - uses: actions/checkout@v4
